@@ -5,6 +5,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { HomePage } from '@/pages/HomePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AuthPage } from '@/pages/AuthPage';
+import { FaqPage } from '@/pages/FaqPage';
+import { ProfilePage } from '@/pages/ProfilePage';
+import { ProceduresPage } from '@/pages/ProceduresPage';
+import { AdminPage } from '@/pages/AdminPage';
 
 export function App() {
   return (
@@ -12,10 +16,14 @@ export function App() {
       <LazyMotion features={domAnimation} strict>
         <BrowserRouter>
           <Routes>
+            <Route path="admin" element={<AdminPage />} />
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
               <Route path="dang-nhap" element={<AuthPage mode="login" />} />
               <Route path="dang-ky" element={<AuthPage mode="register" />} />
+              <Route path="hoi-dap" element={<FaqPage />} />
+              <Route path="tai-khoan" element={<ProfilePage />} />
+              <Route path="thu-tuc" element={<ProceduresPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
