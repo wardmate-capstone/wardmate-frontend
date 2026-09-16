@@ -1,4 +1,4 @@
-# Cổng hỗ trợ hành chính — Landing page
+# WardMate — Hỗ trợ chuẩn bị hồ sơ hành chính
 
 Landing page tiếng Việt cho Hệ thống Hỗ trợ Chuẩn bị và Hướng dẫn Thủ tục Hành chính cấp xã/phường.
 

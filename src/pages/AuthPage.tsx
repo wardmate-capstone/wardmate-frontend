@@ -50,7 +50,7 @@ export function AuthPage({ mode }: AuthPageProps) {
       <div className="auth-shell">
         <m.aside initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} className="auth-intro">
           <Link to="/" className="auth-back"><ArrowLeft size={18} aria-hidden="true" /> Về trang chủ</Link>
-          <p className="section-label text-gold-300 before:bg-gold-400">Cổng hỗ trợ hành chính</p>
+          <p className="section-label text-gold-300 before:bg-gold-400">WardMate · Hỗ trợ hồ sơ hành chính</p>
           <h1>{isRegister ? 'Tạo tài khoản của bạn' : 'Chào mừng bạn trở lại'}</h1>
           <p>{isRegister ? 'Lưu hồ sơ đang chuẩn bị, nhận góp ý tiền kiểm và theo dõi từng lần bổ sung trong một tài khoản.' : 'Tiếp tục chuẩn bị hồ sơ, xem góp ý tiền kiểm và quản lý các phiên bản đã lưu.'}</p>
           <ul className="auth-benefits">

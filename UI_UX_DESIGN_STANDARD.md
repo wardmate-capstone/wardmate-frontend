@@ -1,6 +1,6 @@
 # Chuẩn thiết kế UI/UX — Hệ thống Hỗ trợ Chuẩn bị và Hướng dẫn Thủ tục Hành chính cấp Xã/Phường
 
-> **Tên sản phẩm tạm dùng:** Một Cửa  
+> **Tên sản phẩm:** WardMate
 > **Phiên bản tài liệu:** 1.0  
 > **Ngôn ngữ sản phẩm:** Tiếng Việt  
 > **Đối tượng của tài liệu:** Product Designer, UI/UX Designer, Front-end Developer, Business Analyst, QA và công cụ sinh giao diện bằng AI  
@@ -49,7 +49,7 @@ Hệ thống giúp người dân chuẩn bị hồ sơ tại nhà và gửi bả
 
 ### 2.2. Tuyên bố sản phẩm
 
-**Một Cửa giúp người dân tìm đúng thủ tục, chuẩn bị đúng hồ sơ và nhận hướng dẫn tiền kiểm trước khi đến cơ quan tiếp nhận.**
+**WardMate giúp người dân tìm đúng thủ tục, chuẩn bị đúng hồ sơ và nhận hướng dẫn tiền kiểm trước khi đến cơ quan tiếp nhận.**
 
 ### 2.3. Giá trị cốt lõi
 
