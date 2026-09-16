@@ -1,5 +1,59 @@
+import { ArrowLeft, MagnifyingGlass as Search } from '@phosphor-icons/react';
+import { m } from 'motion/react';
 import { Link } from 'react-router-dom';
 
 export function NotFoundPage() {
-  return <div className="py-16 text-center"><p className="font-semibold text-brand">404</p><h1 className="mt-3 text-3xl font-bold">Không tìm thấy trang</h1><Link to="/" className="mt-6 inline-block text-brand underline">Về trang chủ</Link></div>;
+  return (
+    <section className="not-found-page" aria-labelledby="not-found-title">
+      <div className="not-found-pattern" aria-hidden="true" />
+      <div className="not-found-shell">
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="not-found-copy"
+        >
+          <p className="section-label">Lạc đường rồi</p>
+          <p className="not-found-code" aria-hidden="true">404</p>
+          <h1 id="not-found-title">Không tìm thấy trang bạn cần</h1>
+          <p>
+            Có thể đường dẫn đã thay đổi hoặc không còn tồn tại. Mời bạn quay về trang chủ để tiếp tục hành trình chuẩn bị hồ sơ.
+          </p>
+          <div className="not-found-actions">
+            <Link to="/" className="not-found-primary">
+              <ArrowLeft size={19} aria-hidden="true" />
+              Về trang chủ
+            </Link>
+            <Link to="/#thu-tuc" className="not-found-secondary">
+              <Search size={19} aria-hidden="true" />
+              Tra cứu thủ tục
+            </Link>
+          </div>
+        </m.div>
+
+        <m.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.08 }}
+          className="village-gate-scene"
+          aria-hidden="true"
+        >
+          <div className="sun-disc" />
+          <div className="cloud cloud-one"><span /><span /><span /></div>
+          <div className="cloud cloud-two"><span /><span /><span /></div>
+          <div className="gate-roof roof-back" />
+          <div className="gate-roof roof-front" />
+          <div className="gate-sign">LỐI VỀ</div>
+          <div className="gate-body">
+            <span className="gate-column" />
+            <span className="gate-opening" />
+            <span className="gate-column" />
+          </div>
+          <div className="village-path" />
+          <div className="lotus-line lotus-left">✦</div>
+          <div className="lotus-line lotus-right">✦</div>
+        </m.div>
+      </div>
+    </section>
+  );
 }
