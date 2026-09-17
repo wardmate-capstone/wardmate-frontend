@@ -23,7 +23,9 @@
     "motion": "^13.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-is": "^19.3.0",
     "react-router-dom": "^7.0.0",
+    "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.0.0"
   },
