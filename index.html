@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WardMate — Cổng Dịch vụ Tiền kiểm Hồ sơ Hành chính Cấp Xã/Phường</title>
+    <meta
+      name="description"
+      content="WardMate hỗ trợ người dân tra cứu thủ tục, chuẩn bị biểu mẫu và gửi hồ sơ để cán bộ tiền kiểm trước khi đến cơ quan có thẩm quyền tiếp nhận chính thức."
+    />
+    <meta name="keywords" content="thủ tục hành chính, tiền kiểm hồ sơ, khai sinh, kết hôn, chứng thực bản sao, ủy ban nhân dân xã phường, dịch vụ công" />
+    <meta name="theme-color" content="#8F1515" />
+    <link rel="icon" type="image/svg+xml" href="/wardmate-mark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- JSON-LD Structured Data for Search Engines and AI Answer Engines (AEO) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://wardmate.gov.vn/#website",
+            "url": "https://wardmate.gov.vn/",
+            "name": "WardMate",
+            "description": "Cổng Hỗ trợ Chuẩn bị và Hướng dẫn Tiền kiểm Thủ tục Hành chính Cấp Xã/Phường",
+            "inLanguage": "vi",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://wardmate.gov.vn/thu-tuc?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "GovernmentService",
+            "@id": "https://wardmate.gov.vn/#service",
+            "name": "Dịch vụ Hỗ trợ Chuẩn bị & Tiền kiểm Hồ sơ",
+            "serviceType": "Hướng dẫn và Tiền kiểm Hồ sơ Hành chính",
+            "provider": {
+              "@type": "GovernmentOrganization",
+              "name": "Ủy ban Nhân dân Cấp Xã / Phường / Thị trấn"
+            },
+            "areaServed": "VN",
+            "description": "Giúp người dân tìm đúng thủ tục, chuẩn bị đúng hồ sơ và nhận hướng dẫn tiền kiểm trước khi đến cơ quan có thẩm quyền."
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
