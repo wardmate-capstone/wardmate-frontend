@@ -12,12 +12,19 @@ import { AdminPage } from '@/pages/AdminPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
+import { OfficerPage } from '@/pages/officer/OfficerPage';
+import { ManagerPage } from '@/pages/manager/ManagerPage';
+
 export function App() {
   return (
     <MotionConfig reducedMotion="user">
       <LazyMotion features={domAnimation} strict>
         <BrowserRouter>
           <Routes>
+            <Route path="officer/*" element={<OfficerPage />} />
+            <Route path="can-bo/*" element={<OfficerPage />} />
+            <Route path="manager/*" element={<ManagerPage />} />
+            <Route path="lanh-dao/*" element={<ManagerPage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />

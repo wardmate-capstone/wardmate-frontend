@@ -1,7 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
-  PersonArmsSpread as Accessibility,
   CaretRight as ChevronRight,
   Headset as Headphones,
   List as Menu,
@@ -33,8 +32,7 @@ export function MainLayout() {
         <div className="mx-auto flex min-h-10 max-w-[1240px] items-center justify-between gap-4 px-5 text-xs sm:px-8">
           <p className="flex items-center gap-2 leading-5"><ShieldCheck size={15} aria-hidden="true" /> Hỗ trợ chuẩn bị và tiền kiểm hồ sơ hành chính cấp xã, phường</p>
           <div className="hidden items-center gap-5 md:flex">
-            <Link to="/hoi-dap" className="utility-link"><CircleHelp size={15} aria-hidden="true" /> Hướng dẫn</Link>
-            <button type="button" className="utility-link"><Accessibility size={15} aria-hidden="true" /> Hỗ trợ tiếp cận</button>
+            <Link to="/hoi-dap" className="utility-link"><CircleHelp size={15} aria-hidden="true" /> Hướng dẫn & Trợ giúp</Link>
           </div>
         </div>
       </div>
@@ -83,7 +81,7 @@ export function MainLayout() {
       <footer className="bg-red-950 text-red-100">
         <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr]">
           <div><div className="flex items-center gap-3"><BrandMark className="footer-brand-mark" size={46} /><BrandWordmark subtitle="Chuẩn bị đúng · Giảm đi lại" inverse /></div><p className="mt-5 max-w-lg text-sm leading-7 text-red-100/65">Đồng hành cùng người dân trong quá trình tra cứu, chuẩn bị và tiền kiểm hồ sơ trước khi đến cơ quan tiếp nhận.</p></div>
-          <div><h2 className="font-bold text-white">Liên kết</h2><ul className="mt-4 space-y-2 text-sm text-red-100/65"><li><Link className="footer-link" to="/thu-tuc">Tra cứu thủ tục</Link></li><li><Link className="footer-link" to="/#quy-trinh">Hướng dẫn thực hiện</Link></li><li><Link className="footer-link" to="/hoi-dap">Câu hỏi thường gặp</Link></li></ul></div>
+          <div><h2 className="font-bold text-white">Liên kết</h2><ul className="mt-4 space-y-2 text-sm text-red-100/65"><li><Link className="footer-link" to="/thu-tuc">Tra cứu thủ tục</Link></li><li><Link className="footer-link" to="/#quy-trinh">Hướng dẫn thực hiện</Link></li><li><Link className="footer-link" to="/hoi-dap">Câu hỏi thường gặp</Link></li><li><Link className="footer-link" to="/officer">Cổng Cán bộ Một cửa</Link></li><li><Link className="footer-link" to="/manager">Cổng Lãnh đạo / Quản lý</Link></li></ul></div>
           <div><h2 className="font-bold text-white">Phạm vi dịch vụ</h2><p className="mt-4 text-sm leading-7 text-red-100/65">Hệ thống hỗ trợ tiền kiểm. Hồ sơ chính thức được tiếp nhận tại cơ quan có thẩm quyền.</p></div>
         </div>
         <div className="border-t border-white/10"><div className="mx-auto flex max-w-[1240px] flex-wrap justify-between gap-3 px-5 py-5 text-xs text-red-100/45 sm:px-8"><span>© 2026 WardMate</span></div></div>
