@@ -478,17 +478,13 @@
   .admin-user-button > svg { @apply hidden text-slate-400 sm:block; }
   .admin-main { @apply mx-auto w-full max-w-[1540px] px-4 py-6 sm:px-6 sm:py-7 xl:px-8; }
   .admin-page-heading { @apply flex flex-col justify-between gap-3 sm:flex-row sm:items-end; }
-  .admin-page-heading > div > p { @apply text-[10px] font-bold uppercase tracking-[.15em] text-red-700; }
-  .admin-page-heading h1 { @apply mt-1 text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl; }
-  .admin-page-heading > div > span { @apply mt-1 block text-sm text-slate-500; }
-  .admin-data-note { @apply inline-flex min-h-8 w-fit items-center rounded-full border border-gold-200 bg-gold-50 px-3 text-xs font-bold text-gold-700; }
+  .admin-page-heading h1 { @apply text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl; }
   .admin-stat-grid { @apply mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4; }
   .admin-stat-card { @apply rounded-xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,.035)]; }
   .admin-stat-card > div { @apply flex items-center justify-between gap-3; }
   .admin-stat-card > div > span { @apply grid size-11 place-items-center rounded-xl border; }
   .admin-stat-card > div > small { @apply text-right text-xs font-semibold text-slate-500; }
   .admin-stat-card > strong { @apply mt-4 block text-3xl font-bold tracking-[-.03em] text-slate-950; }
-  .admin-stat-card > p { @apply mt-1 text-xs text-slate-500; }
   .admin-stat-card.is-warning > div > span { @apply border-gold-100 bg-gold-50 text-gold-700; }
   .admin-stat-card.is-danger > div > span { @apply border-red-100 bg-red-50 text-red-700; }
   .admin-stat-card.is-success > div > span { @apply border-emerald-100 bg-emerald-50 text-emerald-700; }
@@ -497,7 +493,6 @@
   .admin-card { @apply min-w-0 rounded-xl border border-slate-200 bg-white shadow-[0_4px_14px_rgba(15,23,42,.035)]; }
   .admin-card-heading { @apply flex min-h-[68px] items-center justify-between gap-4 border-b border-slate-100 px-5 py-3; }
   .admin-card-heading h2 { @apply text-sm font-bold text-slate-950 sm:text-base; }
-  .admin-card-heading p { @apply mt-1 text-xs text-slate-500; }
   .admin-card-heading > button { @apply inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-red-800; }
   .admin-bar-chart { @apply flex h-[260px] items-end gap-3 px-5 pb-4 pt-7 sm:gap-5 sm:px-7; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 63px, #e2e8f0 64px); }
   .admin-bar-column { @apply flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2; }
@@ -530,6 +525,122 @@
   .admin-status-badge.is-warning { @apply bg-gold-50 text-gold-700; }
   .admin-status-badge.is-info { @apply bg-sky-50 text-sky-700; }
   .admin-status-badge.is-success { @apply bg-emerald-50 text-emerald-700; }
+
+  .admin-nav-section { @apply mb-5 last:mb-0; }
+  .admin-nav-section > p { @apply mb-2 overflow-hidden px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400; max-height: 24px; opacity: 1; transition: max-height 420ms var(--admin-sidebar-ease), opacity 300ms ease, margin 420ms var(--admin-sidebar-ease); }
+  .admin-nav-section > button { @apply mb-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950; transition: padding 420ms var(--admin-sidebar-ease), gap 420ms var(--admin-sidebar-ease), background-color 180ms ease, color 180ms ease; }
+  .admin-nav-section > button.is-active { @apply bg-red-50 text-red-800; box-shadow: inset 3px 0 0 #991d18; }
+  .admin-nav-section > button > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 170px; opacity: 1; transition: max-width 420ms var(--admin-sidebar-ease), opacity 280ms ease; }
+  .admin-nav-section > button > small { @apply grid min-w-6 place-items-center overflow-hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500; max-width: 38px; opacity: 1; transition: max-width 380ms var(--admin-sidebar-ease), opacity 260ms ease; }
+  .admin-nav-section > button.is-active > small { @apply bg-red-100 text-red-800; }
+  @media (min-width: 1024px) {
+    .admin-sidebar.is-compact .admin-nav-section { @apply mb-2; }
+    .admin-sidebar.is-compact .admin-nav-section > p { @apply m-0; max-height: 0; opacity: 0; }
+    .admin-sidebar.is-compact .admin-nav-section > button { @apply gap-0 px-5; }
+    .admin-sidebar.is-compact .admin-nav-section > button > span,
+    .admin-sidebar.is-compact .admin-nav-section > button > small { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
+  }
+  .admin-primary-action { @apply inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-lg bg-red-800 px-4 text-sm font-bold text-white shadow-sm hover:bg-red-900; }
+  .admin-content-card { @apply mt-5; }
+  .admin-toolbar { @apply flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between; }
+  .admin-toolbar > button { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-red-800; }
+  .admin-search { @apply relative flex min-h-11 w-full max-w-lg items-center; }
+  .admin-search > svg { @apply pointer-events-none absolute left-3.5 text-slate-400; }
+  .admin-search input { @apply min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-400 focus:bg-white focus:ring-4 focus:ring-red-50; }
+  .admin-empty { @apply border-t border-slate-100 px-5 py-10 text-center text-sm text-slate-500; }
+  .admin-chart-card { @apply mt-4 overflow-hidden; }
+  .admin-chart-heading { @apply flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between; }
+  .admin-chart-heading h2 { @apply text-sm font-bold text-slate-950 sm:text-base; }
+  .admin-chart-filters { @apply flex w-fit items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1; }
+  .admin-chart-filters button { @apply min-h-8 rounded-md px-3 text-[11px] font-bold text-slate-500 hover:bg-white hover:text-slate-900; }
+  .admin-chart-filters button.is-active { @apply bg-white text-red-800 shadow-sm ring-1 ring-slate-200; }
+  .admin-chart-summary { @apply flex flex-wrap gap-6 px-5 pt-5 sm:gap-10; }
+  .admin-chart-summary > div { @apply flex items-center gap-3; }
+  .admin-chart-summary > div > span { @apply h-8 w-1 rounded-full; }
+  .admin-chart-summary .is-search { @apply bg-red-800; }
+  .admin-chart-summary .is-application { @apply bg-gold-600; }
+  .admin-chart-summary p { @apply flex items-baseline gap-2; }
+  .admin-chart-summary small { @apply text-[10px] font-semibold uppercase tracking-[.06em] text-slate-500; }
+  .admin-chart-summary strong { @apply text-lg font-bold tabular-nums text-slate-950; }
+  .admin-chart-canvas { @apply h-[280px] w-full px-2 pb-4 pt-3 sm:h-[320px] sm:px-5; }
+  .admin-chart-canvas .recharts-surface:focus { outline: none; }
+  .admin-module-card { @apply mt-4 overflow-hidden; }
+  .admin-module-grid { @apply grid gap-px bg-slate-100 sm:grid-cols-2 xl:grid-cols-3; }
+  .admin-module-grid > button { @apply flex min-h-24 items-center gap-3 bg-white p-5 text-left hover:bg-slate-50; }
+  .admin-module-grid > button > span { @apply grid size-11 shrink-0 place-items-center rounded-xl bg-red-50 text-red-800; }
+  .admin-module-grid > button > div { @apply min-w-0 flex-1; }
+  .admin-module-grid strong { @apply block text-sm font-bold text-slate-900; }
+  .admin-module-grid > button > svg { @apply -rotate-90 text-slate-300; }
+  .admin-activity-list { @apply divide-y divide-slate-100 px-5; }
+  .admin-activity-list > div { @apply flex gap-3 py-4; }
+  .admin-activity-list > div > span { @apply grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-bold text-slate-600; }
+  .admin-activity-list p { @apply text-xs leading-5 text-slate-600; }
+  .admin-activity-list strong, .admin-activity-list b { @apply font-bold text-slate-900; }
+  .admin-activity-list small { @apply mt-0.5 block text-[10px] text-slate-400; }
+  .admin-health-list { @apply divide-y divide-slate-100 px-5 py-1; }
+  .admin-health-list > div { @apply flex min-h-12 items-center gap-3 text-xs; }
+  .admin-health-list > div > span, .admin-service-grid header > span { @apply size-2 shrink-0 rounded-full; }
+  .admin-health-list .is-online, .admin-service-grid header > .is-online { @apply bg-emerald-500; box-shadow: 0 0 0 4px #d1fae5; }
+  .admin-health-list .is-warning, .admin-service-grid header > .is-warning { @apply bg-amber-500; box-shadow: 0 0 0 4px #fef3c7; }
+  .admin-health-list p { @apply min-w-0 flex-1 text-slate-600; }
+  .admin-health-list strong { @apply text-[10px] font-bold text-slate-900; }
+  .admin-resource-grid { @apply grid gap-3 p-5 lg:grid-cols-2; }
+  .admin-resource-grid.is-list { @apply grid-cols-1; }
+  .admin-resource-grid article { @apply flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 p-4; }
+  .admin-resource-grid article > span { @apply grid size-11 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800; }
+  .admin-resource-grid article > div { @apply min-w-0 flex-1; }
+  .admin-resource-grid article strong { @apply block truncate text-sm font-bold text-slate-900; }
+  .admin-resource-grid article small { @apply mt-1 block text-xs text-slate-500; }
+  .admin-resource-grid article > button { @apply min-h-9 rounded-lg px-3 text-xs font-bold text-red-800 hover:bg-red-50; }
+  .admin-resource-grid article > em { @apply whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold not-italic; }
+  .admin-resource-grid article > em.is-success { @apply bg-emerald-50 text-emerald-700; }
+  .admin-resource-grid article > em.is-warning { @apply bg-amber-50 text-amber-700; }
+  .admin-split-view { @apply mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,.7fr)]; }
+  .admin-sync-panel { @apply p-6; }
+  .admin-sync-panel > span { @apply grid size-14 place-items-center rounded-2xl bg-red-50 text-red-800; }
+  .admin-sync-panel h2 { @apply mt-5 text-lg font-bold text-slate-950; }
+  .admin-sync-panel > strong { @apply mt-6 block text-sm text-slate-900; }
+  .admin-sync-panel > div { @apply mt-2 h-2 overflow-hidden rounded-full bg-slate-100; }
+  .admin-sync-panel > div > i { @apply block h-full rounded-full bg-red-800; }
+  .admin-sync-panel > button, .admin-backup-card button { @apply mt-6 min-h-11 w-full rounded-lg bg-red-800 px-4 text-sm font-bold text-white hover:bg-red-900; }
+  .admin-person { @apply flex items-center gap-3; }
+  .admin-person > span { @apply grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600; }
+  .admin-person p > small { @apply mt-0.5 block text-[10px] text-slate-500; }
+  .admin-role-grid { @apply mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4; }
+  .admin-role-grid article { @apply p-5; }
+  .admin-role-grid article > div { @apply flex items-start justify-between; }
+  .admin-role-grid article > div > span { @apply grid size-11 place-items-center rounded-xl; }
+  .admin-role-grid .is-danger { @apply bg-red-50 text-red-700; }
+  .admin-role-grid .is-info { @apply bg-sky-50 text-sky-700; }
+  .admin-role-grid .is-success { @apply bg-emerald-50 text-emerald-700; }
+  .admin-role-grid .is-warning { @apply bg-amber-50 text-amber-700; }
+  .admin-role-grid article > div > button { @apply min-h-9 rounded-lg px-2 text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-red-800; }
+  .admin-role-grid h2 { @apply mt-5 text-base font-bold text-slate-950; }
+  .admin-role-grid footer { @apply mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500; }
+  .admin-role-grid footer > svg { @apply text-red-700; }
+  .admin-role-grid footer strong { @apply text-slate-900; }
+  .admin-service-grid { @apply mt-5 grid gap-4 sm:grid-cols-2; }
+  .admin-service-grid article { @apply overflow-hidden; }
+  .admin-service-grid header { @apply flex items-center gap-3 border-b border-slate-100 px-5 py-3 text-[10px] font-bold uppercase tracking-[.08em] text-slate-500; }
+  .admin-service-grid article > div { @apply px-5 py-6; }
+  .admin-service-grid article > div > svg { @apply text-red-800; }
+  .admin-service-grid h2 { @apply mt-4 text-base font-bold text-slate-950; }
+  .admin-service-grid footer { @apply flex items-center justify-between gap-3 bg-slate-50 px-5 py-3; }
+  .admin-service-grid footer > span { @apply text-xs font-semibold text-slate-600; }
+  .admin-service-grid footer > button { @apply min-h-9 rounded-lg px-3 text-xs font-bold text-red-800 hover:bg-red-50; }
+  .admin-security-list { @apply divide-y divide-slate-100 px-5; }
+  .admin-security-list > div { @apply flex items-center gap-3 py-4; }
+  .admin-security-list > div > svg { @apply text-emerald-600; }
+  .admin-security-list p { @apply min-w-0 flex-1; }
+  .admin-security-list strong { @apply block text-sm text-slate-900; }
+  .admin-security-list small { @apply mt-1 block text-xs text-slate-500; }
+  .admin-backup-card > div:last-child { @apply p-6; }
+  .admin-backup-card > div:last-child > span { @apply grid size-14 place-items-center rounded-2xl bg-sky-50 text-sky-700; }
+  .admin-backup-card > div:last-child > strong { @apply mt-5 block text-sm text-slate-900; }
+  .admin-backup-card > div:last-child > p, .admin-backup-card > div:last-child > small { @apply mt-1 block text-xs leading-5 text-slate-500; }
+  .admin-backup-card > div:last-child > div { @apply mt-5 h-2 overflow-hidden rounded-full bg-slate-100; }
+  .admin-backup-card > div:last-child > div > i { @apply block h-full w-full rounded-full bg-emerald-500; }
+  .admin-table-wrap code { @apply rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-600; }
 
   .not-found-page { @apply relative isolate min-h-[620px] overflow-hidden bg-[#faf8f3] px-5 py-14 sm:px-8 sm:py-20; }
   .not-found-pattern { @apply pointer-events-none absolute inset-0 -z-10 opacity-[.055]; background-image: url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; mask-image: linear-gradient(90deg, #000, transparent 72%); }
