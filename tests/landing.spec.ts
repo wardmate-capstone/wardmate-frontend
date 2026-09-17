@@ -59,6 +59,32 @@ test('đăng ký kiểm tra mật khẩu xác nhận', async ({ page }) => {
   await expect(page.getByText('Mật khẩu xác nhận chưa khớp.')).toBeVisible();
 });
 
+test('quên mật khẩu gửi hướng dẫn khôi phục và quay lại đăng nhập', async ({ page }) => {
+  await page.goto('/dang-nhap');
+  await page.getByRole('link', { name: 'Quên mật khẩu?' }).click();
+  await expect(page).toHaveURL(/\/quen-mat-khau$/);
+  await expect(page.getByRole('heading', { name: 'Quên mật khẩu' })).toBeVisible();
+
+  await page.getByLabel('Số điện thoại hoặc email').fill('an@example.com');
+  await page.getByRole('button', { name: 'Gửi hướng dẫn khôi phục' }).click();
+  await expect(page.getByRole('heading', { name: 'Kiểm tra thông tin liên hệ' })).toBeVisible();
+  await page.getByRole('link', { name: 'Tiếp tục đặt mật khẩu' }).click();
+  await expect(page).toHaveURL(/\/dat-lai-mat-khau$/);
+});
+
+test('đặt lại mật khẩu kiểm tra xác nhận và hiển thị trạng thái hoàn tất', async ({ page }) => {
+  await page.goto('/dat-lai-mat-khau');
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('matkhau123');
+  await page.getByLabel('Xác nhận mật khẩu mới', { exact: true }).fill('khongkhop123');
+  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Mật khẩu xác nhận chưa khớp.');
+
+  await page.getByLabel('Xác nhận mật khẩu mới', { exact: true }).fill('matkhau123');
+  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click();
+  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu thành công' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Đăng nhập ngay' })).toHaveAttribute('href', '/dang-nhap');
+});
+
 test('trang không tìm thấy có lối quay về rõ ràng và không tràn ngang', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/duong-dan-khong-ton-tai');
