@@ -9,6 +9,8 @@ import { FaqPage } from '@/pages/FaqPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ProceduresPage } from '@/pages/ProceduresPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
 export function App() {
   return (
@@ -21,6 +23,8 @@ export function App() {
               <Route index element={<HomePage />} />
               <Route path="dang-nhap" element={<AuthPage mode="login" />} />
               <Route path="dang-ky" element={<AuthPage mode="register" />} />
+              <Route path="quen-mat-khau" element={<ForgotPasswordPage />} />
+              <Route path="dat-lai-mat-khau" element={<ResetPasswordPage />} />
               <Route path="hoi-dap" element={<FaqPage />} />
               <Route path="tai-khoan" element={<ProfilePage />} />
               <Route path="thu-tuc" element={<ProceduresPage />} />

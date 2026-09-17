@@ -81,7 +81,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <label className="auth-checkbox"><input type="checkbox" name={isRegister ? 'terms' : 'remember'} required={isRegister} /> <span>{isRegister ? 'Tôi đồng ý với điều khoản sử dụng' : 'Ghi nhớ đăng nhập'}</span></label>
-              {!isRegister && <button type="button" onClick={() => toast.info('Hướng dẫn khôi phục mật khẩu sẽ được gửi đến thông tin liên hệ của bạn.')} className="font-semibold text-red-800 hover:underline">Quên mật khẩu?</button>}
+              {!isRegister && <Link to="/quen-mat-khau" className="font-semibold text-red-800 hover:underline">Quên mật khẩu?</Link>}
             </div>
 
             <Button type="submit" size="large" className="mt-1 w-full">{isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}</Button>
