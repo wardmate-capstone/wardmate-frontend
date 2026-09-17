@@ -152,6 +152,15 @@
   .auth-checkbox input { @apply mt-0.5 size-4 accent-red-700; }
   .auth-switch { @apply mt-7 border-t border-slate-100 pt-6 text-center text-sm text-slate-600; }
   .auth-switch a { @apply font-bold text-red-800 hover:underline; }
+  .auth-recovery-note { @apply rounded-xl border border-gold-100 bg-gold-50 px-4 py-3 text-sm leading-6 text-slate-600; }
+  .auth-recovery-success { @apply flex min-h-[420px] flex-col justify-center; }
+  .auth-recovery-success > span { @apply grid size-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600; }
+  .auth-recovery-success h2 { @apply mt-6 text-2xl font-bold text-slate-950 sm:text-3xl; }
+  .auth-recovery-success > p { @apply mt-4 text-sm leading-7 text-slate-600; }
+  .auth-recovery-success > p strong { @apply break-all font-bold text-slate-900; }
+  .auth-recovery-actions { @apply mt-8 grid gap-3; }
+  .auth-recovery-actions > button { @apply min-h-11 rounded-xl px-4 text-sm font-bold text-red-800 hover:bg-red-50; }
+  .auth-form-error { @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800; }
 
   .faq-page { @apply bg-[#faf8f4]; }
   .faq-hero { @apply relative isolate overflow-hidden bg-red-900 px-5 py-14 text-white sm:px-8 sm:py-16; }
