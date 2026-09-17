@@ -1,40 +1,41 @@
 import {
-  IdentificationIcon,
-  DocumentCheckIcon,
-  HomeModernIcon,
-  HeartIcon,
-  MapPinIcon,
-  BriefcaseIcon,
-  UserGroupIcon,
-  ClipboardDocumentCheckIcon,
-  ShieldCheckIcon,
-  CheckBadgeIcon,
-  MagnifyingGlassIcon,
-  DocumentTextIcon,
-} from '@heroicons/react/24/outline';
+  Baby,
+  BookOpenText as BookOpenCheck,
+  Briefcase as BriefcaseBusiness,
+  Buildings as House,
+  Certificate as FileBadge2,
+  CheckSquare as FileCheck2,
+  HandHeart,
+  Handshake as HeartHandshake,
+  MapPinArea as MapPinned,
+  SealCheck as BadgeCheck,
+  ShieldCheck,
+  UserCheck as UserRoundCheck,
+  UsersThree as UsersRound,
+} from '@phosphor-icons/react';
 
 export const serviceGroups = [
-  { label: 'Hộ tịch', description: 'Khai sinh, kết hôn, tình trạng hôn nhân', icon: IdentificationIcon, count: '12 hướng dẫn' },
-  { label: 'Chứng thực', description: 'Bản sao, chữ ký và giấy tờ liên quan', icon: DocumentCheckIcon, count: '08 hướng dẫn' },
-  { label: 'Cư trú', description: 'Thông tin và chỉ dẫn đến cơ quan phù hợp', icon: HomeModernIcon, count: '06 hướng dẫn' },
-  { label: 'Chính sách xã hội', description: 'Hỗ trợ và chính sách dành cho người dân', icon: HeartIcon, count: '15 hướng dẫn' },
-  { label: 'Đất đai và xây dựng', description: 'Tra cứu điều kiện và nơi tiếp nhận', icon: MapPinIcon, count: '10 hướng dẫn' },
-  { label: 'Lao động và việc làm', description: 'Thủ tục liên quan đến lao động địa phương', icon: BriefcaseIcon, count: '09 hướng dẫn' },
+  { label: 'Hộ tịch', description: 'Khai sinh, kết hôn, tình trạng hôn nhân', icon: Baby, count: '12 hướng dẫn' },
+  { label: 'Chứng thực', description: 'Bản sao, chữ ký và giấy tờ liên quan', icon: FileBadge2, count: '08 hướng dẫn' },
+  { label: 'Cư trú', description: 'Thông tin và chỉ dẫn đến cơ quan phù hợp', icon: House, count: '06 hướng dẫn' },
+  { label: 'Chính sách xã hội', description: 'Hỗ trợ và chính sách dành cho người dân', icon: HandHeart, count: '15 hướng dẫn' },
+  { label: 'Đất đai và xây dựng', description: 'Tra cứu điều kiện và nơi tiếp nhận', icon: MapPinned, count: '10 hướng dẫn' },
+  { label: 'Lao động và việc làm', description: 'Thủ tục liên quan đến lao động địa phương', icon: BriefcaseBusiness, count: '09 hướng dẫn' },
 ];
 
 export const popularProcedures = [
-  { title: 'Đăng ký khai sinh', category: 'Hộ tịch', icon: IdentificationIcon, note: 'Có hỗ trợ chuẩn bị hồ sơ' },
-  { title: 'Đăng ký kết hôn', category: 'Hộ tịch', icon: HeartIcon, note: 'Có tờ khai điện tử' },
-  { title: 'Chứng thực bản sao từ bản chính', category: 'Chứng thực', icon: DocumentCheckIcon, note: 'Có hướng dẫn giấy tờ' },
-  { title: 'Cấp giấy xác nhận tình trạng hôn nhân', category: 'Hộ tịch', icon: DocumentTextIcon, note: 'Có hỗ trợ tiền kiểm' },
-  { title: 'Đề nghị hỗ trợ xã hội', category: 'Chính sách xã hội', icon: UserGroupIcon, note: 'Có hướng dẫn theo trường hợp' },
+  { title: 'Đăng ký khai sinh', category: 'Hộ tịch', icon: Baby, note: 'Có hỗ trợ chuẩn bị hồ sơ' },
+  { title: 'Đăng ký kết hôn', category: 'Hộ tịch', icon: HeartHandshake, note: 'Có tờ khai điện tử' },
+  { title: 'Chứng thực bản sao từ bản chính', category: 'Chứng thực', icon: FileCheck2, note: 'Có hướng dẫn giấy tờ' },
+  { title: 'Cấp giấy xác nhận tình trạng hôn nhân', category: 'Hộ tịch', icon: UserRoundCheck, note: 'Có hỗ trợ tiền kiểm' },
+  { title: 'Đề nghị hỗ trợ xã hội', category: 'Chính sách xã hội', icon: UsersRound, note: 'Có hướng dẫn theo trường hợp' },
 ];
 
 export const preparationSteps = [
-  { number: '01', title: 'Tìm đúng thủ tục', description: 'Tra cứu theo nhu cầu, đọc điều kiện và xác định đúng cơ quan tiếp nhận.', icon: MagnifyingGlassIcon },
-  { number: '02', title: 'Chuẩn bị hồ sơ', description: 'Hoàn thành danh sách giấy tờ, tờ khai và tài liệu cần tiền kiểm.', icon: ClipboardDocumentCheckIcon },
-  { number: '03', title: 'Nhận góp ý', description: 'Cán bộ chỉ rõ nội dung cần bổ sung. Những phần khác được giữ nguyên.', icon: ShieldCheckIcon },
-  { number: '04', title: 'Nhận QR sau khi duyệt', description: 'Mang QR cùng hồ sơ giấy đến cơ quan có thẩm quyền để đối chiếu.', icon: CheckBadgeIcon },
+  { number: '01', title: 'Tìm đúng thủ tục', description: 'Tra cứu theo nhu cầu, đọc điều kiện và xác định đúng cơ quan tiếp nhận.', icon: BookOpenCheck },
+  { number: '02', title: 'Chuẩn bị hồ sơ', description: 'Hoàn thành danh sách giấy tờ, tờ khai và tài liệu cần tiền kiểm.', icon: FileCheck2 },
+  { number: '03', title: 'Nhận góp ý', description: 'Cán bộ chỉ rõ nội dung cần bổ sung. Những phần khác được giữ nguyên.', icon: ShieldCheck },
+  { number: '04', title: 'Nhận QR sau khi duyệt', description: 'Mang QR cùng hồ sơ giấy đến cơ quan có thẩm quyền để đối chiếu.', icon: BadgeCheck },
 ];
 
 export const notices = [
