@@ -54,7 +54,7 @@ export function ProceduresPage() {
             <h1 id="procedures-title">Thủ tục hành chính</h1>
          </div>
           <form className="procedures-search" role="search" onSubmit={handleSearch}>
-            <label htmlFor="procedures-search-input">Tìm thủ tục</label>
+            <label htmlFor="procedures-search-input">Tên thủ tục hoặc nhu cầu của bạn</label>
             <div>
               <MagnifyingGlass size={22} aria-hidden="true" />
               <input id="procedures-search-input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ví dụ: đăng ký khai sinh" />

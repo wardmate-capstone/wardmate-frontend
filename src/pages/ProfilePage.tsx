@@ -97,7 +97,7 @@ export function ProfilePage() {
                 </div>
                 <div className="account-form-actions">
                   <button type="button" onClick={cancelEditing} className="account-cancel-action"><X size={18} aria-hidden="true" /> Hủy</button>
-                  <button type="submit" className="account-save-action"><Check size={18} aria-hidden="true" /> Lưu thay đổi</button>
+                  <button type="submit" className="account-save-action"><Check size={18} aria-hidden="true" /> Lưu thông tin</button>
                 </div>
               </form>
             ) : (

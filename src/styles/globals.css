@@ -8,28 +8,57 @@
   --color-red-400: #f86457;
   --color-red-500: #e93d32;
   --color-red-600: #da251d;
-  --color-red-700: #bd1f18;
-  --color-red-800: #991d18;
-  --color-red-900: #791b17;
-  --color-red-950: #410b09;
+  --color-red-700: #B91C1C; /* Primary Red */
+  --color-red-800: #B91C1C; /* Primary Red */
+  --color-red-900: #8F1515; /* Dark Red */
+  --color-red-950: #570c0c; /* Deep Dark Red */
   --color-gold-50: #fffdeb;
   --color-gold-100: #fff8c6;
-  --color-gold-200: #ffef88;
-  --color-gold-300: #ffe047;
-  --color-gold-400: #ffcd00;
-  --color-gold-500: #e9b900;
-  --color-gold-600: #c89000;
-  --color-gold-700: #9e6800;
-  --font-sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --color-gold-200: #F5D76E; /* Light Gold */
+  --color-gold-300: #F5D76E; /* Light Gold */
+  --color-gold-400: #D4A017; /* Gold */
+  --color-gold-500: #D4A017; /* Gold */
+  --color-gold-600: #b5860d;
+  --color-gold-700: #916806;
+  --color-gov-bg: #F8F7F4;
+  --color-gov-card: #FFFFFF;
+  --color-gov-text: #1F2937;
+  --color-gov-border: #E5E7EB;
+  --color-gov-success: #16803C;
+  --font-sans: "Poppins", "Be Vietnam Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --primary-red: #B91C1C;
+  --dark-red: #8F1515;
+  --gold: #D4A017;
+  --light-gold: #F5D76E;
+  --bg-page: #F8F7F4;
+  --card: #FFFFFF;
+  --text-main: #1F2937;
+  --border-color: #E5E7EB;
+  --success-color: #16803C;
 }
 
 @layer base {
-  html { scroll-behavior: smooth; }
-  body { @apply m-0 overflow-x-clip bg-white font-sans text-slate-900 antialiased; }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+  body {
+    margin: 0;
+    overflow-x: clip;
+    max-width: 100vw;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
   button:not(:disabled), a { cursor: pointer; }
-  :focus-visible { outline: 3px solid #ffcd00; outline-offset: 3px; }
+  :focus-visible { outline: 3px solid #D4A017; outline-offset: 3px; }
   #main:focus { outline: none; }
-  ::selection { background: #fde68a; color: #3d0c12; }
+  ::selection { background: #F5D76E; color: #8F1515; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
@@ -427,9 +456,9 @@
   .account-cancel-action { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50; }
   .account-save-action { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-800 px-4 text-sm font-bold text-white hover:bg-red-900; }
 
-  .admin-layout { --admin-sidebar-duration: 520ms; --admin-sidebar-ease: cubic-bezier(.4, 0, .2, 1); @apply min-h-screen bg-slate-50 text-slate-900; }
+  .admin-layout { --admin-sidebar-duration: 520ms; --admin-sidebar-ease: cubic-bezier(.4, 0, .2, 1); @apply min-h-screen max-w-full overflow-x-clip bg-slate-50 text-slate-900; }
   .admin-sidebar-overlay { @apply fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden; }
-  .admin-sidebar { @apply fixed inset-y-0 left-0 z-50 flex w-[268px] -translate-x-full flex-col overflow-x-clip border-r border-slate-200 bg-white shadow-2xl lg:translate-x-0 lg:shadow-none; transition-property: width, transform, box-shadow; transition-duration: var(--admin-sidebar-duration); transition-timing-function: var(--admin-sidebar-ease); will-change: width, transform; }
+  .admin-sidebar { @apply fixed inset-y-0 left-0 z-50 flex w-[268px] max-w-[85vw] -translate-x-full flex-col overflow-x-clip border-r border-slate-200 bg-white shadow-2xl lg:translate-x-0 lg:shadow-none; transition-property: width, transform, box-shadow; transition-duration: var(--admin-sidebar-duration); transition-timing-function: var(--admin-sidebar-ease); will-change: width, transform; }
   .admin-sidebar.is-open { @apply translate-x-0; }
   .admin-sidebar.is-compact { @apply lg:w-[84px]; }
   .admin-brand { @apply flex min-h-[72px] items-center gap-3 border-b border-slate-100 px-5; transition: padding var(--admin-sidebar-duration) var(--admin-sidebar-ease), gap 460ms var(--admin-sidebar-ease); }
@@ -461,7 +490,7 @@
     .admin-sidebar.is-compact .admin-nav > button { @apply gap-0 px-5; }
     .admin-sidebar.is-compact .admin-sidebar-user { @apply gap-0 p-2.5; }
   }
-  .admin-workspace { @apply min-w-0 lg:ml-[268px]; transition-property: margin-left; transition-duration: var(--admin-sidebar-duration); transition-timing-function: var(--admin-sidebar-ease); will-change: margin-left; }
+  .admin-workspace { @apply min-w-0 max-w-full overflow-x-clip lg:ml-[268px]; transition-property: margin-left; transition-duration: var(--admin-sidebar-duration); transition-timing-function: var(--admin-sidebar-ease); will-change: margin-left; }
   .admin-workspace.is-sidebar-collapsed { @apply lg:ml-[84px]; }
   .admin-topbar { @apply sticky top-0 z-30 flex min-h-[72px] items-center gap-2 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:gap-3 sm:px-6; }
   .admin-menu-toggle, .admin-collapse-button { @apply grid size-11 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-red-800; }
@@ -521,7 +550,7 @@
   .admin-table-card { @apply mt-4 overflow-hidden; }
   .admin-table-wrap { @apply w-full overflow-x-auto; }
   .admin-table-wrap table { @apply w-full min-w-[760px] border-collapse text-left; }
-  .admin-table-wrap th { @apply border-b border-slate-200 bg-slate-50 px-5 py-3 text-[10px] font-bold uppercase tracking-[.08em] text-slate-500; }
+  .admin-table-wrap th { @apply relative border-b border-slate-200 bg-slate-50 px-5 py-3 text-[10px] font-bold uppercase tracking-[.08em] text-slate-500; }
   .admin-table-wrap td { @apply border-b border-slate-100 px-5 py-3.5 text-xs text-slate-600; }
   .admin-table-wrap tbody tr:last-child td { @apply border-b-0; }
   .admin-table-wrap tbody tr:hover { @apply bg-slate-50/80; }
