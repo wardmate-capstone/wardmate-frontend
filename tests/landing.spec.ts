@@ -27,10 +27,10 @@ test('menu mobile mở, đóng và không tràn ngang', async ({ page }) => {
 });
 
 test('không tràn ngang ở các cỡ màn hình chính', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   for (const width of [360, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
-    await page.evaluate(() => document.fonts.ready);
     await expect.poll(
       () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       { message: `viewport ${width}px` },
@@ -113,7 +113,7 @@ test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', asy
   await page.getByRole('button', { name: 'Chỉnh sửa' }).click();
   await page.getByLabel('Họ và tên').fill('Nguyễn Minh Anh Mẫu');
   await page.getByRole('button', { name: 'Lưu thông tin' }).click();
-  await expect(page.getByText('Nguyễn Minh Anh Mẫu')).toBeVisible();
+  await expect(page.getByText('Nguyễn Minh Anh Mẫu').first()).toBeVisible();
   await expect(page.getByText('Đã lưu thay đổi thông tin cá nhân.')).toBeVisible();
 });
 
