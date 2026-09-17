@@ -8,36 +8,19 @@
   --color-red-400: #f86457;
   --color-red-500: #e93d32;
   --color-red-600: #da251d;
-  --color-red-700: #B91C1C; /* Primary Red */
-  --color-red-800: #B91C1C; /* Primary Red */
-  --color-red-900: #8F1515; /* Dark Red */
-  --color-red-950: #570c0c; /* Deep Dark Red */
+  --color-red-700: #bd1f18;
+  --color-red-800: #991d18;
+  --color-red-900: #791b17;
+  --color-red-950: #410b09;
   --color-gold-50: #fffdeb;
   --color-gold-100: #fff8c6;
-  --color-gold-200: #F5D76E; /* Light Gold */
-  --color-gold-300: #F5D76E; /* Light Gold */
-  --color-gold-400: #D4A017; /* Gold */
-  --color-gold-500: #D4A017; /* Gold */
-  --color-gold-600: #b5860d;
-  --color-gold-700: #916806;
-  --color-gov-bg: #F8F7F4;
-  --color-gov-card: #FFFFFF;
-  --color-gov-text: #1F2937;
-  --color-gov-border: #E5E7EB;
-  --color-gov-success: #16803C;
-  --font-sans: "Poppins", "Be Vietnam Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-:root {
-  --primary-red: #B91C1C;
-  --dark-red: #8F1515;
-  --gold: #D4A017;
-  --light-gold: #F5D76E;
-  --bg-page: #F8F7F4;
-  --card: #FFFFFF;
-  --text-main: #1F2937;
-  --border-color: #E5E7EB;
-  --success-color: #16803C;
+  --color-gold-200: #ffef88;
+  --color-gold-300: #ffe047;
+  --color-gold-400: #ffcd00;
+  --color-gold-500: #e9b900;
+  --color-gold-600: #c89000;
+  --color-gold-700: #9e6800;
+  --font-sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
 }
 
 @layer base {
@@ -46,19 +29,11 @@
     overflow-x: clip;
     max-width: 100vw;
   }
-  body {
-    margin: 0;
-    overflow-x: clip;
-    max-width: 100vw;
-    background-color: var(--bg-page);
-    color: var(--text-main);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
+  body { @apply m-0 overflow-x-clip bg-white font-sans text-slate-900 antialiased; max-width: 100vw; }
   button:not(:disabled), a { cursor: pointer; }
-  :focus-visible { outline: 3px solid #D4A017; outline-offset: 3px; }
+  :focus-visible { outline: 3px solid #ffcd00; outline-offset: 3px; }
   #main:focus { outline: none; }
-  ::selection { background: #F5D76E; color: #8F1515; }
+  ::selection { background: #fde68a; color: #3d0c12; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
@@ -84,6 +59,13 @@
   .mobile-nav-link { @apply flex min-h-14 items-center justify-between border-b border-slate-100 text-base font-semibold text-slate-800 hover:text-red-800; }
   .footer-link { @apply inline-flex min-h-9 items-center hover:text-gold-300; }
 
+  .hero-main { @apply relative isolate scroll-mt-36 overflow-hidden border-b-4 border-gold-400 bg-red-900 px-5 py-8 text-white sm:px-8 sm:py-10 lg:py-12; }
+  .hero-main-glow { @apply pointer-events-none absolute left-1/2 top-[-180px] -z-[5] size-[520px] -translate-x-1/2 rounded-full bg-gold-300/10 blur-3xl; }
+  .hero-main-content { @apply relative z-10 mx-auto flex min-h-[500px] w-full max-w-[980px] flex-col items-center justify-center text-center; }
+  .hero-national-emblem { @apply h-20 w-auto object-contain drop-shadow-[0_8px_22px_rgba(48,4,7,.35)] sm:h-24; }
+  .hero-agency { @apply mt-3 text-xs font-bold uppercase tracking-[.18em] text-gold-300 sm:text-sm; }
+  .hero-main h1 { @apply mt-3 max-w-5xl text-4xl font-bold leading-[1.08] tracking-[-.035em] text-white sm:text-5xl lg:text-6xl; text-shadow: 0 3px 18px rgba(48,4,7,.22); }
+  .hero-description { @apply mt-3 max-w-3xl text-sm font-medium leading-7 text-red-50/85 sm:text-lg sm:leading-8; }
   .national-pattern { position: absolute; inset: 0; background-image: linear-gradient(90deg, rgba(121,27,23,.9) 0%, rgba(153,29,24,.72) 48%, rgba(121,27,23,.42) 100%), url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; }
   .hero-search-box { @apply max-w-3xl rounded-3xl bg-white p-4 text-slate-900 shadow-[0_22px_55px_rgba(44,7,12,.22)] sm:p-5; }
   .hero-search-input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
