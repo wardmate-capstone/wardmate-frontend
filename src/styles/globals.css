@@ -43,13 +43,11 @@
   .footer-brand-mark { @apply shrink-0 drop-shadow-md; }
   .brand-wordmark { @apply min-w-0; }
   .brand-wordmark > strong { @apply block truncate text-xl font-extrabold leading-none tracking-normal sm:text-[1.45rem]; }
-  .brand-wordmark > strong > span:first-child { @apply text-red-900; }
-  .brand-wordmark > strong > span:last-child { @apply text-gold-700; }
+  .brand-wordmark > strong > span { @apply text-red-900; }
   .brand-wordmark > small { @apply mt-1.5 block truncate text-[10px] font-bold uppercase tracking-[.14em] text-slate-500; }
   .brand-wordmark.is-compact > strong { @apply text-base sm:text-base; }
   .brand-wordmark.is-compact > small { @apply mt-1 text-[9px] tracking-[.1em]; }
-  .brand-wordmark.is-inverse > strong > span:first-child { @apply text-white; }
-  .brand-wordmark.is-inverse > strong > span:last-child { @apply text-gold-300; }
+  .brand-wordmark.is-inverse > strong > span { @apply text-white; }
   .brand-wordmark.is-inverse > small { @apply text-red-100/60; }
   .mobile-menu-button { @apply grid size-12 shrink-0 place-items-center rounded-xl border border-red-200 bg-white text-red-800 hover:bg-red-50; }
   .main-nav-link { @apply relative inline-flex min-h-12 items-center px-5 text-sm font-semibold text-white/90 hover:bg-red-900 hover:text-white; }
