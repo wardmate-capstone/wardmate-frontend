@@ -10,7 +10,7 @@ import {
   UserCircle as UserRound,
   X,
 } from '@phosphor-icons/react';
-import { BrandIcon } from '@/components/brand/BrandIcon';
+import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { buttonVariants } from '@/components/ui/Button';
 
@@ -45,7 +45,7 @@ export function MainLayout() {
       <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 shadow-[0_3px_18px_rgba(70,16,20,.06)] backdrop-blur-lg">
         <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-6 px-5 sm:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="WardMate - Trang chủ">
-            <span className="brand-mark"><BrandIcon /></span>
+            <BrandMark className="brand-mark" />
             <BrandWordmark subtitle="Hỗ trợ hồ sơ cấp xã, phường" />
           </Link>
 
@@ -93,7 +93,7 @@ export function MainLayout() {
       <footer className="bg-red-950 text-red-100">
         <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-full border border-gold-500/50 bg-red-900 text-gold-400"><BrandIcon size={22} /></span><BrandWordmark subtitle="Chuẩn bị đúng · Giảm đi lại" inverse /></div>
+            <div className="flex items-center gap-3"><BrandMark className="footer-brand-mark" size={46} /><BrandWordmark subtitle="Chuẩn bị đúng · Giảm đi lại" inverse /></div>
             <p className="mt-5 max-w-lg text-sm leading-7 text-red-100/65">Đồng hành cùng người dân trong quá trình tra cứu, chuẩn bị và tiền kiểm hồ sơ trước khi đến cơ quan tiếp nhận.</p>
           </div>
           <div><h2 className="font-bold text-white">Liên kết</h2><ul className="mt-4 space-y-2 text-sm text-red-100/65"><li><Link className="footer-link" to="/thu-tuc">Tra cứu thủ tục</Link></li><li><Link className="footer-link" to="/#quy-trinh">Hướng dẫn thực hiện</Link></li><li><Link className="footer-link" to="/hoi-dap">Câu hỏi thường gặp</Link></li></ul></div>

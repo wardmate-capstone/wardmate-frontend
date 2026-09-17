@@ -35,23 +35,12 @@ export function NotFoundPage() {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.08 }}
-          className="village-gate-scene"
-          aria-hidden="true"
+          className="not-found-photo"
         >
-          <div className="sun-disc" />
-          <div className="cloud cloud-one"><span /><span /><span /></div>
-          <div className="cloud cloud-two"><span /><span /><span /></div>
-          <div className="gate-roof roof-back" />
-          <div className="gate-roof roof-front" />
-          <div className="gate-sign">LỐI VỀ</div>
-          <div className="gate-body">
-            <span className="gate-column" />
-            <span className="gate-opening" />
-            <span className="gate-column" />
-          </div>
-          <div className="village-path" />
-          <div className="lotus-line lotus-left">✦</div>
-          <div className="lotus-line lotus-right">✦</div>
+          <img
+            src="/van-mieu-quoc-tu-giam-1.jpg"
+            alt="Khuê Văn Các tại Văn Miếu - Quốc Tử Giám"
+          />
         </m.div>
       </div>
     </section>

@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from '@phosphor-icons/react';
-import { BrandIcon } from '@/components/brand/BrandIcon';
+import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { toast } from 'sonner';
 
@@ -73,7 +73,7 @@ export function AdminPage() {
         aria-label="Điều hướng quản trị"
       >
         <div className="admin-brand">
-          <span><BrandIcon /></span>
+          <BrandMark className="admin-brand-mark" size={42} />
           <div><BrandWordmark subtitle="Quản trị hệ thống" compact /></div>
           <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu"><X size={21} aria-hidden="true" /></button>
         </div>

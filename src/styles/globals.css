@@ -39,9 +39,10 @@
 @layer components {
   .skip-link { @apply fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-white px-4 py-3 font-bold text-red-900 shadow-xl transition-transform focus:translate-y-0; }
   .utility-link { @apply inline-flex min-h-10 items-center gap-2 text-red-50/75 hover:text-white; }
-  .brand-mark { @apply grid size-12 shrink-0 place-items-center rounded-full border-2 border-gold-400 bg-red-800 text-gold-300 shadow-sm; }
+  .brand-mark { @apply size-12 shrink-0 drop-shadow-sm; }
+  .footer-brand-mark { @apply shrink-0 drop-shadow-md; }
   .brand-wordmark { @apply min-w-0; }
-  .brand-wordmark > strong { @apply block truncate text-xl font-extrabold leading-none tracking-[-.035em] sm:text-[1.45rem]; }
+  .brand-wordmark > strong { @apply block truncate text-xl font-extrabold leading-none tracking-normal sm:text-[1.45rem]; }
   .brand-wordmark > strong > span:first-child { @apply text-red-900; }
   .brand-wordmark > strong > span:last-child { @apply text-gold-700; }
   .brand-wordmark > small { @apply mt-1.5 block truncate text-[10px] font-bold uppercase tracking-[.14em] text-slate-500; }
@@ -432,9 +433,9 @@
   .admin-sidebar.is-open { @apply translate-x-0; }
   .admin-sidebar.is-compact { @apply lg:w-[84px]; }
   .admin-brand { @apply flex min-h-[72px] items-center gap-3 border-b border-slate-100 px-5; transition: padding var(--admin-sidebar-duration) var(--admin-sidebar-ease), gap 460ms var(--admin-sidebar-ease); }
-  .admin-brand > span { @apply grid size-10 shrink-0 place-items-center rounded-xl bg-red-800 text-gold-300 shadow-sm; }
+  .admin-brand-mark { @apply size-10 shrink-0 drop-shadow-sm; }
   .admin-brand > div { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 180px; opacity: 1; filter: blur(0); transform: translateX(0); transition: max-width 500ms var(--admin-sidebar-ease), opacity 440ms ease 20ms, transform 480ms var(--admin-sidebar-ease) 20ms, filter 440ms ease 20ms; }
-  .admin-brand strong { @apply block text-base font-extrabold tracking-[-.01em] text-slate-950; }
+  .admin-brand strong { @apply block text-base font-extrabold tracking-normal text-slate-950; }
   .admin-brand small { @apply mt-0.5 block text-[11px] font-medium text-slate-500; }
   .admin-brand > button { @apply grid size-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden; }
   .admin-nav { @apply flex-1 overflow-y-auto px-3 py-5; }
@@ -536,32 +537,14 @@
   .not-found-pattern { @apply pointer-events-none absolute inset-0 -z-10 opacity-[.055]; background-image: url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; mask-image: linear-gradient(90deg, #000, transparent 72%); }
   .not-found-shell { @apply mx-auto grid max-w-[1120px] items-center gap-12 lg:grid-cols-[.88fr_1.12fr]; }
   .not-found-copy { @apply relative z-10; }
-  .not-found-code { @apply mt-5 text-[5.5rem] font-bold leading-none tracking-[-.06em] text-red-800 sm:text-[7.5rem]; text-shadow: 3px 3px 0 #ffcd00; }
+  .not-found-code { @apply mt-5 text-[5.5rem] font-bold leading-none tracking-normal text-red-800 sm:text-[7.5rem]; text-shadow: 3px 3px 0 #ffcd00; }
   .not-found-copy h1 { @apply mt-5 max-w-xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl; }
   .not-found-copy > p:last-of-type { @apply mt-5 max-w-xl text-base leading-8 text-slate-600; }
   .not-found-actions { @apply mt-8 flex flex-col gap-3 sm:flex-row; }
   .not-found-primary { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 text-sm font-bold text-white shadow-[0_8px_20px_rgba(121,27,23,.18)] transition-colors hover:bg-red-900; }
   .not-found-secondary { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-6 text-sm font-bold text-red-800 transition-colors hover:bg-red-50; }
-  .village-gate-scene { @apply relative mx-auto h-[360px] w-full max-w-[540px] overflow-hidden rounded-[2rem] border border-red-100 bg-gold-50 shadow-[0_24px_60px_rgba(85,34,18,.12)] sm:h-[430px]; }
-  .village-gate-scene::before { content: ""; @apply absolute inset-x-0 bottom-0 h-[34%] bg-red-50; clip-path: polygon(0 32%, 18% 12%, 35% 30%, 56% 8%, 74% 27%, 100% 3%, 100% 100%, 0 100%); }
-  .village-gate-scene::after { content: ""; @apply absolute inset-x-0 bottom-0 h-16 bg-red-900; clip-path: polygon(0 48%, 12% 28%, 25% 48%, 40% 17%, 55% 45%, 69% 20%, 83% 46%, 100% 24%, 100% 100%, 0 100%); }
-  .sun-disc { @apply absolute right-[12%] top-[12%] size-24 rounded-full bg-gold-400 opacity-90 sm:size-28; box-shadow: 0 0 0 14px rgba(255,205,0,.12), 0 0 0 28px rgba(255,205,0,.07); }
-  .cloud { @apply absolute flex items-center text-red-200; }
-  .cloud span { @apply block h-1 w-14 rounded-full bg-current; }
-  .cloud span:first-child, .cloud span:last-child { @apply w-6; }
-  .cloud-one { @apply left-[8%] top-[19%]; }
-  .cloud-two { @apply right-[8%] top-[38%] scale-75; }
-  .gate-roof { @apply absolute left-1/2 z-10 -translate-x-1/2 bg-red-800; clip-path: polygon(7% 56%, 18% 46%, 22% 28%, 42% 19%, 47% 4%, 50% 0, 53% 4%, 58% 19%, 78% 28%, 82% 46%, 93% 56%, 100% 79%, 79% 72%, 72% 100%, 28% 100%, 21% 72%, 0 79%); }
-  .roof-back { @apply top-[28%] h-[88px] w-[72%] bg-red-950 opacity-20; transform: translateX(-50%) scale(1.08); }
-  .roof-front { @apply top-[25%] h-[88px] w-[72%]; box-shadow: inset 0 -10px 0 #ffcd00; }
-  .gate-sign { @apply absolute left-1/2 top-[43%] z-20 -translate-x-1/2 border border-gold-300 bg-red-950 px-4 py-2 text-xs font-bold tracking-[.2em] text-gold-300 shadow-md; }
-  .gate-body { @apply absolute bottom-[15%] left-1/2 z-10 flex h-[42%] w-[55%] -translate-x-1/2 items-stretch justify-between bg-[#f2c785] px-[9%] pt-5 shadow-[inset_0_0_0_5px_rgba(121,27,23,.16)]; }
-  .gate-column { @apply h-full w-[15%] bg-red-800; box-shadow: inset 0 0 0 4px rgba(255,205,0,.28); }
-  .gate-opening { @apply mt-auto h-[78%] w-[42%] rounded-t-full bg-red-950; }
-  .village-path { @apply absolute bottom-0 left-1/2 z-20 h-[22%] w-[32%] -translate-x-1/2 bg-gold-100; clip-path: polygon(39% 0, 61% 0, 100% 100%, 0 100%); }
-  .lotus-line { @apply absolute bottom-16 z-30 grid size-10 place-items-center rounded-full border border-gold-400 bg-red-800 text-lg text-gold-300; }
-  .lotus-left { @apply left-[9%]; }
-  .lotus-right { @apply right-[9%]; }
+  .not-found-photo { @apply relative mx-auto aspect-[4/3] w-full max-w-[540px] overflow-hidden rounded-[2rem] border border-red-100 bg-gold-50 shadow-[0_24px_60px_rgba(85,34,18,.14)]; }
+  .not-found-photo img { @apply size-full object-cover; object-position: 50% 54%; }
 }
 
 @media (max-width: 639px) {
@@ -582,5 +565,5 @@
 
 @media (max-width: 390px) {
   .hero-search-box [type="submit"] { width: 100%; }
-  .village-gate-scene { height: 310px; }
+  .not-found-photo { @apply rounded-2xl; }
 }
