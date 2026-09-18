@@ -21,9 +21,14 @@ import {
   Sparkle,
   Trash,
   ArrowsLeftRight,
+  GitDiff,
+  CalendarBlank,
+  UserCircle,
 } from '@phosphor-icons/react';
-import type { Application, ApplicationStatus } from '@/types/application';
+import type { Application, ApplicationStatus, RevisionHistoryItem } from '@/types/application';
 import { ApplicationStatusBadge } from '@/components/common/ApplicationStatusBadge';
+import { VersionSnapshotModal } from '@/components/common/VersionSnapshotModal';
+import { VersionCompareModal } from '@/components/common/VersionCompareModal';
 import { toast } from 'sonner';
 
 interface OfficerReviewWorkspaceProps {
@@ -62,6 +67,12 @@ export const OfficerReviewWorkspace: React.FC<OfficerReviewWorkspaceProps> = ({
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [generalRevisionNote, setGeneralRevisionNote] = useState('');
+
+  // Version history modals
+  const [snapshotRevision, setSnapshotRevision] = useState<RevisionHistoryItem | null>(null);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [compareVersionA, setCompareVersionA] = useState<number | undefined>(undefined);
+  const [compareVersionB, setCompareVersionB] = useState<number | undefined>(undefined);
 
   // Field Commenting State
   const [editingFieldComment, setEditingFieldComment] = useState<string | null>(null);
@@ -240,6 +251,7 @@ export const OfficerReviewWorkspace: React.FC<OfficerReviewWorkspaceProps> = ({
   ];
 
   return (
+    <>
     <div className="space-y-6">
       {/* Top Workspace Header Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -950,78 +962,251 @@ export const OfficerReviewWorkspace: React.FC<OfficerReviewWorkspaceProps> = ({
         </div>
       )}
 
-      {/* TAB CONTENT 7: Revision History & Diff */}
+      {/* TAB CONTENT 7: Revision History & Diff — Upgraded Timeline */}
       {activeTab === 'history' && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Lịch sử sửa đổi & So sánh phiên bản (What changed?)</h3>
-              <p className="text-xs text-slate-500">
-                Theo dõi tiến trình hoàn thiện hồ sơ qua các lần cán bộ yêu cầu bổ sung và công dân gửi lại
-              </p>
-            </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800">
-              Phiên bản hiện tại: v{app.currentVersion}
-            </span>
-          </div>
-
-          <div className="space-y-6">
-            {app.revisionHistory.map((rev) => (
-              <div key={rev.version} className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid size-8 place-items-center rounded-lg bg-red-800 text-white font-bold text-xs">
-                      v{rev.version}
-                    </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">Phiên bản {rev.version}</h4>
-                      <p className="text-[11px] text-slate-500">
-                        Nộp lúc: {rev.submittedAt} {rev.reviewedBy && `• Thụ lý: ${rev.reviewedBy}`}
-                      </p>
-                    </div>
-                  </div>
-                  {rev.reviewedAt && (
-                    <span className="text-xs text-slate-500 font-medium">Đã tiền kiểm lúc: {rev.reviewedAt}</span>
-                  )}
-                </div>
-
-                <p className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
-                  <strong>Tóm tắt:</strong> {rev.summary}
+        <div className="space-y-5">
+          {/* Header Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Lịch sử sửa đổi & So sánh phiên bản</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Theo dõi tiến trình hoàn thiện hồ sơ qua các lần cán bộ yêu cầu bổ sung và công dân gửi lại
                 </p>
-
-                {/* Diffs Table */}
-                {rev.diffs.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Nội dung thay đổi so với phiên bản trước:
-                    </p>
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold">
-                          <tr>
-                            <th className="p-3">Hạng mục thay đổi</th>
-                            <th className="p-3 text-rose-800">Phiên bản cũ (Trước)</th>
-                            <th className="p-3 text-emerald-800">Phiên bản mới (Sau khi sửa)</th>
-                            <th className="p-3">Lý do điều chỉnh</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {rev.diffs.map((diff, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50">
-                              <td className="p-3 font-bold text-slate-900">{diff.fieldName}</td>
-                              <td className="p-3 text-rose-700 bg-rose-50/40">{diff.oldValue}</td>
-                              <td className="p-3 text-emerald-700 bg-emerald-50/40 font-bold">{diff.newValue}</td>
-                              <td className="p-3 text-slate-600">{diff.reason}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                  Phiên bản hiện tại: v{app.currentVersion}
+                </span>
+                {app.revisionHistory.length >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sorted = [...app.revisionHistory].sort((a, b) => a.version - b.version);
+                      setCompareVersionA(sorted[0]?.version);
+                      setCompareVersionB(sorted[sorted.length - 1]?.version);
+                      setIsCompareModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-indigo-900 bg-indigo-100 hover:bg-indigo-200 rounded-xl border border-indigo-300 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <ArrowsLeftRight size={15} weight="bold" />
+                    So sánh phiên bản
+                  </button>
                 )}
               </div>
-            ))}
+            </div>
+
+            {/* Stats row */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                <p className="text-xl font-extrabold text-slate-900">{app.revisionHistory.length}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Tổng phiên bản</p>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-center">
+                <p className="text-xl font-extrabold text-amber-800">{app.revisionHistory.filter(r => r.result === 'need_revision').length}</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">Lần yêu cầu bổ sung</p>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
+                <p className="text-xl font-extrabold text-emerald-800">
+                  {app.revisionHistory.reduce((acc, r) => acc + r.diffs.length, 0)}
+                </p>
+                <p className="text-[11px] text-emerald-700 mt-0.5">Tổng thay đổi</p>
+              </div>
+            </div>
           </div>
+
+          {/* Empty state */}
+          {app.revisionHistory.length === 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 flex flex-col items-center text-slate-400">
+              <ArrowsCounterClockwise size={36} className="mb-3 opacity-30" />
+              <p className="text-sm font-medium">Chưa có lịch sử phiên bản</p>
+              <p className="text-xs mt-1">Hồ sơ này chưa qua lần chỉnh sửa nào</p>
+            </div>
+          )}
+
+          {/* Timeline */}
+          {app.revisionHistory.length > 0 && (
+            <div className="relative">
+              {/* Connecting line */}
+              {app.revisionHistory.length > 1 && (
+                <div className="absolute left-[28px] top-10 bottom-10 w-0.5 bg-gradient-to-b from-slate-300 via-slate-200 to-transparent z-0" />
+              )}
+
+              <div className="space-y-4 relative z-10">
+                {[...app.revisionHistory].sort((a, b) => b.version - a.version).map((rev) => {
+                  const isCurrent = rev.version === app.currentVersion;
+                  const resultColor =
+                    rev.result === 'approved' ? 'bg-emerald-700' :
+                    rev.result === 'need_revision' ? 'bg-amber-500' :
+                    'bg-indigo-600';
+                  const resultLabel =
+                    rev.result === 'approved' ? 'Đã duyệt' :
+                    rev.result === 'need_revision' ? 'Yêu cầu bổ sung' :
+                    'Đang chờ xét';
+                  const resultBadgeStyle =
+                    rev.result === 'approved'
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                      : rev.result === 'need_revision'
+                      ? 'bg-amber-100 text-amber-800 border-amber-200'
+                      : 'bg-indigo-100 text-indigo-800 border-indigo-200';
+
+                  return (
+                    <div key={rev.version} className="flex gap-4">
+                      {/* Timeline node */}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className={`grid size-14 place-items-center rounded-2xl text-white font-extrabold text-sm shadow-md shrink-0 ${resultColor}`}>
+                          v{rev.version}
+                        </div>
+                      </div>
+
+                      {/* Card */}
+                      <div className={`flex-1 rounded-2xl border shadow-xs overflow-hidden ${
+                        isCurrent ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-slate-200'
+                      }`}>
+                        {/* Card header */}
+                        <div className={`px-5 py-3.5 flex items-center justify-between flex-wrap gap-2 ${
+                          isCurrent ? 'bg-indigo-50/60' : 'bg-slate-50'
+                        }`}>
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <h4 className="text-sm font-bold text-slate-900">
+                              Phiên bản {rev.version}
+                              {isCurrent && (
+                                <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white">
+                                  HIỆN TẠI
+                                </span>
+                              )}
+                            </h4>
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${resultBadgeStyle}`}>
+                              {resultLabel}
+                            </span>
+                            {rev.diffs.length > 0 && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                                <GitDiff size={12} /> {rev.diffs.length} thay đổi
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {rev.snapshot && (
+                              <button
+                                type="button"
+                                onClick={() => setSnapshotRevision(rev)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                              >
+                                <Eye size={13} /> Xem phiên bản này
+                              </button>
+                            )}
+                            {app.revisionHistory.length >= 2 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const sorted = [...app.revisionHistory].sort((a, b) => a.version - b.version);
+                                  const otherVersions = sorted.filter(r => r.version !== rev.version);
+                                  setCompareVersionA(otherVersions[0]?.version ?? sorted[0]?.version);
+                                  setCompareVersionB(rev.version);
+                                  setIsCompareModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl transition-colors cursor-pointer"
+                              >
+                                <ArrowsLeftRight size={13} /> So sánh
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card body */}
+                        <div className="px-5 py-4 bg-white space-y-4">
+                          {/* Meta info row */}
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <CalendarBlank size={13} /> Nộp: <strong className="text-slate-800">{rev.submittedAt}</strong>
+                            </span>
+                            {rev.reviewedBy && (
+                              <span className="flex items-center gap-1">
+                                <UserCircle size={13} /> Thụ lý: <strong className="text-slate-800">{rev.reviewedBy}</strong>
+                              </span>
+                            )}
+                            {rev.reviewedAt && (
+                              <span className="flex items-center gap-1">
+                                <Clock size={13} /> Tiền kiểm lúc: <strong className="text-slate-800">{rev.reviewedAt}</strong>
+                              </span>
+                            )}
+                            {rev.commentsCount > 0 && (
+                              <span className="flex items-center gap-1 text-amber-700 font-medium">
+                                <ChatText size={13} /> {rev.commentsCount} nhận xét
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Summary */}
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                            <strong className="text-slate-900">Tóm tắt: </strong>{rev.summary}
+                          </div>
+
+                          {/* Officer note */}
+                          {rev.officerNote && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                              <UserCircle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                              <div className="text-xs text-amber-900">
+                                <strong className="block mb-0.5">Kết luận Cán bộ:</strong>
+                                {rev.officerNote}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Diffs Table — enhanced */}
+                          {rev.diffs.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                Nội dung thay đổi so với phiên bản trước:
+                              </p>
+                              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                      <th className="px-4 py-2.5">Hạng mục</th>
+                                      <th className="px-4 py-2.5">
+                                        <span className="flex items-center gap-1 text-rose-700">
+                                          <span className="size-2 rounded-sm bg-rose-400 inline-block" /> Trước
+                                        </span>
+                                      </th>
+                                      <th className="px-4 py-2.5">
+                                        <span className="flex items-center gap-1 text-emerald-700">
+                                          <span className="size-2 rounded-sm bg-emerald-400 inline-block" /> Sau
+                                        </span>
+                                      </th>
+                                      <th className="px-4 py-2.5">Lý do</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 bg-white">
+                                    {rev.diffs.map((diff, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{diff.fieldName}</td>
+                                        <td className="px-4 py-3">
+                                          <span className="inline-block px-2 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-medium line-through opacity-80">
+                                            {diff.oldValue}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <span className="inline-block px-2 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                                            {diff.newValue}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600 text-[11px] leading-relaxed">{diff.reason}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1156,5 +1341,24 @@ export const OfficerReviewWorkspace: React.FC<OfficerReviewWorkspaceProps> = ({
         </div>
       )}
     </div>
+
+      {/* VERSION SNAPSHOT MODAL */}
+      {snapshotRevision && (
+        <VersionSnapshotModal
+          revision={snapshotRevision}
+          onClose={() => setSnapshotRevision(null)}
+        />
+      )}
+
+      {/* VERSION COMPARE MODAL */}
+      {isCompareModalOpen && (
+        <VersionCompareModal
+          revisionHistory={app.revisionHistory}
+          defaultVersionA={compareVersionA}
+          defaultVersionB={compareVersionB}
+          onClose={() => setIsCompareModalOpen(false)}
+        />
+      )}
+    </>
   );
 };

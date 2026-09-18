@@ -67,6 +67,20 @@ export interface RevisionDiff {
   reason: string;
 }
 
+export interface VersionSnapshotDocument {
+  name: string;
+  fileType: 'image' | 'pdf';
+  status: 'valid' | 'invalid' | 'pending';
+  officerComment?: string;
+}
+
+export interface VersionSnapshot {
+  eformFields: EformField[];
+  documents: VersionSnapshotDocument[];
+  checklist: Array<{ id: string; name: string; status: 'ok' | 'warning' | 'missing'; officerNote?: string }>;
+  officerComments: string[];
+}
+
 export interface RevisionHistoryItem {
   version: number;
   submittedAt: string;
@@ -75,6 +89,9 @@ export interface RevisionHistoryItem {
   summary: string;
   diffs: RevisionDiff[];
   commentsCount: number;
+  snapshot?: VersionSnapshot;
+  officerNote?: string;
+  result?: 'approved' | 'need_revision' | 'pending';
 }
 
 export interface Application {
