@@ -10,6 +10,7 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { ProceduresPage } from '@/pages/ProceduresPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { OfficerPage } from '@/pages/officer/OfficerPage';
+import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
@@ -21,6 +22,8 @@ export function App() {
           <Routes>
             <Route path="officer/*" element={<OfficerPage />} />
             <Route path="can-bo/*" element={<OfficerPage />} />
+            <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />
+            <Route path="quan-ly-thu-tuc/*" element={<ProcedureManagerPage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
