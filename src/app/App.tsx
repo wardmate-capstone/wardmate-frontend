@@ -9,6 +9,7 @@ import { FaqPage } from '@/pages/FaqPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ProceduresPage } from '@/pages/ProceduresPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { OfficerPage } from '@/pages/officer/OfficerPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
@@ -18,6 +19,8 @@ export function App() {
       <LazyMotion features={domAnimation} strict>
         <BrowserRouter>
           <Routes>
+            <Route path="officer/*" element={<OfficerPage />} />
+            <Route path="can-bo/*" element={<OfficerPage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
