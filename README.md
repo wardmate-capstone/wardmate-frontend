@@ -1,483 +1,766 @@
-Cán bộ đăng nhập
-       ↓
-   Dashboard
-       ↓
-Xem hồ sơ chờ kiểm tra
-       ↓
- Quick Preview
-       ↓
-Kiểm tra thông tin
-       ↓
-Kiểm tra Checklist
-       ↓
-Kiểm tra E-form
-       ↓
-   ┌───────────────┐
-   │ Hồ sơ hợp lệ?               │
-   └───────┬───────┘
-       Có  │  Không
-           │
-    ↓      │       ↓
-  Approve  │   Comment
-    ↓      │       ↓
-Thông báo  │   Người dân
-người dân  │   chỉnh sửa
-    ↓      │       ↓
-Cho phép   │   Gửi lại
-nộp hồ sơ  │       ↓
-           └───────┘
-
-
-
-
-Sau đó phần quản lý flow của manager
-
-Manager / Procedure Manager
-            ↓
-       Dashboard
-            ↓
- ┌──────────┼──────────┐
- ↓          ↓          ↓
-Thống kê   Thủ tục    Biểu mẫu
- ↓          ↓          ↓
-Tra cứu    CRUD       Upload
- ↓          ↓          ↓
-Lượt dùng  Điều kiện  Mapping E-form
-           Quy trình
-           Lệ phí
-
-Các flow con thuộc Main Flow 2
-2.1. Officer Login & Authorization
-Login
-RBAC
-Xác định role
-Front-desk Officer / Manager
-2.2. Review Application Flow
-Xem danh sách hồ sơ
-Filter theo status
-Quick Preview
-Review
-Comment
-Approve / Request Revision
-2.3. Comment & Revision Flow
-Đây là flow nên làm kỹ:
-Officer Comment
-      ↓
-Citizen nhận notification
-      ↓
-Citizen mở hồ sơ
-      ↓
-Xem comment
-      ↓
-Edit form
-      ↓
-Submit revision
-      ↓
-Officer review lại
-2.4. Notification Flow
-Hồ sơ cần bổ sung
-Hồ sơ đã được duyệt
-Cho phép nộp hồ sơ
-
-2.5. Procedure Management Flow
-Create procedure
-Edit
-Delete
-Publish/Unpublish
-Update legal information
-2.6. Form Management Flow
-Upload PDF/Word
-Upload mẫu minh họa
-Cấu hình field
-Mapping field → dữ liệu người dân
-Version form
-Ví dụ:
-"Họ và tên" → fullName
-"Ngày sinh" → dateOfBirth
-"CCCD" → citizenId
-"Địa chỉ" → address
-2.7. Dashboard & Analytics Flow
-Số lượt tra cứu
-Thủ tục được quan tâm
-Lượt tải biểu mẫu
-FAQ/lỗi thường gặp
-Số hồ sơ
-Tỷ lệ hồ sơ đạt
-Tỷ lệ cần bổ sung
-Thời gian xử lý trung bình
-Mức độ hài lòng
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-MAIN FLOW 2 — OFFICER
-Cán bộ Một cửa kiểm tra, phê duyệt và tiếp nhận hồ sơ
-🎯 Mục tiêu
-Main Flow 2 hỗ trợ cán bộ Một cửa quản lý toàn bộ quá trình từ khi người dân gửi hồ sơ điện tử để tiền kiểm cho đến khi hồ sơ được duyệt, cấp mã QR và được tiếp nhận chính thức tại UBND.
-Cán bộ có thể:
-Tiếp nhận hồ sơ tiền kiểm.
-Xem và phân loại hồ sơ.
-Kiểm tra thông tin người dân.
-Kiểm tra Checklist.
-Kiểm tra giấy tờ.
-Kiểm tra E-form.
-Kiểm tra PDF.
-Comment trực tiếp.
-Yêu cầu người dân chỉnh sửa/bổ sung.
-Duyệt hồ sơ.
-Hệ thống tự động tạo QR sau khi duyệt.
-Theo dõi lịch sử hồ sơ.
-Quét QR khi người dân đến UBND.
-Đối chiếu hồ sơ điện tử và hồ sơ giấy.
-Xác nhận tiếp nhận hồ sơ chính thức.
-
-PHẦN A — CÁN BỘ TIẾP NHẬN HỒ SƠ TIỀN KIỂM
-1. Cán bộ đăng nhập
-Cán bộ truy cập hệ thống:
-Login
- ↓
-Authentication
- ↓
-RBAC
- ↓
-Verify Officer Role
- ↓
-Officer Dashboard
-Hệ thống kiểm tra quyền:
-FRONT_DESK_OFFICER
-Nếu đúng quyền → truy cập Dashboard.
-
-2. Officer Dashboard
-Dashboard là màn hình làm việc chính của cán bộ.
-Thông tin tổng quan
-┌───────────────────────────────────────────┐
-│           OFFICER DASHBOARD               │
-├───────────────────────────────────────────┤
-│ Hồ sơ chờ kiểm tra             12         │
-│ Hồ sơ đang xử lý                5         │
-│ Hồ sơ cần bổ sung               3         │
-│ Hồ sơ đã duyệt                  8         │
-│ Hồ sơ chờ tiếp nhận             6         │
-│ Hồ sơ quá hạn                   1         │
-└───────────────────────────────────────────┘
-Các khu vực chính
+Sidebar Front-desk Officer
 Dashboard
-├── Hồ sơ chờ kiểm tra
-├── Hồ sơ cần bổ sung
-├── Hồ sơ đã duyệt
-├── Hồ sơ chờ tiếp nhận
-├── Hồ sơ đang xử lý
-└── Hồ sơ hoàn thành
 
-3. Danh sách hồ sơ tiền kiểm
-Cán bộ chọn:
-Hồ sơ chờ kiểm tra
-Hệ thống hiển thị:
-Mã hồ sơ
-Người dân
+Quản lý hồ sơ
+├── Tất cả hồ sơ
+├── Chờ tiền kiểm
+├── Đang kiểm tra
+├── Cần bổ sung
+├── Đã gửi lại
+├── Đã duyệt tiền kiểm
+└── Chờ tiếp nhận chính thức
+
+Tiếp nhận hồ sơ
+├── Chờ tiếp nhận
+└── Đã tiếp nhận
+
+Lịch sử xử lý
+
+Thông báo
+
+Hồ sơ cá nhân
+Đăng xuất
+
+Điểm quan trọng là không có "Quét QR" nữa.
+
+1. Dashboard
+
+Sidebar:
+
+Dashboard
+
+Màn hình này hiển thị tổng quan:
+
+12  Chờ tiền kiểm
+5   Đang kiểm tra
+3   Cần bổ sung
+4   Đã gửi lại
+8   Đã duyệt tiền kiểm
+6   Chờ tiếp nhận chính thức
+20  Đã tiếp nhận hôm nay
+
+Ngoài ra:
+
+Hồ sơ mới nhất.
+Hồ sơ vừa được người dân gửi lại.
+Hồ sơ đang xử lý.
+Thời gian xử lý trung bình.
+Số hồ sơ đã xử lý hôm nay.
+2. Quản lý hồ sơ
+
+Đây là module chính của Officer.
+
+Quản lý hồ sơ
+├── Tất cả hồ sơ
+├── Chờ tiền kiểm
+├── Đang kiểm tra
+├── Cần bổ sung
+├── Đã gửi lại
+├── Đã duyệt tiền kiểm
+└── Chờ tiếp nhận chính thức
+Tất cả hồ sơ
+
+Hiển thị:
+
+Mã hồ sơ	Người dân	Thủ tục	Ngày gửi	Cán bộ	Trạng thái	Action
+HS001	Nguyễn Văn A	Đăng ký kết hôn	21/09	—	Chờ tiền kiểm	Xem
+HS002	Trần Văn B	Chứng thực	21/09	Nguyễn C	Đang kiểm tra	Tiếp tục
+
+Filter:
+
+Search mã hồ sơ
+Search người dân
 Thủ tục
-Ngày gửi
 Trạng thái
-HS001
+Ngày gửi
+Cán bộ xử lý
+3. Chờ tiền kiểm
+
+Đây chính là chức năng:
+
+Tiếp nhận hồ sơ tiền kiểm.
+
+Sidebar:
+
+Quản lý hồ sơ
+    └── Chờ tiền kiểm
+
+Officer mở danh sách:
+
+HS-2026-00125
 Nguyễn Văn A
 Đăng ký kết hôn
-01/09
-Chờ kiểm tra
-HS002
-Trần Văn B
-Chứng thực
-01/09
-Chờ kiểm tra
+21/09/2026 08:30
 
-Cán bộ có thể:
-Search mã hồ sơ.
-Search tên người dân.
-Filter theo thủ tục.
-Filter theo ngày.
-Filter theo trạng thái.
-Sort theo thời gian gửi.
+[Quick Preview]
+[Nhận xử lý]
 
-4. Nhận hồ sơ để xử lý
-Cán bộ chọn một hồ sơ:
-HS-2026-00125
-Hệ thống chuyển:
+Khi chọn:
+
+[Nhận xử lý]
+
+trạng thái:
+
 SUBMITTED_FOR_REVIEW
         ↓
 UNDER_REVIEW
-Đồng thời lưu:
+
+và lưu:
+
 reviewStartedAt
 reviewedBy
-Ví dụ:
-Cán bộ: Nguyễn Văn B
-Bắt đầu kiểm tra:
-01/09/2026 09:15
-Điều này rất hữu ích để tính thời gian xử lý trung bình.
+4. Xem và phân loại hồ sơ
 
-PHẦN B — KIỂM TRA HỒ SƠ
-5. Quick Preview
-Cán bộ không cần mở từng màn hình riêng biệt.
-Hệ thống cung cấp:
-Application Review Workspace
-Gồm:
-┌──────────────────────────────────────────────┐
-│ Hồ sơ HS-2026-00125                          │
-├──────────────┬──────────────┬────────────────┤
-│ Người dân    │ Checklist    │ Review         │
-├──────────────┴──────────────┴────────────────┤
-│                                              │
-│              PDF Preview                     │
-│                                              │
-└──────────────────────────────────────────────┘
+Không cần sidebar riêng.
 
-6. Kiểm tra thông tin người dân
-Cán bộ kiểm tra:
-Họ tên.
-Ngày sinh.
-Số định danh/CCCD.
-Địa chỉ.
-Thông tin liên quan đến thủ tục.
-Ví dụ:
-Họ tên: Nguyễn Văn A       ✓
-Ngày sinh: 01/01/2000      ✓
-CCCD: ************         ✓
-Địa chỉ: ...               ⚠
-Nếu phát hiện sai:
-Comment vào trường tương ứng.
+Nó nằm trong:
 
-7. Kiểm tra điều kiện thủ tục
-Hệ thống hiển thị điều kiện của thủ tục.
-Cán bộ đối chiếu hồ sơ với điều kiện.
+Quản lý hồ sơ
+    └── Tất cả hồ sơ
+
+Officer sử dụng:
+
+Search
+Filter
+Sort
+
+Ví dụ filter:
+
+Trạng thái: Cần bổ sung
+Thủ tục: Đăng ký kết hôn
+Ngày: 01/09 - 21/09
+
+Do đó:
+
+Xem và phân loại hồ sơ = chức năng trong Application List, không phải menu riêng.
+
+5. Đang kiểm tra
+
+Sidebar:
+
+Quản lý hồ sơ
+    └── Đang kiểm tra
+
+Danh sách những hồ sơ Officer đã nhận nhưng chưa đưa ra quyết định.
+
 Ví dụ:
-Điều kiện:
-✓ Người thực hiện đủ điều kiện
+
+HS-2026-00125
+
+Nguyễn Văn A
+Đăng ký kết hôn
+
+Bắt đầu:
+09:15 21/09/2026
+
+[Tiếp tục kiểm tra]
+
+Khi click → mở Application Review Workspace.
+
+6. Application Review Workspace
+
+Đây mới là nơi chứa phần lớn các chức năng bạn hỏi.
+
+┌─────────────────────────────────────────────────────────┐
+│ HS-2026-00125                    [ĐANG KIỂM TRA]        │
+│ Nguyễn Văn A · Đăng ký kết hôn                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ [Thông tin] [Điều kiện] [Checklist] [Giấy tờ]          │
+│ [E-form] [PDF] [Comment] [Phiên bản] [Timeline]         │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│                  Nội dung Review                        │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│ [Yêu cầu bổ sung]                 [Duyệt tiền kiểm]     │
+└─────────────────────────────────────────────────────────┘
+
+Và các chức năng của bạn nằm ở đây.
+
+7. Kiểm tra thông tin người dân
+
+Tab:
+
+[Thông tin]
+
+Giao diện:
+
+THÔNG TIN NGƯỜI DÂN
+
+Họ tên
+Nguyễn Văn A                     ✓
+
+Ngày sinh
+01/01/2000                       ✓
+
+CCCD
+********1234                     ✓
+
+Địa chỉ
+Bình Dương                       ⚠
+
+Số điện thoại
+09xxxxxxxx
+
+Officer có thể:
+
+[Hợp lệ]
+[Cần kiểm tra]
+[Comment]
+8. Kiểm tra điều kiện thủ tục
+
+Nên thêm tab:
+
+[Điều kiện]
+
+Ví dụ:
+
+ĐIỀU KIỆN THỰC HIỆN
+
+✓ Đúng đối tượng thực hiện
+
 ✓ Đúng cơ quan có thẩm quyền
-✓ Thông tin phù hợp
-Nếu không đáp ứng:
-❌ Không đáp ứng điều kiện thực hiện thủ tục
-Cán bộ ghi rõ lý do.
 
-8. Kiểm tra Smart Checklist
-Hệ thống tự động hiển thị Checklist.
+✓ Thông tin cư trú phù hợp
+
+⚠ Điều kiện khác cần kiểm tra
+
+Nếu không đạt:
+
+[Thêm nhận xét]
+9. Kiểm tra Checklist
+
+Tab:
+
+[Checklist]
+
 Ví dụ:
+
 THÀNH PHẦN HỒ SƠ
 
-☑ CCCD
-☑ Giấy xác nhận cư trú
-☑ Tờ khai
-☑ Giấy tờ liên quan
-Cán bộ kiểm tra từng mục.
-Có thể đánh dấu:
-✓ Đầy đủ
-⚠ Cần kiểm tra
-✕ Thiếu
+CCCD
+Citizen: Đã chuẩn bị
+Officer: [Hợp lệ ▼]
 
-9. Kiểm tra tài liệu đính kèm
-Cán bộ xem các file người dân upload:
-Documents
+Giấy xác nhận cư trú
+Citizen: Đã chuẩn bị
+Officer: [Cần kiểm tra ▼]
 
-CCCD.jpg
-GiayCuTru.pdf
-TaiKhai.pdf
-Cán bộ có thể:
+Tờ khai đăng ký
+Citizen: Đã chuẩn bị
+Officer: [Hợp lệ ▼]
+
+Officer status:
+
+Hợp lệ
+Cần kiểm tra
+Thiếu
+Không hợp lệ
+10. Kiểm tra giấy tờ
+
+Tab:
+
+[Giấy tờ]
+
+Hiển thị:
+
+CCCD mặt trước.jpg
+
+[Preview]
+
+Trạng thái:
+● Chưa kiểm tra
+
+[Hợp lệ]
+[Không hợp lệ]
+[Comment]
+
+Officer có thể:
+
 Preview.
 Zoom.
-Kiểm tra.
 Đánh dấu hợp lệ.
 Đánh dấu không hợp lệ.
 Comment.
+11. Kiểm tra E-form
+
+Tab:
+
+[E-form]
+
 Ví dụ:
-Giấy xác nhận cư trú.pdf
 
-❌ Không hợp lệ
+Field	Dữ liệu	Review
+Họ tên	Nguyễn Văn A	✓
+Ngày sinh	01/01/2000	✓
+CCCD	********1234	✓
+Địa chỉ	Bình Dương	⚠ Comment
 
-Comment:
-"Thông tin địa chỉ chưa khớp với E-form."
+Mỗi field nên có:
 
-10. Kiểm tra E-form
-Cán bộ kiểm tra dữ liệu người dân đã nhập.
+[✓]
+[⚠]
+[💬]
+
+Không cần Officer sửa dữ liệu của Citizen.
+
+Officer chỉ:
+
+Review
+Comment
+Request Revision
+12. Kiểm tra PDF
+
+Tab:
+
+[PDF]
+
+Layout:
+
+┌───────────────────────────────┬────────────────────┐
+│                               │ REVIEW CHECKLIST   │
+│                               │                    │
+│        PDF PREVIEW            │ ☑ Đúng mẫu        │
+│                               │ ☑ Đúng version     │
+│                               │ ☑ Đầy đủ dữ liệu   │
+│                               │ ☑ Không lỗi layout │
+│                               │                    │
+└───────────────────────────────┴────────────────────┘
+
+Có:
+
+[Download]
+[Full Screen]
+13. Comment trực tiếp
+
+Không cần Sidebar:
+
+Comment
+
+nên là tab + action trong Review Workspace.
+
+Tab:
+
+[Comment]
+
+Tổng hợp:
+
+3 vấn đề cần xử lý
+
+1. E-form > Địa chỉ
+   "Vui lòng cập nhật địa chỉ theo giấy xác nhận cư trú."
+
+2. CCCD mặt trước
+   "Ảnh chưa rõ."
+
+3. Checklist > Giấy cư trú
+   "Thiếu tài liệu."
+
+Officer có thể:
+
+Add Comment
+Edit Comment
+Delete Comment
+14. Yêu cầu người dân chỉnh sửa/bổ sung
+
+Không phải sidebar riêng.
+
+Button cố định cuối Review Workspace:
+
+[Yêu cầu bổ sung]
+
+Modal:
+
+YÊU CẦU CHỈNH SỬA/BỔ SUNG
+
+Các vấn đề:
+
+☑ E-form > Địa chỉ
+☑ Document > CCCD
+☑ Checklist > Giấy cư trú
+
+Ghi chú:
+[...................................]
+
+[Hủy]
+[Gửi yêu cầu]
+
+Sau đó:
+
+UNDER_REVIEW
+      ↓
+NEED_REVISION
+
+Hồ sơ tự xuất hiện trong:
+
+Quản lý hồ sơ
+    └── Cần bổ sung
+15. Cần bổ sung
+
+Sidebar:
+
+Quản lý hồ sơ
+    └── Cần bổ sung
+
+Đây là những hồ sơ Officer đã gửi Request Revision và đang chờ Citizen sửa.
+
+Table:
+
+Mã HS	Citizen	Thủ tục	Ngày yêu cầu	Số lỗi	Status
+HS125	Nguyễn A	Kết hôn	21/09	3	Cần bổ sung
+
+Không cần Officer làm gì nhiều cho đến khi Citizen gửi lại.
+
+16. Đã gửi lại
+
+Sidebar:
+
+Quản lý hồ sơ
+    └── Đã gửi lại
+
+Đây là một menu rất nên có.
+
+Khi Citizen sửa xong:
+
+NEED_REVISION
+      ↓
+RESUBMITTED
+
+Officer thấy badge:
+
+● Người dân vừa cập nhật
+
+Action:
+
+[Review lại]
+17. Theo dõi lịch sử sửa hồ sơ
+
+Đây là:
+
+Revision History
+
+Không cần sidebar riêng cho từng hồ sơ.
+
+Nằm trong Review Workspace:
+
+[Phiên bản]
+
 Ví dụ:
-E-FORM
 
-Họ tên: Nguyễn Văn A
-Ngày sinh: 01/01/2000
-CCCD: ************
-Địa chỉ: Bình Định
-Đối chiếu:
-E-form
-   ↕
-CCCD
-   ↕
-Giấy cư trú
-Nếu thông tin không khớp → Comment.
+Version 1
+21/09 09:00
 
-11. Kiểm tra PDF
-Cán bộ Preview file PDF được hệ thống tạo.
-Kiểm tra:
-Đúng biểu mẫu.
-Đúng phiên bản.
-Đầy đủ thông tin.
-Không sai dữ liệu.
-Không bị thiếu trường.
-Bố cục đúng.
-E-form Data
-     ↓
-PDF
-     ↓
-Officer Review
+Officer Request Revision
 
-PHẦN C — RA QUYẾT ĐỊNH
-12. Final Review
-Sau khi kiểm tra:
+Version 2
+21/09 10:05
+
+[So sánh V1 ↔ V2]
+
+Compare:
+
+Trường	V1	V2
+Địa chỉ	A	B
+CCCD	old.jpg	new.jpg
+18. Timeline
+
+Nên có tab:
+
+[Timeline]
+
+Ví dụ:
+
+08:20 Hồ sơ được tạo
+
+08:52 E-form hoàn thành
+
+09:00 Gửi tiền kiểm
+
+09:15 Officer tiếp nhận
+
+09:30 Yêu cầu chỉnh sửa
+
+10:05 Citizen chỉnh sửa
+
+10:07 Gửi lại
+
+10:30 Được duyệt tiền kiểm
+19. Duyệt hồ sơ
+
+Button cuối Review Workspace:
+
+[Duyệt tiền kiểm]
+
+Modal:
+
+XÁC NHẬN DUYỆT TIỀN KIỂM
+
 ✓ Điều kiện
 ✓ Thông tin
 ✓ Checklist
-✓ Documents
+✓ Giấy tờ
 ✓ E-form
 ✓ PDF
-Hệ thống cho phép cán bộ đưa ra quyết định.
-┌───────────────────────────┐
-│     FINAL REVIEW          │
-├───────────────────────────┤
-│ ✓ Hồ sơ đầy đủ            │
-│ ✓ Thông tin hợp lệ        │
-│ ✓ Biểu mẫu hợp lệ         │
-│                           │
-│ [Request Revision]        │
-│ [Approve]                 │
-└───────────────────────────┘
 
-13. Trường hợp KHÔNG hợp lệ
-Cán bộ chọn:
-Request Revision
-Không nên chỉ cho nhập một comment chung.
-Nên cho phép comment theo từng vị trí:
-E-form
- └── Địa chỉ
-       ↓
-Comment:
-"Vui lòng cập nhật địa chỉ theo
-giấy xác nhận cư trú."
-Hoặc:
-Document
- └── CCCD
-       ↓
-Comment:
-"Vui lòng bổ sung ảnh CCCD rõ hơn."
+[Hủy]
 
-14. Gửi yêu cầu chỉnh sửa
-Cán bộ xác nhận:
-Request Revision
-       ↓
-NEED_REVISION
-       ↓
-Notification Citizen
-Người dân nhận:
-⚠️ Hồ sơ HS-2026-00125 cần được chỉnh sửa/bổ sung.
+[Xác nhận duyệt]
 
-15. Người dân chỉnh sửa
-Đây là loop trong Main Flow 2:
-NEED_REVISION
-      ↓
-Citizen xem Comment
-      ↓
-Edit E-form
-      ↓
-Upload / Update document
-      ↓
-Generate PDF
-      ↓
-Resubmit
-      ↓
-RESUBMITTED
-      ↓
-Officer Review
-Cán bộ sẽ nhận thông báo:
-Hồ sơ đã được người dân cập nhật.
+Sau confirm:
 
-16. So sánh phiên bản trước và sau
-Một chức năng nâng cấp rất đáng làm:
-Revision History
-Version 1
-Địa chỉ: A
-       ↓
-Officer Comment
-       ↓
-Version 2
-Địa chỉ: B
-Cán bộ có thể xem:
-What changed?
-Ví dụ:
-Changed:
-✓ Địa chỉ
-✓ Giấy xác nhận cư trú
-Như vậy cán bộ không phải kiểm tra lại toàn bộ hồ sơ nếu chỉ có một vài phần được chỉnh sửa.
-
-PHẦN D — DUYỆT HỒ SƠ
-17. Approve
-Nếu hồ sơ đạt:
-Cán bộ chọn:
-Approve
-Hệ thống yêu cầu xác nhận:
-Bạn có chắc chắn muốn duyệt
-hồ sơ này?
-
-[Hủy]     [Xác nhận duyệt]
-Sau khi xác nhận:
 UNDER_REVIEW
       ↓
 APPROVED
+20. Tạo QR sau duyệt
 
-18. Hệ thống tạo QR Code
-Đây là điểm quan trọng theo yêu cầu mới của bạn.
-QR chỉ được tạo sau khi cán bộ Approve.
+Bạn nói:
+
+Hệ thống không còn chức năng quét QR.
+
+Điều này không đồng nghĩa phải bỏ QR của Citizen, nếu requirement của bạn vẫn là:
+
+Sau Officer duyệt, hệ thống tạo QR cho bộ hồ sơ.
+
+Flow vẫn có thể:
+
+Officer Approve
+      ↓
 APPROVED
-    ↓
-Generate QR
-    ↓
-QR Generated
+      ↓
+System Generate QR
+      ↓
+READY_TO_SUBMIT
+
+Officer không có menu QR.
+
+Citizen vẫn có thể:
+
+View QR
+Download QR
+
+Nếu bạn cũng muốn bỏ QR hoàn toàn khỏi dự án, lúc đó mới xóa bước Generate QR. Còn theo yêu cầu hiện tại của bạn, mình hiểu là chỉ bỏ chức năng Officer quét QR.
+
+21. Đã duyệt tiền kiểm
+
+Sidebar:
+
+Quản lý hồ sơ
+    └── Đã duyệt tiền kiểm
+
+Table:
+
+Mã HS	Citizen	Procedure	Approved At	Approved By	Status
+
+Officer có thể:
+
+View
+View Approved Version
+View Timeline
+
+Không Edit.
+
+22. Chờ tiếp nhận chính thức
+
+Đây chính là nơi đặt hai chức năng bạn hỏi:
+
+Đối chiếu hồ sơ điện tử và hồ sơ giấy.
+Xác nhận tiếp nhận hồ sơ chính thức.
+
+Sidebar:
+
+Tiếp nhận hồ sơ
+    └── Chờ tiếp nhận
+
+Khi Citizen đến UBND, Officer không cần scan QR nữa.
+
+Có thể tìm bằng:
+
+Mã hồ sơ
+Số CCCD
+Số điện thoại
+Họ tên
+
 Ví dụ:
-Application ID:
+
+TÌM HỒ SƠ ĐÃ DUYỆT
+
+[Mã hồ sơ / CCCD / SĐT........]
+
+[Tìm kiếm]
+
+Kết quả:
+
 HS-2026-00125
 
-QR:
-████████████
-██      ████
-██  QR  ████
-████████████
-QR liên kết với bộ hồ sơ đã được duyệt.
-QR
- ↓
-Application ID
- ↓
-Approved Application
- ↓
+Nguyễn Văn A
+Đăng ký kết hôn
+
+Đã duyệt tiền kiểm
+Version: V3
+
+Officer chọn:
+
+[Tiếp nhận hồ sơ]
+23. Màn hình đối chiếu hồ sơ
+
+Sau khi Officer tìm hồ sơ:
+
+┌────────────────────────┬────────────────────────┐
+│ HỒ SƠ ĐIỆN TỬ          │ HỒ SƠ GIẤY             │
+├────────────────────────┼────────────────────────┤
+│ CCCD                   │ ☐ Đã đối chiếu         │
+│ Giấy cư trú            │ ☐ Đã đối chiếu         │
+│ Tờ khai                │ ☐ Đã đối chiếu         │
+│ PDF approved           │ ☐ Đã đối chiếu         │
+└────────────────────────┴────────────────────────┘
+
+Officer tick:
+
+☑ CCCD khớp
+☑ Giấy cư trú khớp
+☑ Tờ khai khớp
+☑ Hồ sơ đầy đủ
+
+Sau đó:
+
+[Xác nhận tiếp nhận chính thức]
+24. Xác nhận tiếp nhận chính thức
+
+Modal:
+
+XÁC NHẬN TIẾP NHẬN HỒ SƠ
+
+HS-2026-00125
+Nguyễn Văn A
+
+Hồ sơ giấy đã được kiểm tra và
+đối chiếu với hồ sơ điện tử.
+
+[Hủy]
+
+[Xác nhận tiếp nhận]
+
+Sau đó:
+
+READY_TO_SUBMIT
+       ↓
+OFFICIALLY_RECEIVED
+
+Hồ sơ chuyển sang:
+
+Tiếp nhận hồ sơ
+    └── Đã tiếp nhận
+25. Đã tiếp nhận
+
+Sidebar:
+
+Tiếp nhận hồ sơ
+    └── Đã tiếp nhận
+
+Table:
+
+Mã HS	Citizen	Procedure	Tiếp nhận lúc	Officer	Status
+
+Actions:
+
+View Detail
+View Timeline
+View Approved Version
+
+Read-only.
+
+26. Lịch sử xử lý
+
+Sidebar:
+
+Lịch sử xử lý
+
+Đây là lịch sử của Officer, khác với Revision History của một hồ sơ.
+
+Ví dụ:
+
+Time	Mã HS	Action
+08:30	HS001	Nhận xử lý
+08:45	HS001	Comment
+09:00	HS001	Request Revision
+10:30	HS002	Approve
+14:20	HS003	Xác nhận tiếp nhận
+
+Filter:
+
+Ngày
+Action
+Procedure
+Application
+Sidebar Officer chốt lại
+
+Mình khuyên bạn dùng bản này:
+
+OFFICER
+
+Dashboard
+
+Quản lý hồ sơ
+├── Tất cả hồ sơ
+├── Chờ tiền kiểm
+├── Đang kiểm tra
+├── Cần bổ sung
+├── Đã gửi lại
+├── Đã duyệt tiền kiểm
+└── Chờ tiếp nhận chính thức
+
+Tiếp nhận hồ sơ
+├── Chờ tiếp nhận
+└── Đã tiếp nhận
+
+Lịch sử xử lý
+
+Thông báo
+
+Hồ sơ cá nhân
+
+Đăng xuất
+
+Trong đó Application Review Workspace chứa:
+
+Thông tin người dân
+Điều kiện thủ tục
+Checklist
+Giấy tờ
 E-form
- ↓
-PDF Documents
+PDF
+Comment
+Revision History
+Timeline
 
+[Yêu cầu bổ sung]
+[Duyệt tiền kiểm]
 
-20. Thông báo cho người dân
-Sau khi QR được tạo:
-APPROVED
-   ↓
-QR GENERATED
-   ↓
-Notification
-Người dân nhận:
-Hồ sơ của bạn đã được duyệt tiền kiểm. Mã QR đã được tạo. Vui lòng tải mã QR và các biểu mẫu đã hoàn thành, in hồ sơ và mang đến UBND để nộp.
+Và Official Receipt Workspace chứa:
 
+Tìm hồ sơ đã duyệt
+        ↓
+Xem Approved Version
+        ↓
+Đối chiếu hồ sơ điện tử
+với hồ sơ giấy
+        ↓
+Xác nhận tiếp nhận chính thức
+Mapping toàn bộ 14 chức năng bạn đưa ra
+Chức năng	Nằm ở đâu
+Tiếp nhận hồ sơ tiền kiểm	Chờ tiền kiểm → Nhận xử lý
+Xem và phân loại hồ sơ	Tất cả hồ sơ + Search/Filter
+Kiểm tra thông tin người dân	Review Workspace → Thông tin
+Kiểm tra Checklist	Review Workspace → Checklist
+Kiểm tra giấy tờ	Review Workspace → Giấy tờ
+Kiểm tra E-form	Review Workspace → E-form
+Kiểm tra PDF	Review Workspace → PDF
+Comment trực tiếp	Review Workspace → Field/Document/Comment
+Yêu cầu chỉnh sửa/bổ sung	Review Workspace → Yêu cầu bổ sung
+Duyệt hồ sơ	Review Workspace → Duyệt tiền kiểm
+Tạo QR sau duyệt	System tự động, không nằm Sidebar
+Theo dõi lịch sử sửa hồ sơ	Review Workspace → Phiên bản/Revision History
+Đối chiếu hồ sơ điện tử và giấy	Tiếp nhận hồ sơ → Chờ tiếp nhận → Detail
+Xác nhận tiếp nhận chính thức	Tiếp nhận hồ sơ → Detail → Xác nhận tiếp nhận

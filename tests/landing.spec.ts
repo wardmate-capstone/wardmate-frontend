@@ -135,8 +135,8 @@ test('trang quản trị hiển thị tổng quan và menu mobile không tràn n
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/admin');
 
-  await expect(page.getByRole('heading', { name: 'Trung tâm điều hành' })).toBeVisible();
-  await expect(page.getByText('Đã duyệt tiền kiểm', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trung tâm quản trị' })).toBeVisible();
+  await expect(page.getByText('Thủ tục đang áp dụng', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Mở menu quản trị' }).click();
   await expect(page.getByRole('complementary', { name: 'Điều hướng quản trị' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
