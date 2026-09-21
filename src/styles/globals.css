@@ -20,23 +20,23 @@
   --color-gold-500: #e9b900;
   --color-gold-600: #c89000;
   --color-gold-700: #9e6800;
-  --font-sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
   *, ::before, ::after {
-    font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   html {
     scroll-behavior: smooth;
     overflow-x: clip;
     max-width: 100vw;
-    font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  body { 
+  body, #root { 
     @apply m-0 overflow-x-clip bg-white text-slate-900 antialiased; 
     max-width: 100vw; 
-    font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   input, button, select, textarea, optgroup, table, th, td {
     font-family: inherit;
