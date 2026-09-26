@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { m } from 'motion/react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 import {
   ArrowLeft,
   CheckCircle,
@@ -11,7 +11,8 @@ import {
   LockKey,
   UserCircle,
 } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/Button';
+import { Button, Input } from '@/components/ui';
+import { safeReturnTo } from '@/lib/authRedirect';
 
 type AuthPageProps = { mode: 'login' | 'register' };
 
@@ -23,7 +24,7 @@ function PasswordField({ id, label, autoComplete }: { id: string; label: string;
       <label className="auth-label" htmlFor={id}>{label}</label>
       <div className="relative">
         <LockKey className="auth-field-icon" size={20} aria-hidden="true" />
-        <input id={id} name={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} className="auth-input pr-12" placeholder="Nhập mật khẩu" minLength={8} required />
+        <Input id={id} name={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} className="auth-input min-h-14 pl-12 pr-12" placeholder="Nhập mật khẩu" minLength={8} required />
         <button type="button" className="auth-password-toggle" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
           {visible ? <EyeSlash size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
         </button>
@@ -34,6 +35,9 @@ function PasswordField({ id, label, autoComplete }: { id: string; label: string;
 
 export function AuthPage({ mode }: AuthPageProps) {
   const isRegister = mode === 'register';
+  const [searchParams] = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
+  const expired = !isRegister && searchParams.get('reason') === 'session-expired';
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,16 +69,18 @@ export function AuthPage({ mode }: AuthPageProps) {
             <div><p>{isRegister ? 'Bắt đầu sử dụng' : 'Tài khoản cá nhân'}</p><h2>{isRegister ? 'Đăng ký tài khoản' : 'Đăng nhập'}</h2></div>
           </div>
 
+          {expired && <p role="status" className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.</p>}
+
           <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
             {isRegister && (
               <div>
                 <label className="auth-label" htmlFor="full-name">Họ và tên</label>
-                <div className="relative"><UserCircle className="auth-field-icon" size={20} aria-hidden="true" /><input id="full-name" name="full-name" className="auth-input" autoComplete="name" placeholder="Nguyễn Văn An" required /></div>
+                <div className="relative"><UserCircle className="auth-field-icon" size={20} aria-hidden="true" /><Input id="full-name" name="full-name" className="auth-input min-h-14 pl-12" autoComplete="name" placeholder="Nguyễn Văn An" required /></div>
               </div>
             )}
             <div>
               <label className="auth-label" htmlFor="identity">Số điện thoại hoặc email</label>
-              <div className="relative"><IdentificationCard className="auth-field-icon" size={20} aria-hidden="true" /><input id="identity" name="identity" className="auth-input" autoComplete="username" placeholder="Nhập số điện thoại hoặc email" required /></div>
+              <div className="relative"><IdentificationCard className="auth-field-icon" size={20} aria-hidden="true" /><Input id="identity" name="identity" className="auth-input min-h-14 pl-12" autoComplete="username" placeholder="Nhập số điện thoại hoặc email" required /></div>
             </div>
             <PasswordField id="password" label="Mật khẩu" autoComplete={isRegister ? 'new-password' : 'current-password'} />
             {isRegister && <PasswordField id="confirm-password" label="Xác nhận mật khẩu" autoComplete="new-password" />}
@@ -89,7 +95,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 
           <p className="auth-switch">
             {isRegister ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
-            <Link to={isRegister ? '/dang-nhap' : '/dang-ky'}>{isRegister ? 'Đăng nhập' : 'Đăng ký ngay'}</Link>
+            <Link to={(isRegister ? '/dang-nhap' : '/dang-ky') + (returnTo !== '/' ? '?returnTo=' + encodeURIComponent(returnTo) : '')}>{isRegister ? 'Đăng nhập' : 'Đăng ký ngay'}</Link>
           </p>
         </m.div>
       </div>
