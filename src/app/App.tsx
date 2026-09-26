@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/Toast';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { HomePage } from '@/pages/HomePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';

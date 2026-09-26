@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { m } from 'motion/react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 import {
   ArrowRight,
   CaretDown as ChevronDown,

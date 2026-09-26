@@ -7,7 +7,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 import { popularProcedures } from '@/data/landing';
 
 const categories = ['Tất cả', 'Hộ tịch', 'Chứng thực', 'Chính sách xã hội'] as const;

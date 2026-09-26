@@ -24,11 +24,14 @@ const buttonVariants = cva(
   },
 );
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>;
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { loading?: boolean };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, type = 'button', ...props }, ref) => (
-    <button ref={ref} type={type} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  ({ className, variant, size, type = 'button', loading = false, disabled, children, ...props }, ref) => (
+    <button ref={ref} type={type} className={cn(buttonVariants({ variant, size }), className)} {...props} disabled={disabled || loading} aria-busy={loading || props['aria-busy']}>
+      {loading && <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent" />}
+      {children}
+    </button>
   ),
 );
 

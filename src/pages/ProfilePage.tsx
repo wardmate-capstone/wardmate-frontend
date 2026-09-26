@@ -13,7 +13,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 
 const initialProfile = {
   fullName: 'Nguyễn Minh Anh',

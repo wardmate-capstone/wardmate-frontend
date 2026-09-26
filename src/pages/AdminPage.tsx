@@ -22,7 +22,7 @@ import {
   Users,
   X,
 } from '@phosphor-icons/react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 import {
   Area,
   AreaChart,

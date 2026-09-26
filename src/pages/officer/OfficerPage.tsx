@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/Toast';
 import {
   INITIAL_OFFICER_APPLICATIONS,
   INITIAL_OFFICER_AUDIT_LOGS,
