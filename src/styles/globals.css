@@ -707,3 +707,18 @@
   .hero-search-box [type="submit"] { width: 100%; }
   .not-found-photo { @apply rounded-2xl; }
 }
+
+@layer components {
+  .procedure-detail-section { @apply scroll-mt-36 rounded-xl border border-slate-200 bg-white p-5 text-slate-700 sm:p-6; }
+  .procedure-detail-section > h2 { @apply mb-5 border-b border-slate-100 pb-4 text-xl font-bold text-red-900; }
+  .procedure-detail-table { @apply w-full table-fixed border-collapse text-left text-sm leading-6; }
+  .procedure-detail-table th { @apply border border-slate-200 bg-red-50 p-3 font-bold text-red-900; }
+  .procedure-detail-table td { @apply border border-slate-200 p-3 align-top; overflow-wrap: anywhere; }
+  @media (max-width: 639px) {
+    .procedure-detail-table, .procedure-detail-table tbody { display: block; }
+    .procedure-detail-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .procedure-detail-table tr { @apply mb-3 block overflow-hidden rounded-lg border border-slate-200; }
+    .procedure-detail-table td { @apply block border-0 border-b border-slate-100 last:border-b-0; }
+    .procedure-detail-table td[data-label]::before { content: attr(data-label); @apply mb-1 block font-semibold text-red-900; }
+  }
+}

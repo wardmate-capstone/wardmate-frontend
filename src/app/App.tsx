@@ -8,6 +8,7 @@ import { AuthPage } from '@/pages/AuthPage';
 import { FaqPage } from '@/pages/FaqPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { ProceduresPage } from '@/pages/ProceduresPage';
+import { ProcedureDetailPage } from '@/pages/ProcedureDetailPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { OfficerPage } from '@/pages/officer/OfficerPage';
 import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
@@ -34,6 +35,7 @@ export function App() {
               <Route path="hoi-dap" element={<FaqPage />} />
               <Route path="tai-khoan" element={<ProfilePage />} />
               <Route path="thu-tuc" element={<ProceduresPage />} />
+              <Route path="thu-tuc/:procedureId" element={<ProcedureDetailPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>

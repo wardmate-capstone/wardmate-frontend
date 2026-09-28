@@ -16,6 +16,19 @@ export const mockPublicProcedures = [
 ].map((procedure, index) => ({
   ...procedure,
   id: 'demo-' + (index + 1),
+  // Frontend schema only; no verified legal data or backend integration.
+  content_payload: {
+    schemaVersion: 1,
+    overview: 'Trang minh họa thông tin về ' + procedure.title.toLowerCase() + '. Nội dung và điều kiện áp dụng sẽ được cập nhật sau khi được xác minh.',
+    methods: ['Trực tiếp', 'Trực tuyến', 'Dịch vụ bưu chính'].map((method) => ({
+      method,
+      processingTime: 'Thông tin cần được cơ quan tiếp nhận xác nhận.',
+      fee: 'Chưa có mức phí, lệ phí được xác minh.',
+      notes: 'Chưa xác nhận điều kiện áp dụng hoặc miễn, giảm.',
+    })),
+    legalBases: [],
+    receivingAgencies: [],
+  },
   description: {
     'Hộ tịch': 'Tra cứu hướng dẫn chuẩn bị thông tin và giấy tờ hộ tịch.',
     'Chứng thực': 'Tra cứu hướng dẫn chuẩn bị giấy tờ cần chứng thực.',

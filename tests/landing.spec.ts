@@ -122,8 +122,8 @@ test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực v
   await expect(page.getByRole('heading', { name: 'Thủ tục hành chính' })).toBeVisible();
 
   await page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn').fill('khai sinh');
-  await expect(page.getByRole('button', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Xem Đăng ký kết hôn/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Xem Đăng ký kết hôn/ })).toHaveCount(0);
 
   await page.getByRole('button', { name: /Chứng thực/ }).click();
   await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
@@ -164,7 +164,7 @@ test('public procedures paginate, preserve URL state and fit mobile', async ({ p
   await expect(page).toHaveURL(/page=2/);
   await expect(page.getByRole('status')).toContainText('6–10 / 15');
   await expect(page.getByRole('heading', { name: '15 thủ tục phù hợp' })).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Xem Đăng ký khai tử', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Xem Đăng ký khai tử', exact: true })).toBeVisible();
   await pagination.getByRole('button', { name: 'Trang sau', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('11–15 / 15');
   await expect(pagination.getByRole('button', { name: 'Trang sau', exact: true })).toBeDisabled();

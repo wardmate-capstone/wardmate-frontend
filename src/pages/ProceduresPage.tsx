@@ -1,7 +1,7 @@
 import { type FormEvent, useRef } from 'react';
 import { ArrowRight, CaretLeft, CaretRight, House, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Input, Badge, toast } from '@/components/ui';
+import { Button, Input, Badge } from '@/components/ui';
 import { mockPublicProcedures } from '@/data/mockPublicProcedures';
 
 const categories = ['Tất cả', ...new Set(mockPublicProcedures.map((item) => item.category))];
@@ -125,11 +125,11 @@ export function ProceduresPage() {
               <ul className="procedures-list">
                 {visibleProcedures.map((procedure, index) => (
                   <li key={procedure.id}>
-                    <button type="button" className="procedure-result-row" onClick={() => toast.info('Bạn đang xem danh mục minh họa. Hướng dẫn chi tiết chưa được cung cấp.')} aria-label={'Xem ' + procedure.title}>
+                    <Link to={'/thu-tuc/' + procedure.id + (searchParams.size ? '?' + searchParams.toString() : '')} className="procedure-result-row" aria-label={'Xem ' + procedure.title}>
                       <span className="procedure-result-number">{String(startIndex + index + 1).padStart(2, '0')}</span>
                       <span className="procedure-result-copy"><small>{procedure.category}</small><strong>{procedure.title}</strong><span className="mt-1 block text-sm leading-6 text-slate-600">{procedure.description}</span></span>
                       <span className="procedure-result-action"><span className="hidden sm:inline">Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
-                    </button>
+                    </Link>
                   </li>
                 ))}
               </ul>

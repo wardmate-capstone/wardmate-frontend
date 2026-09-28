@@ -69,7 +69,7 @@ export function MainLayout() {
         <nav aria-label="Điều hướng chính" className="hidden border-t border-red-100 bg-red-800 text-white lg:block">
           <div className="mx-auto flex max-w-[1240px] items-center px-8">
             {navigation.map((item) => {
-              const isActive = item.href.startsWith('/#') ? false : location.pathname === item.href;
+              const isActive = item.href.startsWith('/#') ? false : (location.pathname === item.href || (item.href === '/thu-tuc' && location.pathname.startsWith('/thu-tuc/')));
               return <Link key={item.href} to={item.href} className={`main-nav-link ${isActive ? 'is-active' : ''}`}>{item.label}</Link>;
             })}
           </div>
