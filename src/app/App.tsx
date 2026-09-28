@@ -39,7 +39,7 @@ export function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
-          <Toaster position="bottom-center" richColors closeButton />
+          <Toaster position="top-right" richColors closeButton />
         </BrowserRouter>
       </LazyMotion>
     </MotionConfig>

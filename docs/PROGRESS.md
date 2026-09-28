@@ -4,6 +4,20 @@ Cập nhật: 28/09/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## FE-TASK-31 — Modal Đánh giá Mức độ Hài lòng Công dân (Feedback)
+
+- Người dùng xác nhận phạm vi: chỉ làm giao diện đánh giá với mock data, chưa có backend API.
+- Đã tạo `CitizenFeedbackModal` tại `src/components/feedback/CitizenFeedbackModal.tsx` và kiểu dữ liệu `src/types/feedback.ts`.
+- Giao diện modal đánh giá:
+  - Đánh giá từ 1 đến 5 sao có nhãn tương ứng (Rất không hài lòng -> Rất hài lòng), hỗ trợ hover preview, radio group chuẩn WCAG AA và bàn phím.
+  - Danh sách tiêu chí chất lượng phục vụ đa chọn (Thủ tục rõ ràng, thời gian tiền kiểm nhanh, hướng dẫn dễ hiểu, giao diện trực quan,...).
+  - Khung nhập góp ý chi tiết kèm đếm ký tự (tối đa 500 ký tự).
+  - Xử lý submit với hiệu ứng loading và màn hình cảm ơn ghi nhận thành công.
+  - Đóng modal an toàn bằng phím Escape, click outside hoặc nút "Để sau".
+- Tích hợp vào `src/pages/ProfilePage.tsx`: hiển thị danh sách hồ sơ tiền kiểm gần đây và nút mở modal đánh giá dịch vụ cho hồ sơ đã hoàn thành.
+- Kiểm tra ngày 28/09: `npm run typecheck`, `npm run lint`, `npm run build` đều đạt; 4/4 test trong `tests/feedback.spec.ts` đạt; toàn bộ test regression đạt.
+- Phần chưa làm: API lưu trữ và thống kê đánh giá người dân lên server backend.
+
 ## FE-TASK-25 — Chuông Thông báo & Danh sách Thông báo Người dùng
 
 - Người dùng xác nhận phạm vi: chỉ làm giao diện với mock data, chưa có backend API.

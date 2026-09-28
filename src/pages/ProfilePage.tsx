@@ -11,9 +11,12 @@ import {
   Phone,
   User,
   X,
+  Star,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/components/ui/Toast';
+import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
+import type { CitizenFeedback } from '@/types/feedback';
 
 const initialProfile = {
   fullName: 'Nguyễn Minh Anh',
@@ -22,6 +25,36 @@ const initialProfile = {
   email: 'minhanh@example.com',
   address: 'Phường Minh Khai, Thành phố Hà Nội',
 };
+
+const initialApplications = [
+  {
+    code: 'HS-2026-00094',
+    procedure: 'Chứng thực bản sao từ bản chính',
+    statusLabel: 'Đã duyệt tiền kiểm',
+    badgeClass: 'bg-emerald-100 text-emerald-800',
+    updatedAt: '08:15, 28/09/2026',
+    nextStep: 'Sẵn sàng mang giấy tờ đến UBND',
+    canFeedback: true,
+  },
+  {
+    code: 'HS-2026-00128',
+    procedure: 'Đăng ký khai sinh',
+    statusLabel: 'Cần bổ sung',
+    badgeClass: 'bg-amber-100 text-amber-800',
+    updatedAt: '09:42, 28/09/2026',
+    nextStep: 'Cần chụp lại ảnh giấy chứng sinh',
+    canFeedback: false,
+  },
+  {
+    code: 'HS-2026-00052',
+    procedure: 'Đăng ký kết hôn',
+    statusLabel: 'Chờ tiền kiểm',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    updatedAt: '16:30, 27/09/2026',
+    nextStep: 'Cán bộ đang kiểm tra',
+    canFeedback: false,
+  },
+];
 
 function formatDate(value: string) {
   const [year, month, day] = value.split('-');
@@ -32,6 +65,23 @@ export function ProfilePage() {
   const [profile, setProfile] = useState(initialProfile);
   const [draft, setDraft] = useState(initialProfile);
   const [isEditing, setIsEditing] = useState(false);
+  const [myApplications] = useState(initialApplications);
+
+  // Feedback modal state
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackTarget, setFeedbackTarget] = useState<{ procedure: string; code?: string }>({
+    procedure: 'Chứng thực bản sao từ bản chính',
+    code: 'HS-2026-00094',
+  });
+
+  function handleOpenFeedback(procedure: string, code?: string) {
+    setFeedbackTarget({ procedure, code });
+    setIsFeedbackOpen(true);
+  }
+
+  function handleSubmitFeedback(data: CitizenFeedback) {
+    toast.success(`Cảm ơn bạn đã đánh giá ${data.rating} sao!`);
+  }
 
   function startEditing() {
     setDraft(profile);
@@ -111,6 +161,70 @@ export function ProfilePage() {
             )}
           </section>
         </div>
+
+        {/* Section: Hồ sơ của tôi & Đánh giá dịch vụ */}
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs" aria-labelledby="my-applications-title">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h2 id="my-applications-title" className="text-lg font-bold text-slate-900">
+                Hồ sơ tiền kiểm gần đây
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Theo dõi tiến độ tiền kiểm và đánh giá mức độ hài lòng về chất lượng phục vụ
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenFeedback('Chứng thực bản sao từ bản chính', 'HS-2026-00094')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100 transition-colors"
+            >
+              <Star size={16} weight="fill" className="text-amber-500" aria-hidden="true" />
+              <span>Đánh giá dịch vụ</span>
+            </button>
+          </div>
+
+          <div className="mt-4 divide-y divide-slate-100">
+            {myApplications.map((app) => (
+              <div key={app.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900">{app.procedure}</span>
+                    <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-semibold text-slate-600">
+                      {app.code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Cập nhật: {app.updatedAt} · {app.nextStep}</p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${app.badgeClass}`}>
+                    {app.statusLabel}
+                  </span>
+                  {app.canFeedback && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenFeedback(app.procedure, app.code)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-amber-400 hover:bg-amber-50/50 hover:text-amber-900 transition-colors"
+                      title="Gửi đánh giá mức độ hài lòng"
+                    >
+                      <Star size={14} weight="fill" className="text-amber-500" aria-hidden="true" />
+                      <span>Đánh giá</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Citizen Feedback Modal */}
+        <CitizenFeedbackModal
+          open={isFeedbackOpen}
+          onOpenChange={setIsFeedbackOpen}
+          procedureName={feedbackTarget.procedure}
+          applicationCode={feedbackTarget.code}
+          onSubmitFeedback={handleSubmitFeedback}
+        />
       </div>
     </div>
   );
