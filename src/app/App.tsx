@@ -10,6 +10,7 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { ProceduresPage } from '@/pages/ProceduresPage';
 import { ProcedureDetailPage } from '@/pages/ProcedureDetailPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { CitizenPage } from '@/pages/citizen';
 import { OfficerPage } from '@/pages/officer/OfficerPage';
 import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -21,6 +22,8 @@ export function App() {
       <LazyMotion features={domAnimation} strict>
         <BrowserRouter>
           <Routes>
+            <Route path="citizen/*" element={<CitizenPage />} />
+            <Route path="cong-dan/*" element={<CitizenPage />} />
             <Route path="officer/*" element={<OfficerPage />} />
             <Route path="can-bo/*" element={<OfficerPage />} />
             <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />

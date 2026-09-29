@@ -28,7 +28,6 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
   const [selectedAspects, setSelectedAspects] = useState<string[]>([]);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
   const activeRating = hoverRating || rating;
 
