@@ -10,6 +10,7 @@ import {
   FileText,
   Gear,
   House,
+  IdentificationCard,
   Key,
   List,
   MagnifyingGlass,
@@ -23,6 +24,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
+import { Modal } from '@/components/ui/Modal';
 import {
   Area,
   AreaChart,
@@ -41,6 +43,7 @@ type SectionId =
   | 'forms'
   | 'knowledge'
   | 'users'
+  | 'profiles'
   | 'roles'
   | 'integrations'
   | 'audit'
@@ -66,6 +69,7 @@ const navigation: Array<{
     group: 'Tài khoản & truy cập',
     items: [
       { id: 'users', label: 'Người dùng hệ thống', icon: Users },
+      { id: 'profiles', label: 'Hồ sơ công dân', icon: IdentificationCard, badge: '5' },
       { id: 'roles', label: 'Vai trò & quyền hạn', icon: Key },
     ],
   },
@@ -144,12 +148,71 @@ const chartData: Record<ChartRange, Array<{ label: string; searches: number; app
   ],
 };
 
+export interface AdminProfileItem {
+  fullName: string;
+  identityNumber: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  gender: string;
+  permanentAddress: string;
+  temporaryAddress: string;
+}
+
+const initialAdminProfiles: AdminProfileItem[] = [
+  {
+    fullName: 'Nguyễn Minh Anh',
+    identityNumber: '001092008128',
+    phoneNumber: '0900000128',
+    dateOfBirth: '1992-08-15',
+    gender: 'Nữ',
+    permanentAddress: 'Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội',
+    temporaryAddress: 'Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội',
+  },
+  {
+    fullName: 'Trần Quốc Bảo',
+    identityNumber: '001088002341',
+    phoneNumber: '0912345678',
+    dateOfBirth: '1988-03-24',
+    gender: 'Nam',
+    permanentAddress: 'Số 45 Đường Giải Phóng, Phường An Khánh, Thành phố Hà Nội',
+    temporaryAddress: 'Số 45 Đường Giải Phóng, Phường An Khánh, Thành phố Hà Nội',
+  },
+  {
+    fullName: 'Lê Thu Hà',
+    identityNumber: '001195009876',
+    phoneNumber: '0987654321',
+    dateOfBirth: '1995-11-10',
+    gender: 'Nữ',
+    permanentAddress: 'Thôn Thượng, Xã Ninh Hiệp, Huyện Gia Lâm, Thành phố Hà Nội',
+    temporaryAddress: 'Căn hộ 802 Tòa Landmark, Phường An Khánh, Thành phố Hà Nội',
+  },
+  {
+    fullName: 'Phạm Văn Nam',
+    identityNumber: '001085001122',
+    phoneNumber: '0933221100',
+    dateOfBirth: '1985-05-18',
+    gender: 'Nam',
+    permanentAddress: 'Tổ dân phố 6, Phường An Khánh, Thành phố Hà Nội',
+    temporaryAddress: 'Tổ dân phố 6, Phường An Khánh, Thành phố Hà Nội',
+  },
+  {
+    fullName: 'Hoàng Thị Mai',
+    identityNumber: '001199003344',
+    phoneNumber: '0944556677',
+    dateOfBirth: '1999-09-02',
+    gender: 'Nữ',
+    permanentAddress: 'Số 88 Ngõ 192 Lê Trọng Tấn, Thành phố Hà Nội',
+    temporaryAddress: 'Số 14 Ngõ 32 Phường An Khánh, Thành phố Hà Nội',
+  },
+];
+
 const sectionMeta: Record<SectionId, { title: string }> = {
   overview: { title: 'Trung tâm quản trị' },
   procedures: { title: 'Quản lý thủ tục hành chính' },
   forms: { title: 'Biểu mẫu & E-form' },
   knowledge: { title: 'Pháp lý & tri thức AI' },
   users: { title: 'Người dùng hệ thống' },
+  profiles: { title: 'Quản lý hồ sơ công dân (Admin Profiles)' },
   roles: { title: 'Vai trò & quyền hạn' },
   integrations: { title: 'Dịch vụ tích hợp' },
   audit: { title: 'Nhật ký hoạt động' },
@@ -163,6 +226,11 @@ export function AdminPage() {
   const [query, setQuery] = useState('');
   const meta = sectionMeta[activeSection];
 
+  // Quản lý hồ sơ công dân (Admin Profiles)
+  const [profiles, setProfiles] = useState<AdminProfileItem[]>(initialAdminProfiles);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<AdminProfileItem | null>(null);
+
   const filteredProcedures = useMemo(() => procedures.filter((item) => `${item.code} ${item.name} ${item.field}`.toLowerCase().includes(query.toLowerCase())), [query]);
   const filteredUsers = useMemo(() => users.filter((item) => `${item.name} ${item.email} ${item.role}`.toLowerCase().includes(query.toLowerCase())), [query]);
 
@@ -174,6 +242,25 @@ export function AdminPage() {
 
   function demoAction(message: string) {
     toast.success(message);
+  }
+
+  function handleOpenCreateProfile() {
+    setEditingProfile(null);
+    setIsProfileModalOpen(true);
+  }
+
+  function handleSaveProfile(item: AdminProfileItem) {
+    setProfiles((prev) => {
+      const idx = prev.findIndex((p) => p.identityNumber === item.identityNumber);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = item;
+        return next;
+      }
+      return [item, ...prev];
+    });
+    setIsProfileModalOpen(false);
+    toast.success(`Đã lưu hồ sơ của công dân ${item.fullName}.`);
   }
 
   return (
@@ -220,7 +307,21 @@ export function AdminPage() {
         <main id="admin-main" className="admin-main" tabIndex={-1}>
           <div className="admin-page-heading">
             <div><h1>{meta.title}</h1></div>
-            {activeSection !== 'overview' && <button className="admin-primary-action" type="button" onClick={() => demoAction('Đã mở biểu mẫu tạo mới.')}><Plus size={18} weight="bold" /> Tạo mới</button>}
+            {activeSection !== 'overview' && (
+              <button
+                className="admin-primary-action"
+                type="button"
+                onClick={() => {
+                  if (activeSection === 'profiles') {
+                    handleOpenCreateProfile();
+                  } else {
+                    demoAction('Đã mở biểu mẫu tạo mới.');
+                  }
+                }}
+              >
+                <Plus size={18} weight="bold" /> Tạo mới
+              </button>
+            )}
           </div>
 
           {activeSection === 'overview' && <Overview onSelect={selectSection} />}
@@ -228,12 +329,32 @@ export function AdminPage() {
           {activeSection === 'forms' && <FormsView onAction={demoAction} />}
           {activeSection === 'knowledge' && <KnowledgeView onAction={demoAction} />}
           {activeSection === 'users' && <UsersView query={query} setQuery={setQuery} rows={filteredUsers} onAction={demoAction} />}
+          {activeSection === 'profiles' && (
+            <AdminProfilesView
+              query={query}
+              setQuery={setQuery}
+              profiles={profiles}
+              onEditProfile={(item) => {
+                setEditingProfile(item);
+                setIsProfileModalOpen(true);
+              }}
+              onCreateProfile={handleOpenCreateProfile}
+            />
+          )}
           {activeSection === 'roles' && <RolesView onAction={demoAction} />}
           {activeSection === 'integrations' && <IntegrationsView onAction={demoAction} />}
           {activeSection === 'audit' && <AuditView />}
           {activeSection === 'backup' && <BackupView onAction={demoAction} />}
         </main>
       </div>
+
+      {/* Modal Quản lý hồ sơ công dân */}
+      <AdminProfileModal
+        open={isProfileModalOpen}
+        onOpenChange={setIsProfileModalOpen}
+        profile={editingProfile}
+        onSave={handleSaveProfile}
+      />
     </div>
   );
 }
@@ -341,4 +462,302 @@ function AuditView() {
 
 function BackupView({ onAction }: { onAction: (message: string) => void }) {
   return <div className="admin-split-view"><section className="admin-card admin-security-card"><div className="admin-card-heading"><div><h2>Bảo vệ dữ liệu cá nhân</h2></div><span className="admin-status-badge is-success">Đạt yêu cầu</span></div><div className="admin-security-list"><div><ShieldCheck size={22} /><p><strong>Mã hóa dữ liệu lưu trữ</strong><small>AES-256 · Hoạt động</small></p></div><div><Key size={22} /><p><strong>Mã hóa dữ liệu truyền tải</strong><small>TLS 1.3 · Hoạt động</small></p></div><div><Activity size={22} /><p><strong>Kiểm tra truy cập bất thường</strong><small>Không phát hiện rủi ro</small></p></div></div></section><section className="admin-card admin-backup-card"><div className="admin-card-heading"><div><h2>Sao lưu gần nhất</h2></div></div><div><span><Database size={30} weight="duotone" /></span><strong>wardmate-prod-2026-09-16</strong><p>Hoàn tất lúc 23:18 · 18,4 GB · Đã mã hóa</p><div><i /></div><small>Lưu giữ 30 ngày · Bản sao tiếp theo sau 13 giờ</small><button type="button" onClick={() => onAction('Đã bắt đầu tạo bản sao lưu thủ công.')}>Sao lưu ngay</button></div></section></div>;
+}
+
+function AdminProfilesView({
+  query,
+  setQuery,
+  profiles,
+  onEditProfile,
+  onCreateProfile,
+}: {
+  query: string;
+  setQuery: (val: string) => void;
+  profiles: AdminProfileItem[];
+  onEditProfile: (profile: AdminProfileItem) => void;
+  onCreateProfile: () => void;
+}) {
+  const [selectedGender, setSelectedGender] = useState('all');
+
+  const filtered = useMemo(() => {
+    return profiles.filter((p) => {
+      const matchQuery = `${p.fullName} ${p.identityNumber} ${p.phoneNumber} ${p.permanentAddress} ${p.temporaryAddress}`
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchGender = selectedGender === 'all' || p.gender === selectedGender;
+      return matchQuery && matchGender;
+    });
+  }, [profiles, query, selectedGender]);
+
+  function formatDate(d: string) {
+    if (!d || !d.includes('-')) return d;
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
+  }
+
+  return (
+    <section className="admin-card admin-table-card admin-content-card">
+      <div className="admin-toolbar">
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Tìm tên, số CCCD, điện thoại hoặc địa chỉ..."
+        />
+        <div className="flex items-center gap-2">
+          <select
+            className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+            value={selectedGender}
+            onChange={(e) => setSelectedGender(e.target.value)}
+          >
+            <option value="all">Tất cả giới tính</option>
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+          </select>
+          <button type="button" onClick={onCreateProfile}>
+            <Plus size={16} weight="bold" /> Thêm hồ sơ
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Họ và tên</th>
+              <th>Số CCCD / Mã định danh</th>
+              <th>Số điện thoại</th>
+              <th>Ngày sinh</th>
+              <th>Giới tính</th>
+              <th>Nơi thường trú</th>
+              <th>Nơi tạm trú</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item) => (
+              <tr key={item.identityNumber}>
+                <td>
+                  <div className="admin-person">
+                    <span>
+                      {item.fullName
+                        .split(' ')
+                        .slice(-2)
+                        .map((part) => part[0])
+                        .join('')}
+                    </span>
+                    <p>
+                      <strong>{item.fullName}</strong>
+                      <small>Công dân</small>
+                    </p>
+                  </div>
+                </td>
+                <td>
+                  <code className="rounded bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-slate-900">
+                    {item.identityNumber}
+                  </code>
+                </td>
+                <td>{item.phoneNumber}</td>
+                <td>{formatDate(item.dateOfBirth)}</td>
+                <td>
+                  <span
+                    className={`admin-status-badge ${
+                      item.gender === 'Nam' ? 'is-info' : 'is-warning'
+                    }`}
+                  >
+                    {item.gender}
+                  </span>
+                </td>
+                <td className="max-w-[200px] truncate" title={item.permanentAddress}>
+                  {item.permanentAddress}
+                </td>
+                <td className="max-w-[200px] truncate" title={item.temporaryAddress}>
+                  {item.temporaryAddress}
+                </td>
+                <td>
+                  <button type="button" onClick={() => onEditProfile(item)}>
+                    Chỉnh sửa
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="admin-empty">Không tìm thấy hồ sơ công dân nào phù hợp.</p>
+      )}
+    </section>
+  );
+}
+
+function AdminProfileModal({
+  open,
+  onOpenChange,
+  profile,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  profile: AdminProfileItem | null;
+  onSave: (item: AdminProfileItem) => void;
+}) {
+  const [formData, setFormData] = useState<AdminProfileItem>({
+    fullName: profile?.fullName || '',
+    identityNumber: profile?.identityNumber || '',
+    phoneNumber: profile?.phoneNumber || '',
+    dateOfBirth: profile?.dateOfBirth || '1995-01-01',
+    gender: profile?.gender || 'Nam',
+    permanentAddress: profile?.permanentAddress || '',
+    temporaryAddress: profile?.temporaryAddress || '',
+  });
+
+  useMemo(() => {
+    if (profile) {
+      setFormData(profile);
+    } else {
+      setFormData({
+        fullName: '',
+        identityNumber: '',
+        phoneNumber: '',
+        dateOfBirth: '1995-01-01',
+        gender: 'Nam',
+        permanentAddress: '',
+        temporaryAddress: '',
+      });
+    }
+  }, [profile]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formData.fullName.trim()) {
+      toast.error('Vui lòng nhập họ và tên công dân');
+      return;
+    }
+    if (!formData.identityNumber.trim()) {
+      toast.error('Vui lòng nhập số CCCD / Mã định danh');
+      return;
+    }
+    if (!formData.phoneNumber.trim()) {
+      toast.error('Vui lòng nhập số điện thoại');
+      return;
+    }
+    onSave(formData);
+  }
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={profile ? `Chỉnh sửa hồ sơ: ${profile.fullName}` : 'Thêm hồ sơ công dân mới'}
+      description="Quản lý chi tiết các thuộc tính định danh cá nhân công dân phục vụ tiền kiểm dịch vụ công."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-bold text-slate-700">
+              Họ và tên <span className="text-red-600">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="Ví dụ: Nguyễn Minh Anh"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700">
+              Số CCCD / Mã định danh <span className="text-red-600">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.identityNumber}
+              onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+              placeholder="12 chữ số căn cước"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 font-mono text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700">
+              Số điện thoại <span className="text-red-600">*</span>
+            </label>
+            <input
+              type="tel"
+              required
+              value={formData.phoneNumber}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              placeholder="090 000 0128"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Ngày sinh</label>
+            <input
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700">Giới tính</label>
+            <select
+              value={formData.gender}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            >
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700">Nơi thường trú</label>
+            <input
+              type="text"
+              value={formData.permanentAddress}
+              onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
+              placeholder="Địa chỉ ghi trên CCCD"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700">Nơi tạm trú</label>
+            <input
+              type="text"
+              value={formData.temporaryAddress}
+              onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
+              placeholder="Nơi ở hiện tại của công dân"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            onClick={() => onOpenChange(false)}
+          >
+            Hủy bỏ
+          </button>
+          <button
+            type="submit"
+            className="rounded-lg bg-red-800 px-5 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm"
+          >
+            Lưu hồ sơ
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
