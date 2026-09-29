@@ -338,7 +338,6 @@ export function AdminPage() {
                 setEditingProfile(item);
                 setIsProfileModalOpen(true);
               }}
-              onCreateProfile={handleOpenCreateProfile}
             />
           )}
           {activeSection === 'roles' && <RolesView onAction={demoAction} />}
@@ -469,13 +468,11 @@ function AdminProfilesView({
   setQuery,
   profiles,
   onEditProfile,
-  onCreateProfile,
 }: {
   query: string;
   setQuery: (val: string) => void;
   profiles: AdminProfileItem[];
   onEditProfile: (profile: AdminProfileItem) => void;
-  onCreateProfile: () => void;
 }) {
   const [selectedGender, setSelectedGender] = useState('all');
 
@@ -513,24 +510,28 @@ function AdminProfilesView({
             <option value="Nam">Nam</option>
             <option value="Nữ">Nữ</option>
           </select>
-          <button type="button" onClick={onCreateProfile}>
-            <Plus size={16} weight="bold" /> Thêm hồ sơ
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-red-800"
+            onClick={() => toast.info('Đang lọc danh sách hồ sơ công dân')}
+          >
+            <Gear size={17} /> Bộ lọc
           </button>
         </div>
       </div>
 
       <div className="admin-table-wrap">
-        <table>
+        <table className="min-w-[1050px]">
           <thead>
             <tr>
-              <th>Họ và tên</th>
-              <th>Số CCCD / Mã định danh</th>
-              <th>Số điện thoại</th>
-              <th>Ngày sinh</th>
-              <th>Giới tính</th>
-              <th>Nơi thường trú</th>
-              <th>Nơi tạm trú</th>
-              <th />
+              <th className="min-w-[170px] whitespace-nowrap">Họ và tên</th>
+              <th className="min-w-[160px] whitespace-nowrap">Số CCCD / Mã định danh</th>
+              <th className="min-w-[120px] whitespace-nowrap">Số điện thoại</th>
+              <th className="min-w-[110px] whitespace-nowrap">Ngày sinh</th>
+              <th className="min-w-[90px] whitespace-nowrap">Giới tính</th>
+              <th className="min-w-[200px] whitespace-nowrap">Nơi thường trú</th>
+              <th className="min-w-[200px] whitespace-nowrap">Nơi tạm trú</th>
+              <th className="min-w-[90px] whitespace-nowrap text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -567,13 +568,17 @@ function AdminProfilesView({
                     {item.gender}
                   </span>
                 </td>
-                <td className="max-w-[200px] truncate" title={item.permanentAddress}>
-                  {item.permanentAddress}
+                <td className="max-w-[220px]" title={item.permanentAddress}>
+                  <span className="line-clamp-2 text-xs text-slate-700 leading-relaxed">
+                    {item.permanentAddress}
+                  </span>
                 </td>
-                <td className="max-w-[200px] truncate" title={item.temporaryAddress}>
-                  {item.temporaryAddress}
+                <td className="max-w-[220px]" title={item.temporaryAddress}>
+                  <span className="line-clamp-2 text-xs text-slate-700 leading-relaxed">
+                    {item.temporaryAddress}
+                  </span>
                 </td>
-                <td>
+                <td className="text-right">
                   <button type="button" onClick={() => onEditProfile(item)}>
                     Chỉnh sửa
                   </button>

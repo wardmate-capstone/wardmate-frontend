@@ -1,8 +1,27 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 29/09/2026.
+Cập nhật: 30/09/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## FE-TASK-33 — Phân hệ Quản lý Hồ sơ Công dân trên Admin (Admin Profiles)
+
+- Người dùng yêu cầu: Thêm trang giao diện AdminProfiles tại [src/pages/AdminPage.tsx](file:///e:/wardmate-frontend/src/pages/AdminPage.tsx) quản lý 7 thuộc tính định danh cá nhân:
+  1. `fullName`: Họ và tên
+  2. `identityNumber`: Số CCCD / Mã định danh cá nhân (12 số)
+  3. `phoneNumber`: Số điện thoại liên hệ
+  4. `dateOfBirth`: Ngày sinh (định dạng YYYY-MM-DD / DD/MM/YYYY)
+  5. `gender`: Giới tính (Nam / Nữ / Khác)
+  6. `permanentAddress`: Nơi thường trú
+  7. `temporaryAddress`: Nơi tạm trú / Nơi ở hiện tại
+- Triển khai trong [src/pages/AdminPage.tsx](file:///e:/wardmate-frontend/src/pages/AdminPage.tsx):
+  - Bổ sung `SectionId` `'profiles'` và mục **"Hồ sơ công dân"** vào menu điều hướng nhóm *Tài khoản & truy cập* (icon `IdentificationCard`, badge đếm số lượng).
+  - Giao diện bảng dữ liệu `AdminProfilesView`:
+    - Thanh công cụ (`admin-toolbar`): Ô tìm kiếm từ khóa đa trường (`SearchBar`), dropdown lọc theo giới tính và nút `+ Thêm hồ sơ`.
+    - Bảng hiển thị: 7 cột thuộc tính định danh kèm mã mono nổi bật cho CCCD, badge giới tính và nút thao tác *Chỉnh sửa*.
+  - Modal tạo mới / Chỉnh sửa hồ sơ `AdminProfileModal`:
+    - Dựa trên Radix Modal chuẩn của hệ thống, form nhập liệu đầy đủ cả 7 trường thông tin, kiểm tra tính hợp lệ cơ bản và cập nhật trực tiếp vào state danh sách kèm thông báo Sonner Toast.
+- Kiểm tra ngày 30/09: `npm run typecheck`, `npm run lint`, `npm run build` đều đạt 100%. Đã xác minh thực tế trên trình duyệt qua subagent (`admin_profiles_modal_1790702366358.png`).
 
 ## FE-TASK-32 — Phân hệ Giao diện Cổng Dịch vụ Công dân (Citizen Workspace)
 
