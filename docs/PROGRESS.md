@@ -30,7 +30,8 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - **Đăng xuất**: Hộp thoại xác nhận đăng xuất an toàn với toast thông báo và điều hướng về `/dang-nhap`.
 - Cấu hình Route trong `src/app/App.tsx`: Hỗ trợ cả 2 đường dẫn `/citizen/*` và `/cong-dan/*`.
 - Export module tại `src/pages/citizen/index.ts`.
-- Đã kiểm tra ngày 29/09: `npm run typecheck`, `npm run lint`, `npm run build` đều đạt 100%.
+- Đã sửa lỗi layout thanh điều hướng: Bổ sung các class `.admin-nav-parent`, `.admin-subnav-tree`, `.admin-subnav-btn` và `shrink-0` cho khối user trong [src/styles/globals.css](file:///e:/wardmate-frontend/src/styles/globals.css) để các mục con phân cấp cây không bị dính chùm ngang, có đường kẻ dọc liên kết, thụt lề chuẩn, icon và badge riêng biệt.
+- Đã kiểm tra ngày 29/09: `npm run typecheck`, `npm run lint`, `npm run build` đều đạt 100%; Đã xác minh visual trực tiếp trên trình duyệt qua subagent.
 
 ## FE-TASK-31 — Modal Đánh giá Mức độ Hài lòng Công dân (Feedback)
 

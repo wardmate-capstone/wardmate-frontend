@@ -386,60 +386,63 @@ export function CitizenPage() {
             </button>
           </div>
 
-          {/* Nhóm 2: Hồ sơ của tôi */}
+          {/* Nhóm 2: Hồ sơ & Chuẩn bị */}
           <div className="admin-nav-section">
-            <div className="flex items-center justify-between px-3 mb-1">
-              <p className="!m-0">Hồ sơ của tôi</p>
+            <p>Hồ sơ & Chuẩn bị</p>
+
+            {/* Mục cha: Hồ sơ của tôi */}
+            <button
+              type="button"
+              className={`admin-nav-parent ${isDossierSection ? 'is-active' : ''}`}
+              onClick={() => setIsDossiersExpanded((prev) => !prev)}
+              title={sidebarCollapsed ? 'Hồ sơ của tôi' : undefined}
+              aria-expanded={isDossiersExpanded}
+            >
+              <Folder size={20} aria-hidden="true" weight={isDossierSection ? 'fill' : 'regular'} />
+              <span>Hồ sơ của tôi</span>
+              {dossierCounts.all > 0 && <small>{dossierCounts.all}</small>}
               {!sidebarCollapsed && (
-                <button
-                  type="button"
-                  onClick={() => setIsDossiersExpanded(!isDossiersExpanded)}
-                  className="text-slate-400 hover:text-slate-700 p-0.5 rounded"
-                  aria-label={isDossiersExpanded ? 'Thu gọn hồ sơ' : 'Mở rộng hồ sơ'}
-                >
-                  <CaretDown
-                    size={14}
-                    className={`transition-transform duration-200 ${isDossiersExpanded ? '' : '-rotate-90'}`}
-                  />
-                </button>
+                <CaretDown
+                  size={14}
+                  className={`text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isDossiersExpanded ? '' : '-rotate-90'
+                  }`}
+                />
               )}
-            </div>
+            </button>
 
             {/* Các nhánh con của Hồ sơ của tôi */}
             {(isDossiersExpanded || sidebarCollapsed) && (
-              <div className="space-y-0.5">
+              <div className="admin-subnav-tree">
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_all' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_all' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_all' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_all')}
                   title={sidebarCollapsed ? 'Tất cả hồ sơ' : undefined}
                 >
-                  <Folder size={19} aria-hidden="true" weight={activeSection === 'dossiers_all' ? 'fill' : 'regular'} />
+                  <List size={16} aria-hidden="true" />
                   <span>Tất cả hồ sơ</span>
                   {dossierCounts.all > 0 && <small>{dossierCounts.all}</small>}
                 </button>
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_draft' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_draft' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_draft' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_draft')}
                   title={sidebarCollapsed ? 'Bản nháp' : undefined}
                 >
-                  <FileDashed size={19} aria-hidden="true" />
+                  <FileDashed size={16} aria-hidden="true" />
                   <span>Bản nháp</span>
                   {dossierCounts.draft > 0 && <small>{dossierCounts.draft}</small>}
                 </button>
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_pending' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_pending' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_pending' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_pending')}
                   title={sidebarCollapsed ? 'Chờ tiền kiểm' : undefined}
                 >
-                  <Clock size={19} aria-hidden="true" className="text-sky-600" />
+                  <Clock size={16} aria-hidden="true" className="text-sky-600" />
                   <span>Chờ tiền kiểm</span>
                   {dossierCounts.pending > 0 && (
                     <small className="!bg-sky-100 !text-sky-800">{dossierCounts.pending}</small>
@@ -448,12 +451,11 @@ export function CitizenPage() {
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_need_revision' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_need_revision' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_need_revision' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_need_revision')}
                   title={sidebarCollapsed ? 'Cần chỉnh sửa' : undefined}
                 >
-                  <WarningCircle size={19} aria-hidden="true" className="text-amber-600" />
+                  <WarningCircle size={16} aria-hidden="true" className="text-amber-600" />
                   <span>Cần chỉnh sửa</span>
                   {dossierCounts.need_revision > 0 && (
                     <small className="!bg-amber-100 !text-amber-800">{dossierCounts.need_revision}</small>
@@ -462,12 +464,11 @@ export function CitizenPage() {
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_resubmitted' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_resubmitted' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_resubmitted' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_resubmitted')}
                   title={sidebarCollapsed ? 'Đã gửi lại' : undefined}
                 >
-                  <ArrowClockwise size={19} aria-hidden="true" className="text-indigo-600" />
+                  <ArrowClockwise size={16} aria-hidden="true" className="text-indigo-600" />
                   <span>Đã gửi lại</span>
                   {dossierCounts.resubmitted > 0 && (
                     <small className="!bg-indigo-100 !text-indigo-800">{dossierCounts.resubmitted}</small>
@@ -476,12 +477,11 @@ export function CitizenPage() {
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_approved' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_approved' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_approved' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_approved')}
                   title={sidebarCollapsed ? 'Đã duyệt' : undefined}
                 >
-                  <CheckCircle size={19} aria-hidden="true" className="text-emerald-600" />
+                  <CheckCircle size={16} aria-hidden="true" className="text-emerald-600" />
                   <span>Đã duyệt</span>
                   {dossierCounts.approved > 0 && (
                     <small className="!bg-emerald-100 !text-emerald-800">{dossierCounts.approved}</small>
@@ -490,12 +490,11 @@ export function CitizenPage() {
 
                 <button
                   type="button"
-                  className={activeSection === 'dossiers_completed' ? 'is-active' : ''}
-                  aria-current={activeSection === 'dossiers_completed' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'dossiers_completed' ? 'is-active' : ''}`}
                   onClick={() => selectSection('dossiers_completed')}
                   title={sidebarCollapsed ? 'Đã hoàn thành' : undefined}
                 >
-                  <SealCheck size={19} aria-hidden="true" className="text-teal-600" />
+                  <SealCheck size={16} aria-hidden="true" className="text-teal-600" />
                   <span>Đã hoàn thành</span>
                   {dossierCounts.completed > 0 && (
                     <small className="!bg-teal-100 !text-teal-800">{dossierCounts.completed}</small>
@@ -503,72 +502,69 @@ export function CitizenPage() {
                 </button>
               </div>
             )}
-          </div>
 
-          {/* Nhóm 3: Chuẩn bị hồ sơ */}
-          <div className="admin-nav-section">
-            <div className="flex items-center justify-between px-3 mb-1">
-              <p className="!m-0">Chuẩn bị hồ sơ</p>
+            {/* Mục cha: Chuẩn bị hồ sơ */}
+            <button
+              type="button"
+              className={`admin-nav-parent mt-2 ${activeSection.startsWith('prep_') ? 'is-active' : ''}`}
+              onClick={() => setIsPrepExpanded((prev) => !prev)}
+              title={sidebarCollapsed ? 'Chuẩn bị hồ sơ' : undefined}
+              aria-expanded={isPrepExpanded}
+            >
+              <Checks size={20} aria-hidden="true" />
+              <span>Chuẩn bị hồ sơ</span>
               {!sidebarCollapsed && (
-                <button
-                  type="button"
-                  onClick={() => setIsPrepExpanded(!isPrepExpanded)}
-                  className="text-slate-400 hover:text-slate-700 p-0.5 rounded"
-                  aria-label={isPrepExpanded ? 'Thu gọn chuẩn bị' : 'Mở rộng chuẩn bị'}
-                >
-                  <CaretDown
-                    size={14}
-                    className={`transition-transform duration-200 ${isPrepExpanded ? '' : '-rotate-90'}`}
-                  />
-                </button>
+                <CaretDown
+                  size={14}
+                  className={`text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isPrepExpanded ? '' : '-rotate-90'
+                  }`}
+                />
               )}
-            </div>
+            </button>
 
+            {/* Các nhánh con của Chuẩn bị hồ sơ */}
             {(isPrepExpanded || sidebarCollapsed) && (
-              <div className="space-y-0.5">
+              <div className="admin-subnav-tree">
                 <button
                   type="button"
-                  className={activeSection === 'prep_checklist' ? 'is-active' : ''}
-                  aria-current={activeSection === 'prep_checklist' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'prep_checklist' ? 'is-active' : ''}`}
                   onClick={() => selectSection('prep_checklist')}
                   title={sidebarCollapsed ? 'Checklist' : undefined}
                 >
-                  <Checks size={19} aria-hidden="true" />
+                  <Checks size={16} aria-hidden="true" />
                   <span>Checklist</span>
                 </button>
 
                 <button
                   type="button"
-                  className={activeSection === 'prep_documents' ? 'is-active' : ''}
-                  aria-current={activeSection === 'prep_documents' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'prep_documents' ? 'is-active' : ''}`}
                   onClick={() => selectSection('prep_documents')}
                   title={sidebarCollapsed ? 'Giấy tờ đã tải lên' : undefined}
                 >
-                  <CloudArrowUp size={19} aria-hidden="true" />
+                  <CloudArrowUp size={16} aria-hidden="true" />
                   <span>Giấy tờ đã tải lên</span>
                   <small>{citizenDocuments.length}</small>
                 </button>
 
                 <button
                   type="button"
-                  className={activeSection === 'prep_forms' ? 'is-active' : ''}
-                  aria-current={activeSection === 'prep_forms' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'prep_forms' ? 'is-active' : ''}`}
                   onClick={() => selectSection('prep_forms')}
                   title={sidebarCollapsed ? 'Biểu mẫu' : undefined}
                 >
-                  <FileCode size={19} aria-hidden="true" />
+                  <FileCode size={16} aria-hidden="true" />
                   <span>Biểu mẫu</span>
                   <small>{citizenForms.length}</small>
                 </button>
 
                 <button
                   type="button"
-                  className={activeSection === 'prep_pdfs' ? 'is-active' : ''}
-                  aria-current={activeSection === 'prep_pdfs' ? 'page' : undefined}
+                  className={`admin-subnav-btn ${activeSection === 'prep_pdfs' ? 'is-active' : ''}`}
                   onClick={() => selectSection('prep_pdfs')}
                   title={sidebarCollapsed ? 'PDF đã tạo' : undefined}
                 >
-                  <FilePdf size={19} aria-hidden="true" />
+                  <FilePdf size={16} aria-hidden="true" />
                   <span>PDF đã tạo</span>
                   <small>{citizenPdfs.length}</small>
                 </button>
@@ -576,9 +572,9 @@ export function CitizenPage() {
             )}
           </div>
 
-          {/* Nhóm 4: Tiện ích & Tài khoản */}
+          {/* Nhóm 3: Tiện ích & Cài đặt */}
           <div className="admin-nav-section">
-            <p>Tiện ích & Tài khoản</p>
+            <p>Tiện ích & Cài đặt</p>
             <button
               type="button"
               className={activeSection === 'notifications' ? 'is-active' : ''}

@@ -474,7 +474,7 @@
   .admin-nav > button.is-active { @apply bg-red-50 text-red-800; box-shadow: inset 3px 0 0 #991d18; }
   .admin-nav > button > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 170px; opacity: 1; filter: blur(0); transform: translateX(0); transition: max-width 500ms var(--admin-sidebar-ease), opacity 440ms ease 20ms, transform 480ms var(--admin-sidebar-ease) 20ms, filter 440ms ease 20ms; }
   .admin-nav > button > small { @apply grid min-w-6 place-items-center overflow-hidden rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-white; max-width: 32px; opacity: 1; filter: blur(0); transform: scale(1); transition: max-width 470ms var(--admin-sidebar-ease), min-width 470ms var(--admin-sidebar-ease), padding 470ms var(--admin-sidebar-ease), opacity 420ms ease 20ms, transform 450ms var(--admin-sidebar-ease) 20ms, filter 420ms ease 20ms; }
-  .admin-sidebar-user { @apply m-3 flex items-center gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3; transition: padding 500ms var(--admin-sidebar-ease), gap 470ms var(--admin-sidebar-ease); }
+  .admin-sidebar-user { @apply m-3 flex items-center gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 shrink-0; transition: padding 500ms var(--admin-sidebar-ease), gap 470ms var(--admin-sidebar-ease); }
   .admin-sidebar-user > span { @apply grid size-10 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-bold text-white; }
   .admin-sidebar-user > div { @apply min-w-0 overflow-hidden whitespace-nowrap; max-width: 170px; opacity: 1; filter: blur(0); transform: translateX(0); transition: max-width 500ms var(--admin-sidebar-ease), opacity 440ms ease 20ms, transform 480ms var(--admin-sidebar-ease) 20ms, filter 440ms ease 20ms; }
   .admin-sidebar-user strong { @apply block truncate text-xs font-bold text-slate-900; }
@@ -564,12 +564,34 @@
   .admin-nav-section > button > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 170px; opacity: 1; transition: max-width 420ms var(--admin-sidebar-ease), opacity 280ms ease; }
   .admin-nav-section > button > small { @apply grid min-w-6 place-items-center overflow-hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500; max-width: 38px; opacity: 1; transition: max-width 380ms var(--admin-sidebar-ease), opacity 260ms ease; }
   .admin-nav-section > button.is-active > small { @apply bg-red-100 text-red-800; }
+  /* Hỗ trợ menu cây đa cấp cho Sidebar (Công dân & Phân hệ) */
+  .admin-nav-parent { @apply mb-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950; transition: padding 420ms var(--admin-sidebar-ease), gap 420ms var(--admin-sidebar-ease), background-color 180ms ease, color 180ms ease; }
+  .admin-nav-parent.is-active { @apply bg-red-50 text-red-800; box-shadow: inset 3px 0 0 #991d18; }
+  .admin-nav-parent > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 170px; }
+  .admin-nav-parent > small { @apply grid min-w-6 place-items-center overflow-hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500; }
+  .admin-nav-parent.is-active > small { @apply bg-red-100 text-red-800; }
+
+  .admin-subnav-tree { @apply my-1 ml-4 flex flex-col space-y-1 border-l-2 border-slate-200 pl-2; }
+  .admin-subnav-btn { @apply mb-0.5 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950; transition: all 180ms ease; }
+  .admin-subnav-btn.is-active { @apply bg-red-50 text-red-800 font-bold; box-shadow: inset 3px 0 0 #991d18; }
+  .admin-subnav-btn > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left; max-width: 140px; }
+  .admin-subnav-btn > small { @apply grid min-w-5 place-items-center overflow-hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shrink-0; }
+  .admin-subnav-btn.is-active > small { @apply bg-red-100 text-red-800; }
+
   @media (min-width: 1024px) {
     .admin-sidebar.is-compact .admin-nav-section { @apply mb-2; }
     .admin-sidebar.is-compact .admin-nav-section > p { @apply m-0; max-height: 0; opacity: 0; }
-    .admin-sidebar.is-compact .admin-nav-section > button { @apply gap-0 px-5; }
+    .admin-sidebar.is-compact .admin-nav-section > button,
+    .admin-sidebar.is-compact .admin-nav-parent { @apply gap-0 px-5; }
     .admin-sidebar.is-compact .admin-nav-section > button > span,
-    .admin-sidebar.is-compact .admin-nav-section > button > small { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
+    .admin-sidebar.is-compact .admin-nav-section > button > small,
+    .admin-sidebar.is-compact .admin-nav-parent > span,
+    .admin-sidebar.is-compact .admin-nav-parent > small,
+    .admin-sidebar.is-compact .admin-nav-parent > svg:last-child { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
+    .admin-sidebar.is-compact .admin-subnav-tree { @apply ml-0 border-l-0 pl-0 my-0; }
+    .admin-sidebar.is-compact .admin-subnav-btn { @apply gap-0 px-5 min-h-10 justify-center; }
+    .admin-sidebar.is-compact .admin-subnav-btn > span,
+    .admin-sidebar.is-compact .admin-subnav-btn > small { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; opacity: 0; display: none; }
   }
   .admin-primary-action { @apply inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-lg bg-red-800 px-4 text-sm font-bold text-white shadow-sm hover:bg-red-900; }
   .admin-content-card { @apply mt-5; }
