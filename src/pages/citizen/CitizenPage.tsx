@@ -16,6 +16,7 @@ import {
   FilePdf,
   FileText,
   Folder,
+  Funnel,
   House,
   List,
   MagnifyingGlass,
@@ -1241,6 +1242,7 @@ function CitizenDossiersView({
   onSelectSection: (id: CitizenSectionId) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedField, setSelectedField] = useState('all');
 
   // Map activeSection sang trạng thái lọc
   const targetStatus = useMemo(() => {
@@ -1265,13 +1267,14 @@ function CitizenDossiersView({
   const filteredDossiers = useMemo(() => {
     return dossiers.filter((d) => {
       const matchStatus = targetStatus === 'ALL' || d.status === targetStatus;
+      const matchField = selectedField === 'all' || d.field === selectedField;
       const matchSearch =
         d.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         d.procedureName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         d.field.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchStatus && matchSearch;
+      return matchStatus && matchField && matchSearch;
     });
-  }, [dossiers, targetStatus, searchTerm]);
+  }, [dossiers, targetStatus, selectedField, searchTerm]);
 
   return (
     <section className="admin-card admin-table-card admin-content-card">
@@ -1287,12 +1290,21 @@ function CitizenDossiersView({
         </label>
 
         <div className="flex items-center gap-2">
+          <select
+            className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+            value={selectedField}
+            onChange={(e) => setSelectedField(e.target.value)}
+          >
+            <option value="all">Tất cả lĩnh vực</option>
+            <option value="Hộ tịch">Hộ tịch</option>
+            <option value="Chứng thực">Chứng thực</option>
+            <option value="Địa chính">Địa chính</option>
+          </select>
           <button
             type="button"
-            onClick={() => onSelectSection('procedures')}
-            className="!bg-red-800 !text-white hover:!bg-red-900 border-none"
+            onClick={() => toast.info('Đang hiển thị danh sách hồ sơ theo bộ lọc')}
           >
-            <Plus size={16} weight="bold" /> Nộp hồ sơ mới
+            <Funnel size={16} /> Lọc
           </button>
         </div>
       </div>
@@ -1326,20 +1338,20 @@ function CitizenDossiersView({
                     {item.status}
                   </span>
                 </td>
-                <td className="max-w-[280px]">
-                  <p className="truncate text-xs text-slate-600" title={item.officerNote}>
+                <td className="max-w-[320px]">
+                  <p className="text-xs text-slate-700 leading-relaxed line-clamp-2" title={item.officerNote}>
                     {item.officerNote || '—'}
                   </p>
                   {item.officerName && (
-                    <small className="block text-[10px] text-slate-400 truncate">Cán bộ: {item.officerName}</small>
+                    <small className="block text-[10px] text-slate-400 mt-0.5 truncate">Cán bộ: {item.officerName}</small>
                   )}
                 </td>
                 <td>
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-2">
                     {item.status === 'Cần chỉnh sửa' && (
                       <button
                         type="button"
-                        className="!text-amber-800 hover:!bg-amber-50"
+                        className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100"
                         onClick={() => toast.info(`Mở giao diện bổ sung giấy tờ cho hồ sơ ${item.code}`)}
                       >
                         Chỉnh sửa
@@ -1348,7 +1360,7 @@ function CitizenDossiersView({
                     {item.status === 'Đã hoàn thành' && (
                       <button
                         type="button"
-                        className="!text-emerald-700 hover:!bg-emerald-50"
+                        className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
                         onClick={() => onOpenFeedback(item.procedureName, item.code)}
                       >
                         Đánh giá
@@ -1356,6 +1368,7 @@ function CitizenDossiersView({
                     )}
                     <button
                       type="button"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-red-800 shadow-sm"
                       onClick={() => onSelectSection('qr_code')}
                       title="Xem mã QR hồ sơ"
                     >
