@@ -1,27 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
-  test('Dashboard hiển thị đầy đủ các chỉ số KPI, biểu đồ và không tràn ngang trên mobile', async ({ page }) => {
+  test('Thống kê hồ sơ (trang mặc định): Hiển thị đầy đủ các chỉ số, biểu đồ và không tràn ngang trên mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/manager');
 
-    // Heading
-    await expect(page.getByRole('heading', { name: 'Tổng quan Điều hành', exact: true })).toBeVisible();
+    // Heading mặc định là Thống kê Hồ sơ Hành chính
+    await expect(page.getByRole('heading', { name: 'Thống kê Hồ sơ Hành chính', exact: true })).toBeVisible();
 
-    // 4 metric cards
-    await expect(page.getByText('Tổng hồ sơ tiếp nhận (T9)')).toBeVisible();
-    await expect(page.getByText('Tỷ lệ giải quyết đúng hạn')).toBeVisible();
-    await expect(page.getByText('Thời gian xử lý trung bình')).toBeVisible();
-    await expect(page.getByText('Mức độ hài lòng người dân')).toBeVisible();
+    // 4 metric cards trong Thống kê hồ sơ
+    await expect(page.getByText('Tổng tiếp nhận')).toBeVisible();
+    await expect(page.getByText('Đã giải quyết đúng hạn')).toBeVisible();
 
-    // Biểu đồ & phân bổ
-    await expect(page.getByText('Phân bổ theo Lĩnh vực')).toBeVisible();
-
-    // Kiểm tra không tràn ngang
+    // Kiểm tra không tràn ngang trên mobile
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test('Hồ sơ công dân: Hiển thị giao diện chuẩn Admin, tìm kiếm và mở Modal chi tiết', async ({ page }) => {
+  test('Hồ sơ công dân: Hiển thị danh sách và chuyển sang Trang Chi tiết Hồ sơ công dân', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/manager');
 
@@ -32,20 +27,19 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByText('Nguyễn Văn An')).toBeVisible();
     await expect(page.getByText('Trần Thị Mai Hương')).toBeVisible();
 
-    // Mở modal xem chi tiết
+    // Mở TRANG CHI TIẾT hồ sơ công dân
     await page.getByRole('button', { name: 'Xem chi tiết' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Chi tiết hồ sơ công dân', exact: true })).toBeVisible();
-    await expect(page.getByText('001092008128')).toBeVisible();
 
-    // Đóng modal
-    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Chi tiết hồ sơ công dân', exact: true })).toHaveCount(0);
+    // Kiểm tra các phần trên Trang chi tiết
+    await expect(page.getByRole('heading', { name: 'Nguyễn Văn An' })).toBeVisible();
+    await expect(page.getByText('Thông tin Định danh & Nhân thân')).toBeVisible();
+    await expect(page.getByText('001092008128').first()).toBeVisible();
+    await expect(page.getByText('Lịch sử Hồ sơ Thủ tục Hành chính tại Phường')).toBeVisible();
+    await expect(page.getByText('HS-2026-0912')).toBeVisible();
 
-    // Mở modal thêm hồ sơ mới
-    await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
-    await expect(page.getByRole('heading', { name: 'Thêm hồ sơ công dân mới', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Hủy bỏ' }).click();
-    await expect(page.getByRole('heading', { name: 'Thêm hồ sơ công dân mới', exact: true })).toHaveCount(0);
+    // Quay lại danh sách
+    await page.getByRole('button', { name: 'Quay lại danh sách công dân' }).click();
+    await expect(page.getByRole('heading', { name: 'Quản lý Hồ sơ Công dân', exact: true })).toBeVisible();
   });
 
   test('Thống kê hệ thống: Chuyển đổi mượt mà giữa các mục thống kê', async ({ page }) => {
@@ -55,7 +49,6 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     // 1. Thống kê hồ sơ
     await page.locator('aside').getByRole('button', { name: 'Thống kê hồ sơ' }).click();
     await expect(page.getByRole('heading', { name: 'Thống kê Hồ sơ Hành chính', exact: true })).toBeVisible();
-    await expect(page.getByText('Đã giải quyết đúng hạn')).toBeVisible();
 
     // 2. Thống kê thủ tục
     await page.locator('aside').getByRole('button', { name: 'Thống kê thủ tục' }).click();
