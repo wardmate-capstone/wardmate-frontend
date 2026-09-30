@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ManagerSidebar } from './ManagerSidebar';
 import { ManagerHeader, managerSectionTitles } from './ManagerHeader';
-import { ManagerDashboardView } from './views/ManagerDashboardView';
 import { ManagerProfilesView } from './views/ManagerProfilesView';
+import { ManagerProfileDetailView } from './views/ManagerProfileDetailView';
 import { ManagerSystemStatsView } from './views/ManagerSystemStatsView';
 import { ManagerPerformanceView } from './views/ManagerPerformanceView';
 import { ManagerFeedbackView } from './views/ManagerFeedbackView';
@@ -14,13 +14,15 @@ import { initialManagerProfiles } from './mockData';
 import { toast } from '@/components/ui/Toast';
 
 export const ManagerPage: React.FC = () => {
-  const [currentSection, setCurrentSection] = useState<ManagerSectionId>('dashboard');
+  // Thay dashboard bằng trang thống kê hồ sơ làm mặc định
+  const [currentSection, setCurrentSection] = useState<ManagerSectionId>('stats-dossiers');
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Quản lý danh sách hồ sơ công dân
+  // Quản lý danh sách hồ sơ công dân & xem chi tiết
   const [profiles, setProfiles] = useState<ManagerProfileItem[]>(initialManagerProfiles);
+  const [selectedProfile, setSelectedProfile] = useState<ManagerProfileItem | null>(null);
 
   const handleSaveProfile = (profile: ManagerProfileItem) => {
     setProfiles((prev) => {
@@ -32,6 +34,11 @@ export const ManagerPage: React.FC = () => {
       }
       return [profile, ...prev];
     });
+
+    if (selectedProfile && selectedProfile.identityNumber === profile.identityNumber) {
+      setSelectedProfile(profile);
+    }
+
     toast.success(`Đã lưu hồ sơ công dân ${profile.fullName} thành công.`);
   };
 
@@ -53,7 +60,10 @@ export const ManagerPage: React.FC = () => {
       {/* Sidebar điều hướng */}
       <ManagerSidebar
         currentSection={currentSection}
-        onSelectSection={(sec) => setCurrentSection(sec)}
+        onSelectSection={(sec) => {
+          setCurrentSection(sec);
+          setSelectedProfile(null);
+        }}
         isOpenMobile={isOpenMobile}
         onCloseMobile={() => setIsOpenMobile(false)}
         isCollapsedDesktop={isCollapsedDesktop}
@@ -74,26 +84,36 @@ export const ManagerPage: React.FC = () => {
         />
 
         <main id="manager-main" className="admin-main" tabIndex={-1}>
-          {/* Page Heading */}
-          <div className="admin-page-heading mb-6">
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
-              {currentMeta.subtitle && (
-                <p className="text-xs text-slate-500 mt-1">{currentMeta.subtitle}</p>
-              )}
+          {/* Page Heading (Ẩn khi đang xem chi tiết công dân vì view chi tiết có header riêng) */}
+          {!selectedProfile && (
+            <div className="admin-page-heading mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
+                {currentMeta.subtitle && (
+                  <p className="text-xs text-slate-500 mt-1">{currentMeta.subtitle}</p>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Dynamic Views */}
-          {currentSection === 'dashboard' && (
-            <ManagerDashboardView onNavigateSection={(sec) => setCurrentSection(sec)} />
           )}
 
+          {/* Dynamic Views */}
           {currentSection === 'profiles' && (
-            <ManagerProfilesView
-              profiles={profiles}
-              onSaveProfile={handleSaveProfile}
-            />
+            selectedProfile ? (
+              <ManagerProfileDetailView
+                profile={selectedProfile}
+                onBack={() => setSelectedProfile(null)}
+                onEdit={(p) => {
+                  setSelectedProfile(null);
+                  toast.info(`Mở biểu mẫu chỉnh sửa thông tin của ${p.fullName}`);
+                }}
+              />
+            ) : (
+              <ManagerProfilesView
+                profiles={profiles}
+                onSaveProfile={handleSaveProfile}
+                onSelectProfile={(p) => setSelectedProfile(p)}
+              />
+            )
           )}
 
           {(currentSection === 'stats-dossiers' ||
