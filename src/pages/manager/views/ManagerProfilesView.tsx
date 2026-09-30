@@ -10,11 +10,13 @@ import { ManagerProfileItem } from '../types';
 interface ManagerProfilesViewProps {
   profiles: ManagerProfileItem[];
   onSaveProfile: (profile: ManagerProfileItem) => void;
+  onSelectProfile?: (profile: ManagerProfileItem) => void;
 }
 
 export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   profiles,
   onSaveProfile,
+  onSelectProfile,
 }) => {
   const [query, setQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<'All' | 'Nam' | 'Nữ' | 'Khác'>('All');
@@ -177,7 +179,13 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     <button
                       type="button"
                       className="text-xs font-semibold text-red-800 hover:text-red-950 px-2 py-1 rounded hover:bg-red-50"
-                      onClick={() => setViewingProfile(item)}
+                      onClick={() => {
+                        if (onSelectProfile) {
+                          onSelectProfile(item);
+                        } else {
+                          setViewingProfile(item);
+                        }
+                      }}
                     >
                       Xem chi tiết
                     </button>
