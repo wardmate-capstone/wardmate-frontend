@@ -41,7 +41,7 @@ export function MainLayout() {
       <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 shadow-[0_3px_18px_rgba(70,16,20,.06)] backdrop-blur-lg">
         <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="WardMate - Trang chủ">
-            <BrandMark className="brand-mark" />
+            <BrandMark className="brand-mark" size={56} />
             <BrandWordmark subtitle="Dịch vụ công xã - phường" />
           </Link>
           <div className="hidden items-center gap-3 lg:flex">

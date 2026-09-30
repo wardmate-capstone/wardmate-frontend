@@ -54,7 +54,7 @@
 @layer components {
   .skip-link { @apply fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-white px-4 py-3 font-bold text-red-900 shadow-xl transition-transform focus:translate-y-0; }
   .utility-link { @apply inline-flex min-h-10 items-center gap-2 text-red-50/75 hover:text-white; }
-  .brand-mark { @apply size-12 shrink-0 drop-shadow-sm; }
+  .brand-mark { @apply size-14 shrink-0 drop-shadow-sm; }
   .footer-brand-mark { @apply shrink-0 drop-shadow-md; }
   .brand-wordmark { @apply min-w-0; }
   .brand-wordmark > strong { @apply block truncate text-xl font-extrabold leading-none tracking-normal sm:text-[1.45rem]; }
