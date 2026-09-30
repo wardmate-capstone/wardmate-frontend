@@ -8,8 +8,15 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0912345678",
     dateOfBirth: "1992-05-14",
     gender: "Nam",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Số 12 ngõ 45 phố Nguyễn Du, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội",
     temporaryAddress: "Số 88 đường Giải Phóng, Phường Phương Mai, Quận Đống Đa, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0912", procedureName: "Đăng ký khai sinh", field: "Hộ tịch", submittedAt: "28/09/2026", status: "Đã hoàn thành", officer: "Nguyễn Minh Anh" },
+      { code: "HS-2026-0814", procedureName: "Chứng thực bản sao từ bản chính CCCD", field: "Chứng thực", submittedAt: "15/08/2026", status: "Đã hoàn thành", officer: "Phạm Tuấn Kiệt" },
+      { code: "HS-2026-0420", procedureName: "Đăng ký kết hôn", field: "Hộ tịch", submittedAt: "20/04/2026", status: "Đã hoàn thành", officer: "Trần Quốc Bảo" },
+    ],
   },
   {
     fullName: "Trần Thị Mai Hương",
@@ -17,8 +24,14 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0988776655",
     dateOfBirth: "1988-11-20",
     gender: "Nữ",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Thôn Thượng, Xã Ninh Hiệp, Huyện Gia Lâm, Hà Nội",
     temporaryAddress: "Căn 1204 Tòa R2 Royal City, 72A Nguyễn Trãi, Phường Thượng Đình, Quận Thanh Xuân, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0925", procedureName: "Đăng ký biến động đất đai (sang tên)", field: "Địa chính", submittedAt: "25/09/2026", status: "Đang xử lý", officer: "Lê Thu Hà" },
+      { code: "HS-2026-0710", procedureName: "Xác nhận tình trạng hôn nhân", field: "Hộ tịch", submittedAt: "10/07/2026", status: "Đã hoàn thành", officer: "Trần Quốc Bảo" },
+    ],
   },
   {
     fullName: "Lê Hoàng Long",
@@ -26,8 +39,13 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0904112233",
     dateOfBirth: "1995-02-08",
     gender: "Nam",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Tổ dân phố 3, Phường Mộ Lao, Quận Hà Đông, Hà Nội",
     temporaryAddress: "Tổ dân phố 3, Phường Mộ Lao, Quận Hà Đông, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0918", procedureName: "Cấp lại Giấy xác nhận tình trạng hôn nhân", field: "Hộ tịch", submittedAt: "18/09/2026", status: "Cần bổ sung", officer: "Nguyễn Minh Anh" },
+    ],
   },
   {
     fullName: "Phạm Thu Trang",
@@ -35,8 +53,13 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0976543210",
     dateOfBirth: "1985-08-30",
     gender: "Nữ",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Số 25 ngách 8 ngõ 106 phố Chùa Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội",
     temporaryAddress: "Số 5 phố Tràng Thi, Phường Hàng Trống, Quận Hoàn Kiếm, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0830", procedureName: "Chứng thực chữ ký trong giấy ủy quyền", field: "Chứng thực", submittedAt: "30/08/2026", status: "Đã hoàn thành", officer: "Phạm Tuấn Kiệt" },
+    ],
   },
   {
     fullName: "Vũ Minh Đức",
@@ -44,8 +67,13 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0933445566",
     dateOfBirth: "1999-12-05",
     gender: "Nam",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Số 102 ngõ 1194 đường Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội",
     temporaryAddress: "Số 102 ngõ 1194 đường Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0612", procedureName: "Đăng ký kết hôn", field: "Hộ tịch", submittedAt: "12/06/2026", status: "Đã hoàn thành", officer: "Trần Quốc Bảo" },
+    ],
   },
   {
     fullName: "Đỗ Thị Bích Ngọc",
@@ -53,8 +81,13 @@ export const initialManagerProfiles: ManagerProfileItem[] = [
     phoneNumber: "0915667788",
     dateOfBirth: "1996-07-19",
     gender: "Nữ",
+    ethnicity: "Kinh",
+    vneidLevel: 2,
     permanentAddress: "Số 42 phố Hàng Bông, Phường Hàng Gai, Quận Hoàn Kiếm, Hà Nội",
     temporaryAddress: "Số 42 phố Hàng Bông, Phường Hàng Gai, Quận Hoàn Kiếm, Hà Nội",
+    dossierHistory: [
+      { code: "HS-2026-0922", procedureName: "Trợ cấp bảo trợ xã hội", field: "Lao động - TB&XH", submittedAt: "22/09/2026", status: "Đang xử lý", officer: "Vũ Mai Phương" },
+    ],
   },
 ];
 
