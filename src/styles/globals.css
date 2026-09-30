@@ -744,3 +744,9 @@
     .procedure-detail-table td[data-label]::before { content: attr(data-label); @apply mb-1 block font-semibold text-red-900; }
   }
 }
+@layer components {
+  .procedure-manager-layout .admin-nav-section > button > span { white-space: normal; }
+  @media (min-width: 1024px) {
+    .procedure-manager-layout .admin-sidebar.is-compact .admin-nav-section > button > span { white-space: nowrap; }
+  }
+}

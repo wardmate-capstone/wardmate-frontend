@@ -2,24 +2,22 @@ import React from 'react';
 import {
   List,
   SidebarSimple,
-  Plus,
   Bell,
+  Plus,
   MagnifyingGlass,
-  Sparkle
 } from '@phosphor-icons/react';
 import { ProcedureNavSection } from './ProcedureManagerSidebar';
 
 interface ProcedureManagerHeaderProps {
-  currentSection: ProcedureNavSection;
   onOpenMobileSidebar: () => void;
+  onAddNewProcedure?: () => void;
   isCollapsedDesktop: boolean;
   onToggleCollapseDesktop: () => void;
-  onAddNewProcedure: () => void;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
 }
 
-const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: string }> = {
+export const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: string }> = {
   dashboard: {
     title: 'Tổng quan Quản lý Thủ tục',
     subtitle: 'Theo dõi 45 thủ tục công khai, 12 biểu mẫu hiện hành và trạng thái đồng bộ tri thức AI'
@@ -45,7 +43,7 @@ const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: stri
     subtitle: 'Quản lý các tệp PDF trống, file Word và mẫu điền minh họa kèm theo thủ tục'
   },
   'upload-form': {
-    title: 'Upload / Tạo mới Biểu mẫu Chuẩn',
+    title: 'Tải lên biểu mẫu',
     subtitle: 'Tải lên biểu mẫu Word (.doc/.docx) hoặc PDF và thiết lập thời hạn hiệu lực'
   },
   'form-versions': {
@@ -79,114 +77,20 @@ const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: stri
 };
 
 export const ProcedureManagerHeader: React.FC<ProcedureManagerHeaderProps> = ({
-  currentSection,
-  onOpenMobileSidebar,
-  isCollapsedDesktop,
-  onToggleCollapseDesktop,
-  onAddNewProcedure,
-  searchQuery = '',
-  onSearchChange
-}) => {
-  const currentInfo = sectionTitles[currentSection] || {
-    title: 'Quản lý Thủ tục Hành chính',
-    subtitle: 'Cổng điều hành và chuẩn hóa nghiệp vụ Một cửa'
-  };
-
-  return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur-md sm:px-6">
-      {/* Left Area: Toggle + Title */}
-      <div className="flex items-center gap-3">
-        {/* Mobile Hamburger */}
-        <button
-          type="button"
-          onClick={onOpenMobileSidebar}
-          className="grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 lg:hidden"
-          aria-label="Mở menu điều hướng"
-        >
-          <List size={22} weight="bold" />
-        </button>
-
-        {/* Desktop Collapse Toggle */}
-        <button
-          type="button"
-          onClick={onToggleCollapseDesktop}
-          className="hidden size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 lg:grid"
-          title={isCollapsedDesktop ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-          aria-label="Thu gọn hoặc mở rộng thanh điều hướng"
-        >
-          <SidebarSimple size={20} weight="duotone" />
-        </button>
-
-        {/* Title */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-base font-bold text-slate-950 sm:text-lg">
-              {currentInfo.title}
-            </h1>
-            <span className="hidden rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-800 sm:inline-block">
-              Quản lý nghiệp vụ
-            </span>
-          </div>
-          <p className="hidden truncate text-xs text-slate-500 md:block">
-            {currentInfo.subtitle}
-          </p>
-        </div>
-      </div>
-
-      {/* Right Area: Search, Action, Notification, Profile badge */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Quick Search */}
-        {onSearchChange && (
-          <div className="relative hidden sm:block">
-            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Tìm thủ tục, mã..."
-              className="h-9 w-44 rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100 md:w-56"
-            />
-          </div>
-        )}
-
-        {/* Primary Action: Add Procedure */}
-        <button
-          type="button"
-          onClick={onAddNewProcedure}
-          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-800 to-red-900 px-3.5 text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-red-300"
-          title="Thêm thủ tục hành chính mới"
-        >
-          <Plus size={16} weight="bold" />
-          <span className="hidden sm:inline">Thêm thủ tục</span>
-          <span className="sm:hidden">Thêm</span>
-        </button>
-
-        {/* AI Sync Indicator */}
-        <div
-          className="hidden items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] font-semibold text-purple-800 lg:flex"
-          title="Cơ sở tri thức AI đã đồng bộ 100%"
-        >
-          <Sparkle size={14} weight="fill" className="text-purple-600" />
-          <span>AI Synced</span>
-        </div>
-
-        {/* Notification Bell */}
-        <button
-          type="button"
-          className="relative grid size-9 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100"
-          aria-label="Thông báo hệ thống"
-        >
-          <Bell size={18} />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-600 ring-2 ring-white" />
-        </button>
-
-        {/* User Mini Avatar */}
-        <div className="flex items-center gap-2 pl-1 sm:pl-2">
-          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-extrabold text-gold-300 shadow-inner">
-            HN
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-};
+  onOpenMobileSidebar, isCollapsedDesktop, onToggleCollapseDesktop,
+  searchQuery = '', onSearchChange, onAddNewProcedure
+}) => (
+  <header className="admin-topbar">
+    <button type="button" className="admin-menu-toggle" onClick={onOpenMobileSidebar} aria-label="Mở menu điều hướng" aria-controls="procedure-manager-sidebar"><List size={23} /></button>
+    <button type="button" className={`admin-collapse-button ${isCollapsedDesktop ? 'is-collapsed' : ''}`} onClick={onToggleCollapseDesktop} aria-label="Thu gọn hoặc mở rộng thanh điều hướng" aria-controls="procedure-manager-sidebar" aria-expanded={!isCollapsedDesktop}><SidebarSimple size={21} /></button>
+    {onSearchChange && <div className="relative hidden md:block">
+      <MagnifyingGlass size={17} className="absolute left-3 top-3 text-slate-400" />
+      <input aria-label="Tìm thủ tục, mã" value={searchQuery} onChange={e => onSearchChange(e.target.value)} placeholder="Tìm thủ tục, mã..." className="h-11 w-52 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs" />
+    </div>}
+    {onAddNewProcedure && <button type="button" className="admin-primary-action" onClick={onAddNewProcedure}><Plus size={18} /><span>Thêm thủ tục</span></button>}
+    <div className="admin-topbar-actions">
+      <button type="button" aria-label="Thông báo hệ thống"><Bell size={21} /><span>•</span></button>
+      <div className="admin-user-button"><span>HN</span><div><strong>Lê Hoàng Nam</strong><small>Quản lý thủ tục</small></div></div>
+    </div>
+  </header>
+);

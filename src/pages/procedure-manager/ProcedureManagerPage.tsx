@@ -1,6 +1,7 @@
+import { Plus } from '@phosphor-icons/react';
 import React, { useState } from 'react';
 import { ProcedureManagerSidebar, ProcedureNavSection } from './ProcedureManagerSidebar';
-import { ProcedureManagerHeader } from './ProcedureManagerHeader';
+import { ProcedureManagerHeader, sectionTitles } from './ProcedureManagerHeader';
 import { ProcedureDashboardView } from './ProcedureDashboardView';
 import { ProcedureListView } from './ProcedureListView';
 import { ProcedureDetailView } from './ProcedureDetailView';
@@ -75,7 +76,8 @@ export const ProcedureManagerPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 antialiased selection:bg-gold-200 selection:text-red-950">
+    <div className="admin-layout procedure-manager-layout">
+      <a href="#procedure-manager-main" className="skip-link">Đến nội dung chính</a>
       {/* Sidebar */}
       <ProcedureManagerSidebar
         currentSection={currentSection}
@@ -92,20 +94,26 @@ export const ProcedureManagerPage: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
+      <div className={`admin-workspace ${isCollapsedDesktop ? 'is-sidebar-collapsed' : ''}`}>
         {/* Header */}
         <ProcedureManagerHeader
-          currentSection={currentSection}
           onOpenMobileSidebar={() => setIsOpenMobile(true)}
           isCollapsedDesktop={isCollapsedDesktop}
           onToggleCollapseDesktop={() => setIsCollapsedDesktop(!isCollapsedDesktop)}
-          onAddNewProcedure={handleOpenCreateWizard}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onAddNewProcedure={currentSection !== 'dashboard' && currentSection !== 'procedures' && !selectedProcedure ? handleOpenCreateWizard : undefined}
         />
 
         {/* Dynamic Views */}
-        <main className="flex-1 overflow-x-hidden focus:outline-none">
+        <main id="procedure-manager-main" className="admin-main" tabIndex={-1}>
+          {(currentSection === 'dashboard' || selectedProcedure) && <div className="admin-page-heading mb-5">
+            <div><h1>{selectedProcedure ? 'Chi tiết thủ tục' : sectionTitles[currentSection].title}</h1></div>
+            <div className="flex flex-wrap gap-2">
+              {currentSection === 'dashboard' && !selectedProcedure && <button type="button" className="min-h-11 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600" onClick={() => setCurrentSection('upload-form')}>Tải biểu mẫu lên</button>}
+              <button type="button" className="admin-primary-action" onClick={handleOpenCreateWizard}><Plus size={18} weight="bold" /> Thêm thủ tục</button>
+            </div>
+          </div>}
           {/* If a procedure is selected, show Detail Workspace regardless of section */}
           {selectedProcedure ? (
             <ProcedureDetailView
@@ -130,8 +138,8 @@ export const ProcedureManagerPage: React.FC = () => {
               {currentSection === 'dashboard' && (
                 <ProcedureDashboardView
                   onNavigateSection={(sec) => setCurrentSection(sec)}
-                  onSelectProcedure={handleSelectProcedure}
                   onOpenCreateWizard={handleOpenCreateWizard}
+                  onSelectProcedure={handleSelectProcedure}
                 />
               )}
 

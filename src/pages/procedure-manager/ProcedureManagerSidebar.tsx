@@ -1,3 +1,5 @@
+import { BrandMark } from '@/components/brand/BrandMark';
+import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import {
   SquaresFour,
   Files,
@@ -13,7 +15,6 @@ import {
   UserGear,
   SignOut,
   X,
-  ShieldCheck,
   UploadSimple,
   LinkSimple
 } from '@phosphor-icons/react';
@@ -144,191 +145,38 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
 
   return (
     <>
-      {/* Mobile Backdrop */}
-      {isOpenMobile && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden"
-          onClick={onCloseMobile}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar Container */}
-      <aside
-        id="procedure-manager-sidebar"
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:static lg:z-auto ${
-          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
-        } ${isCollapsedDesktop ? 'w-20' : 'w-72'}`}
-        aria-label="Điều hướng Quản lý Thủ tục"
-      >
-        {/* Brand Header */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-red-800 to-red-950 text-white shadow-md">
-              <ShieldCheck size={24} weight="duotone" className="text-gold-300" />
-            </div>
-            {!isCollapsedDesktop && (
-              <div className="min-w-0">
-                <span className="block truncate text-xs font-bold uppercase tracking-wider text-red-800">
-                  WardMate Gov
-                </span>
-                <span className="block truncate text-sm font-extrabold text-slate-950">
-                  Quản lý Thủ tục
-                </span>
-              </div>
-            )}
-          </div>
-          {/* Mobile close button */}
-          <button
-            type="button"
-            onClick={onCloseMobile}
-            className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
-            aria-label="Đóng menu điều hướng"
-          >
-            <X size={20} />
-          </button>
+      {isOpenMobile && <button type="button" className="admin-sidebar-overlay" onClick={onCloseMobile} aria-label="Đóng menu điều hướng" />}
+      <aside id="procedure-manager-sidebar" className={`admin-sidebar ${isOpenMobile ? 'is-open' : ''} ${isCollapsedDesktop ? 'is-compact' : ''}`} aria-label="Điều hướng Quản lý Thủ tục">
+        <div className="admin-brand">
+          <BrandMark className="admin-brand-mark" size={42} />
+          <div><BrandWordmark subtitle="Quản lý thủ tục" compact /></div>
+          <button type="button" onClick={onCloseMobile} aria-label="Đóng menu"><X size={21} /></button>
         </div>
-
-        {/* Scrollable Navigation */}
-        <nav className="flex-1 space-y-6 overflow-y-auto p-3.5 focus:outline-none">
-          {/* Dashboard Item */}
-          <div>
-            <button
-              type="button"
-              onClick={() => handleNavClick('dashboard')}
-              className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
-                currentSection === 'dashboard'
-                  ? 'bg-red-800 text-white shadow-sm'
-                  : 'text-slate-700 hover:bg-red-50 hover:text-red-900'
-              }`}
-              title="Tổng quan hệ thống"
-            >
-              <SquaresFour size={22} weight={currentSection === 'dashboard' ? 'fill' : 'regular'} className="shrink-0" />
-              {!isCollapsedDesktop && (
-                <span className="flex-1 text-left">Dashboard</span>
-              )}
+        <nav className="admin-nav">
+          <div className="admin-nav-section">
+            <p>Tổng quan</p>
+            <button type="button" className={currentSection === 'dashboard' ? 'is-active' : ''} aria-current={currentSection === 'dashboard' ? 'page' : undefined} onClick={() => handleNavClick('dashboard')} title="Dashboard">
+              <SquaresFour size={20} /><span>Dashboard</span>
             </button>
           </div>
-
-          {/* Grouped navigation */}
-          {navGroups.map((group) => (
-            <div key={group.title} className="space-y-1">
-              {!isCollapsedDesktop && (
-                <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {group.title}
-                </p>
-              )}
-              <ul className="space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentSection === item.id;
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleNavClick(item.id)}
-                        className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-red-800 font-semibold text-white shadow-sm'
-                            : 'text-slate-700 hover:bg-red-50 hover:text-red-900'
-                        }`}
-                        title={item.label}
-                      >
-                        <Icon
-                          size={20}
-                          weight={isActive ? 'fill' : 'regular'}
-                          className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-red-800'}`}
-                        />
-                        {!isCollapsedDesktop && (
-                          <>
-                            <span className="flex-1 truncate text-left">{item.label}</span>
-                            {item.badge && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                  isActive
-                                    ? 'bg-white/20 text-white'
-                                    : item.badgeColor || 'bg-slate-100 text-slate-600'
-                                }`}
-                              >
-                                {item.badge}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+          {navGroups.map(group => (
+            <div className="admin-nav-section" key={group.title}>
+              <p>{group.title}</p>
+              {group.items.map(({ id, label, icon: Icon, badge }) => (
+                <button key={id} type="button" className={currentSection === id ? 'is-active' : ''} aria-current={currentSection === id ? 'page' : undefined} onClick={() => handleNavClick(id)} title={badge ? `${label} · ${badge}` : label} aria-label={label}>
+                  <Icon size={20} aria-hidden="true" /><span>{label}</span>{badge && <small>{id === 'procedures' ? publishedCount + draftCount : id === 'ai-knowledge' ? 'AI' : badge.split(' ')[0]}</small>}
+                </button>
+              ))}
             </div>
           ))}
-
-          {/* System & Audit */}
-          <div className="space-y-1 border-t border-slate-100 pt-3">
-            {!isCollapsedDesktop && (
-              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Hệ thống
-              </p>
-            )}
-            <ul className="space-y-1">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNavClick('audit-logs')}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                    currentSection === 'audit-logs'
-                      ? 'bg-red-800 font-semibold text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-red-50 hover:text-red-900'
-                  }`}
-                  title="Lịch sử cập nhật"
-                >
-                  <Article size={20} weight={currentSection === 'audit-logs' ? 'fill' : 'regular'} className="shrink-0" />
-                  {!isCollapsedDesktop && <span className="flex-1 text-left">Lịch sử cập nhật</span>}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNavClick('profile')}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                    currentSection === 'profile'
-                      ? 'bg-red-800 font-semibold text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-red-50 hover:text-red-900'
-                  }`}
-                  title="Hồ sơ cá nhân"
-                >
-                  <UserGear size={20} weight={currentSection === 'profile' ? 'fill' : 'regular'} className="shrink-0" />
-                  {!isCollapsedDesktop && <span className="flex-1 text-left">Hồ sơ cá nhân</span>}
-                </button>
-              </li>
-            </ul>
+          <div className="admin-nav-section">
+            <p>Hệ thống</p>
+            <button type="button" className={currentSection === 'audit-logs' ? 'is-active' : ''} onClick={() => handleNavClick('audit-logs')} title="Lịch sử cập nhật"><Article size={20} /><span>Lịch sử cập nhật</span></button>
+            <button type="button" className={currentSection === 'profile' ? 'is-active' : ''} onClick={() => handleNavClick('profile')} title="Hồ sơ cá nhân"><UserGear size={20} /><span>Hồ sơ cá nhân</span></button>
+            <button type="button" onClick={() => { if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Thủ tục?')) window.location.href = '/dang-nhap'; }} title="Đăng xuất" aria-label="Đăng xuất khỏi hệ thống"><SignOut size={20} /><span>Đăng xuất</span></button>
           </div>
         </nav>
-
-        {/* User Card & Logout Footer */}
-        <div className="shrink-0 border-t border-slate-200 bg-slate-50 p-3">
-          <div className="flex items-center justify-between gap-2">
-            {!isCollapsedDesktop && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-slate-900">Lê Hoàng Nam</p>
-                <p className="truncate text-[11px] text-slate-500">Chuyên viên Quản lý thủ tục</p>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Thủ tục?')) {
-                  window.location.href = '/dang-nhap';
-                }
-              }}
-              className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-red-100 hover:text-red-800"
-              title="Đăng xuất"
-              aria-label="Đăng xuất khỏi hệ thống"
-            >
-              <SignOut size={20} />
-            </button>
-          </div>
-        </div>
+        <div className="admin-sidebar-user"><span>HN</span><div><strong>Lê Hoàng Nam</strong><small>Chuyên viên Quản lý thủ tục</small></div></div>
       </aside>
     </>
   );
