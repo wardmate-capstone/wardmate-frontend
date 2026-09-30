@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  House,
   IdentificationCard,
   Files,
   ClipboardText,
@@ -46,44 +45,6 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
   };
 
   const navGroups = [
-    {
-      title: 'Quản lý thông tin',
-      items: [
-        {
-          id: 'profiles' as ManagerSectionId,
-          label: 'Hồ sơ công dân',
-          icon: IdentificationCard,
-          badge: `${profilesCount}`,
-          badgeColor: 'bg-red-100 text-red-800',
-        },
-      ],
-    },
-    {
-      title: 'Thống kê hệ thống',
-      items: [
-        {
-          id: 'stats-dossiers' as ManagerSectionId,
-          label: 'Thống kê hồ sơ',
-          icon: Files,
-          badge: '1.4k',
-        },
-        {
-          id: 'stats-procedures' as ManagerSectionId,
-          label: 'Thống kê thủ tục',
-          icon: ClipboardText,
-        },
-        {
-          id: 'stats-searches' as ManagerSectionId,
-          label: 'Thống kê lượt tra cứu',
-          icon: MagnifyingGlass,
-        },
-        {
-          id: 'stats-forms' as ManagerSectionId,
-          label: 'Thống kê biểu mẫu',
-          icon: FileText,
-        },
-      ],
-    },
     {
       title: 'Hiệu suất xử lý',
       items: [
@@ -184,16 +145,62 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
 
         <nav className="admin-nav">
           <div className="admin-nav-section">
-            <p>Tổng quan</p>
+            <p>Thống kê hệ thống</p>
             <button
               type="button"
-              className={currentSection === 'dashboard' ? 'is-active' : ''}
-              aria-current={currentSection === 'dashboard' ? 'page' : undefined}
-              onClick={() => handleNavClick('dashboard')}
-              title="Dashboard"
+              className={currentSection === 'stats-dossiers' ? 'is-active' : ''}
+              aria-current={currentSection === 'stats-dossiers' ? 'page' : undefined}
+              onClick={() => handleNavClick('stats-dossiers')}
+              title="Thống kê hồ sơ"
             >
-              <House size={20} />
-              <span>Dashboard</span>
+              <Files size={20} />
+              <span>Thống kê hồ sơ</span>
+              <small>1.4k</small>
+            </button>
+            <button
+              type="button"
+              className={currentSection === 'stats-procedures' ? 'is-active' : ''}
+              aria-current={currentSection === 'stats-procedures' ? 'page' : undefined}
+              onClick={() => handleNavClick('stats-procedures')}
+              title="Thống kê thủ tục"
+            >
+              <ClipboardText size={20} />
+              <span>Thống kê thủ tục</span>
+            </button>
+            <button
+              type="button"
+              className={currentSection === 'stats-searches' ? 'is-active' : ''}
+              aria-current={currentSection === 'stats-searches' ? 'page' : undefined}
+              onClick={() => handleNavClick('stats-searches')}
+              title="Thống kê lượt tra cứu"
+            >
+              <MagnifyingGlass size={20} />
+              <span>Thống kê lượt tra cứu</span>
+            </button>
+            <button
+              type="button"
+              className={currentSection === 'stats-forms' ? 'is-active' : ''}
+              aria-current={currentSection === 'stats-forms' ? 'page' : undefined}
+              onClick={() => handleNavClick('stats-forms')}
+              title="Thống kê biểu mẫu"
+            >
+              <FileText size={20} />
+              <span>Thống kê biểu mẫu</span>
+            </button>
+          </div>
+
+          <div className="admin-nav-section">
+            <p>Hồ sơ công dân</p>
+            <button
+              type="button"
+              className={currentSection === 'profiles' ? 'is-active' : ''}
+              aria-current={currentSection === 'profiles' ? 'page' : undefined}
+              onClick={() => handleNavClick('profiles')}
+              title={`Hồ sơ công dân (${profilesCount})`}
+            >
+              <IdentificationCard size={20} />
+              <span>Hồ sơ công dân</span>
+              <small>{profilesCount}</small>
             </button>
           </div>
 
