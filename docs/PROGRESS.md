@@ -4,6 +4,41 @@ Cập nhật: 30/09/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Xây dựng Giao diện Phân hệ Quản lý Điều hành (Manager Workspace) — 30/09/2026
+
+- Người dùng yêu cầu xây dựng giao diện phân hệ Quản lý điều hành (`/manager`, `/quan-ly`) theo layout và phong cách chuẩn của trang Admin (`AdminPage.tsx`), bao gồm cây chức năng:
+  - **Dashboard**: Thống kê chỉ số nhanh (tiếp nhận, hoàn thành đúng hạn, thời gian xử lý TB, mức độ hài lòng), biểu đồ xu hướng Recharts AreaChart, phân bổ theo lĩnh vực, top thủ tục giải quyết nhiều nhất và phản ánh người dân mới nhất.
+  - **Hồ sơ công dân** (Lấy giống trang Admin): Bảng danh sách 7 trường định danh, tìm kiếm đa trường, lọc theo giới tính, Modal xem chi tiết và Modal tạo mới/chỉnh sửa hồ sơ dùng Radix Modal và Sonner Toast.
+  - **Thống kê hệ thống**:
+    - Thống kê hồ sơ: Diễn biến tiếp nhận & giải quyết theo tháng, bảng cơ cấu theo lĩnh vực, phân loại đúng hạn/trễ hạn.
+    - Thống kê thủ tục: Tần suất thực hiện, tỷ lệ nộp trực tuyến, thời gian trung bình từng thủ tục.
+    - Thống kê lượt tra cứu: Biểu đồ lưu lượng theo khung giờ trong ngày, top từ khóa tìm kiếm.
+    - Thống kê biểu mẫu: Số lượt tải Word/PDF, số lượt điền E-Form trực tuyến, trạng thái rà soát.
+  - **Hiệu suất xử lý**:
+    - Thời gian xử lý: So sánh thời gian thực tế với quy định pháp luật.
+    - Tỷ lệ hoàn thành: Tỷ lệ giải quyết trước hạn, đúng hạn, quá hạn và rút hồ sơ.
+    - Tỷ lệ cần bổ sung: Phân tích nguyên nhân hồ sơ thiếu sót và giải pháp giảm số lần đi lại cho dân.
+    - Hiệu suất cán bộ: Bảng đánh giá năng suất từng cán bộ Một cửa, tỷ lệ đúng hạn và điểm hài lòng (sao).
+  - **Phản hồi người dân**:
+    - Báo cáo phản hồi: Danh sách ý kiến đóng góp, phân loại chủ đề, phản hồi giải trình từ cơ quan.
+    - Mức độ hài lòng: Đánh giá theo 4 tiêu chí chuẩn của Bộ Nội vụ (SIPAS).
+  - **Báo cáo**: Trung tâm kết xuất báo cáo định kỳ tháng, quý, năm, xuất file PDF, Excel.
+  - **Cài đặt quyền**: Danh mục vai trò và chi tiết phân quyền chức năng trong hệ thống.
+  - **Hồ sơ cá nhân**: Thông tin tài khoản quản trị và bảo mật.
+  - **Đăng xuất**: Hộp thoại xác nhận và điều hướng về trang đăng nhập.
+- Files triển khai:
+  - `src/pages/manager/ManagerPage.tsx`: Layout chính, điều phối view và state quản lý hồ sơ.
+  - `src/pages/manager/ManagerSidebar.tsx`: Thanh điều hướng phân cấp chuẩn Admin.
+  - `src/pages/manager/ManagerHeader.tsx`: Topbar với breadcrumb, tìm kiếm và nút xuất báo cáo.
+  - `src/pages/manager/views/*`: 7 view chức năng chi tiết, module hóa rõ ràng.
+  - `src/pages/manager/mockData.ts`, `src/pages/manager/types.ts`.
+  - Cập nhật route `/manager/*` và `/quan-ly/*` tại `src/app/App.tsx`.
+- Kiểm tra:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+  - `npm run build`: Đạt 100% (Vite production bundle thành công).
+  - Playwright tests: 10/10 tests đạt (`tests/manager.spec.ts` 4/4 tests và `tests/procedure-manager.spec.ts` 6/6 tests), kiểm tra đầy đủ desktop và mobile (không tràn ngang).
+
 ## Cập nhật Logo WardMate — 30/09/2026
 
 - Người dùng cung cấp tệp logo mới tại `dist/wardmate-mark.svg`.

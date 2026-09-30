@@ -13,6 +13,7 @@ import { AdminPage } from '@/pages/AdminPage';
 import { CitizenPage } from '@/pages/citizen';
 import { OfficerPage } from '@/pages/officer/OfficerPage';
 import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
+import { ManagerPage } from '@/pages/manager/ManagerPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
@@ -26,6 +27,8 @@ export function App() {
             <Route path="cong-dan/*" element={<CitizenPage />} />
             <Route path="officer/*" element={<OfficerPage />} />
             <Route path="can-bo/*" element={<OfficerPage />} />
+            <Route path="manager/*" element={<ManagerPage />} />
+            <Route path="quan-ly/*" element={<ManagerPage />} />
             <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />
             <Route path="quan-ly-thu-tuc/*" element={<ProcedureManagerPage />} />
             <Route path="admin" element={<AdminPage />} />
