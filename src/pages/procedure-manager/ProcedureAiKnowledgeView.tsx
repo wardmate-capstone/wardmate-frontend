@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Brain,
   ArrowsClockwise,
   Scales,
   Question,
@@ -54,20 +53,16 @@ export const ProcedureAiKnowledgeView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Top Banner */}
-      <section className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-950 p-6 text-white shadow-xl sm:p-8">
+      <section className="admin-card p-5">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-purple-300">
-              <Brain size={16} weight="fill" />
-              <span>RAG Knowledge Base & AI Semantic Indexing</span>
-            </div>
-            <h2 className="text-2xl font-black tracking-tight sm:text-3xl">
-              Cơ sở Dữ liệu Tri thức AI (WardMate Intelligence)
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Tri thức AI
             </h2>
-            <p className="text-sm leading-relaxed text-purple-100/80">
-              Quản lý các nguồn dữ liệu văn bản pháp luật, bộ câu hỏi FAQ và quy định nghiệp vụ được nạp vào mô hình AI để tự động hỗ trợ cán bộ tiền kiểm và giải đáp cho người dân.
+            <p className="text-sm leading-relaxed text-slate-500">
+              Đồng bộ nguồn dữ liệu để AI sử dụng nội dung mới nhất.
             </p>
           </div>
 
@@ -75,7 +70,7 @@ export const ProcedureAiKnowledgeView: React.FC = () => {
             type="button"
             onClick={handleSyncAll}
             disabled={isSyncingAll}
-            className="inline-flex items-center gap-2 rounded-2xl bg-purple-500 px-5 py-3 text-sm font-extrabold text-white shadow-lg transition-transform hover:-translate-y-0.5 hover:bg-purple-600 disabled:opacity-50"
+            className="admin-primary-action disabled:opacity-50"
           >
             <ArrowsClockwise size={18} className={isSyncingAll ? 'animate-spin' : ''} weight="bold" />
             <span>{isSyncingAll ? 'Đang đồng bộ AI...' : 'Đồng bộ lại toàn bộ AI'}</span>
@@ -91,12 +86,12 @@ export const ProcedureAiKnowledgeView: React.FC = () => {
           return (
             <div
               key={source.id}
-              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300"
+              className="flex flex-col justify-between admin-card p-6 transition-all hover:border-purple-300"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="grid size-10 place-items-center rounded-2xl bg-purple-100 text-purple-800">
+                    <div className="grid size-10 place-items-center rounded-xl bg-purple-100 text-purple-800">
                       <Icon size={20} weight="duotone" />
                     </div>
                     <div>

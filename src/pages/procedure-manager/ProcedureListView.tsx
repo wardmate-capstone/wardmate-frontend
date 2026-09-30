@@ -110,22 +110,19 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Header bar */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             QUẢN LÝ THỦ TỤC HÀNH CHÍNH
-          </h2>
-          <p className="text-xs text-slate-500 sm:text-sm">
-            Quản lý vòng đời thủ tục, biểu mẫu, thành phần hồ sơ và văn bản quy phạm pháp luật
-          </p>
+          </h1>
         </div>
 
         <button
           type="button"
           onClick={onOpenCreateWizard}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-800 to-red-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow hover:brightness-105"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:shadow hover:brightness-105"
         >
           <Plus size={18} weight="bold" />
           <span>+ Thêm thủ tục</span>
@@ -133,7 +130,7 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3 admin-card p-4 lg:flex-row lg:items-center">
         {/* Search input */}
         <div className="relative flex-1">
           <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -141,7 +138,7 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên thủ tục, mã thủ tục (HT-01, CT-01)..."
+            placeholder="Tìm tên hoặc mã thủ tục..."
             className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100 sm:text-sm"
           />
         </div>
@@ -197,8 +194,8 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
       </div>
 
       {/* Main Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="admin-card overflow-hidden">
+        <div className="admin-table-wrap">
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
               <tr>
@@ -238,9 +235,6 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
                       >
                         {proc.title}
                       </button>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-500">
-                        {proc.description}
-                      </p>
                     </td>
 
                     {/* Danh mục */}
@@ -302,7 +296,7 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
                         {/* Context Menu Dropdown */}
                         {activeMenuId === proc.id && (
                           <div
-                            className="absolute right-0 top-10 z-20 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
+                            className="absolute right-0 top-10 z-20 w-52 admin-card p-2 shadow-xl"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
@@ -413,9 +407,6 @@ export const ProcedureListView: React.FC<ProcedureListViewProps> = ({
           <p>
             Hiển thị <strong className="text-slate-900">{filteredProcedures.length}</strong> / {procedures.length} thủ tục
           </p>
-          <span className="text-[11px] text-slate-400">
-            * Nguyên tắc bảo toàn: Không dùng xóa cứng đối với các thủ tục đã được tiếp nhận hồ sơ.
-          </span>
         </div>
       </div>
     </div>

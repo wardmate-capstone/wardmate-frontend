@@ -51,15 +51,12 @@ export const ProcedureChecklistsView: React.FC = () => {
   ]);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             MẪU THÀNH PHẦN HỒ SƠ DÙNG CHUNG (CHECKLIST REPOSITORY)
-          </h2>
-          <p className="text-xs text-slate-500">
-            Kho thư viện các thành phần giấy tờ chuẩn hóa để gán nhanh vào thủ tục hành chính
-          </p>
+          </h1>
         </div>
 
         <button
@@ -73,7 +70,7 @@ export const ProcedureChecklistsView: React.FC = () => {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {templates.map((tpl) => (
-          <div key={tpl.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+          <div key={tpl.id} className="admin-card p-6 space-y-3">
             <div className="flex items-center justify-between">
               <span className="grid size-7 place-items-center rounded-xl bg-slate-900 text-xs font-bold text-white">
                 #{tpl.order}

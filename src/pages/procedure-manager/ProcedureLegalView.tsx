@@ -47,16 +47,13 @@ export const ProcedureLegalView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Top Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             VĂN BẢN QUY PHẠM PHÁP LUẬT
-          </h2>
-          <p className="text-xs text-slate-500">
-            Kho văn bản Luật, Nghị định, Thông tư làm căn cứ pháp lý và cấp dữ liệu cho mô hình AI
-          </p>
+          </h1>
         </div>
 
         <button
@@ -70,7 +67,7 @@ export const ProcedureLegalView: React.FC = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 admin-card p-4 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -178,7 +175,7 @@ export const ProcedureLegalView: React.FC = () => {
       )}
 
       {/* Main Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="admin-card overflow-hidden">
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
             <tr>
@@ -194,7 +191,7 @@ export const ProcedureLegalView: React.FC = () => {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {filteredDocs.map((doc) => (
               <tr key={doc.id} className="hover:bg-slate-50/70">
-                <td className="px-5 py-4 font-mono font-extrabold text-red-900 whitespace-nowrap">
+                <td className="px-5 py-4 font-mono font-bold text-red-900 whitespace-nowrap">
                   {doc.docNumber}
                 </td>
                 <td className="px-4 py-4 max-w-sm">

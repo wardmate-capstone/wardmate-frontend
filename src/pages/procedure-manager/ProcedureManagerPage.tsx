@@ -138,7 +138,6 @@ export const ProcedureManagerPage: React.FC = () => {
               {currentSection === 'dashboard' && (
                 <ProcedureDashboardView
                   onNavigateSection={(sec) => setCurrentSection(sec)}
-                  onOpenCreateWizard={handleOpenCreateWizard}
                   onSelectProcedure={handleSelectProcedure}
                 />
               )}

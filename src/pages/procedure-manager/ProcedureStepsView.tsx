@@ -39,15 +39,12 @@ export const ProcedureStepsView: React.FC = () => {
   ]);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             QUY TRÌNH THỰC HIỆN MẪU (STANDARD STEP FLOWS)
-          </h2>
-          <p className="text-xs text-slate-500">
-            Mẫu quy trình phối hợp 4 bước chuẩn hóa giữa Người dân, Cán bộ Một cửa và UBND phường
-          </p>
+          </h1>
         </div>
 
         <button
@@ -65,7 +62,7 @@ export const ProcedureStepsView: React.FC = () => {
             <span className="absolute -left-8 top-1.5 grid size-7 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shadow ring-4 ring-white">
               {s.stepNumber}
             </span>
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="admin-card p-6">
               <div className="flex items-center justify-between">
                 <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-700">
                   Chủ thể: {s.responsibleParty}

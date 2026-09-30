@@ -5,14 +5,14 @@ test('Quản lý thủ tục: Dashboard hiển thị đầy đủ 6 chỉ số v
   await page.goto('/procedure-manager');
 
   // Title / banner
-  await expect(page.getByRole('heading', { name: 'Hệ thống Quản lý Thủ tục & Chuẩn hóa Biểu mẫu' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tổng quan Quản lý Thủ tục' })).toBeVisible();
 
   // 6 stat cards
   await expect(page.getByText('Đang công khai').first()).toBeVisible();
   await expect(page.getByText('Bản nháp').first()).toBeVisible();
   await expect(page.getByText('Tạm ngừng').first()).toBeVisible();
   await expect(page.getByText('Biểu mẫu').first()).toBeVisible();
-  await expect(page.getByText('Cần cập nhật').first()).toBeVisible();
+  await expect(page.getByText('Biểu mẫu cần cập nhật').first()).toBeVisible();
   await expect(page.getByText('Văn bản pháp lý').first()).toBeVisible();
 
   // Warning section
@@ -127,7 +127,7 @@ test('Quản lý thủ tục: Quản lý Biểu mẫu Word/PDF và Trải nghi�
   await main.getByRole('button', { name: '+ Upload biểu mẫu' }).click();
   await expect(main.getByRole('heading', { name: 'UPLOAD / TẠO MỚI BIỂU MẪU CHUẨN' })).toBeVisible();
   await expect(main.getByText('File Word (.doc/.docx) *')).toBeVisible();
-  await expect(main.getByText('Chọn tệp Word')).toBeVisible();
+  await expect(main.getByText('Chọn tệp Word', { exact: true })).toBeVisible();
 
   // Switch to Versions tab
   await main.getByRole('button', { name: 'Phiên bản biểu mẫu' }).click();
@@ -174,7 +174,7 @@ test('Quản lý thủ tục: Dữ liệu tri thức AI và kích hoạt đồng
   // Navigate to AI Knowledge
   await page.getByRole('button', { name: 'Dữ liệu kiến thức AI' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Cơ sở Dữ liệu Tri thức AI (WardMate Intelligence)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tri thức AI' })).toBeVisible();
   await expect(page.getByText('Cơ sở dữ liệu Văn bản quy phạm pháp luật')).toBeVisible();
 
   // Trigger sync button

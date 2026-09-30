@@ -141,20 +141,17 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Top Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             QUẢN LÝ BIỂU MẪU CHUẨN (FORM MANAGEMENT)
-          </h2>
-          <p className="text-xs text-slate-500">
-            Quản lý các tệp biểu mẫu Word (.doc/.docx) và PDF phục vụ công dân tải về hoặc biên tập trực tiếp
-          </p>
+          </h1>
         </div>
 
         {/* 4-Tab Switcher */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-100 p-1">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 p-1">
           <button
             type="button"
             onClick={() => setViewMode('list')}
@@ -198,22 +195,22 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
       {viewMode === 'list' && (
         <div className="space-y-4">
           {/* Search bar */}
-          <div className="flex rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+          <div className="flex admin-card p-3.5">
             <div className="relative flex-1">
               <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm mã biểu mẫu (BM-HT-01), tên biểu mẫu, thủ tục áp dụng..."
+                placeholder="Tìm mã, tên biểu mẫu hoặc thủ tục..."
                 className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-xs text-slate-900 focus:border-red-500 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Forms Table */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="admin-card overflow-hidden">
+            <div className="admin-table-wrap">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                   <tr>
@@ -231,7 +228,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredForms.map((form) => (
                     <tr key={form.id} className="hover:bg-slate-50/70">
-                      <td className="px-5 py-4 font-mono font-extrabold text-red-900 whitespace-nowrap">
+                      <td className="px-5 py-4 font-mono font-bold text-red-900 whitespace-nowrap">
                         {form.code}
                       </td>
                       <td className="px-4 py-4 max-w-xs sm:max-w-sm">
@@ -364,13 +361,13 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
 
       {/* VIEW 2: UPLOAD / TẠO MỚI BIỂU MẪU */}
       {viewMode === 'upload' && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 space-y-6">
+        <div className="admin-card p-6 sm:p-8 space-y-6">
           <div className="border-b border-slate-100 pb-4">
             <h3 className="text-lg font-bold text-slate-950">
               UPLOAD / TẠO MỚI BIỂU MẪU CHUẨN
             </h3>
             <p className="text-xs text-slate-500">
-              Tải lên tệp Word chuẩn (.doc/.docx) hoặc PDF để gắn vào thủ tục hành chính. Công dân sẽ tải hoặc điền trực tiếp nội dung văn bản này.
+              Chọn tệp Word (.doc/.docx) hoặc PDF để gắn vào thủ tục.
             </p>
           </div>
 
@@ -466,7 +463,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
             {/* File Upload Dropzones */}
             <div className="grid gap-4 sm:grid-cols-3 pt-2">
               {/* File Word */}
-              <div className="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 p-5 text-center space-y-2">
+              <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 p-5 text-center space-y-2">
                 <FileDoc size={32} className="mx-auto text-blue-700" weight="fill" />
                 <p className="text-xs font-bold text-slate-900">File Word (.doc/.docx) *</p>
                 <p className="text-[11px] text-slate-500">Mẫu chuẩn để công dân biên tập</p>
@@ -482,7 +479,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
               </div>
 
               {/* File PDF */}
-              <div className="rounded-2xl border-2 border-dashed border-red-200 bg-red-50/40 p-5 text-center space-y-2">
+              <div className="rounded-xl border-2 border-dashed border-red-200 bg-red-50/40 p-5 text-center space-y-2">
                 <FilePdf size={32} className="mx-auto text-red-700" weight="fill" />
                 <p className="text-xs font-bold text-slate-900">File PDF mẫu (nếu có)</p>
                 <p className="text-[11px] text-slate-500">Bản in mẫu trống chuẩn</p>
@@ -498,7 +495,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
               </div>
 
               {/* File Mẫu minh họa */}
-              <div className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 p-5 text-center space-y-2">
+              <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 p-5 text-center space-y-2">
                 <CheckCircle size={32} className="mx-auto text-emerald-700" weight="fill" />
                 <p className="text-xs font-bold text-slate-900">Mẫu điền minh họa (nếu có)</p>
                 <p className="text-[11px] text-slate-500">Hướng dẫn công dân điền chữ</p>
@@ -544,7 +541,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
 
       {/* VIEW 3: CHI TIẾT BIỂU MẪU & LỊCH SỬ PHIÊN BẢN */}
       {viewMode === 'versions' && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 space-y-6">
+        <div className="admin-card p-6 sm:p-8 space-y-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start border-b border-slate-100 pb-5">
             <div>
               <div className="flex items-center gap-2">
@@ -556,7 +553,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
                   {selectedForm.status === 'PUBLISHED' ? 'Đang áp dụng' : 'Bản nháp'}
                 </span>
               </div>
-              <h3 className="mt-1 text-2xl font-extrabold text-slate-950">{selectedForm.name}</h3>
+              <h3 className="mt-1 text-2xl font-bold text-slate-950">{selectedForm.name}</h3>
               <p className="text-xs text-slate-500">
                 Thủ tục áp dụng: <strong>{selectedForm.procedureName}</strong> · Ngày hiệu lực: {selectedForm.effectiveDate}
               </p>
@@ -587,15 +584,15 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
 
           {/* Files Card */}
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-xs font-bold text-slate-500 uppercase">File Word chuẩn (.docx)</p>
               <p className="mt-1 text-sm font-bold text-slate-900 truncate">{selectedForm.wordFileName}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-xs font-bold text-slate-500 uppercase">File PDF mẫu</p>
               <p className="mt-1 text-sm font-bold text-slate-900 truncate">{selectedForm.pdfFileName || 'Không có'}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-xs font-bold text-slate-500 uppercase">File mẫu minh họa</p>
               <p className="mt-1 text-sm font-bold text-slate-900 truncate">{selectedForm.sampleFilledFileName || 'Không có'}</p>
             </div>
@@ -613,7 +610,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
                 return (
                   <div
                     key={ver.version}
-                    className={`rounded-2xl border p-5 transition-all ${
+                    className={`rounded-xl border p-5 transition-all ${
                       isCurrent
                         ? 'border-emerald-300 bg-emerald-50/40 ring-1 ring-emerald-400'
                         : 'border-slate-200 bg-slate-50/50'
@@ -621,7 +618,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
                   >
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-base font-black text-slate-950">{ver.version}</span>
+                        <span className="font-mono text-base font-bold text-slate-950">{ver.version}</span>
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                           isCurrent ? 'bg-emerald-200 text-emerald-950' : 'bg-slate-200 text-slate-700'
                         }`}>
@@ -668,7 +665,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
 
       {/* VIEW 4: GẮN BIỂU MẪU VÀO THỦ TỤC */}
       {viewMode === 'attach' && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 space-y-6">
+        <div className="admin-card p-6 sm:p-8 space-y-6">
           <div className="border-b border-slate-100 pb-4">
             <h3 className="text-lg font-bold text-slate-950">
               GẮN BIỂU MẪU VÀO THỦ TỤC HÀNH CHÍNH
@@ -680,7 +677,7 @@ export const ProcedureFormsView: React.FC<ProcedureFormsViewProps> = ({
 
           <div className="space-y-4">
             {mockProcedures.map((proc) => (
-              <div key={proc.id} className="rounded-2xl border border-slate-200 p-5 space-y-3">
+              <div key={proc.id} className="rounded-xl border border-slate-200 p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold text-red-900">{proc.code}</span>

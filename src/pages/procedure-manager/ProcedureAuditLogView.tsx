@@ -16,19 +16,16 @@ export const ProcedureAuditLogView: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+        <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
           LỊCH SỬ CẬP NHẬT & KIỂM TOÁN HỆ THỐNG
-        </h2>
-        <p className="text-xs text-slate-500 sm:text-sm">
-          Nhật ký ghi nhận mọi thao tác cấu hình thủ tục, thay đổi biểu mẫu, cập nhật phiên bản và xuất bản
-        </p>
+        </h1>
       </div>
 
       {/* Filter */}
-      <div className="flex rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <div className="flex admin-card p-3.5">
         <div className="relative flex-1">
           <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -42,7 +39,7 @@ export const ProcedureAuditLogView: React.FC = () => {
       </div>
 
       {/* Audit Log Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="admin-card overflow-hidden">
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
             <tr>

@@ -30,15 +30,12 @@ export const ProcedureCategoriesView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950 sm:text-2xl">
+          <h1 className="text-2xl font-bold tracking-[-.02em] text-slate-950 sm:text-3xl">
             DANH MỤC LĨNH VỰC THỦ TỤC
-          </h2>
-          <p className="text-xs text-slate-500">
-            Phân loại lĩnh vực quản lý nhà nước cấp xã / phường phục vụ tra cứu và thống kê
-          </p>
+          </h1>
         </div>
 
         <button
@@ -110,10 +107,10 @@ export const ProcedureCategoriesView: React.FC = () => {
         {categories.map((cat) => (
           <div
             key={cat.id}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3 transition-all hover:border-red-200"
+            className="admin-card p-6 space-y-3 transition-all hover:border-red-200"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-10 place-items-center rounded-2xl bg-red-50 text-red-900 font-extrabold text-sm">
+              <div className="grid size-10 place-items-center rounded-xl bg-red-50 text-red-900 font-bold text-sm">
                 <FolderSimple size={22} weight="duotone" />
               </div>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">

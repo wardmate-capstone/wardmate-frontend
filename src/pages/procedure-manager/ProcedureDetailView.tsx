@@ -59,7 +59,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
   ];
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-5">
       {/* Back button & Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
         <button
@@ -75,12 +75,12 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
       </div>
 
       {/* Main Header Card */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="admin-card p-6 sm:p-8">
         <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
           {/* Left: Info */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="font-mono text-base font-extrabold text-red-900 sm:text-lg">
+              <span className="font-mono text-base font-bold text-red-900 sm:text-lg">
                 {procedure.code}
               </span>
               <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-800">
@@ -90,7 +90,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                 {procedure.categoryName}
               </span>
               <span
-                className={`rounded-full px-3 py-0.5 text-xs font-extrabold ${
+                className={`rounded-full px-3 py-0.5 text-xs font-bold ${
                   procedure.status === 'PUBLISHED'
                     ? 'bg-emerald-100 text-emerald-800'
                     : procedure.status === 'DRAFT'
@@ -106,7 +106,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
               </span>
             </div>
 
-            <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               {procedure.title}
             </h2>
 
@@ -125,7 +125,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
             <button
               type="button"
               onClick={() => onEdit(procedure)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-red-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-red-900"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-red-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-transform hover:bg-red-900"
             >
               <PencilSimple size={16} weight="bold" />
               <span>Chỉnh sửa</span>
@@ -196,13 +196,13 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
       </section>
 
       {/* Tab Content Panels */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="admin-card p-6 sm:p-8">
         {/* Tab 1: Tổng quan */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Đối tượng thực hiện
                   </span>
@@ -211,7 +211,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Cơ quan có thẩm quyền & Tiếp nhận
                   </span>
@@ -223,7 +223,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Kết quả thực hiện
                   </span>
@@ -234,11 +234,11 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Thời gian giải quyết
                   </span>
-                  <p className="mt-1 text-base font-extrabold text-slate-950">
+                  <p className="mt-1 text-base font-bold text-slate-950">
                     {procedure.processingTimeDays === 0
                       ? 'Giải quyết ngay trong ngày làm việc'
                       : `${procedure.processingTimeDays} ngày làm việc`}
@@ -248,11 +248,11 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Lệ phí thủ tục
                   </span>
-                  <p className="mt-1 text-base font-extrabold text-slate-950">
+                  <p className="mt-1 text-base font-bold text-slate-950">
                     {procedure.isFeeFree
                       ? 'Miễn lệ phí'
                       : `${procedure.feeAmount.toLocaleString('vi-VN')} VNĐ`}
@@ -262,7 +262,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Mức độ số hóa nghiệp vụ
                   </span>
@@ -306,7 +306,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
             {procedure.conditions.length === 0 ? (
               <p className="py-8 text-center text-xs text-slate-400">Chưa có điều kiện nào được cấu hình.</p>
             ) : (
-              <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
                 {procedure.conditions.map((cond) => (
                   <div key={cond.id} className="flex items-start gap-3 p-4">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-red-100 text-xs font-bold text-red-900">
@@ -347,7 +347,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
 
             <div className="grid gap-4 md:grid-cols-2">
               {procedure.checklistTemplates.map((chk) => (
-                <div key={chk.id} className="rounded-2xl border border-slate-200 p-4 transition-all hover:border-red-200">
+                <div key={chk.id} className="rounded-xl border border-slate-200 p-4 transition-all hover:border-red-200">
                   <div className="flex items-center justify-between">
                     <span className="grid size-6 place-items-center rounded-full bg-slate-900 text-xs font-bold text-white">
                       {chk.order}
@@ -393,8 +393,8 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
 
             <div className="space-y-3">
               {procedure.steps.map((step) => (
-                <div key={step.id} className="flex items-start gap-4 rounded-2xl border border-slate-200 p-4">
-                  <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-red-800 to-red-950 text-sm font-extrabold text-gold-300">
+                <div key={step.id} className="flex items-start gap-4 rounded-xl border border-slate-200 p-4">
+                  <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-red-800 to-red-950 text-sm font-bold text-gold-300">
                     {step.stepNumber}
                   </div>
                   <div className="flex-1">
@@ -440,7 +440,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
             </div>
 
             {procedure.forms.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+              <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
                 <FileText size={36} className="mx-auto text-slate-300" />
                 <p className="mt-2 text-xs font-bold text-slate-500">Thủ tục chưa được gắn biểu mẫu chuẩn nào.</p>
                 <p className="mt-1 text-[11px] text-slate-400">Vui lòng tải lên file Word (.docx) hoặc PDF chuẩn từ Cổng Dịch vụ công.</p>
@@ -448,11 +448,11 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
             ) : (
               <div className="space-y-4">
                 {procedure.forms.map((form) => (
-                  <div key={form.id} className="rounded-2xl border border-slate-200 p-5 transition-shadow hover:shadow-sm">
+                  <div key={form.id} className="rounded-xl border border-slate-200 p-5 transition-shadow hover:shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs font-black text-red-900">{form.code}</span>
+                          <span className="font-mono text-xs font-bold text-red-900">{form.code}</span>
                           <span className="rounded-md bg-blue-100 px-2 py-0.5 font-mono text-[11px] font-bold text-blue-800">
                             Phiên bản {form.currentVersion}
                           </span>
@@ -473,7 +473,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setActiveCitizenModalForm(form)}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-800 to-red-900 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:from-red-900 hover:to-red-950"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-red-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:from-red-900 hover:to-red-950"
                       >
                         <Eye size={15} weight="bold" />
                         <span>Mở soạn thảo (Citizen Editor & PDF)</span>
@@ -580,10 +580,10 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
 
             <div className="space-y-3">
               {procedure.legalDocuments.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
+                <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
                   <div className="min-w-0 pr-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-extrabold text-red-900">{doc.docNumber}</span>
+                      <span className="font-mono text-xs font-bold text-red-900">{doc.docNumber}</span>
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">{doc.docType}</span>
                       <span className="text-xs text-slate-400">Ban hành: {doc.issuedDate}</span>
                     </div>
@@ -608,7 +608,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
             <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
               <div className="relative">
                 <span className="absolute -left-6 top-1.5 size-3 rounded-full bg-red-800 ring-4 ring-white" />
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-bold text-slate-900">Phiên bản V3 (Hiện hành)</span>
                     <span className="text-xs text-slate-500">21/09/2026</span>
@@ -622,7 +622,7 @@ export const ProcedureDetailView: React.FC<ProcedureDetailViewProps> = ({
 
               <div className="relative">
                 <span className="absolute -left-6 top-1.5 size-3 rounded-full bg-slate-400 ring-4 ring-white" />
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-bold text-slate-900">Phiên bản V2</span>
                     <span className="text-xs text-slate-500">01/01/2023</span>
