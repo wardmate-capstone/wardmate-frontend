@@ -31,7 +31,7 @@ export function MainLayout() {
       <div className="h-1 bg-gradient-to-r from-red-900 via-red-700 to-gold-500" />
       <div className="bg-red-950 text-red-50">
         <div className="mx-auto flex min-h-10 max-w-[1240px] items-center justify-between gap-4 px-5 text-xs sm:px-8">
-          <p className="flex items-center gap-2 leading-5"><ShieldCheck size={15} aria-hidden="true" /> Hỗ trợ chuẩn bị và tiền kiểm hồ sơ hành chính cấp xã, phường</p>
+          <p className="flex items-center gap-2 leading-5"><ShieldCheck size={15} aria-hidden="true" /> Hỗ trợ chuẩn bị và tiền kiểm thủ tục hành chính cấp xã - phường</p>
           <div className="hidden items-center gap-5 md:flex">
             <Link to="/hoi-dap" className="utility-link"><CircleHelp size={15} aria-hidden="true" /> Hướng dẫn & Trợ giúp</Link>
           </div>
@@ -42,7 +42,7 @@ export function MainLayout() {
         <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="WardMate - Trang chủ">
             <BrandMark className="brand-mark" />
-            <BrandWordmark subtitle="Hỗ trợ hồ sơ cấp xã, phường" />
+            <BrandWordmark subtitle="Dịch vụ công xã - phường" />
           </Link>
           <div className="hidden items-center gap-3 lg:flex">
             <NotificationBell />
