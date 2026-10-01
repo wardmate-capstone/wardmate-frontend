@@ -16,6 +16,7 @@ import { ManagerPage } from '@/pages/manager/ManagerPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { UserProfileProvider } from '@/hooks/useUserProfile';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export function App() {
   return (
@@ -24,15 +25,25 @@ export function App() {
         <UserProfileProvider>
           <BrowserRouter>
             <Routes>
+            <Route element={<ProtectedRoute roles={['REGISTERED_CITIZEN']} />}>
             <Route path="citizen/*" element={<CitizenPage />} />
             <Route path="cong-dan/*" element={<CitizenPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['FRONT_DESK_OFFICER']} />}>
             <Route path="officer/*" element={<OfficerPage />} />
             <Route path="can-bo/*" element={<OfficerPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['MANAGER']} />}>
             <Route path="manager/*" element={<ManagerPage />} />
             <Route path="quan-ly/*" element={<ManagerPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['PROCEDURE_MANAGER', 'IT_ADMIN']} />}>
             <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />
             <Route path="quan-ly-thu-tuc/*" element={<ProcedureManagerPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['IT_ADMIN']} />}>
             <Route path="admin" element={<AdminPage />} />
+            </Route>
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
               <Route path="dang-nhap" element={<AuthPage key="login" mode="login" />} />
