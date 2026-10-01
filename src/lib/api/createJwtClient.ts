@@ -66,9 +66,9 @@ export function createJwtClient(options: JwtClientOptions) {
   }
 
   api.interceptors.request.use((request) => {
-    if (!options.baseURL.trim()) throw new Error('API chưa được cấu hình.');
     // This instance is for one backend only; never send JWTs to an arbitrary host.
-    const root = new URL(options.baseURL, typeof location === 'undefined' ? 'http://localhost' : location.origin);
+    const rootOrigin = typeof location === 'undefined' ? 'http://localhost' : location.origin;
+    const root = options.baseURL.trim() ? new URL(options.baseURL, rootOrigin) : new URL(rootOrigin);
     const target = new URL(api.getUri(request), root);
     if (target.origin !== root.origin) throw new Error('API request must use the configured backend origin.');
     if (request.skipAuth) {

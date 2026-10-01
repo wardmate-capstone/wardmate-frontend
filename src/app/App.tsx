@@ -15,13 +15,15 @@ import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManager
 import { ManagerPage } from '@/pages/manager/ManagerPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
+import { UserProfileProvider } from '@/hooks/useUserProfile';
 
 export function App() {
   return (
     <MotionConfig reducedMotion="user">
       <LazyMotion features={domAnimation} strict>
-        <BrowserRouter>
-          <Routes>
+        <UserProfileProvider>
+          <BrowserRouter>
+            <Routes>
             <Route path="citizen/*" element={<CitizenPage />} />
             <Route path="cong-dan/*" element={<CitizenPage />} />
             <Route path="officer/*" element={<OfficerPage />} />
@@ -45,7 +47,8 @@ export function App() {
           </Routes>
           <Toaster position="top-right" richColors closeButton />
         </BrowserRouter>
-      </LazyMotion>
+      </UserProfileProvider>
+    </LazyMotion>
     </MotionConfig>
   );
 }
