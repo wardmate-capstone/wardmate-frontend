@@ -34,6 +34,9 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByRole('heading', { name: 'Nguyễn Văn An' })).toBeVisible();
     await expect(page.getByText('Thông tin Định danh & Nhân thân')).toBeVisible();
     await expect(page.getByText('001092008128').first()).toBeVisible();
+
+    // Chuyển sang Tab 2: Lịch sử hồ sơ
+    await page.getByRole('button', { name: /2\. Lịch sử Hồ sơ/ }).click();
     await expect(page.getByText('Lịch sử Hồ sơ Thủ tục Hành chính tại Phường')).toBeVisible();
     await expect(page.getByText('HS-2026-0912')).toBeVisible();
 

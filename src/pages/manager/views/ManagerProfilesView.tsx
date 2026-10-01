@@ -159,6 +159,9 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     </span>
                     <p>
                       <strong className="block text-xs font-bold text-slate-900">{item.fullName}</strong>
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] text-red-900 bg-red-50/80 px-1.5 py-0.5 rounded border border-red-100/80 mt-0.5">
+                        CCCD: {item.identityNumber}
+                      </span>
                     </p>
                   </div>
                 </td>
