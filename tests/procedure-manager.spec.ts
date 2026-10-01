@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { mockWorkspaceAuth } from './fixtures/auth';
+test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']));
 
 test('Quản lý thủ tục: Dashboard hiển thị đầy đủ 6 chỉ số và không tràn ngang trên mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { mockWorkspaceAuth } from './fixtures/auth';
 
 test('hiển thị thông điệp chính và tìm kiếm tiếng Việt không dấu', async ({ page }) => {
   await page.goto('/');
@@ -109,13 +110,14 @@ test('trang hỏi đáp mở câu trả lời và gửi thắc mắc', async ({ 
 });
 
 test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', async ({ page }) => {
-  await page.goto('/tai-khoan');
-  await expect(page.getByRole('heading', { name: 'Thông tin tài khoản' })).toBeVisible();
-  await page.getByRole('button', { name: 'Chỉnh sửa' }).click();
-  await page.getByLabel('Họ và tên').fill('Nguyễn Minh Anh Mẫu');
-  await page.getByRole('button', { name: 'Lưu thông tin' }).click();
+  await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
+  await page.goto('/citizen');
+  await page.getByRole('button', { name: 'Hồ sơ cá nhân', exact: true }).click();
+  await page.getByRole('button', { name: 'Chỉnh sửa thông tin' }).click();
+  await page.locator('form input[type="text"]').first().fill('Nguyễn Minh Anh Mẫu');
+  await page.locator('form button[type="submit"]').click();
   await expect(page.getByText('Nguyễn Minh Anh Mẫu').first()).toBeVisible();
-  await expect(page.getByText('Đã lưu thay đổi thông tin cá nhân.')).toBeVisible();
+  await expect(page.getByText('Đã cập nhật thông tin hồ sơ thành công.')).toBeVisible();
 });
 
 test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực và trạng thái rỗng', async ({ page }) => {
@@ -133,6 +135,7 @@ test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực v
 });
 
 test('trang quản trị hiển thị tổng quan và menu mobile không tràn ngang', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/admin');
 
@@ -144,6 +147,7 @@ test('trang quản trị hiển thị tổng quan và menu mobile không tràn n
 });
 
 test('sidebar quản trị có thể thu gọn trên desktop', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/admin');
 

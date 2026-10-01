@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { mockWorkspaceAuth } from './fixtures/auth';
+test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['FRONT_DESK_OFFICER']));
 
-test('Cổng cán bộ: Dashboard hiển thị đầy đủ 7 chỉ số và không tràn ngang trên mobile', async ({ page }) => {
+test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và không tràn ngang trên mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/officer');
 
@@ -14,7 +16,8 @@ test('Cổng cán bộ: Dashboard hiển thị đầy đủ 7 chỉ số và kh�
   await expect(page.getByText('Đã gửi lại').first()).toBeVisible();
   await expect(page.getByText('Đã duyệt tiền kiểm').first()).toBeVisible();
   await expect(page.getByText('Chờ tiếp nhận').first()).toBeVisible();
-  await expect(page.getByText('Đã tiếp nhận hôm nay').first()).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Chỉ số hiệu suất ca trực' })).toBeVisible();
+  await expect(page.getByText('Số hồ sơ đã giải quyết hôm nay')).toBeVisible();
 
   // Check no QR Scan is present for officer
   await expect(page.getByText('Quét QR')).toHaveCount(0);

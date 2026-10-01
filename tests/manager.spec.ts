@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { mockWorkspaceAuth } from './fixtures/auth';
+test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['MANAGER']));
 
 test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
   test('Thống kê hồ sơ (trang mặc định): Hiển thị đầy đủ các chỉ số, biểu đồ và không tràn ngang trên mobile', async ({ page }) => {

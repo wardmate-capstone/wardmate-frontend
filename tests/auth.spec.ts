@@ -21,6 +21,13 @@ async function reply(route: Route, status: number, body?: unknown, setCookie?: s
 async function mock(context: BrowserContext, handler: (route: Route) => Promise<void>) {
   await context.route(gateway + '/**', async (route) => {
     if (route.request().method() === 'OPTIONS') return reply(route, 204);
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/v1/users/me') return reply(route, 200, {
+      id: 'mock-user', username: 'demo', email: 'demo@example.test', profile: { fullName: 'Người Dùng Mẫu' },
+      roles: ['REGISTERED_CITIZEN', 'FRONT_DESK_OFFICER'], permissions: ['profile.read'],
+    });
+    // Every app boot now restores the cookie before deciding whether a route is private.
+    if (path.endsWith('/refresh-token') && !route.request().headers().cookie?.includes('refreshToken=')) return reply(route, 401);
     await handler(route);
   });
 }
@@ -42,7 +49,7 @@ test('register sends only required fields, preserves returnTo and never establis
   const requests: string[] = [];
   await mock(context, async (route) => {
     requests.push(new URL(route.request().url()).pathname);
-    expect(route.request().postDataJSON()).toEqual({ username: 'demo', email: 'demo@example.test', password: 'mock-password', fullName: 'Người Dùng Mẫu' });
+    expect(route.request().postDataJSON()).toEqual({ username: 'demo', email: 'demo@example.test', password: 'Mock-password', fullName: 'Người Dùng Mẫu' });
     expect(route.request().headers()['x-csrf-protection']).toBe('1');
     expect(route.request().headers().authorization).toBeUndefined();
     await reply(route, requests.length === 1 ? 400 : 201,
@@ -52,8 +59,8 @@ test('register sends only required fields, preserves returnTo and never establis
   await page.getByLabel('Họ và tên').fill('Người Dùng Mẫu');
   await page.getByLabel('Tên đăng nhập', { exact: true }).fill('demo');
   await page.getByLabel('Email', { exact: true }).fill('demo@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('mock-password');
-  await page.getByLabel('Xác nhận mật khẩu').fill('mock-password');
+  await page.getByLabel('Mật khẩu', { exact: true }).fill('Mock-password');
+  await page.getByLabel('Xác nhận mật khẩu').fill('Mock-password');
   await page.getByText('Tôi đồng ý với điều khoản sử dụng').click();
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -130,7 +137,7 @@ test('login prevents double submission and rejects external returnTo', async ({ 
   });
   await page.goto('/dang-nhap?returnTo=https%3A%2F%2Fevil.test');
   await fillLogin(page);
-  await expect(page.getByRole('button', { name: 'Đăng nhập', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Đang đăng nhập...' })).toBeDisabled();
   await page.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit());
   const secondLogin = await page.evaluate(async () => {
     const path = '/src/lib/api/index.ts';
@@ -163,9 +170,9 @@ test('revoke retries expired access once, sends no body and clears the cookie/se
   await page.goto('/dang-nhap?returnTo=%2Fcitizen');
   await fillLogin(page);
   await expect(page).toHaveURL(/\/citizen$/);
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
-  await page.getByRole('button', { name: 'Đăng xuất ngay' }).click();
-  await expect(page).toHaveURL(/\/dang-nhap$/);
+  await page.getByRole('button', { name: 'Menu tài khoản công dân' }).click();
+  await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
+  await expect(page).toHaveURL('http://localhost:4317/');
   expect(events).toEqual(['/api/v1/auth/login', '/api/v1/auth/revoke-token', '/api/v1/auth/refresh-token', '/api/v1/auth/revoke-token']);
   expect((await context.cookies()).some((value) => value.name === 'refreshToken')).toBe(false);
 });
@@ -184,12 +191,13 @@ test('failed revoke keeps the page and permits retry without claiming logout suc
   await expect(page.getByText(/Chưa xác nhận được việc thu hồi phiên/)).toBeVisible();
   await expect(page).toHaveURL(/\/officer$/);
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
-  await expect(page).toHaveURL(/\/dang-nhap$/);
+  await expect(page).toHaveURL('http://localhost:4317/');
   expect(revokes).toBe(2);
 });
 
 test('403 CSRF and temporary refresh errors do not redirect; 401 expiry does', async ({ page, context }) => {
   let status = 403;
+  await context.addCookies([{ name: 'refreshToken', value: 'mock-refresh', domain: 'localhost', path: '/api/v1/auth', httpOnly: true, sameSite: 'Strict' }]);
   await mock(context, async (route) => {
     if (route.request().url().endsWith('/refresh-token')) return reply(route, status, { code: 'iam.csrf_rejected' });
     return reply(route, 401, {});
@@ -234,9 +242,9 @@ test('two tabs serialize cookie rotation and share logout invalidation without s
   await page.reload();
   expect(await Promise.all([requestPrivate(page), requestPrivate(second)])).toEqual([200, 200]);
   expect(maximum).toBe(1);
-  await second.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
-  await second.getByRole('button', { name: 'Đăng xuất ngay' }).click();
-  await expect(second).toHaveURL(/\/dang-nhap$/);
+  await second.getByRole('button', { name: 'Menu tài khoản công dân' }).click();
+  await second.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).click();
+  await expect(second).toHaveURL('http://localhost:4317/');
   await expect.poll(() => page.evaluate(async () => {
     const path = '/src/lib/api/index.ts';
     return (await import(path)).authClient.hasAccessToken();
