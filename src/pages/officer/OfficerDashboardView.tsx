@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Hourglass,
   ClockCounterClockwise,
@@ -9,11 +9,21 @@ import {
   Tray,
   ArrowRight,
   CaretRight,
-  Lightning,
-  Sparkle,
   TrendUp,
   UserCircle,
+  ChartBar,
+  Lightning,
+  Check,
 } from '@phosphor-icons/react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
 
 interface OfficerDashboardViewProps {
@@ -21,16 +31,28 @@ interface OfficerDashboardViewProps {
   onSelectSection: (section: OfficerSection) => void;
   onOpenApplicationReview: (app: OfficerApplication) => void;
   onQuickPreview: (app: OfficerApplication) => void;
-  onTakeApplication: (appId: string) => void;
 }
+
+// Dữ liệu biểu đồ luồng xử lý hồ sơ trong ca trực theo khung giờ
+const mockHourlyWorkload = [
+  { time: '08:00', received: 4, reviewed: 3 },
+  { time: '09:00', received: 7, reviewed: 6 },
+  { time: '10:00', received: 9, reviewed: 8 },
+  { time: '11:00', received: 5, reviewed: 5 },
+  { time: '13:30', received: 6, reviewed: 4 },
+  { time: '14:30', received: 8, reviewed: 7 },
+  { time: '15:30', received: 6, reviewed: 5 },
+  { time: '16:30', received: 3, reviewed: 3 },
+];
 
 export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   applications,
   onSelectSection,
   onOpenApplicationReview,
   onQuickPreview,
-  onTakeApplication,
 }) => {
+  const [chartView, setChartView] = useState<'hourly' | 'summary'>('hourly');
+
   // Counts by status
   const pendingApps = applications.filter((a) => a.status === 'SUBMITTED_FOR_REVIEW');
   const reviewingApps = applications.filter((a) => a.status === 'UNDER_REVIEW');
@@ -64,21 +86,21 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
       id: 'apps-need-revision' as OfficerSection,
       label: 'Cần bổ sung',
       count: needRevisionApps.length,
-      note: 'Chờ người dân chỉnh sửa',
+      note: 'Chờ công dân hoàn thiện',
       icon: WarningCircle,
-      tone: 'rose',
-      bgClass: 'bg-rose-50 text-rose-800 border-rose-200 hover:border-rose-300',
-      badgeClass: 'bg-rose-100 text-rose-900',
+      tone: 'orange',
+      bgClass: 'bg-orange-50 text-orange-800 border-orange-200 hover:border-orange-300',
+      badgeClass: 'bg-orange-100 text-orange-900',
     },
     {
       id: 'apps-resubmitted' as OfficerSection,
       label: 'Đã gửi lại',
       count: resubmittedApps.length,
-      note: 'Người dân vừa cập nhật V2',
+      note: 'Ưu tiên tiền kiểm lại V2',
       icon: ArrowCounterClockwise,
       tone: 'purple',
       bgClass: 'bg-purple-50 text-purple-800 border-purple-200 hover:border-purple-300',
-      badgeClass: 'bg-purple-100 text-purple-900 font-bold ring-2 ring-purple-300',
+      badgeClass: 'bg-purple-100 text-purple-900',
     },
     {
       id: 'apps-approved' as OfficerSection,
@@ -112,57 +134,32 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
     },
   ];
 
-  return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <section
-        aria-label="Thông báo đầu ca trực"
-        className="relative overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-900 via-red-800 to-red-950 p-6 text-white shadow-sm"
-      >
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold-300">
-              <Sparkle size={16} aria-hidden="true" />
-              <span>Ca làm việc sáng 21/09/2026 · Quầy Một cửa số 02</span>
-            </div>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-              Chào buổi sáng, Cán bộ Lê Thu Hà
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-red-100/90 leading-6">
-              Hệ thống ghi nhận <strong className="text-white underline decoration-gold-400">{resubmittedApps.length} hồ sơ</strong> người dân vừa bổ sung lại và <strong className="text-white underline decoration-gold-400">{pendingApps.length} hồ sơ mới</strong> đang chờ tiếp nhận tiền kiểm.
-            </p>
-          </div>
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return 'Chào buổi sáng';
+    }
+    if (hour >= 12 && hour < 18) {
+      return 'Chào buổi chiều';
+    }
+    return 'Chào buổi tối';
+  };
 
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => onSelectSection('apps-resubmitted')}
-              className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-4 py-2.5 text-sm font-bold text-red-950 shadow-sm hover:bg-gold-300 transition-transform active:scale-95"
-            >
-              <Lightning size={18} weight="fill" aria-hidden="true" />
-              <span>Xử lý hồ sơ gửi lại</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectSection('receipt-waiting')}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
-            >
-              <span>Tiếp nhận tại quầy</span>
-              <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </section>
+  // Top hồ sơ gửi lại cần ưu tiên xem ngay (tối đa 2 hồ sơ để tổng quan không bị dài)
+  const priorityResubmittedApps = resubmittedApps.slice(0, 2);
+
+  return (
+    <div className="space-y-6">
+      {/* Welcome Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          {getGreeting()}, Cán bộ Lê Thu Hà
+        </h1>
+
+      </div>
 
       {/* 7 KPI Stat Cards */}
-      <section aria-labelledby="kpi-heading">
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="kpi-heading" className="text-lg font-bold text-slate-900">
-            Chỉ số phân luồng hồ sơ
-          </h2>
-          <span className="text-xs text-slate-500 font-medium">Bấm vào thẻ để lọc danh sách tương ứng</span>
-        </div>
-
+      <section aria-label="Chỉ số phân luồng hồ sơ">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           {statCards.map((card) => {
             const Icon = card.icon;
@@ -199,25 +196,160 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
         </div>
       </section>
 
-      {/* Two Column Layout: Urgent Items & Performance Overview */}
+      {/* Main Grid: Biểu đồ luồng xử lý & Tổng quan chức năng chính */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Priority queues (Resubmitted & Pending) */}
+        {/* Cột 1 & 2 (2/3 width): Biểu đồ xử lý hồ sơ & Hàng đợi ưu tiên */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Resubmitted Section */}
+          {/* Card Biểu đồ Recharts */}
           <section
-            aria-labelledby="resubmitted-heading"
+            aria-labelledby="chart-heading"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-lg bg-red-50 text-red-800">
+                  <ChartBar size={18} weight="bold" />
+                </span>
+                <div>
+                  <h2 id="chart-heading" className="text-base font-bold text-slate-900">
+                    Tiến độ xử lý hồ sơ trong ca trực
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Đối chiếu số lượng hồ sơ tiếp nhận vào quầy & số lượng đã hoàn thành tiền kiểm
+                  </p>
+                </div>
+              </div>
+
+              {/* Bộ chuyển đổi chế độ xem */}
+              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setChartView('hourly')}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    chartView === 'hourly'
+                      ? 'bg-white shadow text-red-900 font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Theo giờ ca trực
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartView('summary')}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    chartView === 'summary'
+                      ? 'bg-white shadow text-red-900 font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Tóm tắt tỷ lệ
+                </button>
+              </div>
+            </div>
+
+            {chartView === 'hourly' ? (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={mockHourlyWorkload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b0000" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#8b0000" stopOpacity={0.0} />
+                      </linearGradient>
+                      <linearGradient id="colorReviewed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#059669" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      formatter={(val: unknown, name: unknown) => [
+                        `${Number(val ?? 0)} hồ sơ`,
+                        String(name) === 'received' ? 'Hồ sơ vào quầy' : 'Đã duyệt / xử lý',
+                      ]}
+                      labelFormatter={(label) => `Khung giờ: ${label}`}
+                      contentStyle={{
+                        borderRadius: '0.75rem',
+                        border: '1px solid #e2e8f0',
+                        fontSize: '12px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="received"
+                      name="received"
+                      stroke="#8b0000"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorReceived)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="reviewed"
+                      name="reviewed"
+                      stroke="#059669"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorReviewed)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-xs text-slate-500 font-medium">Tổng hồ sơ nộp vào</span>
+                  <strong className="block text-2xl font-bold text-slate-900 mt-1 font-mono">48 hồ sơ</strong>
+                  <span className="text-[11px] text-emerald-700 font-semibold mt-1 inline-block">
+                    ↑ 12% so với ca sáng hôm qua
+                  </span>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-xs text-slate-500 font-medium">Đã xử lý & tiền kiểm</span>
+                  <strong className="block text-2xl font-bold text-emerald-700 mt-1 font-mono">41 hồ sơ</strong>
+                  <span className="text-[11px] text-slate-500 mt-1 inline-block">Đạt 85.4% tổng nộp</span>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-xs text-slate-500 font-medium">Hồ sơ tồn chờ giải quyết</span>
+                  <strong className="block text-2xl font-bold text-amber-700 mt-1 font-mono">7 hồ sơ</strong>
+                  <span className="text-[11px] text-amber-700 mt-1 inline-block">Đang trong hạn xử lý</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-slate-100 text-xs">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-full bg-red-800" />
+                  <span className="text-slate-600">Hồ sơ vào quầy</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-full bg-emerald-600" />
+                  <span className="text-slate-600">Đã duyệt / xử lý</span>
+                </div>
+              </div>
+              <span className="text-[11px] text-slate-400">Cập nhật lúc {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </section>
+
+          {/* Hàng đợi ưu tiên xử lý ngay (Gọn gàng, chỉ hiển thị top hồ sơ cần duyệt lại gấp) */}
+          <section
+            aria-labelledby="priority-action-heading"
             className="rounded-2xl border border-purple-200 bg-white p-5 shadow-2xs"
           >
             <div className="flex items-center justify-between border-b border-purple-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <span className="grid size-8 place-items-center rounded-lg bg-purple-100 text-purple-800 font-bold">
-                  <ArrowCounterClockwise size={18} weight="bold" />
+                  <Lightning size={18} weight="fill" />
                 </span>
                 <div>
-                  <h3 id="resubmitted-heading" className="text-base font-bold text-slate-900">
-                    Hồ sơ vừa được người dân gửi lại ({resubmittedApps.length})
+                  <h3 id="priority-action-heading" className="text-base font-bold text-slate-900">
+                    Hồ sơ ưu tiên xử lý ngay ({resubmittedApps.length})
                   </h3>
-                  <p className="text-xs text-slate-500">Ưu tiên tiền kiểm lại sau khi công dân đã sửa theo góp ý</p>
+                  <p className="text-xs text-slate-500">Ưu tiên tiền kiểm hồ sơ công dân đã sửa và nộp lại</p>
                 </div>
               </div>
               <button
@@ -225,19 +357,19 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 onClick={() => onSelectSection('apps-resubmitted')}
                 className="text-xs font-bold text-purple-700 hover:underline inline-flex items-center gap-1"
               >
-                <span>Xem tất cả</span>
+                <span>Xem tất cả ({resubmittedApps.length})</span>
                 <CaretRight size={14} aria-hidden="true" />
               </button>
             </div>
 
-            {resubmittedApps.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">Không có hồ sơ nào vừa gửi lại.</p>
+            {priorityResubmittedApps.length === 0 ? (
+              <p className="py-4 text-center text-xs text-slate-500">Không có hồ sơ nào cần xử lý gấp.</p>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {resubmittedApps.map((app) => (
+                {priorityResubmittedApps.map((app) => (
                   <li key={app.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-purple-50/50 p-2 rounded-xl transition-colors">
                     <div className="flex items-start gap-3 min-w-0">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-purple-100 text-purple-800 text-xs font-bold">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-purple-100 text-purple-800 text-xs font-bold">
                         V{app.currentVersion}
                       </span>
                       <div className="min-w-0">
@@ -245,15 +377,15 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                           <strong className="text-sm font-bold text-purple-950 font-mono">
                             {app.applicationNumber}
                           </strong>
-                          <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-                            Người dân vừa cập nhật V2
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                            Công dân vừa bổ sung V2
                           </span>
                         </div>
                         <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
                           {app.citizen.fullName} · {app.procedureName}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Gửi lại lúc: {app.submittedAt} · Phiên bản: V{app.currentVersion}
+                          Nộp lại lúc: {app.submittedAt}
                         </p>
                       </div>
                     </div>
@@ -279,94 +411,56 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               </ul>
             )}
           </section>
-
-          {/* New Pending Applications Section */}
-          <section
-            aria-labelledby="pending-heading"
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="grid size-8 place-items-center rounded-lg bg-amber-100 text-amber-800 font-bold">
-                  <Hourglass size={18} weight="bold" />
-                </span>
-                <div>
-                  <h3 id="pending-heading" className="text-base font-bold text-slate-900">
-                    Hồ sơ chờ tiếp nhận kiểm tra ({pendingApps.length})
-                  </h3>
-                  <p className="text-xs text-slate-500">Nhận xử lý để chuyển trạng thái Đang kiểm tra</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectSection('apps-pending')}
-                className="text-xs font-bold text-red-800 hover:underline inline-flex items-center gap-1"
-              >
-                <span>Xem tất cả</span>
-                <CaretRight size={14} aria-hidden="true" />
-              </button>
-            </div>
-
-            {pendingApps.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">Hiện không có hồ sơ mới chờ kiểm tra.</p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {pendingApps.map((app) => (
-                  <li key={app.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 p-2 rounded-xl transition-colors">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <strong className="text-sm font-bold text-slate-900 font-mono">
-                          {app.applicationNumber}
-                        </strong>
-                        {app.urgency === 'urgent' && (
-                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-100 text-red-800">
-                            Cần gấp
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
-                        {app.citizen.fullName} · {app.procedureName}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Nộp lúc: {app.submittedAt}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        onClick={() => onQuickPreview(app)}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        Quick Preview
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onTakeApplication(app.id)}
-                        className="px-3 py-1.5 rounded-lg bg-red-800 text-xs font-bold text-white hover:bg-red-900 shadow-2xs"
-                      >
-                        Nhận xử lý
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
         </div>
 
-        {/* Right 1 Col: Performance, Desk Info & Fast Links */}
+        {/* Cột 3 (1/3 width): Tổng quan các chức năng chính & Ca trực */}
         <div className="space-y-6">
-          {/* Performance Card */}
+          {/* Card Tiếp nhận tại quầy (Chức năng cốt lõi của Officer) */}
+          <section
+            aria-labelledby="desk-action-heading"
+            className="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/70 to-emerald-50/40 p-5 shadow-2xs space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-lg bg-teal-100 text-teal-800">
+                  <FileText size={18} weight="bold" />
+                </span>
+                <h3 id="desk-action-heading" className="text-sm font-bold text-teal-950">
+                  Tiếp nhận hồ sơ tại quầy
+                </h3>
+              </div>
+              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-teal-100 text-teal-900 border border-teal-200">
+                {readySubmitApps.length} chờ tiếp nhận
+              </span>
+            </div>
+            <p className="text-xs text-teal-900 leading-relaxed">
+              Đối chiếu trực tiếp bản chính với hồ sơ điện tử đã duyệt tiền kiểm và cấp Giấy tiếp nhận & hẹn trả kết quả chính thức.
+            </p>
+            <button
+              type="button"
+              onClick={() => onSelectSection('receipt-waiting')}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-900 transition-colors shadow-2xs"
+            >
+              <span>Tiếp nhận tại quầy</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </button>
+          </section>
+
+          {/* Card Hiệu suất ca làm việc */}
           <section
             aria-labelledby="performance-heading"
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4"
           >
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <TrendUp size={20} className="text-emerald-700" weight="bold" />
-              <h3 id="performance-heading" className="text-base font-bold text-slate-900">
-                Hiệu suất ca làm việc
-              </h3>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <TrendUp size={20} className="text-emerald-700" weight="bold" />
+                <h3 id="performance-heading" className="text-sm font-bold text-slate-900">
+                  Chỉ số hiệu suất ca trực
+                </h3>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                Đạt chuẩn
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -392,39 +486,15 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             </div>
           </section>
 
-          {/* Ready for Official Receipt fast block */}
-          <section
-            aria-labelledby="desk-action-heading"
-            className="rounded-2xl border border-teal-200 bg-teal-50/50 p-5 shadow-2xs space-y-3"
-          >
-            <div className="flex items-center gap-2">
-              <FileText size={20} className="text-teal-800" weight="bold" />
-              <h3 id="desk-action-heading" className="text-sm font-bold text-teal-950">
-                Tiếp nhận hồ sơ trực tiếp
-              </h3>
-            </div>
-            <p className="text-xs text-teal-800 leading-5">
-              Khi người dân mang hồ sơ giấy đến quầy, sử dụng chức năng tra cứu để đối chiếu các bản chính và cấp biên nhận chính thức.
-            </p>
-            <button
-              type="button"
-              onClick={() => onSelectSection('receipt-waiting')}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-900 transition-colors shadow-2xs"
-            >
-              <span>Mở quầy tiếp nhận hồ sơ</span>
-              <ArrowRight size={14} aria-hidden="true" />
-            </button>
-          </section>
-
-          {/* Desk Assigned Officer */}
+          {/* Card Thông tin ca trực & Phân công */}
           <section
             aria-labelledby="officer-duty-heading"
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <UserCircle size={20} className="text-slate-700" weight="bold" />
               <h3 id="officer-duty-heading" className="text-sm font-bold text-slate-900">
-                Thông tin ca trực
+                Thông tin quầy làm việc
               </h3>
             </div>
             <dl className="space-y-2 text-xs">
@@ -433,16 +503,18 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 <dd className="font-bold text-slate-900">Lê Thu Hà</dd>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
-                <dt className="text-slate-500">Vị trí làm việc:</dt>
+                <dt className="text-slate-500">Vị trí:</dt>
                 <dd className="font-semibold text-slate-800">Quầy Một cửa 02</dd>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
-                <dt className="text-slate-500">Thời gian ca trực:</dt>
-                <dd className="font-medium text-slate-800">07:30 - 11:30 | 13:30 - 17:00</dd>
+                <dt className="text-slate-500">Lĩnh vực:</dt>
+                <dd className="font-medium text-slate-800">Hộ tịch & Chứng thực</dd>
               </div>
               <div className="flex justify-between py-1">
-                <dt className="text-slate-500">Lĩnh vực thụ lý:</dt>
-                <dd className="font-medium text-slate-800">Hộ tịch & Chứng thực</dd>
+                <dt className="text-slate-500">Trạng thái quầy:</dt>
+                <dd className="font-semibold text-emerald-700 inline-flex items-center gap-1">
+                  <Check size={12} weight="bold" /> Đang nhận tiếp dân
+                </dd>
               </div>
             </dl>
           </section>

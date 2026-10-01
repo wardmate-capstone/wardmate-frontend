@@ -361,7 +361,6 @@ export const OfficerPage: React.FC = () => {
                   onSelectSection={(sec) => setActiveSection(sec)}
                   onOpenApplicationReview={handleOpenReview}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
-                  onTakeApplication={handleTakeApplication}
                 />
               )}
 

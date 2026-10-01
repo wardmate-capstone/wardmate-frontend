@@ -3,9 +3,6 @@ import {
   List,
   SidebarSimple,
   Bell,
-  CaretRight,
-  ShieldCheck,
-  BuildingOffice,
 } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 
@@ -19,7 +16,7 @@ interface OfficerHeaderProps {
   breadcrumbs?: Array<{ label: string; onClick?: () => void }>;
 }
 
-const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle: string }> = {
+const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string }> = {
   dashboard: {
     title: 'Tổng quan công việc Cán bộ Một cửa',
     subtitle: 'Theo dõi tiến độ tiền kiểm, hàng đợi tiếp nhận và hiệu suất xử lý hồ sơ',
@@ -86,17 +83,17 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
   const currentMeta = SECTION_TITLES[activeSection] || SECTION_TITLES.dashboard;
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex min-h-[68px] items-center justify-between gap-4 border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-md sm:px-6">
       {/* Left controls & Breadcrumb */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile menu trigger */}
         <button
           type="button"
-          className="grid size-11 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
+          className="grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
           onClick={onOpenMobileMenu}
           aria-label="Mở menu điều hướng cán bộ"
         >
-          <List size={22} aria-hidden="true" />
+          <List size={22} weight="bold" />
         </button>
 
         {/* Desktop compact sidebar toggle */}
@@ -106,43 +103,40 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
           onClick={onToggleCompact}
           aria-label={isCompact ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
         >
-          <SidebarSimple size={20} className={isCompact ? 'rotate-180' : ''} aria-hidden="true" />
+          <SidebarSimple size={20} className={isCompact ? 'rotate-180' : ''} />
         </button>
 
-        {/* Desk / Department Badge & Breadcrumb */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <BuildingOffice size={16} className="text-red-800 shrink-0" aria-hidden="true" />
-            <span className="truncate font-semibold text-slate-700">UBND Phường An Khánh · Quầy số 02</span>
-            <span className="hidden md:inline text-slate-300">|</span>
-            <span className="hidden md:inline-flex items-center gap-1 text-emerald-700 font-medium">
-              <ShieldCheck size={14} aria-hidden="true" /> Tiền kiểm hồ sơ Một cửa
-            </span>
-          </div>
-
+        {/* Breadcrumb tương tự Manager */}
+        <div className="flex items-center gap-2 min-w-0 pl-0.5 sm:pl-1">
+          <span className="hidden sm:inline-flex items-center text-xs font-semibold text-slate-400">
+            Cán bộ
+          </span>
+          <span className="hidden sm:inline text-slate-300 text-xs select-none">/</span>
           {breadcrumbs && breadcrumbs.length > 0 ? (
-            <nav className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5" aria-label="Breadcrumb">
+            <div className="flex items-center gap-2 min-w-0">
               {breadcrumbs.map((crumb, idx) => (
                 <React.Fragment key={crumb.label}>
-                  {idx > 0 && <CaretRight size={12} className="text-slate-400" aria-hidden="true" />}
+                  {idx > 0 && <span className="text-slate-300 text-xs select-none">/</span>}
                   {crumb.onClick ? (
                     <button
                       type="button"
                       onClick={crumb.onClick}
-                      className="hover:text-red-800 hover:underline font-medium text-slate-600"
+                      className="hover:text-red-800 hover:underline font-medium text-slate-600 text-xs sm:text-sm truncate"
                     >
                       {crumb.label}
                     </button>
                   ) : (
-                    <span className="font-bold text-slate-900">{crumb.label}</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[170px] sm:max-w-[280px] md:max-w-[360px]">
+                      {crumb.label}
+                    </span>
                   )}
                 </React.Fragment>
               ))}
-            </nav>
+            </div>
           ) : (
-            <p className="text-xs font-bold text-slate-900 truncate mt-0.5">
+            <span className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[170px] sm:max-w-[280px] md:max-w-[360px]">
               {currentMeta.title}
-            </p>
+            </span>
           )}
         </div>
       </div>
@@ -160,7 +154,7 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
               : 'Thông báo ca trực'
           }
         >
-          <Bell size={20} aria-hidden="true" />
+          <Bell size={20} />
           {unreadNotifsCount > 0 && (
             <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-red-600 px-1 py-0.5 text-[10px] font-bold text-white ring-2 ring-white">
               {unreadNotifsCount}
