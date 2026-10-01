@@ -159,7 +159,6 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     </span>
                     <p>
                       <strong className="block text-xs font-bold text-slate-900">{item.fullName}</strong>
-                      <small className="text-[11px] text-slate-500">Công dân</small>
                     </p>
                   </div>
                 </td>
@@ -218,7 +217,6 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             if (!open) setViewingProfile(null);
           }}
           title="Chi tiết hồ sơ công dân"
-          description="Thông tin định danh và cư trú được đồng bộ từ Cơ sở dữ liệu dân cư"
         >
           <div className="space-y-4 py-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
@@ -288,7 +286,6 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           title={editingProfile ? 'Chỉnh sửa hồ sơ công dân' : 'Thêm hồ sơ công dân mới'}
-          description="Nhập đầy đủ thông tin định danh 7 trường chuẩn theo cơ sở dữ liệu quốc gia"
         >
           <form onSubmit={handleFormSubmit} className="space-y-4 py-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

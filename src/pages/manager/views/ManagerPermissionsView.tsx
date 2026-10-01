@@ -31,11 +31,8 @@ export const ManagerPermissionsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200">
         <div>
           <h2 className="text-sm font-bold text-slate-900">
-            Quản lý Vai trò & Phân quyền Hệ thống
+            Nhóm vai trò
           </h2>
-          <p className="text-xs text-slate-500">
-            Thiết lập quyền truy cập chức năng cho từng vị trí công tác tại Bộ phận Một cửa
-          </p>
         </div>
 
         <button
