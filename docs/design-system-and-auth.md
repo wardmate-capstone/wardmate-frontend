@@ -5,9 +5,12 @@
 - Core: Button, Input, Modal, Badge và Toast tại `src/components/ui`.
 - Input đã được dùng trong đăng nhập/đăng ký. Các trang dùng Toast qua module chung.
 - Modal/Badge dùng được ngay; ví dụ trực quan nằm tại `/tests/fixtures/ui.html` khi chạy Vite dev. Fixture không nằm trong bundle production.
-- Đã nối 4 API Auth theo bàn giao HttpOnly: register, login, refresh-token, revoke-token. Chưa nối `/users/me`, roles/permissions hoặc route guard theo yêu cầu người dùng.
-- Development mặc định dùng Gateway `http://localhost:5000`; có thể ghi đè bằng `VITE_API_BASE_URL`. Production bắt buộc cấu hình URL Gateway HTTPS (hoặc proxy cùng origin), không có URL thì báo thiếu cấu hình.
-- Access token chỉ ở RAM. Cookie refresh HttpOnly do BE quản lý; không lưu token vào localStorage/sessionStorage. Sau reload, request có xác thực đầu tiên nếu trả 401 sẽ refresh qua cookie rồi retry. Không gọi refresh ngay lúc mở trang công cộng.
+- Đã nối register, login, refresh-token, revoke-token và `/api/v1/users/me`. Zustand tại `src/stores/authStore.ts` giữ trạng thái restoring/authenticated/anonymous/error, danh tính, roles/permissions; token không persist.
+- Base URL mặc định rỗng để dùng `/api` cùng origin; `VITE_API_BASE_URL` có thể ghi đè. Vite dev proxy và Vercel rewrite hiện trỏ IAM Azure. Deployment khác cần cấu hình proxy/URL phù hợp; không mặc định các route nghiệp vụ service khác đi được qua IAM.
+- Access token chỉ ở RAM trong JWT client. Refresh cookie HttpOnly do BE quản lý. Khi ứng dụng khởi động/F5, provider khôi phục phiên rồi lấy `/users/me`; route riêng tư chờ hoàn tất. Bootstrap và refresh khi 401 dùng chung một promise trong client.
+- Form Login/Register dùng React Hook Form + Zod, đồng bộ ràng buộc IAM (kể cả giới hạn mật khẩu 72 byte UTF-8), lỗi tiếng Việt từng trường và ánh xạ ProblemDetails.errors. Đăng ký thành công không tạo phiên.
+- Protected Routes bảo vệ cả alias tiếng Việt: citizen/cong-dan → REGISTERED_CITIZEN; officer/can-bo → FRONT_DESK_OFFICER; manager/quan-ly → MANAGER; procedure-manager/quan-ly-thu-tuc → PROCEDURE_MANAGER hoặc IT_ADMIN; admin → IT_ADMIN. Không cấp IT_ADMIN quyền workspace khác ngầm định. Menu tài khoản công khai hiển thị workspace theo role.
+- Chưa đăng nhập → login với returnTo nội bộ; sai role → thông báo không có quyền; lỗi mạng/5xx/CSRF lúc bootstrap → trạng thái lỗi và nút thử lại trên trang riêng tư. Backend vẫn là nơi thực thi bảo mật API.
 - “Ghi nhớ đăng nhập” được giữ nguyên UI và chưa nối logic theo yêu cầu. Thời hạn cookie hiện do BE quyết định.
 
 ## Component dùng chung
@@ -45,7 +48,7 @@ toast.success('Đã lưu thay đổi.');
 - `logout()`: POST `/api/v1/auth/revoke-token`, không body, Bearer + cookie. Chỉ xóa phiên/thông báo thành công khi nhận 204; 401 dùng luồng refresh/retry một lần.
 - Cả bốn POST gửi `X-CSRF-Protection: 1`, `withCredentials: true`. FE không đọc/ghi Set-Cookie. JSON login/refresh được kiểm tra tokenType và thời hạn, không nhận refresh token từ JSON.
 - `useLogout` dùng chung ở các nút Citizen/Officer/Manager/Procedure Manager. Admin hiện không có nút logout riêng, không thêm UI ngoài yêu cầu.
-- Web Locks tuần tự hóa request auth có cookie ở các tab cùng origin; BroadcastChannel xóa access token cũ khi tab khác login/logout. Không truyền token qua storage hoặc channel. Browser không có Web Locks chỉ được gom refresh trong một tab; chưa bảo đảm phối hợp đa tab/cross-origin FE trên browser đó.
+- Web Locks tuần tự hóa request auth có cookie ở các tab cùng origin; BroadcastChannel xóa phiên cũ khi tab khác logout, khôi phục danh tính mới khi tab khác login. Không truyền token qua storage hoặc channel. Browser không có Web Locks chỉ được gom refresh trong một tab; chưa bảo đảm phối hợp đa tab/cross-origin FE trên browser đó.
 
 ### Môi trường local và kiểm thử cookie
 
@@ -53,7 +56,7 @@ Dùng FE `http://localhost:5173`, Gateway `http://localhost:5000`; không trộn
 
 Vite đã cố định host `localhost`, port 5173 và strictPort (không tự nhảy sang 5174 khi cổng bận). Cấu hình riêng máy phát triển ở `.env.development.local`; file này được Git ignore và không áp dụng cho production build. `.env.example` chỉ là mẫu, không tự được Vite nạp. Sau khi thay `.env`, khởi động lại `npm run dev`.
 
-Người dùng xác nhận BE chạy trên máy/server khác ngày 01/10 và cung cấp Swagger IAM Azure. `.env.development.local` và `.env.example` đã dùng `VITE_API_BASE_URL=https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io` (không kèm `/swagger/index.html`). Hai cổng 5173/3000 là origin FE được BE cho phép, không phải cổng API để thay vào base URL. Đã xác minh OPTIONS login trả 204, allow-origin localhost:5173, credentials=true và cho phép header CSRF. Chưa kiểm tra cookie từ login thật: nếu BE vẫn đặt SameSite=Strict theo bàn giao cũ, cookie sẽ không đi từ FE localhost sang BE Azure khác site; cần phối hợp BE hoặc proxy cùng site cho luồng refresh.
+IAM Azure đã được cung cấp ở phiên trước. Cấu hình proxy hiện tại nhằm gửi cookie cùng origin với FE; không suy ra cookie production hoạt động chỉ từ source cấu hình. FE-TASK-03 chưa xác minh lại đăng nhập/cookie bằng tài khoản thật. Không trộn localhost và 127.0.0.1.
 
 Playwright ghi đè `VITE_API_BASE_URL=http://localhost:5000` trong tiến trình Vite dành cho test để mock Auth không vô tình gọi server thật từ `.env` cá nhân.
 
@@ -64,7 +67,7 @@ Test auth mock dùng `http://localhost:4317`; các test UI cũ giữ `127.0.0.1:
 Điểm cấu hình duy nhất: `src/lib/api/index.ts`. `createJwtClient` nhận:
 - `baseURL`: URL backend.
 - `refreshAccessToken(transport)`: callback gọi endpoint refresh thật và trả về access token đã kiểm tra định dạng.
-- `onSessionExpired`: hiện dùng `redirectToLogin`.
+- `onSessionExpired`: xóa token và trạng thái Zustand; chuyển đăng nhập bằng `redirectToLogin` ngoài bootstrap. Khi bootstrap, public vẫn mở được, route guard xử lý trang riêng tư.
 - `isRefreshSessionExpired`: adapter Auth chỉ coi 401 là hết phiên; 403 CSRF trả lỗi để kiểm tra cấu hình.
 - `timeout`: mặc định 15 giây.
 
@@ -101,7 +104,7 @@ Luồng login/logout:
 - 403 từ request nghiệp vụ: trả lỗi phân quyền, không refresh.
 - Đăng nhập phiên mới/logout trong lúc refresh: bỏ kết quả phiên cũ.
 - Request bị hủy không được gửi lại.
-- Không có base URL: báo thiếu cấu hình trước khi gửi request. Không có refresh adapter: không gọi endpoint giả.
+- Base URL rỗng dùng origin hiện tại và cần reverse proxy `/api`. Không có refresh adapter: không gọi endpoint giả.
 - Client này chỉ dùng cho backend đã cấu hình; URL khác origin bị chặn.
 - Không tự retry 5xx/lỗi mạng ở request nghiệp vụ. UI nơi gọi chịu trách nhiệm hiển thị lỗi phù hợp.
 
@@ -109,14 +112,14 @@ Luồng login/logout:
 
 Người dùng cần xác thực lại để tiếp tục việc đang làm. Chuyển về landing sẽ làm họ mất ngữ cảnh. URL đăng nhập giữ `returnTo` nội bộ và hiển thị thông báo hết phiên rõ ràng; người dùng vẫn có link về trang chủ. `safeReturnTo` chặn URL ngoài và vòng lặp trang xác thực.
 
-Form đã điều hướng sau login thành công thật theo response API; không tự coi validation FE là đăng nhập. Không bảo đảm giữ dữ liệu form chưa lưu qua lần chuyển trang. ReturnTo chỉ kiểm tra URL nội bộ, không thay thế phân quyền BE; route guard/roles chưa thuộc task này.
+Form chỉ điều hướng sau login và tải danh tính IAM thành công; không tự coi validation FE là đăng nhập. Không bảo đảm giữ dữ liệu form chưa lưu qua lần chuyển trang. ReturnTo được kiểm tra URL nội bộ, sau đó ProtectedRoute kiểm tra quyền workspace; không thay thế phân quyền BE.
 
 ## Kiểm tra
 
 ```sh
 npm run build
 npm run lint
-npm run test:e2e -- tests/auth.spec.ts tests/jwt-client.spec.ts tests/design-system.spec.ts tests/landing.spec.ts
+npm run test:e2e -- tests/auth.spec.ts tests/auth-session.spec.ts tests/jwt-client.spec.ts tests/design-system.spec.ts tests/landing.spec.ts
 ```
 
 JWT được kiểm thử bằng Axios adapter giả lập, không cần server/API/token thật. Test UI kiểm tra bàn phím, focus, mô tả lỗi, loading, toast và mobile.

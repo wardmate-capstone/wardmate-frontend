@@ -31,11 +31,12 @@
 - Stack hiện tại: React, TypeScript, Vite, Tailwind CSS; dùng npm và `package-lock.json`.
 - Alias import: `@/` trỏ tới `src/`.
 - Dự án hỗ trợ chuẩn bị và tiền kiểm hồ sơ hành chính; không đồng nhất tiền kiểm với tiếp nhận chính thức.
-- Backend auth chưa được cung cấp tại mốc bàn giao trong `docs/PROGRESS.md`. Chỉ đổi nhận định này khi có bằng chứng mới.
+- Backend IAM đã có hợp đồng auth HttpOnly, `/api/v1/users/me`, roles/permissions; đã đối chiếu source tại `D:/wardmate-backend` ngày 01/10/2026. Không dùng ghi chú lịch sử “chưa có backend auth” làm trạng thái hiện tại.
 - HTTP client: `src/lib/api/index.ts`; logic refresh: `src/lib/api/createJwtClient.ts`.
 - Không tự đặt hợp đồng API hoặc chọn nơi lưu refresh token khi chưa có thông tin backend.
 - Khi phiên không còn hợp lệ: về `/dang-nhap`, giải thích hết phiên và giữ `returnTo` nội bộ an toàn. Điều hướng sau đăng nhập cần thành công thật.
-- “Ghi nhớ đăng nhập”, khôi phục phiên sau reload và auth thật còn chờ backend; không mô tả là đã hoàn tất.
+- FE-TASK-03 dùng Zustand, Zod/React Hook Form và Protected Routes theo role IAM. Access token chỉ ở RAM; refresh token qua cookie HttpOnly. Khôi phục phiên và gọi API đã có code; phân biệt kiểm thử mock với xác minh môi trường thật.
+- “Ghi nhớ đăng nhập” được tạm bỏ qua theo quyết định người dùng; checkbox giữ nguyên, chưa có logic hoặc hợp đồng rememberMe.
 - Ponytail là công cụ cá nhân đã cài trên máy người dùng, không phải dependency frontend. Không giả định máy khác có plugin hoặc hooks đã được chấp thuận.
 
 ## Kiểm tra và Git

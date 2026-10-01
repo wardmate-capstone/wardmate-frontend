@@ -4,6 +4,19 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## FE-TASK-03 — Form auth, Zustand và Protected Routes — 01/10/2026
+
+- Phạm vi đã được người dùng duyệt: Zod/React Hook Form, Zustand, guard theo role IAM; IT_ADMIN được vào admin và procedure-manager, không ngầm cấp workspace khác. Tạm bỏ qua “Ghi nhớ đăng nhập”, giữ checkbox chưa có logic; không mở rộng quên/đặt lại mật khẩu.
+- Đã triển khai: `src/lib/authSchema.ts`, `src/pages/auth/AuthPage.tsx` dùng schema theo IAM, lỗi từng trường/ProblemDetails.errors, giữ UI/loading/chống submit lặp. Password giữ nguyên khoảng trắng, giới hạn 72 byte UTF-8. CSS cố định icon theo chiều cao input để lỗi bên dưới không làm lệch icon.
+- `src/stores/authStore.ts`, `src/hooks/useAuthState.ts`, `src/hooks/useUserProfile.tsx`, `src/lib/api/index.ts`, `createJwtClient.ts`: trạng thái restoring/authenticated/anonymous/error; lấy danh tính/roles/permissions bằng GET `/api/v1/users/me`; profile ban đầu dùng response này. Bootstrap và 401 dùng chung refresh promise; kiểm tra phiên trước khi áp dụng kết quả auth/profile đến muộn. Không persist token hoặc user; refresh vẫn HttpOnly, access token ở RAM của JWT client.
+- `src/components/ProtectedRoute.tsx`, `src/app/App.tsx`: chờ bootstrap; chưa xác thực chuyển login kèm returnTo nội bộ; sai role hiển thị không có quyền; lỗi bootstrap 403/mạng/5xx giữ trang riêng tư và cho thử lại. Bảo vệ alias tiếng Việt lẫn tiếng Anh. Public pages vẫn mở không cần đăng nhập. `UserDropdown.tsx` hiển thị các workspace được cấp theo role.
+- API tiếp tục dùng hợp đồng IAM hiện có; không thay backend, endpoint, cookie policy hoặc database. Không kiểm thử tài khoản thật/Azure/deployment trong phiên này, chưa xác nhận production cookie. Auth/roles trong Playwright là mock, không phải tích hợp end-to-end thật.
+- Kiểm tra: typecheck và lint đạt. Lượt hồi quy 62 tests: 61 đạt, 1 test cán bộ dùng nhãn dashboard cũ thất bại. Đã đối chiếu UI và sửa test; chạy lại `auth-session.spec.ts` + `officer.spec.ts`: **16/16 đạt**, gồm test menu IT_ADMIN mới. Các test auth/JWT/design-system/landing/manager/procedure-manager đã đạt ở lượt hồi quy. Test workspace được bổ sung mock IAM đúng role; test hồ sơ/logout cũ cập nhật theo UI đang có, không thay nghiệp vụ để làm test qua.
+- Build production đã đạt; còn cảnh báo chunk lớn và annotation trong dependency Zod. `npm audit` báo 1 high ở dependency phát triển gián tiếp brace-expansion; không chạy audit fix/refactor dependency ngoài phạm vi. Ảnh đăng ký mobile đã kiểm tra; kiểm tra bổ sung ảnh lỗi validation mobile được ghi ở mục xác minh cuối bên dưới.
+- Tài liệu cập nhật: `AGENTS.md`, `docs/design-system-and-auth.md`, file này; thay nhận định lỗi thời “chưa có backend auth/route guard”. `package.json`/lock thêm Zustand, Zod, React Hook Form và resolver. Chưa commit/push.
+- Còn chờ: smoke test login/logout/F5/role với IAM thật trên môi trường triển khai; cần tài khoản test đúng role và cấu hình proxy/cookie tại môi trường đó. Không ghi “Complete tích hợp thật” chỉ dựa trên test mock.
+- Xác minh cuối: test server validation/mobile **1/1 đạt**, ảnh `test-results/auth-validation-mobile.png` đã xem (lỗi nằm dưới ô nhập, icon không lệch, không tràn ngang); build bản cuối đạt và `git diff --check` đạt. Tổng phạm vi đã kiểm tra là 63 test khác nhau qua các lượt trên, không phải một lượt 63/63; chưa chạy toàn bộ test suite ngoài phạm vi. Không có thay đổi backend, commit hoặc push.
+
 ## Nâng cao Trải nghiệm Nút Đăng nhập & Đăng ký (Dynamic Loading Text) — 01/10/2026
 
 - **Yêu cầu & Triển khai**:
