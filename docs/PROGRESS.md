@@ -4,6 +4,32 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Loại bỏ thanh Tabs lọc trạng thái hồ sơ Cán bộ — 01/10/2026
+
+- **Yêu cầu**: Xóa thanh tab lọc trạng thái hồ sơ (Tất cả hồ sơ, Chờ tiền kiểm, Đang kiểm tra, Cần bổ sung, Đã gửi lại, Đã duyệt tiền kiểm, Chờ tiếp nhận) ở đầu danh sách hồ sơ vì đã có accordion tree đầy đủ trên sidebar.
+- **Triển khai**:
+  - Gỡ bỏ mảng `tabs` và khối `<nav aria-label="Lọc hồ sơ theo trạng thái">` trong [src/pages/officer/OfficerApplicationListView.tsx](file:///e:/wardmate-frontend/src/pages/officer/OfficerApplicationListView.tsx).
+  - Tối ưu không gian giao diện: danh sách hồ sơ bắt đầu trực tiếp bằng thanh công cụ tìm kiếm và lọc nâng cao, bảng hồ sơ thoáng đãng, đồng bộ cấu trúc với Admin và Manager.
+- **Tệp thay đổi**: `src/pages/officer/OfficerApplicationListView.tsx`, `src/pages/officer/OfficerDashboardView.tsx`.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+  - Đã chụp ảnh xác minh thực tế qua Playwright Edge: Thanh tab trùng lặp đã được loại bỏ hoàn toàn, giao diện sạch sẽ và chuẩn mực.
+
+## Phóng to nền ngoài và làm trong suốt khối Quy trình — 01/10/2026
+
+- **Yêu cầu**: Phóng to nền ngoài của Hành trình (`.journey-section`), lấy đúng ảnh gốc (`/vietnam-cultural-pattern.png`); đổi khối nhỏ quy trình (`.journey-overview`) thành trong suốt để nhìn thông xuyên thấu ra nền phía sau.
+- **Triển khai**:
+  - `.journey-section`: Sử dụng trực tiếp ảnh gốc `/vietnam-cultural-pattern.png` phóng to phủ tràn toàn bộ section (`background-size: cover; background-position: center;`), không còn lớp gradient che mờ hay đục màu.
+  - `.journey-workspace`: Đổi màu nền khối bao quanh sang mờ nhẹ trong suốt (`bg-black/10 backdrop-blur-sm`) với viền `border-white/25`.
+  - Khối quy trình (`.journey-overview`): Chuyển sang `bg-transparent` (trong suốt hoàn toàn), ẩn họa tiết đè con để nhìn thông xuyên thấu ra toàn bộ nền đỏ của ảnh gốc; giữ nguyên chữ trắng (`text-white`) và nhãn vàng kim (`text-gold-300`) cùng nút bấm trắng `bg-white text-red-900` nổi bật trên nền đỏ.
+  - Cột 4 bước (`.journey-timeline-wrap`): Giữ nguyên nền trắng sạch sẽ `bg-white` để đảm bảo độ tương phản cao, dễ đọc quy trình.
+- **Tệp thay đổi**: `src/styles/globals.css`.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+  - Đã chụp ảnh xác minh thực tế qua Playwright Edge: Nền ngoài phủ rộng sắc nét, khối quy trình trong suốt nhìn xuyên thấu ra ảnh gốc phía sau.
+
 ## Kiểm tra và chia commit Officer/Manager — 01/10/2026
 
 - Theo yêu cầu commit/push, nhóm thay đổi hiện tại thành 3 commit: dashboard/điều hướng Officer; tab hồ sơ và CCCD Manager kèm test; giao diện phản hồi Manager kèm bàn giao.

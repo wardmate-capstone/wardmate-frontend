@@ -27,7 +27,6 @@ interface OfficerApplicationListViewProps {
 export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProps> = ({
   applications,
   activeSection,
-  onSelectSection,
   onOpenReviewWorkspace,
   onTakeApplication,
   onQuickPreview,
@@ -99,15 +98,6 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
       });
   }, [applications, statusFilter, searchQuery, selectedProcedure, selectedOfficer, sortOrder]);
 
-  const tabs: Array<{ id: OfficerSection; label: string; count: number }> = [
-    { id: 'apps-all', label: 'Tất cả hồ sơ', count: applications.length },
-    { id: 'apps-pending', label: 'Chờ tiền kiểm', count: applications.filter((a) => a.status === 'SUBMITTED_FOR_REVIEW').length },
-    { id: 'apps-reviewing', label: 'Đang kiểm tra', count: applications.filter((a) => a.status === 'UNDER_REVIEW').length },
-    { id: 'apps-need-revision', label: 'Cần bổ sung', count: applications.filter((a) => a.status === 'NEED_REVISION').length },
-    { id: 'apps-resubmitted', label: 'Đã gửi lại', count: applications.filter((a) => a.status === 'RESUBMITTED').length },
-    { id: 'apps-approved', label: 'Đã duyệt tiền kiểm', count: applications.filter((a) => a.status === 'APPROVED').length },
-    { id: 'apps-ready-submit', label: 'Chờ tiếp nhận', count: applications.filter((a) => a.status === 'READY_TO_SUBMIT').length },
-  ];
 
   function renderStatusBadge(status: ApplicationStatus, priorityBadge?: string) {
     switch (status) {
@@ -167,37 +157,6 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
   return (
     <section aria-label="Quản lý danh sách hồ sơ" className="space-y-5">
-      {/* Status Tabs Navigation */}
-      <nav aria-label="Lọc hồ sơ theo trạng thái" className="border-b border-slate-200 bg-white rounded-xl shadow-2xs p-1">
-        <ul className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {tabs.map((tab) => {
-            const isActive = activeSection === tab.id;
-            return (
-              <li key={tab.id} className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onSelectSection(tab.id)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
-                    isActive
-                      ? 'bg-red-800 text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
 
       {/* Filter Toolbar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">

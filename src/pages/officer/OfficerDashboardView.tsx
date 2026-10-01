@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Hourglass,
-  ClockCounterClockwise,
-  WarningCircle,
-  ArrowCounterClockwise,
-  CheckCircle,
   FileText,
-  Tray,
   ArrowRight,
   CaretRight,
   TrendUp,
@@ -53,86 +47,9 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 }) => {
   const [chartView, setChartView] = useState<'hourly' | 'summary'>('hourly');
 
-  // Counts by status
-  const pendingApps = applications.filter((a) => a.status === 'SUBMITTED_FOR_REVIEW');
-  const reviewingApps = applications.filter((a) => a.status === 'UNDER_REVIEW');
-  const needRevisionApps = applications.filter((a) => a.status === 'NEED_REVISION');
+  // Hồ sơ gửi lại cần ưu tiên & hồ sơ chờ tiếp nhận
   const resubmittedApps = applications.filter((a) => a.status === 'RESUBMITTED');
-  const approvedApps = applications.filter((a) => a.status === 'APPROVED');
   const readySubmitApps = applications.filter((a) => a.status === 'READY_TO_SUBMIT');
-
-  const statCards = [
-    {
-      id: 'apps-pending' as OfficerSection,
-      label: 'Chờ tiền kiểm',
-      count: pendingApps.length,
-      note: 'Cần tiếp nhận kiểm tra',
-      icon: Hourglass,
-      tone: 'amber',
-      bgClass: 'bg-amber-50 text-amber-800 border-amber-200 hover:border-amber-300',
-      badgeClass: 'bg-amber-100 text-amber-900',
-    },
-    {
-      id: 'apps-reviewing' as OfficerSection,
-      label: 'Đang kiểm tra',
-      count: reviewingApps.length,
-      note: 'Hồ sơ đang xử lý',
-      icon: ClockCounterClockwise,
-      tone: 'blue',
-      bgClass: 'bg-blue-50 text-blue-800 border-blue-200 hover:border-blue-300',
-      badgeClass: 'bg-blue-100 text-blue-900',
-    },
-    {
-      id: 'apps-need-revision' as OfficerSection,
-      label: 'Cần bổ sung',
-      count: needRevisionApps.length,
-      note: 'Chờ công dân hoàn thiện',
-      icon: WarningCircle,
-      tone: 'orange',
-      bgClass: 'bg-orange-50 text-orange-800 border-orange-200 hover:border-orange-300',
-      badgeClass: 'bg-orange-100 text-orange-900',
-    },
-    {
-      id: 'apps-resubmitted' as OfficerSection,
-      label: 'Đã gửi lại',
-      count: resubmittedApps.length,
-      note: 'Ưu tiên tiền kiểm lại V2',
-      icon: ArrowCounterClockwise,
-      tone: 'purple',
-      bgClass: 'bg-purple-50 text-purple-800 border-purple-200 hover:border-purple-300',
-      badgeClass: 'bg-purple-100 text-purple-900',
-    },
-    {
-      id: 'apps-approved' as OfficerSection,
-      label: 'Đã duyệt tiền kiểm',
-      count: approvedApps.length,
-      note: 'Hồ sơ đạt yêu cầu',
-      icon: CheckCircle,
-      tone: 'emerald',
-      bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:border-emerald-300',
-      badgeClass: 'bg-emerald-100 text-emerald-900',
-    },
-    {
-      id: 'apps-ready-submit' as OfficerSection,
-      label: 'Chờ tiếp nhận',
-      count: readySubmitApps.length,
-      note: 'Sẵn sàng nộp tại quầy',
-      icon: FileText,
-      tone: 'teal',
-      bgClass: 'bg-teal-50 text-teal-800 border-teal-200 hover:border-teal-300',
-      badgeClass: 'bg-teal-100 text-teal-900',
-    },
-    {
-      id: 'receipt-received' as OfficerSection,
-      label: 'Đã tiếp nhận hôm nay',
-      count: 20, // fixed benchmark metric from Officer.md
-      note: 'Hồ sơ giấy đã hoàn tất',
-      icon: Tray,
-      tone: 'slate',
-      bgClass: 'bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300',
-      badgeClass: 'bg-slate-200 text-slate-900',
-    },
-  ];
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
@@ -158,43 +75,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 
       </div>
 
-      {/* 7 KPI Stat Cards */}
-      <section aria-label="Chỉ số phân luồng hồ sơ">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          {statCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => onSelectSection(card.id)}
-                className={`group flex flex-col justify-between rounded-xl border p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${card.bgClass}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="grid size-9 place-items-center rounded-lg bg-white/80 shadow-2xs">
-                    <Icon size={20} weight="bold" aria-hidden="true" />
-                  </span>
-                  <span className={`px-2 py-0.5 text-xs rounded-full border ${card.badgeClass}`}>
-                    {card.count}
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <span className="block text-2xl font-bold tracking-tight tabular-nums">
-                    {card.count}
-                  </span>
-                  <strong className="block text-xs font-bold truncate mt-0.5">
-                    {card.label}
-                  </strong>
-                  <span className="block text-[10px] text-slate-500 mt-1 truncate">
-                    {card.note}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
 
       {/* Main Grid: Biểu đồ luồng xử lý & Tổng quan chức năng chính */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
