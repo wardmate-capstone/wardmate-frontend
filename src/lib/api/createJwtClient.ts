@@ -108,6 +108,8 @@ export function createJwtClient(options: JwtClientOptions) {
     hasAccessToken: () => token !== null,
     setAccessToken,
     clearSession: () => setAccessToken(null),
+    restoreSession: () => token ? Promise.resolve() : options.refreshAccessToken
+      ? refresh(session) : Promise.reject(new Error('Refresh adapter is not configured.')),
   };
 }
 export { AxiosError };

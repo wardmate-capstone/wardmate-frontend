@@ -1,6 +1,7 @@
 import axios, { type AxiosAdapter } from 'axios';
 import { createJwtClient } from './createJwtClient';
 import { redirectToLogin } from '../authRedirect';
+import { useAuthStore, type CurrentUser } from '@/stores/authStore';
 import type { UserProfileDto, ProfileInput } from '@/types/profile';
 export type { UserProfileDto, ProfileInput };
 
@@ -41,27 +42,29 @@ export const authClient = createJwtClient({
   },
   // A CSRF rejection is a configuration/security error, not an expired session.
   isRefreshSessionExpired: (error) => axios.isAxiosError(error) && error.response?.status === 401,
-  onSessionExpired: redirectToLogin,
+  onSessionExpired: () => {
+    clearSession();
+    useAuthStore.setState({ expired: true });
+    if (!bootstrapping) redirectToLogin();
+  },
 });
 export const api = authClient.api;
 
 const channel = typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
   ? new BroadcastChannel('wardmate-auth:' + baseURL) : null;
 let sessionVersion = 0;
-
-function notifyAuthStateChanged() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('wardmate-auth-state'));
-  }
-}
+let bootstrapping = false;
 
 function clearSession() {
   sessionVersion++;
   authClient.clearSession();
-  notifyAuthStateChanged();
+  useAuthStore.setState({ status: 'anonymous', user: null, error: null, expired: false });
 }
 if (channel) channel.onmessage = (event: MessageEvent<unknown>) => {
-  if (event.data === 'login' || event.data === 'logout') clearSession();
+  if (event.data === 'login' || event.data === 'logout') {
+    clearSession();
+    if (event.data === 'login') void restoreSession();
+  }
 };
 import.meta.hot?.dispose(() => channel?.close());
 
@@ -73,7 +76,7 @@ export async function register(payload: RegisterRequest) {
   if (response.status !== 201 || !response.data || typeof response.data.id !== 'string' || !response.data.id.trim()) {
     throw new Error('Phản hồi đăng ký không hợp lệ. Vui lòng thử đăng nhập hoặc liên hệ hỗ trợ.');
   }
-  // Registration does not establish a session; roles/profile are outside this task.
+  // Registration does not establish a session.
 }
 
 let loginPending: Promise<void> | undefined;
@@ -81,13 +84,17 @@ export function login(payload: LoginRequest): Promise<void> {
   if (loginPending) return Promise.reject(new Error('Đang đăng nhập. Vui lòng chờ hoàn tất.'));
   if (logoutPending) return Promise.reject(new Error('Đang đăng xuất. Vui lòng chờ hoàn tất.'));
   clearSession();
+  useAuthStore.setState({ status: 'restoring' });
   const version = sessionVersion;
   loginPending = api.post('/api/v1/auth/login', payload, { ...cookieConfig, skipAuth: true })
-    .then((response) => {
+    .then(async (response) => {
       if (version !== sessionVersion) throw new axios.CanceledError('Session changed.');
       authClient.setAccessToken(readAccessToken(response.data));
       channel?.postMessage('login');
-      notifyAuthStateChanged();
+      await loadCurrentUser(version);
+    }).catch((error: unknown) => {
+      if (version === sessionVersion) useAuthStore.setState({ status: authClient.hasAccessToken() ? 'error' : 'anonymous', error: authErrorMessage(error) });
+      throw error;
     }).finally(() => { loginPending = undefined; });
   return loginPending;
 }
@@ -101,28 +108,49 @@ export function logout(): Promise<void> {
       if (response.status !== 204) throw new Error('Máy chủ chưa xác nhận thu hồi phiên. Vui lòng thử lại.');
       clearSession();
       channel?.postMessage('logout');
-      notifyAuthStateChanged();
     }).finally(() => { logoutPending = undefined; });
   return logoutPending;
 }
 
-let restorePending: Promise<boolean> | undefined;
+async function loadCurrentUser(version: number) {
+  const { data } = await api.get<CurrentUser>('/api/v1/users/me', cookieConfig);
+  if (version !== sessionVersion) throw new axios.CanceledError('Session changed.');
+  if (!data || typeof data.id !== 'string' || !Array.isArray(data.roles) || !data.roles.every(role => typeof role === 'string')
+    || !Array.isArray(data.permissions) || !data.permissions.every(permission => typeof permission === 'string')) {
+    throw new Error('Thông tin tài khoản không hợp lệ. Vui lòng thử lại.');
+  }
+  useAuthStore.setState({ status: 'authenticated', user: data, error: null, expired: false });
+}
+
+let restorePending: { version: number; promise: Promise<boolean> } | undefined;
 export function restoreSession(): Promise<boolean> {
-  if (authClient.hasAccessToken()) return Promise.resolve(true);
-  if (restorePending) return restorePending;
-  restorePending = api.post('/api/v1/auth/refresh-token', undefined, { ...cookieConfig, skipAuth: true })
-    .then((response) => {
-      authClient.setAccessToken(readAccessToken(response.data));
-      notifyAuthStateChanged();
+  if (loginPending) return loginPending.then(() => true, () => false);
+  if (logoutPending) return logoutPending.then(() => false, () => false);
+  if (useAuthStore.getState().status === 'authenticated') return Promise.resolve(true);
+  if (restorePending?.version === sessionVersion) return restorePending.promise;
+  const version = sessionVersion;
+  bootstrapping = true;
+  useAuthStore.setState({ status: 'restoring', error: null });
+  const promise = authClient.restoreSession()
+    .then(async () => {
+      if (version !== sessionVersion) throw new axios.CanceledError('Session changed.');
+      await loadCurrentUser(version);
       return true;
     })
-    .catch(() => {
+    .catch((error: unknown) => {
+      if (version === sessionVersion && !axios.isCancel(error)) {
+        useAuthStore.setState({ status: 'error', user: null, error: authErrorMessage(error) });
+      }
       return false;
     })
     .finally(() => {
-      restorePending = undefined;
+      if (restorePending?.promise === promise) {
+        restorePending = undefined;
+        bootstrapping = false;
+      }
     });
-  return restorePending;
+  restorePending = { version, promise };
+  return promise;
 }
 
 export async function getMyProfile(): Promise<UserProfileDto> {
@@ -131,8 +159,9 @@ export async function getMyProfile(): Promise<UserProfileDto> {
 }
 
 export async function updateMyProfile(payload: ProfileInput): Promise<UserProfileDto> {
+  const owner = useAuthStore.getState().user;
   const response = await api.put<UserProfileDto>('/api/v1/users/me/profile', payload, cookieConfig);
-  notifyAuthStateChanged();
+  if (owner && useAuthStore.getState().user === owner) useAuthStore.setState({ user: { ...owner, profile: response.data } });
   return response.data;
 }
 

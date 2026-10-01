@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getMyProfile, restoreSession, type UserProfileDto } from '@/lib/api';
-import { useAuthState } from '@/hooks/useAuthState';
+import { useAuthStore } from '@/stores/authStore';
 
 export function getInitials(name?: string | null): string {
   if (!name || !name.trim()) return 'CD';
@@ -23,52 +23,32 @@ interface UserProfileContextValue {
 const UserProfileContext = createContext<UserProfileContextValue | undefined>(undefined);
 
 export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthState();
-  const [profile, setProfile] = useState<UserProfileDto | null>(null);
+  const { user, status } = useAuthStore();
+  const profile = user?.profile ?? null;
+  const restoring = status === 'restoring';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (!isAuthenticated) {
-      setProfile(null);
-      setError(null);
-      return;
-    }
+    const owner = useAuthStore.getState().user;
+    if (!owner) return;
     setLoading(true);
     setError(null);
     try {
       const data = await getMyProfile();
-      setProfile(data);
+      if (useAuthStore.getState().user === owner) useAuthStore.setState({ user: { ...owner, profile: data } });
     } catch (err) {
       // 404 là tài khoản mới chưa cập nhật profile, không phải crash
-      setError(err instanceof Error ? err.message : 'Không thể tải hồ sơ');
-      setProfile(null);
+      if (useAuthStore.getState().user === owner) setError(err instanceof Error ? err.message : 'Không thể tải hồ sơ');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
-
-  const [restoring, setRestoring] = useState(true);
+  }, []);
 
   // Khi người dùng F5 / reload trang, khôi phục Access Token từ HttpOnly refresh cookie
   useEffect(() => {
-    let isMounted = true;
-    restoreSession().finally(() => {
-      if (isMounted) setRestoring(false);
-    });
-    return () => {
-      isMounted = false;
-    };
+    void restoreSession();
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchProfile();
-    } else {
-      setProfile(null);
-      setError(null);
-    }
-  }, [isAuthenticated, fetchProfile]);
 
   const initials = useMemo(() => getInitials(profile?.fullName), [profile?.fullName]);
 
