@@ -3,19 +3,19 @@ import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/Toast';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { HomePage } from '@/pages/public/HomePage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
-import { AuthPage } from '@/pages/AuthPage';
+import { NotFoundPage } from '@/pages/errors/NotFoundPage';
+import { AuthPage } from '@/pages/auth/AuthPage';
 import { FaqPage } from '@/pages/public/FaqPage';
-import { ProfilePage } from '@/pages/ProfilePage';
+import { ProfilePage } from '@/pages/account/ProfilePage';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { ProcedureDetailPage } from '@/pages/public/ProcedureDetailPage';
-import { AdminPage } from '@/pages/AdminPage';
+import { AdminPage } from '@/pages/admin/AdminPage';
 import { CitizenPage } from '@/pages/citizen';
 import { OfficerPage } from '@/pages/officer/OfficerPage';
 import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
 import { ManagerPage } from '@/pages/manager/ManagerPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 
 export function App() {
   return (

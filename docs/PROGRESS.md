@@ -4,6 +4,13 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Sắp xếp thư mục pages — 01/10/2026
+
+- Chuyển toàn bộ 10 file trực tiếp dưới `src/pages` vào thư mục theo chức năng: `admin` (AdminPage), `auth` (AuthPage, ForgotPasswordPage, ResetPasswordPage), `public` (HomePage, FaqPage, ProceduresPage, ProcedureDetailPage), `account` (ProfilePage), `errors` (NotFoundPage).
+- Cập nhật import trong `src/app/App.tsx`; giữ nguyên URL, nội dung file và hành vi các trang. Các workspace citizen/officer/manager/procedure-manager giữ nguyên cấu trúc.
+- Người dùng yêu cầu commit/push ngày 01/10; chia theo nhóm trang công cộng và nhóm quản trị/xác thực/tài khoản/trang lỗi. Đối chiếu lịch sử Git và origin/main để xác định trạng thái đồng bộ.
+- Kiểm tra: cả 10 file giữ nguyên nội dung (đối chiếu Git hash); không còn import đường dẫn cũ. Lint và build (gồm TypeScript) đạt, build còn cảnh báo bundle lớn. Lượt test landing/detail/feedback đạt 21/22, một test detail timeout khi chạy song song; chạy riêng test đó đạt (9,4 giây). Không sửa test hoặc tăng timeout.
+
 ## Rút gọn nội dung Manager — 01/10/2026
 
 - Phạm vi `/manager`: bỏ subtext dưới tiêu đề trang, tiêu đề thống kê lặp và mô tả trang trí; rút ngắn tiêu đề biểu đồ, nhóm vai trò và mẫu báo cáo.
@@ -69,7 +76,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 ## Đồng bộ UI Procedure Manager theo Admin — 30/09/2026
 
-- Người dùng chọn `src/pages/AdminPage.tsx` làm mẫu dashboard quản lý; phạm vi lần này chỉ `procedure-manager`, giữ chức năng hiện có.
+- Người dùng chọn `src/pages/admin/AdminPage.tsx` làm mẫu dashboard quản lý; phạm vi lần này chỉ `procedure-manager`, giữ chức năng hiện có.
 - Dùng lại `admin-layout`, sidebar/brand, topbar, workspace, tiêu đề, card, bảng và nút hành động từ CSS Admin. Không thay đổi AdminPage, không thêm dependency hoặc API.
 - Giữ 14 mục điều hướng, tìm kiếm/lọc, chi tiết, wizard 8 bước, biểu mẫu, phiên bản, checklist, pháp lý, AI và đăng xuất. Thẻ thống kê chuyển sang button để dùng được bằng bàn phím.
 - Đồng bộ nền trắng, viền, bo góc, font và màu đỏ chủ đạo; bỏ banner gradient lớn, tránh tiêu đề lặp. Sidebar cố định, cuộn riêng, thu gọn desktop và drawer mobile; nhãn dài xuống dòng khi mở rộng.
@@ -82,7 +89,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - Vẫn là frontend/mock; không sửa các giới hạn dữ liệu và xử lý nghiệp vụ vốn có. Người dùng yêu cầu chia thành 2 commit và push: khung dashboard; nội dung màn hình và rút gọn text. Đối chiếu Git và origin/main để xác định trạng thái đồng bộ hiện tại.
 ## FE-TASK-33 — Phân hệ Quản lý Hồ sơ Công dân trên Admin (Admin Profiles)
 
-- Người dùng yêu cầu: Thêm trang giao diện AdminProfiles tại [src/pages/AdminPage.tsx](file:///e:/wardmate-frontend/src/pages/AdminPage.tsx) quản lý 7 thuộc tính định danh cá nhân:
+- Người dùng yêu cầu: Thêm trang giao diện AdminProfiles tại `src/pages/admin/AdminPage.tsx` quản lý 7 thuộc tính định danh cá nhân:
   1. `fullName`: Họ và tên
   2. `identityNumber`: Số CCCD / Mã định danh cá nhân (12 số)
   3. `phoneNumber`: Số điện thoại liên hệ
@@ -90,7 +97,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   5. `gender`: Giới tính (Nam / Nữ / Khác)
   6. `permanentAddress`: Nơi thường trú
   7. `temporaryAddress`: Nơi tạm trú / Nơi ở hiện tại
-- Triển khai trong [src/pages/AdminPage.tsx](file:///e:/wardmate-frontend/src/pages/AdminPage.tsx):
+- Triển khai trong `src/pages/admin/AdminPage.tsx`:
   - Bổ sung `SectionId` `'profiles'` và mục **"Hồ sơ công dân"** vào menu điều hướng nhóm *Tài khoản & truy cập* (icon `IdentificationCard`, badge đếm số lượng).
   - Giao diện bảng dữ liệu `AdminProfilesView`:
     - Thanh công cụ (`admin-toolbar`): Ô tìm kiếm từ khóa đa trường (`SearchBar`), dropdown lọc theo giới tính và nút `+ Thêm hồ sơ`.
@@ -143,7 +150,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Khung nhập góp ý chi tiết kèm đếm ký tự (tối đa 500 ký tự).
   - Xử lý submit với hiệu ứng loading và màn hình cảm ơn ghi nhận thành công.
   - Đóng modal an toàn bằng phím Escape, click outside hoặc nút "Để sau".
-- Tích hợp vào `src/pages/ProfilePage.tsx`: hiển thị danh sách hồ sơ tiền kiểm gần đây và nút mở modal đánh giá dịch vụ cho hồ sơ đã hoàn thành.
+- Tích hợp vào `src/pages/account/ProfilePage.tsx`: hiển thị danh sách hồ sơ tiền kiểm gần đây và nút mở modal đánh giá dịch vụ cho hồ sơ đã hoàn thành.
 - Kiểm tra ngày 28/09: `npm run typecheck`, `npm run lint`, `npm run build` đều đạt; 4/4 test trong `tests/feedback.spec.ts` đạt; toàn bộ test regression đạt.
 - Phần chưa làm: API lưu trữ và thống kê đánh giá người dân lên server backend.
 
