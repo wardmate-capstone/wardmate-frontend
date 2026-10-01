@@ -4,31 +4,55 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Loại bỏ thanh Tabs lọc trạng thái hồ sơ Cán bộ — 01/10/2026
+## User Dropdown Menu & Ẩn nút Đăng nhập khi Authenticated — 01/10/2026
 
-- **Yêu cầu**: Xóa thanh tab lọc trạng thái hồ sơ (Tất cả hồ sơ, Chờ tiền kiểm, Đang kiểm tra, Cần bổ sung, Đã gửi lại, Đã duyệt tiền kiểm, Chờ tiếp nhận) ở đầu danh sách hồ sơ vì đã có accordion tree đầy đủ trên sidebar.
+- **Yêu cầu**:
+  1. Hiển thị User Avatar/Logo kèm Dropdown menu sau khi đăng nhập thành công.
+  2. Bỏ nút "Đăng nhập" ở trang công cộng/header khi đã đăng nhập thành công và thay bằng User Dropdown.
+  3. Bổ sung đường dẫn trực tiếp tới Cổng dịch vụ công dân (`/citizen`) ngay trong Dropdown menu.
+  4. Cung cấp tùy chọn Đăng xuất (`logout`).
+  5. Loại bỏ trang hồ sơ cá nhân độc lập (`/tai-khoan`) do giao diện `/citizen` đã có sẵn phân hệ quản lý hồ sơ cá nhân (`profile`).
 - **Triển khai**:
-  - Gỡ bỏ mảng `tabs` và khối `<nav aria-label="Lọc hồ sơ theo trạng thái">` trong [src/pages/officer/OfficerApplicationListView.tsx](file:///e:/wardmate-frontend/src/pages/officer/OfficerApplicationListView.tsx).
-  - Tối ưu không gian giao diện: danh sách hồ sơ bắt đầu trực tiếp bằng thanh công cụ tìm kiếm và lọc nâng cao, bảng hồ sơ thoáng đãng, đồng bộ cấu trúc với Admin và Manager.
-- **Tệp thay đổi**: `src/pages/officer/OfficerApplicationListView.tsx`, `src/pages/officer/OfficerDashboardView.tsx`.
+  - `src/lib/api/index.ts`: Kích hoạt custom event `wardmate-auth-state` khi `login`, `logout`, `clearSession` và nhận message từ `BroadcastChannel` để các component React phản ứng tức thì.
+  - `src/hooks/useAuthState.ts`: Hook `useAuthState` dùng `useSyncExternalStore` để lắng nghe thay đổi token RAM từ `authClient.hasAccessToken()` và cập nhật giao diện mà không gây giật lag.
+  - `src/components/layout/UserDropdown.tsx`: Dropdown tài khoản công dân chuẩn design system WardMate:
+    - Avatar tròn "CD" đỏ đô, tên "Nguyễn Minh Anh".
+    - Link dẫn tới Cổng dịch vụ công dân (`/citizen`).
+    - Nút Đăng xuất kết nối trực tiếp với `useLogout()`.
+    - Đã loại bỏ hoàn toàn liên kết thừa tới `/tai-khoan`.
+    - Hỗ trợ đóng khi nhấn phím Escape hoặc click outside, hỗ trợ phiên bản Mobile Drawer.
+  - `src/app/App.tsx`: Gỡ bỏ route `/tai-khoan` và import `ProfilePage` không cần thiết.
+  - `src/data/mockNotifications.ts`: Cập nhật `actionUrl` từ `/tai-khoan` chuyển về `/citizen`.
+  - `src/components/layout/MainLayout.tsx`: Sử dụng `useAuthState()`, hiển thị `UserDropdown` thay thế cho nút "Đăng nhập" ở cả header desktop và menu drawer mobile khi người dùng đã đăng nhập.
+  - `src/pages/citizen/CitizenPage.tsx`: Chuyển đổi nút công dân trên Topbar thành Dropdown menu tương ứng với đường dẫn Tổng quan (`/citizen`), Hồ sơ (`profile`) và Đăng xuất (mở modal xác nhận).
 - **Kiểm tra**:
   - `npm run typecheck`: Đạt 100% (0 lỗi).
   - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
-  - Đã chụp ảnh xác minh thực tế qua Playwright Edge: Thanh tab trùng lặp đã được loại bỏ hoàn toàn, giao diện sạch sẽ và chuẩn mực.
 
-## Phóng to nền ngoài và làm trong suốt khối Quy trình — 01/10/2026
 
-- **Yêu cầu**: Phóng to nền ngoài của Hành trình (`.journey-section`), lấy đúng ảnh gốc (`/vietnam-cultural-pattern.png`); đổi khối nhỏ quy trình (`.journey-overview`) thành trong suốt để nhìn thông xuyên thấu ra nền phía sau.
-- **Triển khai**:
-  - `.journey-section`: Sử dụng trực tiếp ảnh gốc `/vietnam-cultural-pattern.png` phóng to phủ tràn toàn bộ section (`background-size: cover; background-position: center;`), không còn lớp gradient che mờ hay đục màu.
-  - `.journey-workspace`: Đổi màu nền khối bao quanh sang mờ nhẹ trong suốt (`bg-black/10 backdrop-blur-sm`) với viền `border-white/25`.
-  - Khối quy trình (`.journey-overview`): Chuyển sang `bg-transparent` (trong suốt hoàn toàn), ẩn họa tiết đè con để nhìn thông xuyên thấu ra toàn bộ nền đỏ của ảnh gốc; giữ nguyên chữ trắng (`text-white`) và nhãn vàng kim (`text-gold-300`) cùng nút bấm trắng `bg-white text-red-900` nổi bật trên nền đỏ.
-  - Cột 4 bước (`.journey-timeline-wrap`): Giữ nguyên nền trắng sạch sẽ `bg-white` để đảm bảo độ tương phản cao, dễ đọc quy trình.
-- **Tệp thay đổi**: `src/styles/globals.css`.
-- **Kiểm tra**:
-  - `npm run typecheck`: Đạt 100% (0 lỗi).
-  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
-  - Đã chụp ảnh xác minh thực tế qua Playwright Edge: Nền ngoài phủ rộng sắc nét, khối quy trình trong suốt nhìn xuyên thấu ra ảnh gốc phía sau.
+## Sửa cấu hình BE Azure và origin FE — 01/10/2026
+
+- Người dùng xác nhận BE ở máy/server khác; localhost:5000 trước đó trỏ nhầm về máy FE. Kiểm tra local không có listener 5000/5001; chỉ có FE ở 5173.
+- URL BE thực tế từ Swagger người dùng gửi: `https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`. Đã tạo `.env.development.local` (Git ignore, chỉ development) và cập nhật `.env.example` dùng origin này, không kèm đường dẫn Swagger/API.
+- `vite.config.ts` cố định host localhost, port 5173, strictPort để tránh tự nhảy sang cổng ngoài allowlist BE. Xác minh bằng Vite loadEnv/resolveConfig và mã module từ server FE đang chạy: đã nạp URL Azure, không còn gọi localhost:5000 trong phiên dev này.
+- Đã đọc OpenAPI triển khai thật: 4 route Auth tồn tại, refresh/revoke không có body, header CSRF bắt buộc. OPTIONS login thật trả 204, Allow-Origin `http://localhost:5173`, Allow-Credentials true và cho phép Content-Type/Authorization/X-CSRF-Protection. Đây là kiểm tra kết nối/contract/CORS, chưa phải đăng nhập tài khoản thật.
+- `playwright.config.ts` cố định API origin mock localhost:5000 trong tiến trình test, tránh gửi dữ liệu test lên Azure do `.env` cá nhân. Typecheck, lint, diff check và 8/8 test Auth mock đạt; không đổi UI/logic Auth trong task env này. Không chạy lại production build vì chỉ cấu hình dev/test.
+- Còn cần xác minh login/refresh thật với tài khoản test: nếu cookie BE vẫn dùng SameSite=Strict theo bàn giao cũ, FE localhost và BE Azure khác site sẽ không gửi cookie; khi đó cần phối hợp BE hoặc proxy cùng site. Chưa tự đổi chính sách cookie phía BE. Không commit/push.
+
+## Tích hợp 4 API Auth HttpOnly — 01/10/2026
+
+- Người dùng đã chốt triển khai register/login/refresh-token/revoke-token theo `iam-httponly.md`, Gateway `http://localhost:5000`. Bỏ qua roles/permissions, `/users/me`, route guard và giữ nguyên “Ghi nhớ đăng nhập” chưa có logic. Schema `/me` đã được gửi nhưng không dùng trong task này.
+- `src/lib/api/index.ts`: 4 POST dùng credentials + `X-CSRF-Protection: 1`; refresh/revoke không body. Access token chỉ ở RAM, cookie refresh do BE đặt. Kiểm tra response token/thời hạn; register nhận 201 rồi về login, login về safe returnTo hoặc `/`, revoke chỉ báo thành công sau 204.
+- Tái sử dụng JWT client: refresh khi 401, gom đồng thời, retry một lần, chặn kết quả phiên cũ/hủy request. Sau reload khôi phục khi request có xác thực cần refresh, không tự gọi startup hay `/me`. Auth adapter phân biệt refresh 403 CSRF với 401 hết phiên; lỗi mạng/5xx không giả thành logout.
+- Web Locks tuần tự hóa request auth có cookie giữa các tab cùng origin; BroadcastChannel chỉ truyền sự kiện login/logout để xóa access token cũ, không truyền/lưu token. Browser thiếu Web Locks chưa bảo đảm phối hợp đa tab; chỉ có gom refresh trong một tab.
+- `src/pages/auth/AuthPage.tsx`: thay nhãn identity, bổ sung email khi đăng ký; giữ thiết kế, checkbox ghi nhớ và UI nghiệp vụ. Nút submit loading/chống gửi lặp, lỗi từ API, login không áp chính sách độ dài password đăng ký. Thêm key cho hai route auth để kết quả request cũ không điều hướng form mới.
+- `src/hooks/useLogout.ts` nối chung các nút Citizen/Officer/Manager/Procedure Manager. Lỗi revoke giữ trang/cho thử lại và không báo đã thu hồi. Admin chưa có nút logout, không thêm UI mới.
+- Cấu hình: development mặc định Gateway 5000 nếu chưa có biến môi trường; production phải đặt `VITE_API_BASE_URL`. FE local nên dùng `localhost:5173`, không trộn localhost/127.0.0.1. Test auth mock dùng localhost:4317; test với BE thật cần allowlist origin này ở IAM/Gateway.
+- Đã kiểm tra typecheck, lint, build đạt; build còn cảnh báo bundle lớn. Lượt đầu 51 test: 47 đạt, 4 lỗi (locator Email mới, một timeout fixture UI, test Officer giả định luôn buổi sáng). Đã chỉnh nhãn email theo form hiện có và test Officer theo lời chào động; chạy lại 31 test Auth/Core/Landing/Officer đạt. 20 test JWT/Manager/Procedure Manager đã đạt trong lượt đầu. Các kiểm tra auth là mock trên Edge, không phải tích hợp BE thật.
+- Bổ sung kiểm tra đăng nhập hai tài khoản đồng thời bị từ chối và cookie thực sự đổi giá trị giữa hai lượt refresh ở hai tab; chạy lại 3 ca liên quan đạt, lint và diff check cuối đạt.
+- Đã xem ảnh form đăng ký 390/1440px và kiểm tra không tràn ngang. Không refactor UI ngoài phạm vi auth.
+- Không kết nối được localhost:5000 và :5001 khi kiểm tra (curl connection refused), nên chưa xác minh BE thật, CORS/CSRF/rotation thật hoặc tài khoản thật. Chờ BE chạy để kiểm thử E2E với server; chưa commit/push/deploy.
+- Git vẫn dựa trên HEAD `d9ce7fd`; ref origin/main đi trước 2 commit về landing/dashboard Officer, đã đối chiếu danh sách file, không tự pull/ghi đè. Tài liệu chi tiết: [design-system-and-auth.md](design-system-and-auth.md); [auth-integration-review.md](auth-integration-review.md) ghi rõ phạm vi mới ưu tiên hơn đề xuất cũ.
 
 ## Kiểm tra và chia commit Officer/Manager — 01/10/2026
 
@@ -337,27 +361,14 @@ Các kết quả dưới đây thuộc lượt triển khai core/auth ngày 26/0
 - Không phải kiểm thử API thật, cũng không phải xác nhận toàn bộ test của mọi workspace đều đã chạy.
 - Task tài liệu ngày 26/09 chỉ kiểm tra nội dung/đường dẫn/diff; không chạy lại build hay test ứng dụng.
 
-## Phần đang chờ backend
+## Phần còn chờ sau tích hợp Auth
 
-Cần người dùng cung cấp:
-1. Base URL và endpoint login, refresh, logout.
-2. Method, request/response mẫu và định dạng lỗi.
-3. Refresh token dùng cookie HttpOnly hay JSON; quy tắc credentials/CORS và rotation.
-4. Cách khôi phục phiên, thời hạn token và yêu cầu “Ghi nhớ đăng nhập”.
-5. Thông tin user/role và quy tắc truy cập nếu task tiếp theo bao gồm phân quyền.
-
-Khi có contract:
-- Nối refresh adapter trong `src/lib/api/index.ts` bằng transport riêng.
-- Nối login thật với `skipAuth: true`, kiểm tra response rồi đặt access token.
-- Chỉ sau login thành công mới quay lại `safeReturnTo(...)`.
-- Nối logout và khôi phục phiên theo contract; bổ sung test tích hợp tương ứng.
-- Không đánh dấu route protection hoặc phân quyền là đã hoàn tất từ interceptor hiện có.
-
-Giới hạn hiện tại:
-- Access token chỉ nằm trong bộ nhớ, reload sẽ mất.
-- Form đăng nhập/đăng ký chỉ kiểm tra dữ liệu và thông báo; chưa xác thực người dùng.
-- returnTo đã được giữ, nhưng luồng quay lại sau login thật chưa nối.
-- Chuyển trang khi hết phiên không bảo đảm giữ nội dung form chưa lưu.
+- BE local đang chạy và tài khoản kiểm thử để kiểm tra thật 4 API/cookie/CORS/CSRF; hiện chỉ có bằng chứng mock FE.
+- Quy tắc username/password và mẫu lỗi validation chi tiết để đối chiếu thêm với BE. Giữ validation đăng ký tối thiểu 8 ký tự hiện có, không tự đặt policy mới.
+- `/me`, roles/permissions, route protection, user thật trên header và API nghiệp vụ đều được người dùng hoãn; không coi các workspace mock đang được bảo vệ chỉ vì auth đã nối.
+- “Ghi nhớ đăng nhập” còn bỏ qua; cookie hiện có thời hạn do BE quyết định. Không lưu token vào storage để làm checkbox này.
+- Access token mất sau reload; interceptor đã có thể khôi phục qua cookie khi gặp request 401. Chuyển trang khi hết phiên vẫn không bảo đảm giữ nội dung form chưa lưu.
+- Theo bàn giao BE, logout thu hồi refresh hiện tại; access token đã phát còn hiệu lực đến hết hạn (chưa có blacklist).
 
 ## Công cụ cá nhân trên máy người dùng
 

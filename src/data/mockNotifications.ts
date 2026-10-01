@@ -10,7 +10,7 @@ export const INITIAL_MOCK_NOTIFICATIONS: CitizenNotification[] = [
     applicationCode: 'HS-2026-00128',
     createdAt: '2026-09-28T09:42:00Z',
     isRead: false,
-    actionUrl: '/tai-khoan',
+    actionUrl: '/citizen',
     actionLabel: 'Xem yêu cầu bổ sung',
   },
   {
@@ -22,7 +22,7 @@ export const INITIAL_MOCK_NOTIFICATIONS: CitizenNotification[] = [
     applicationCode: 'HS-2026-00094',
     createdAt: '2026-09-28T08:15:00Z',
     isRead: false,
-    actionUrl: '/tai-khoan',
+    actionUrl: '/citizen',
     actionLabel: 'Xem mã QR & Hướng dẫn',
   },
   {
@@ -34,7 +34,7 @@ export const INITIAL_MOCK_NOTIFICATIONS: CitizenNotification[] = [
     applicationCode: 'HS-2026-00052',
     createdAt: '2026-09-27T16:30:00Z',
     isRead: true,
-    actionUrl: '/tai-khoan',
+    actionUrl: '/citizen',
     actionLabel: 'Theo dõi tiến độ',
   },
   {

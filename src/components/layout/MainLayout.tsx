@@ -1,4 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   CaretRight as ChevronRight,
@@ -13,6 +14,8 @@ import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { buttonVariants } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { UserDropdown } from '@/components/layout/UserDropdown';
+import { useAuthState } from '@/hooks/useAuthState';
 
 const navigation = [
   { href: '/', label: 'Trang chủ' },
@@ -23,6 +26,8 @@ const navigation = [
 
 export function MainLayout() {
   const location = useLocation();
+  const { isAuthenticated } = useAuthState();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -46,12 +51,18 @@ export function MainLayout() {
           </Link>
           <div className="hidden items-center gap-3 lg:flex">
             <NotificationBell />
-            <Link to="/dang-nhap" className={buttonVariants({ variant: 'outline' })}><UserRound size={18} aria-hidden="true" /> Đăng nhập</Link>
+            {isAuthenticated ? (
+              <UserDropdown />
+            ) : (
+              <Link to="/dang-nhap" className={buttonVariants({ variant: 'outline' })}>
+                <UserRound size={18} aria-hidden="true" /> Đăng nhập
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
             <NotificationBell isMobileDrawer />
-            <Dialog.Root>
+            <Dialog.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <Dialog.Trigger asChild><button type="button" className="mobile-menu-button" aria-label="Mở menu"><Menu size={24} aria-hidden="true" /></button></Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-[70] bg-slate-950/50 data-[state=open]:animate-in" />
@@ -63,7 +74,15 @@ export function MainLayout() {
                   <nav aria-label="Điều hướng trên điện thoại" className="mt-5 grid">
                     {navigation.map((item) => <Dialog.Close asChild key={item.href}><Link to={item.href} className="mobile-nav-link">{item.label}<ChevronRight size={18} aria-hidden="true" /></Link></Dialog.Close>)}
                   </nav>
-                  <Dialog.Close asChild><Link to="/dang-nhap" className={buttonVariants({ className: 'mt-8 w-full' })}><UserRound size={18} aria-hidden="true" /> Đăng nhập</Link></Dialog.Close>
+                  {isAuthenticated ? (
+                    <UserDropdown isMobileDrawer onItemClick={() => setMobileMenuOpen(false)} />
+                  ) : (
+                    <Dialog.Close asChild>
+                      <Link to="/dang-nhap" className={buttonVariants({ className: 'mt-8 w-full' })}>
+                        <UserRound size={18} aria-hidden="true" /> Đăng nhập
+                      </Link>
+                    </Dialog.Close>
+                  )}
                   <p className="mt-auto flex items-start gap-2 border-t border-slate-200 pt-5 text-sm leading-6 text-slate-500"><Headphones className="mt-0.5" size={18} aria-hidden="true" /> Thông tin hỗ trợ sẽ được cập nhật sau khi xác minh.</p>
                 </Dialog.Content>
               </Dialog.Portal>

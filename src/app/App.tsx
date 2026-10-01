@@ -6,7 +6,6 @@ import { HomePage } from '@/pages/public/HomePage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { FaqPage } from '@/pages/public/FaqPage';
-import { ProfilePage } from '@/pages/account/ProfilePage';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { ProcedureDetailPage } from '@/pages/public/ProcedureDetailPage';
 import { AdminPage } from '@/pages/admin/AdminPage';
@@ -34,12 +33,11 @@ export function App() {
             <Route path="admin" element={<AdminPage />} />
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
-              <Route path="dang-nhap" element={<AuthPage mode="login" />} />
-              <Route path="dang-ky" element={<AuthPage mode="register" />} />
+              <Route path="dang-nhap" element={<AuthPage key="login" mode="login" />} />
+              <Route path="dang-ky" element={<AuthPage key="register" mode="register" />} />
               <Route path="quen-mat-khau" element={<ForgotPasswordPage />} />
               <Route path="dat-lai-mat-khau" element={<ResetPasswordPage />} />
               <Route path="hoi-dap" element={<FaqPage />} />
-              <Route path="tai-khoan" element={<ProfilePage />} />
               <Route path="thu-tuc" element={<ProceduresPage />} />
               <Route path="thu-tuc/:procedureId" element={<ProcedureDetailPage />} />
               <Route path="*" element={<NotFoundPage />} />
