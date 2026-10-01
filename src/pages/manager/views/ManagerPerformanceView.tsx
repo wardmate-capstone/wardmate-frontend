@@ -36,7 +36,6 @@ export const ManagerPerformanceView: React.FC<ManagerPerformanceViewProps> = ({ 
             <div className="admin-card p-4">
               <span className="text-xs text-slate-500 block">Tiết kiệm thời gian cho dân</span>
               <strong className="text-xl text-emerald-700 block mt-1">~1.400 giờ</strong>
-              <small className="text-slate-500">Nhờ quy trình tiền kiểm số</small>
             </div>
           </div>
 
@@ -95,12 +94,10 @@ export const ManagerPerformanceView: React.FC<ManagerPerformanceViewProps> = ({ 
             <div className="admin-card p-4">
               <span className="text-xs text-slate-500 block">Công dân chủ động rút</span>
               <strong className="text-xl text-slate-700 block mt-1">11 HS</strong>
-              <small className="text-slate-500">Thay đổi kế hoạch cá nhân</small>
             </div>
             <div className="admin-card p-4">
               <span className="text-xs text-slate-500 block">Từ chối tiếp nhận (KĐK)</span>
               <strong className="text-xl text-slate-700 block mt-1">9 HS</strong>
-              <small className="text-slate-500">Không thuộc thẩm quyền cấp xã</small>
             </div>
           </div>
 
@@ -183,7 +180,6 @@ export const ManagerPerformanceView: React.FC<ManagerPerformanceViewProps> = ({ 
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Bảng Đánh giá Hiệu suất Cán bộ Một cửa</h3>
-                <p className="text-xs text-slate-500">Theo dõi năng suất giải quyết và đánh giá hài lòng từ công dân</p>
               </div>
             </div>
 

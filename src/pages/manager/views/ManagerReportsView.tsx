@@ -14,11 +14,8 @@ export const ManagerReportsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200">
         <div>
           <h2 className="text-sm font-bold text-slate-900">
-            Hệ thống Báo cáo Tổng hợp & Thống kê TTHC
+            Mẫu báo cáo
           </h2>
-          <p className="text-xs text-slate-500">
-            Biểu mẫu báo cáo theo quy chuẩn của Văn phòng Chính phủ và UBND Thành phố
-          </p>
         </div>
 
         <button

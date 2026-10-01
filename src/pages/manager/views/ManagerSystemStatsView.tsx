@@ -34,17 +34,7 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
     <div className="space-y-6">
       {/* Sub Header & Time Range Filter */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200">
-        <div>
-          <h2 className="text-sm font-bold text-slate-900">
-            {section === 'stats-dossiers' && 'Thống kê Hồ sơ Hành chính Chi tiết'}
-            {section === 'stats-procedures' && 'Thống kê Tần suất & Thời gian theo Thủ tục'}
-            {section === 'stats-searches' && 'Thống kê Lưu lượng Tra cứu & Từ khóa Tìm kiếm'}
-            {section === 'stats-forms' && 'Thống kê Khai thác Biểu mẫu & Dịch vụ E-Form'}
-          </h2>
-          <p className="text-xs text-slate-500">
-            Dữ liệu tổng hợp từ Cổng Dịch vụ công và Hệ thống Một cửa điện tử
-          </p>
-        </div>
+        <span className="text-sm font-semibold text-slate-700">Kỳ thống kê</span>
 
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
@@ -104,7 +94,6 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
             <div className="admin-card p-4">
               <span className="text-xs text-slate-500 block">Đang giải quyết trong hạn</span>
               <strong className="text-xl text-blue-700 block mt-1">32</strong>
-              <small className="text-blue-700 font-semibold">100% trong hạn</small>
             </div>
             <div className="admin-card p-4">
               <span className="text-xs text-slate-500 block">Trễ hạn / Quá hạn</span>
@@ -115,7 +104,7 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
 
           <div className="admin-card p-5">
             <h3 className="text-sm font-bold text-slate-900 mb-4">
-              Biểu đồ Diễn biến Hồ sơ Tiếp nhận & Hoàn thành theo Tháng
+              Tiếp nhận và giải quyết theo tháng
             </h3>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -133,7 +122,7 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
 
           <div className="admin-card p-5">
             <h3 className="text-sm font-bold text-slate-900 mb-3">
-              Chi tiết Tình hình Giải quyết Hồ sơ theo Lĩnh vực
+              Hồ sơ theo lĩnh vực
             </h3>
             <div className="admin-table-wrap">
               <table>
@@ -172,7 +161,6 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Danh mục TTHC phát sinh hồ sơ</h3>
-                <p className="text-xs text-slate-500">Thống kê theo số lượng giao dịch và tỷ lệ số hóa trực tuyến</p>
               </div>
             </div>
 
@@ -238,7 +226,6 @@ export const ManagerSystemStatsView: React.FC<ManagerSystemStatsViewProps> = ({ 
               <h3 className="text-sm font-bold text-slate-900 mb-1">
                 Top Từ khóa Người dân Tìm kiếm
               </h3>
-              <p className="text-xs text-slate-500 mb-4">Nhu cầu quan tâm lớn nhất trong tháng</p>
               <div className="space-y-3">
                 {mockTopKeywords.map((kw, i) => (
                   <div key={kw.keyword} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50">

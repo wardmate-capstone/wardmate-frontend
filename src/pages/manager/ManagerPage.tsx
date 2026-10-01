@@ -89,9 +89,6 @@ export const ManagerPage: React.FC = () => {
             <div className="admin-page-heading mb-6">
               <div>
                 <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
-                {currentMeta.subtitle && (
-                  <p className="text-xs text-slate-500 mt-1">{currentMeta.subtitle}</p>
-                )}
               </div>
             </div>
           )}
