@@ -1,5 +1,6 @@
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
+import { useLogout } from '@/hooks/useLogout';
 import {
   SquaresFour,
   Files,
@@ -57,6 +58,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
   draftCount = 6,
   activeFormsCount = 12
 }) => {
+  const { handleLogout, isLoggingOut } = useLogout();
   const handleNavClick = (section: ProcedureNavSection) => {
     onSelectSection(section);
     onCloseMobile();
@@ -173,7 +175,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
             <p>Hệ thống</p>
             <button type="button" className={currentSection === 'audit-logs' ? 'is-active' : ''} onClick={() => handleNavClick('audit-logs')} title="Lịch sử cập nhật"><Article size={20} /><span>Lịch sử cập nhật</span></button>
             <button type="button" className={currentSection === 'profile' ? 'is-active' : ''} onClick={() => handleNavClick('profile')} title="Hồ sơ cá nhân"><UserGear size={20} /><span>Hồ sơ cá nhân</span></button>
-            <button type="button" onClick={() => { if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Thủ tục?')) window.location.href = '/dang-nhap'; }} title="Đăng xuất" aria-label="Đăng xuất khỏi hệ thống"><SignOut size={20} /><span>Đăng xuất</span></button>
+            <button type="button" disabled={isLoggingOut} aria-busy={isLoggingOut} onClick={() => { if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Thủ tục?')) void handleLogout(); }} title="Đăng xuất" aria-label="Đăng xuất khỏi hệ thống"><SignOut size={20} /><span>Đăng xuất</span></button>
           </div>
         </nav>
         <div className="admin-sidebar-user"><span>HN</span><div><strong>Lê Hoàng Nam</strong><small>Chuyên viên Quản lý thủ tục</small></div></div>

@@ -38,7 +38,7 @@ test('expired session explains re-login and keeps return path through registrati
   await page.goto('/dang-nhap?reason=session-expired&returnTo=%2Ftai-khoan');
   await expect(page.getByRole('status')).toContainText('Phiên đăng nhập đã hết hạn.');
   await expect(page.getByRole('link', { name: 'Đăng ký ngay' })).toHaveAttribute('href', '/dang-ky?returnTo=%2Ftai-khoan');
-  await expect(page.getByLabel('Số điện thoại hoặc email')).toBeVisible();
+  await expect(page.getByLabel('Tên đăng nhập hoặc email')).toBeVisible();
   await page.screenshot({ path: 'test-results/auth-core-mobile.png', fullPage: true });
 });
 

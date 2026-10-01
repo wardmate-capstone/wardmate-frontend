@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useLogout } from '@/hooks/useLogout';
 import {
   ArrowClockwise,
   Bell,
@@ -264,7 +265,7 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
 };
 
 export function CitizenPage() {
-  const navigate = useNavigate();
+  const { handleLogout, isLoggingOut } = useLogout();
   const [activeSection, setActiveSection] = useState<CitizenSectionId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -278,6 +279,34 @@ export function CitizenPage() {
   const [dossiers] = useState<CitizenDossier[]>(initialDossiers);
   const [notifications, setNotifications] = useState(citizenNotifications);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Close user dropdown on Escape or click outside
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        userButtonRef.current?.focus();
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -313,10 +342,8 @@ export function CitizenPage() {
     setSidebarOpen(false);
   }
 
-  function handleLogoutConfirm() {
-    setIsLogoutModalOpen(false);
-    toast.success('Đã đăng xuất thành công khỏi hệ thống.');
-    navigate('/dang-nhap');
+  async function handleLogoutConfirm() {
+    if (await handleLogout()) setIsLogoutModalOpen(false);
   }
 
   function handleOpenFeedback(procedure: string, code?: string) {
@@ -684,19 +711,84 @@ export function CitizenPage() {
               {unreadNotificationsCount > 0 && <span>{unreadNotificationsCount}</span>}
             </button>
 
-            {/* User Button */}
-            <button
-              type="button"
-              className="admin-user-button"
-              onClick={() => selectSection('profile')}
-            >
-              <span>CD</span>
-              <div>
-                <strong>Nguyễn Minh Anh</strong>
-                <small>Công dân điện tử</small>
-              </div>
-              <CaretDown size={14} />
-            </button>
+            {/* User Dropdown */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                ref={userButtonRef}
+                type="button"
+                className="admin-user-button"
+                aria-label="Menu tài khoản công dân"
+                aria-haspopup="menu"
+                aria-expanded={isUserMenuOpen}
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              >
+                <span>CD</span>
+                <div>
+                  <strong>Nguyễn Minh Anh</strong>
+                  <small>Công dân điện tử</small>
+                </div>
+                <CaretDown
+                  size={14}
+                  className={`text-slate-400 transition-transform duration-200 ${
+                    isUserMenuOpen ? 'rotate-180 text-red-800' : ''
+                  }`}
+                />
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Tùy chọn công dân"
+                  className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <div className="border-b border-slate-100 px-3.5 py-3 mb-1.5">
+                    <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
+                      Nguyễn Minh Anh
+                    </strong>
+                    <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
+                      minhanh@example.com
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Link
+                      to="/citizen"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        selectSection('dashboard');
+                      }}
+                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-red-50 hover:text-red-900 transition-colors"
+                    >
+                      <House size={20} className="text-red-700 shrink-0 mt-0.5" weight="duotone" />
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight text-slate-900">
+                          Cổng dịch vụ công dân
+                        </span>
+                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-1">
+                          Trang tổng quan hồ sơ
+                        </span>
+                      </div>
+                    </Link>
+                  </div>
+
+                  <div className="my-1.5 border-t border-slate-100" />
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsLogoutModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 transition-colors"
+                  >
+                    <SignOut size={18} className="shrink-0" weight="bold" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -844,6 +936,8 @@ export function CitizenPage() {
                 type="button"
                 className="rounded-lg bg-red-800 px-4 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm"
                 onClick={handleLogoutConfirm}
+                disabled={isLoggingOut}
+                aria-busy={isLoggingOut}
               >
                 Đăng xuất ngay
               </button>

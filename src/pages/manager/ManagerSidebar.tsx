@@ -20,6 +20,7 @@ import {
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { ManagerSectionId } from './types';
+import { useLogout } from '@/hooks/useLogout';
 
 interface ManagerSidebarProps {
   currentSection: ManagerSectionId;
@@ -39,6 +40,7 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
   isCollapsedDesktop,
   profilesCount = 6,
 }) => {
+  const { handleLogout, isLoggingOut } = useLogout();
   const handleNavClick = (section: ManagerSectionId) => {
     onSelectSection(section);
     onCloseMobile();
@@ -231,10 +233,12 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
               type="button"
               onClick={() => {
                 if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Điều hành?')) {
-                  window.location.href = '/dang-nhap';
+                  void handleLogout();
                 }
               }}
               title="Đăng xuất"
+              disabled={isLoggingOut}
+              aria-busy={isLoggingOut}
               aria-label="Đăng xuất khỏi hệ thống"
             >
               <SignOut size={20} />

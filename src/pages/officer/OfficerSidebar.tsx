@@ -27,6 +27,7 @@ interface OfficerSidebarProps {
   onClose: () => void;
   isCompact: boolean;
   onLogout: () => void;
+  isLoggingOut: boolean;
   badgeCounts: {
     pending: number;
     reviewing: number;
@@ -46,6 +47,7 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
   onClose,
   isCompact,
   onLogout,
+  isLoggingOut,
   badgeCounts,
 }) => {
   const isDossierActive = activeSection.startsWith('apps-');
@@ -413,6 +415,8 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
           <button
             type="button"
             onClick={onLogout}
+            disabled={isLoggingOut}
+            aria-busy={isLoggingOut}
             title={isCompact ? 'Đăng xuất' : undefined}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 hover:bg-rose-50 transition-colors ${
               isCompact ? 'justify-center px-0' : ''

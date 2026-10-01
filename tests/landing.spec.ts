@@ -51,7 +51,8 @@ test('điều hướng đến đăng nhập và chuyển sang đăng ký', async
 test('đăng ký kiểm tra mật khẩu xác nhận', async ({ page }) => {
   await page.goto('/dang-ky');
   await page.getByLabel('Họ và tên').fill('Nguyễn Văn An');
-  await page.getByLabel('Số điện thoại hoặc email').fill('an@example.com');
+  await page.getByLabel('Tên đăng nhập', { exact: true }).fill('nguyenvanan');
+  await page.getByLabel('Email', { exact: true }).fill('an@example.com');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('matkhau123');
   await page.getByLabel('Xác nhận mật khẩu').fill('khongkhop123');
   await page.getByText('Tôi đồng ý với điều khoản sử dụng').click();

@@ -16,6 +16,7 @@ export type JwtClientOptions = {
    */
   refreshAccessToken?: (transport: AxiosInstance) => Promise<string>;
   onSessionExpired?: () => void;
+  isRefreshSessionExpired?: (error: unknown) => boolean;
   timeout?: number;
 };
 
@@ -52,7 +53,8 @@ export function createJwtClient(options: JwtClientOptions) {
       tokenVersion++;
     }).catch((error: unknown) => {
       // A connection/server error should allow a later retry, not sign the user out.
-      if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) {
+      if (options.isRefreshSessionExpired ? options.isRefreshSessionExpired(error)
+        : axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) {
         expire(expectedSession);
       }
       throw error;
@@ -103,6 +105,7 @@ export function createJwtClient(options: JwtClientOptions) {
 
   return {
     api,
+    hasAccessToken: () => token !== null,
     setAccessToken,
     clearSession: () => setAccessToken(null),
   };
