@@ -68,8 +68,8 @@ export function HomePage() {
                 </div>
                 <Button type="submit" variant="primary" size="large">Tìm kiếm <ArrowRight size={18} aria-hidden="true" /></Button>
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>Gợi ý:</span>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <span className="font-medium">Gợi ý:</span>
                 {['Khai sinh', 'Kết hôn', 'Chứng thực bản sao'].map((suggestion) => (
                   <button key={suggestion} type="button" className="hero-suggestion" onClick={() => { setQuery(suggestion); setSubmittedQuery(suggestion); setTimeout(() => document.querySelector('#ket-qua-tra-cuu')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0); }}>{suggestion}</button>
                 ))}
