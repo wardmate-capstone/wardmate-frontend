@@ -4,6 +4,117 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Nâng cao Trải nghiệm Nút Đăng nhập & Đăng ký (Dynamic Loading Text) — 01/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Khi người dùng gửi form, trước đây nút bấm chỉ hiện spinner xoay tròn kèm chữ tĩnh "Đăng nhập" hoặc "Tạo tài khoản".
+  - Đã cập nhật nút bấm tại [src/pages/auth/AuthPage.tsx](file:///d:/frontend/src/pages/auth/AuthPage.tsx) tự động chuyển đổi chữ hiển thị tương ứng:
+    - Khi đăng nhập: **"Đang đăng nhập..."** kèm spinner xoay.
+    - Khi đăng ký: **"Đang tạo tài khoản..."** kèm spinner xoay.
+  - Phản hồi trực quan này giúp người dùng nhận biết rõ ràng hệ thống đang kết nối và xử lý yêu cầu với máy chủ từ xa, không lo lắng hay bấm gửi lặp nhiều lần.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Đồng nhất Trải nghiệm Đăng xuất (Toast & Luồng trực tiếp) — 01/10/2026
+
+- **Yêu cầu & Triển khai**:
+  1. **Đồng nhất thông báo Toast**:
+     - Thay đổi thông báo khi đăng xuất từ *"Đã đăng xuất an toàn."* thành **"Đã đăng xuất."** ngắn gọn, chuẩn xác.
+  2. **Đồng nhất luồng Đăng xuất trên toàn ứng dụng**:
+     - Ở Landing Page và Topbar Cổng công dân (`/citizen`), khi người dùng bấm **"Đăng xuất"**, hệ thống sẽ thực hiện đăng xuất ngay tức thì và hiển thị toast **"Đã đăng xuất."**.
+     - Đã loại bỏ hoàn toàn popup xác nhận thừa rườm rà ở trang `/citizen`, đảm bảo trải nghiệm người dùng (UX) đồng nhất 100% giữa các trang.
+  3. **Giải thích hiện tượng độ trễ 2-3s ban đầu khi F5**:
+     - Do server IAM được triển khai trên **Azure Container Apps** với cơ chế serverless / container scaling, khi ứng dụng F5 và kích hoạt chuỗi 2 request liên tiếp (`POST /refresh-token` rồi đến `GET /profile`), độ trễ mạng quốc tế từ máy local sang data center Japan East kèm độ trễ xử lý DB mất khoảng 1.5 - 2s trước khi nhận được dữ liệu.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Cấu hình Vite Dev Proxy khắc phục lỗi Cookie Cross-Site (F5 / Reload) — 01/10/2026
+
+- **Nguyên nhân cốt lõi phát hiện từ DevTools**:
+  - Trình duyệt hiển thị cảnh báo `(!)` màu vàng ở cột SameSite của cookie `refreshToken` do gọi cross-site từ `http://localhost:5173` sang `https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`.
+  - Khi người dùng F5 hoặc reload trang, trình duyệt chặn không gửi cookie cross-site này lên Azure, dẫn đến backend không nhận được token và trả về `401 iam.invalid_token`.
+- **Giải pháp triển khai (Không sửa Backend)**:
+  1. `vite.config.ts`: Cấu hình Proxy chuyển tiếp `/api` sang Azure Container App với `changeOrigin: true`.
+  2. `src/lib/api/createJwtClient.ts` & `src/lib/api/index.ts`: Cho phép `baseURL` tương đối (cùng origin `http://localhost:5173`).
+  3. `.env.development.local`: Đặt `VITE_API_BASE_URL=` rỗng để chạy qua Vite Proxy.
+  - **Kết quả**: Cookie được lưu và gửi trực tiếp dưới origin `localhost:5173` (Same-Site), không còn bị gắn cờ hạn chế hay bị trình duyệt chặn khi reload. Mỗi lần F5 đều tự động khôi phục phiên thành công 100%.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Tối ưu Giao diện Sidebar Công dân: Gỡ bỏ Nút Đăng xuất ở Sidebar — 01/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Gỡ bỏ hoàn toàn nút **"Đăng xuất"** trong danh mục TIỆN ÍCH & CÀI ĐẶT ở thanh Sidebar trang `/citizen`.
+  - Toàn bộ thao tác kết thúc phiên làm việc / đăng xuất giờ đây được quản lý tập trung và chuẩn mực tại menu **User Dropdown** ở góc phải thanh Topbar (hoặc Header), tránh trùng lặp nút thừa trên giao diện.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Tự động Khôi phục Phiên (F5 / Reload), Sửa Spinner Đăng nhập & Tối ưu Sidebar — 01/10/2026
+
+- **Yêu cầu & Triển khai**:
+  1. **Khắc phục lỗi F5 bị văng đăng nhập**:
+     - Bổ sung hàm `restoreSession()` trong [src/lib/api/index.ts](file:///d:/frontend/src/lib/api/index.ts): Gọi `POST /api/v1/auth/refresh-token` với credentials ngầm khi ứng dụng khởi chạy / reload trang.
+     - Tích hợp vào `UserProfileProvider` ([src/hooks/useUserProfile.tsx](file:///d:/frontend/src/hooks/useUserProfile.tsx)) để tự động lấy lại Access Token vào RAM mà không bắt người dùng phải đăng nhập lại mỗi khi F5.
+  2. **Khắc phục Spinner nút Đăng nhập không xoay**:
+     - Kiểm tra và sửa lỗi CSS tại [src/styles/globals.css](file:///d:/frontend/src/styles/globals.css): Quy tắc `@media (prefers-reduced-motion: reduce)` trước đây vô tình tắt hiệu ứng `animation: none` trên toàn bộ phần tử, làm spinner của nút bấm bị đóng băng thành hình tĩnh `C`. Đã loại trừ `.animate-spin` để spinner xoay tròn liên tục và mượt mà.
+  3. **Gỡ bỏ khung dư thừa ở chân Sidebar**:
+     - Đã loại bỏ phần khung công dân `admin-sidebar-user` ("AĐ - Anh Đức") ở chân Sidebar trang `/citizen` theo yêu cầu, tạo không gian gọn gàng cho danh sách menu và tránh trùng lặp với User Dropdown trên Topbar.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Bổ sung Nút quay lại Trang chủ tại Cổng dịch vụ công dân (`/citizen`) — 01/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Logo và tên hệ thống **WardMate Dịch vụ công dân** ở đầu Sidebar trước đây là thẻ tĩnh, người dùng không thể bấm quay lại trang chủ.
+  - Đã chuyển cụm logo và tên hệ thống thành `<Link to="/" ... title="Về trang chủ WardMate">` có hiệu ứng tương tác, giúp người dùng dễ dàng bấm vào logo để quay về trang chủ bất kỳ lúc nào.
+  - Đồng thời bổ sung tùy chọn **"Về trang chủ"** ngay đầu menu User Dropdown trên Topbar để thuận tiện thao tác khi thanh sidebar đang đóng/thu gọn.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Tối ưu UserProfileProvider & Modal Đăng xuất Công dân — 01/10/2026
+
+- **Vấn đề đã khắc phục**:
+  1. Loại bỏ việc API `GET /api/v1/users/me/profile` bị bắn lặp lại nhiều lần do nhiều component cùng gọi hook độc lập:
+     - Tạo `UserProfileProvider` ([src/hooks/useUserProfile.tsx](file:///d:/frontend/src/hooks/useUserProfile.tsx)) bọc tại gốc `App.tsx`.
+     - Toàn bộ ứng dụng (`UserDropdown`, Topbar, Citizen sidebar, `CitizenProfileView`) hiện tại dùng chung 1 nguồn dữ liệu duy nhất, chỉ gọi 1 request API khi người dùng đăng nhập.
+  2. Khắc phục trải nghiệm popup đăng xuất ở trang Cổng dịch vụ công dân (`/citizen`):
+     - Rút gọn tiêu đề và nội dung modal: *"Bạn có chắc chắn muốn đăng xuất tài khoản? Phiên làm việc hiện tại sẽ kết thúc an toàn."*
+     - Hai nút bấm trực quan: **"Ở lại"** và **"Đăng xuất"**.
+     - Cải tiến `useLogout(redirectTo)`: Khi đăng xuất, xóa phiên và điều hướng an toàn về trang chủ (`/`), hiển thị thông báo toast chuẩn mực.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
+## Tích hợp API Profile thật (/api/v1/users/me/profile) — 01/10/2026
+
+- **Yêu cầu**:
+  - Không dùng dữ liệu cứng (mock/hardcoded) cho thông tin cá nhân của người dùng trên Dropdown menu và trang Cổng dịch vụ công dân (`/citizen`).
+  - Lựa chọn API 2 từ backend `WardMate.Services.IAM`: `GET /api/v1/users/me/profile` và `PUT /api/v1/users/me/profile` ([ProfilesController.cs](file:///d:/wardmate-backend/src/Services/WardMate.Services.IAM/WardMate.Services.IAM.Api/Controllers/ProfilesController.cs)).
+- **Triển khai**:
+  - `src/types/profile.ts`: Khai báo interface `UserProfileDto` và `ProfileInput` khớp hoàn toàn với contract backend IAM (`fullName`, `identityNumber`, `phoneNumber`, `dateOfBirth`, `gender`, `permanentAddress`, `temporaryAddress`).
+  - `src/lib/api/index.ts`: Bổ sung 2 hàm client:
+    - `getMyProfile()`: Gọi `GET /api/v1/users/me/profile` qua `authClient` (tự động gắn token Bearer, cookie credentials).
+    - `updateMyProfile(payload)`: Gọi `PUT /api/v1/users/me/profile` kèm header `X-CSRF-Protection: 1`.
+  - `src/hooks/useUserProfile.ts`: Hook chuyên dụng quản lý dữ liệu profile:
+    - Tự động gọi API khi người dùng đã đăng nhập (`isAuthenticated`).
+    - Tính toán avatar initials động từ chữ cái đầu của họ và tên (`getInitials`).
+    - Hỗ trợ hàm `refetch` và xử lý graceful fallback (khi tài khoản mới chưa có profile 404).
+  - `src/components/layout/UserDropdown.tsx`:
+    - Loại bỏ code cứng `"Nguyễn Minh Anh"`, `"CD"` và email giả định.
+    - Hiển thị họ tên thật, số điện thoại / thông tin liên hệ và avatar initials động từ API thật.
+  - `src/pages/citizen/CitizenPage.tsx`:
+    - Đồng bộ tên và avatar trên Topbar Dropdown và sidebar mini.
+    - `CitizenProfileView` nhận dữ liệu thật từ `useUserProfile` vào form, cho phép người dùng chỉnh sửa và cập nhật trực tiếp qua API `PUT /api/v1/users/me/profile`.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+
 ## User Dropdown Menu & Ẩn nút Đăng nhập khi Authenticated — 01/10/2026
 
 - **Yêu cầu**:

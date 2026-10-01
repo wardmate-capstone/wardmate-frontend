@@ -133,7 +133,11 @@ export function AuthPage({ mode }: AuthPageProps) {
               {!isRegister && <Link to="/quen-mat-khau" className="font-semibold text-red-800 hover:underline">Quên mật khẩu?</Link>}
             </div>
 
-            <Button type="submit" size="large" className="mt-1 w-full" loading={submitting}>{isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}</Button>
+            <Button type="submit" size="large" className="mt-1 w-full" loading={submitting}>
+              {submitting
+                ? (isRegister ? 'Đang tạo tài khoản...' : 'Đang đăng nhập...')
+                : (isRegister ? 'Tạo tài khoản' : 'Đăng nhập')}
+            </Button>
           </form>
 
           <p className="auth-switch">

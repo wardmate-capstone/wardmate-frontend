@@ -6,6 +6,7 @@ import {
   FolderUser,
 } from '@phosphor-icons/react';
 import { useLogout } from '@/hooks/useLogout';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface UserDropdownProps {
   className?: string;
@@ -22,6 +23,10 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { handleLogout, isLoggingOut } = useLogout();
+  const { profile, loading, initials } = useUserProfile();
+
+  const displayName = profile?.fullName?.trim() || 'Công dân';
+  const displayContact = profile?.phoneNumber?.trim() || 'Công dân điện tử';
 
   // Close on Escape or click outside
   useEffect(() => {
@@ -67,14 +72,14 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
       <div className={`border-t border-slate-200 pt-4 mt-6 ${className}`}>
         <div className="flex items-center gap-3 px-1 mb-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shadow-sm">
-            CD
+            {initials}
           </span>
           <div className="min-w-0 flex-1">
             <strong className="block text-sm font-bold text-slate-900 truncate">
-              Nguyễn Minh Anh
+              {loading ? 'Đang tải...' : displayName}
             </strong>
             <small className="block text-xs text-slate-500 truncate">
-              Công dân điện tử
+              {displayContact}
             </small>
           </div>
         </div>
@@ -114,11 +119,11 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shadow-sm">
-          CD
+          {initials}
         </span>
         <div className="hidden sm:block">
           <strong className="block text-xs font-bold text-slate-900 leading-tight">
-            Nguyễn Minh Anh
+            {loading ? 'Đang tải...' : displayName}
           </strong>
           <small className="block text-[10px] text-slate-500 leading-tight">
             Công dân
@@ -139,10 +144,10 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
           {/* Header user info */}
           <div className="border-b border-slate-100 px-3.5 py-3 mb-1.5">
             <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
-              Nguyễn Minh Anh
+              {loading ? 'Đang tải thông tin...' : displayName}
             </strong>
             <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
-              minhanh@example.com
+              {displayContact}
             </span>
           </div>
 

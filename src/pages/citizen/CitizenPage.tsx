@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogout } from '@/hooks/useLogout';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   ArrowClockwise,
+  ArrowLeft,
   Bell,
   CaretDown,
   CaretRight,
@@ -49,6 +51,8 @@ import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { toast } from '@/components/ui/Toast';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import type { CitizenFeedback } from '@/types/feedback';
+import { updateMyProfile, authErrorMessage } from '@/lib/api';
+import type { UserProfileDto } from '@/types/profile';
 
 export type CitizenSectionId =
   | 'dashboard'
@@ -266,6 +270,7 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
 
 export function CitizenPage() {
   const { handleLogout, isLoggingOut } = useLogout();
+  const { profile: userProfile, loading: profileLoading, initials: userInitials, refetch: refetchProfile } = useUserProfile();
   const [activeSection, setActiveSection] = useState<CitizenSectionId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -278,10 +283,12 @@ export function CitizenPage() {
   // Data states
   const [dossiers] = useState<CitizenDossier[]>(initialDossiers);
   const [notifications, setNotifications] = useState(citizenNotifications);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
+
+  const citizenDisplayName = userProfile?.fullName?.trim() || 'Công dân';
+  const citizenDisplayContact = userProfile?.phoneNumber?.trim() || 'Công dân điện tử';
 
   // Close user dropdown on Escape or click outside
   useEffect(() => {
@@ -334,16 +341,12 @@ export function CitizenPage() {
 
   function selectSection(id: CitizenSectionId) {
     if (id === 'logout') {
-      setIsLogoutModalOpen(true);
+      handleLogout();
       return;
     }
     setActiveSection(id);
     setQuery('');
     setSidebarOpen(false);
-  }
-
-  async function handleLogoutConfirm() {
-    if (await handleLogout()) setIsLogoutModalOpen(false);
   }
 
   function handleOpenFeedback(procedure: string, code?: string) {
@@ -379,10 +382,17 @@ export function CitizenPage() {
         aria-label="Điều hướng công dân"
       >
         <div className="admin-brand">
-          <BrandMark className="admin-brand-mark" size={40} />
-          <div>
-            <BrandWordmark subtitle="Dịch vụ công dân" compact />
-          </div>
+          <Link
+            to="/"
+            className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-85 focus:outline-none"
+            title="Về trang chủ WardMate"
+            aria-label="Về trang chủ WardMate"
+          >
+            <BrandMark className="admin-brand-mark" size={40} />
+            <div>
+              <BrandWordmark subtitle="Dịch vụ công dân" compact />
+            </div>
+          </Link>
           <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu">
             <X size={20} />
           </button>
@@ -647,27 +657,8 @@ export function CitizenPage() {
               <User size={20} aria-hidden="true" />
               <span>Hồ sơ cá nhân</span>
             </button>
-
-            <button
-              type="button"
-              className="text-red-700 hover:!bg-red-50 hover:!text-red-800"
-              onClick={() => selectSection('logout')}
-              title={sidebarCollapsed ? 'Đăng xuất' : undefined}
-            >
-              <SignOut size={20} aria-hidden="true" />
-              <span>Đăng xuất</span>
-            </button>
           </div>
         </nav>
-
-        {/* Chân Sidebar: Thông tin công dân */}
-        <div className="admin-sidebar-user">
-          <span className="!bg-red-800">CD</span>
-          <div>
-            <strong>Nguyễn Minh Anh</strong>
-            <small>090 000 0128</small>
-          </div>
-        </div>
       </aside>
 
       {/* KHÔNG GIAN LÀM VIỆC CHÍNH (WORKSPACE) */}
@@ -722,9 +713,9 @@ export function CitizenPage() {
                 aria-expanded={isUserMenuOpen}
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
               >
-                <span>CD</span>
+                <span>{userInitials}</span>
                 <div>
-                  <strong>Nguyễn Minh Anh</strong>
+                  <strong>{profileLoading ? 'Đang tải...' : citizenDisplayName}</strong>
                   <small>Công dân điện tử</small>
                 </div>
                 <CaretDown
@@ -743,33 +734,50 @@ export function CitizenPage() {
                 >
                   <div className="border-b border-slate-100 px-3.5 py-3 mb-1.5">
                     <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
-                      Nguyễn Minh Anh
+                      {profileLoading ? 'Đang tải thông tin...' : citizenDisplayName}
                     </strong>
                     <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
-                      minhanh@example.com
+                      {citizenDisplayContact}
                     </span>
                   </div>
 
                   <div className="space-y-1">
                     <Link
-                      to="/citizen"
+                      to="/"
+                      role="menuitem"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    >
+                      <ArrowLeft size={18} className="text-slate-600 shrink-0 mt-0.5" weight="bold" />
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight text-slate-900">
+                          Về trang chủ
+                        </span>
+                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-0.5">
+                          Trang thông tin dịch vụ công
+                        </span>
+                      </div>
+                    </Link>
+
+                    <button
+                      type="button"
                       role="menuitem"
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         selectSection('dashboard');
                       }}
-                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-red-50 hover:text-red-900 transition-colors"
+                      className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-red-50 hover:text-red-900 transition-colors text-left"
                     >
-                      <House size={20} className="text-red-700 shrink-0 mt-0.5" weight="duotone" />
+                      <House size={18} className="text-red-700 shrink-0 mt-0.5" weight="duotone" />
                       <div className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold leading-tight text-slate-900">
-                          Cổng dịch vụ công dân
+                          Tổng quan công dân
                         </span>
-                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-1">
-                          Trang tổng quan hồ sơ
+                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-0.5">
+                          Bảng điều khiển & hồ sơ
                         </span>
                       </div>
-                    </Link>
+                    </button>
                   </div>
 
                   <div className="my-1.5 border-t border-slate-100" />
@@ -777,14 +785,15 @@ export function CitizenPage() {
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => {
+                    onClick={async () => {
                       setIsUserMenuOpen(false);
-                      setIsLogoutModalOpen(true);
+                      await handleLogout();
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 transition-colors"
+                    disabled={isLoggingOut}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 transition-colors disabled:opacity-60"
                   >
                     <SignOut size={18} className="shrink-0" weight="bold" />
-                    <span>Đăng xuất</span>
+                    <span>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
                   </button>
                 </div>
               )}
@@ -894,7 +903,11 @@ export function CitizenPage() {
           )}
 
           {activeSection === 'profile' && (
-            <CitizenProfileView />
+            <CitizenProfileView
+              initialProfile={userProfile}
+              loading={profileLoading}
+              onProfileUpdated={refetchProfile}
+            />
           )}
         </main>
       </div>
@@ -907,44 +920,6 @@ export function CitizenPage() {
         applicationCode={selectedFeedbackDossier.code}
         onSubmitFeedback={handleSubmitFeedback}
       />
-
-      {/* Modal Xác nhận Đăng xuất */}
-      {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center gap-3">
-              <span className="grid size-12 place-items-center rounded-xl bg-red-50 text-red-700">
-                <SignOut size={24} weight="bold" />
-              </span>
-              <div>
-                <h3 className="text-base font-bold text-slate-950">Xác nhận đăng xuất</h3>
-                <p className="text-xs text-slate-500">Bạn muốn kết thúc phiên làm việc hiện tại?</p>
-              </div>
-            </div>
-            <p className="mt-4 text-xs leading-relaxed text-slate-600">
-              Các thông tin bản nháp chưa lưu sẽ được lưu tạm trong trình duyệt. Bạn có thể đăng nhập lại bất kỳ lúc nào để tiếp tục chuẩn bị hồ sơ.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                onClick={() => setIsLogoutModalOpen(false)}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                className="rounded-lg bg-red-800 px-4 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm"
-                onClick={handleLogoutConfirm}
-                disabled={isLoggingOut}
-                aria-busy={isLoggingOut}
-              >
-                Đăng xuất ngay
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1965,25 +1940,72 @@ function CitizenFeedbackView({
 // ----------------------------------------------------------------------
 // 11. HỒ SƠ CÁ NHÂN
 // ----------------------------------------------------------------------
-function CitizenProfileView() {
-  const [profile, setProfile] = useState({
-    fullName: 'Nguyễn Minh Anh',
-    identityNumber: '001092008128',
-    birthDate: '15/08/1992',
-    gender: 'Nữ',
-    phone: '090 000 0128',
-    email: 'minhanh@example.com',
-    permanentAddress: 'Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội',
-    temporaryAddress: 'Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội',
+function CitizenProfileView({
+  initialProfile,
+  loading,
+  onProfileUpdated,
+}: {
+  initialProfile: UserProfileDto | null;
+  loading: boolean;
+  onProfileUpdated?: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    fullName: initialProfile?.fullName || '',
+    identityNumber: initialProfile?.identityNumber || '',
+    dateOfBirth: initialProfile?.dateOfBirth || '',
+    gender: initialProfile?.gender || '',
+    phoneNumber: initialProfile?.phoneNumber || '',
+    permanentAddress: initialProfile?.permanentAddress || '',
+    temporaryAddress: initialProfile?.temporaryAddress || '',
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  function handleSaveProfile(e: React.FormEvent) {
+  useEffect(() => {
+    if (initialProfile) {
+      setFormData({
+        fullName: initialProfile.fullName || '',
+        identityNumber: initialProfile.identityNumber || '',
+        dateOfBirth: initialProfile.dateOfBirth || '',
+        gender: initialProfile.gender || '',
+        phoneNumber: initialProfile.phoneNumber || '',
+        permanentAddress: initialProfile.permanentAddress || '',
+        temporaryAddress: initialProfile.temporaryAddress || '',
+      });
+    }
+  }, [initialProfile]);
+
+  async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
-    setIsEditing(false);
-    toast.success('Đã lưu thông tin định danh công dân thành công.');
+    if (!formData.fullName.trim()) {
+      toast.error('Họ và tên không được để trống.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateMyProfile({
+        fullName: formData.fullName.trim(),
+        identityNumber: formData.identityNumber?.trim() || null,
+        phoneNumber: formData.phoneNumber?.trim() || null,
+        dateOfBirth: formData.dateOfBirth?.trim() || null,
+        gender: formData.gender?.trim() || null,
+        permanentAddress: formData.permanentAddress?.trim() || null,
+        temporaryAddress: formData.temporaryAddress?.trim() || null,
+      });
+      toast.success('Đã cập nhật thông tin hồ sơ thành công.');
+      setIsEditing(false);
+      onProfileUpdated?.();
+    } catch (error) {
+      toast.error(authErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
   }
+
+  const initials = formData.fullName.trim()
+    ? formData.fullName.trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase()
+    : 'CD';
 
   return (
     <div className="space-y-5 admin-content-card">
@@ -1991,14 +2013,18 @@ function CitizenProfileView() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div className="flex items-center gap-4">
             <span className="grid size-14 place-items-center rounded-2xl bg-red-800 text-lg font-bold text-white shadow-sm">
-              CD
+              {initials}
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-950">{profile.fullName}</h2>
-                <span className="admin-status-badge is-success">Đã định danh VNeID Mức 2</span>
+                <h2 className="text-lg font-bold text-slate-950">
+                  {loading ? 'Đang tải...' : formData.fullName || 'Công dân chưa cập nhật tên'}
+                </h2>
+                <span className="admin-status-badge is-success">Đã định danh điện tử</span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">Số định danh cá nhân / CCCD: {profile.identityNumber}</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Số định danh cá nhân / CCCD: {formData.identityNumber || 'Chưa liên kết'}
+              </p>
             </div>
           </div>
 
@@ -2006,6 +2032,7 @@ function CitizenProfileView() {
             type="button"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50"
             onClick={() => setIsEditing(!isEditing)}
+            disabled={saving}
           >
             <NotePencil size={16} /> {isEditing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa thông tin'}
           </button>
@@ -2013,13 +2040,14 @@ function CitizenProfileView() {
 
         <form onSubmit={handleSaveProfile} className="mt-6 grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold text-slate-700">Họ và tên</label>
+            <label className="block text-xs font-bold text-slate-700">Họ và tên *</label>
             <input
               type="text"
-              value={profile.fullName}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
+              value={formData.fullName}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
             />
           </div>
 
@@ -2027,53 +2055,61 @@ function CitizenProfileView() {
             <label className="block text-xs font-bold text-slate-700">Số CCCD / Mã định danh</label>
             <input
               type="text"
-              value={profile.identityNumber}
-              disabled
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-100 px-3.5 text-xs font-medium text-slate-500 cursor-not-allowed"
+              value={formData.identityNumber}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+              placeholder="Nhập 12 số CCCD"
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700">Ngày sinh</label>
+            <label className="block text-xs font-bold text-slate-700">Ngày sinh (YYYY-MM-DD)</label>
             <input
-              type="text"
-              value={profile.birthDate}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, birthDate: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
+              type="date"
+              value={formData.dateOfBirth}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700">Giới tính</label>
-            <input
-              type="text"
-              value={profile.gender}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
-            />
+            <select
+              value={formData.gender}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value="">Chọn giới tính</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
+            </select>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700">Số điện thoại liên hệ</label>
             <input
-              type="text"
-              value={profile.phone}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
+              type="tel"
+              value={formData.phoneNumber}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              placeholder="090 000 0000"
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700">Địa chỉ Email</label>
+            <label className="block text-xs font-bold text-slate-700">Địa chỉ tạm trú</label>
             <input
-              type="email"
-              value={profile.email}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
+              type="text"
+              value={formData.temporaryAddress}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
+              placeholder="Nhập địa chỉ tạm trú (nếu có)"
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
@@ -2081,10 +2117,11 @@ function CitizenProfileView() {
             <label className="block text-xs font-bold text-slate-700">Nơi thường trú</label>
             <input
               type="text"
-              value={profile.permanentAddress}
-              disabled={!isEditing}
-              onChange={(e) => setProfile({ ...profile, permanentAddress: e.target.value })}
-              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75"
+              value={formData.permanentAddress}
+              disabled={!isEditing || saving}
+              onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
+              placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+              className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium text-slate-900 disabled:opacity-75 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
@@ -2094,14 +2131,16 @@ function CitizenProfileView() {
                 type="button"
                 className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
                 onClick={() => setIsEditing(false)}
+                disabled={saving}
               >
                 Hủy bỏ
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-red-800 px-5 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm"
+                className="rounded-lg bg-red-800 px-5 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm disabled:opacity-60"
+                disabled={saving}
               >
-                Lưu thay đổi
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           )}

@@ -47,7 +47,13 @@
   ::selection { background: #fde68a; color: #3d0c12; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    *:not(.animate-spin):not([data-animate-spin]),
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition: none !important;
+      animation: none !important;
+    }
   }
 }
 
