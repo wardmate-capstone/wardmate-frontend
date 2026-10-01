@@ -4,6 +4,64 @@ Cập nhật: 01/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Kiểm tra và chia commit Officer/Manager — 01/10/2026
+
+- Theo yêu cầu commit/push, nhóm thay đổi hiện tại thành 3 commit: dashboard/điều hướng Officer; tab hồ sơ và CCCD Manager kèm test; giao diện phản hồi Manager kèm bàn giao.
+- `ManagerFeedbackView.tsx` hiện ẩn phần giới thiệu và bộ lọc lĩnh vực; danh sách hiển thị tất cả phản hồi, vẫn giữ thao tác trả lời. Đây là trạng thái code được gửi, không coi bộ lọc còn hoạt động.
+- Đã chạy lại lint, build (gồm TypeScript) và 8/8 test Officer/Manager đạt. Build còn cảnh báo bundle lớn. Chỉ dọn khoảng trắng thừa trước commit; chưa kiểm tra clipboard và toàn bộ thao tác ở tab giấy tờ bằng trình duyệt trong lượt này.
+- Đối chiếu lịch sử Git và origin/main để xác định trạng thái push; chưa tích hợp backend.
+
+## Nâng cấp Giao diện Quản lý Hồ sơ Công dân (Manager Workspace) — 01/10/2026
+
+- **Yêu cầu**: Phân chia chi tiết hồ sơ công dân thành 3 tab nhỏ rõ ràng (1. Thông tin Định danh & Nhân thân và Địa chỉ & Nơi cư trú; 2. Lịch sử Hồ sơ Thủ tục Hành chính tại Phường; 3. Giấy tờ điện tử đã nộp) và làm nổi bật số CCCD/Mã định danh.
+- **Triển khai**:
+  - **Trang Chi tiết ([src/pages/manager/views/ManagerProfileDetailView.tsx](file:///d:/frontend/src/pages/manager/views/ManagerProfileDetailView.tsx))**:
+    - Thiết kế thanh điều hướng 3 Tab chuẩn UI/UX hiện đại với icon chuyên biệt (`IdentificationCard`, `ClockCounterClockwise`, `Files`) và badge đếm số lượng hồ sơ/giấy tờ.
+    - Làm nổi bật số CCCD ở 2 vị trí quan trọng:
+      1. Ngay trên **Header Banner** của công dân: Huy hiệu đỏ đô sang trọng (`font-mono text-base font-black tracking-wider`) kèm nút sao chép nhanh (`Copy`) và biểu tượng điện thoại.
+      2. Trong **Tab 1**: Thiết kế riêng khối thẻ mô phỏng Căn cước công dân gắn chip / VNeID điện tử nổi bật với phông nền gradient nhẹ, số CCCD cỡ lớn `text-xl` và nút Sao chép trực tiếp vào clipboard.
+    - Tab 2: Hiển thị đầy đủ danh sách lịch sử hồ sơ TTHC tại phường (mã hồ sơ, lĩnh vực, thời gian nộp, cán bộ thụ lý, trạng thái và ghi chú của cán bộ Một cửa).
+    - Tab 3: Hiển thị kho giấy tờ điện tử đã nộp dạng grid thẻ tài liệu hiện đại (CCCD, Giấy khai sinh, Xác nhận cư trú CT07, trạng thái xác thực và nút tải về).
+  - **Bảng Danh sách ([src/pages/manager/views/ManagerProfilesView.tsx](file:///d:/frontend/src/pages/manager/views/ManagerProfilesView.tsx))**:
+    - Bổ sung số CCCD nổi bật ngay dưới tên công dân trong cột "Họ và tên", giúp lãnh đạo/cán bộ tra cứu và nhận diện nhanh mà không cần mở chi tiết.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - Playwright test: `tests/manager.spec.ts` 4/4 tests đạt.
+
+## Tái cấu trúc Dashboard Cán bộ Một cửa (Officer Workspace) — 01/10/2026
+
+- **Yêu cầu**: Dashboard ban đầu quá chi tiết (bày danh sách dài từng hồ sơ chờ kiểm tra và gửi lại); người dùng muốn có biểu đồ trực quan và chỉ tổng quan những mảng chính trong các chức năng của cán bộ.
+- **Triển khai ([src/pages/officer/OfficerDashboardView.tsx](file:///d:/frontend/src/pages/officer/OfficerDashboardView.tsx))**:
+  - Tích hợp **Biểu đồ luồng xử lý hồ sơ trong ca trực** sử dụng thư viện `recharts` (`AreaChart`, `ResponsiveContainer`):
+    - Trực quan hóa tiến độ tiếp nhận hồ sơ vào quầy và số lượng hoàn thành tiền kiểm theo các mốc thời gian trong ca làm việc (`08:00`, `09:00`, `10:00`, `11:00`, `13:30`, `14:30`, `15:30`, `16:30`).
+    - Bổ sung bộ lọc chuyển đổi nhanh giữa chế độ biểu đồ khung giờ và tóm tắt tỷ lệ (tổng nộp, đã xử lý, tồn chờ).
+  - Tinh giản danh sách chi tiết: Thay vì dàn trải toàn bộ danh sách hồ sơ (vốn thuộc về các trang danh mục hồ sơ con), Dashboard chỉ giữ lại khối **Hàng đợi ưu tiên xử lý ngay (Priority Queue)** rút gọn hiển thị top hồ sơ vừa được người dân bổ sung gửi lại cần duyệt lại gấp.
+  - Tái cấu trúc layout 3 cột:
+    - 2 cột bên trái: Biểu đồ tiến độ ca trực + Hàng đợi ưu tiên xử lý ngay (bảo đảm đầy đủ các nút nghiệp vụ `Quick Preview`, `Review lại ngay`).
+    - 1 cột bên phải: Khối điều phối **Tiếp nhận hồ sơ tại quầy** (chức năng cốt lõi có badge số lượng chờ tiếp nhận), khối **Hiệu suất ca làm việc** (thời gian TB, tỷ lệ đúng hẹn 94%, tiến độ chỉ tiêu 78%) và khối **Thông tin quầy làm việc** (Quầy Một cửa 02).
+  - Giữ nguyên 7 thẻ KPI phân luồng nghiệp vụ trên đầu để cán bộ nắm trọn vẹn số liệu các trạng thái hồ sơ.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - Playwright test: `tests/officer.spec.ts` 4/4 tests đạt.
+
+## Tinh chỉnh Header & Welcome Section Phân hệ Cán bộ (Officer Workspace) — 01/10/2026
+
+- **Top Header ([src/pages/officer/OfficerHeader.tsx](file:///d:/frontend/src/pages/officer/OfficerHeader.tsx))**:
+  - Gỡ bỏ dòng thông tin 2 hàng cồng kềnh ("UBND Phường An Khánh · Quầy số 02 | Tiền kiểm hồ sơ Một cửa").
+  - Đồng bộ cấu trúc Breadcrumb nằm trên **1 hàng duy nhất** theo chuẩn Manager (`Cán bộ / [Tên chức năng hiện tại]`, ví dụ `Cán bộ / Tổng quan công việc Cán bộ Một cửa`, `Cán bộ / Hồ sơ chờ tiền kiểm`...) và hỗ trợ breadcrumb sâu khi review hồ sơ (`Cán bộ / Quản lý hồ sơ / HS-2026-00125`).
+- **Welcome Section ([src/pages/officer/OfficerDashboardView.tsx](file:///d:/frontend/src/pages/officer/OfficerDashboardView.tsx))**:
+  - Bỏ nền gradient đỏ và border của banner cũ, chuyển về layout tiêu đề sạch.
+  - Bổ sung hàm `getGreeting()` chào hỏi theo thời gian thực (Sáng/Chiều/Tối).
+- **Sidebar Navigation ([src/pages/officer/OfficerSidebar.tsx](file:///d:/frontend/src/pages/officer/OfficerSidebar.tsx))**:
+  - Bổ sung tính năng thu gọn / mở rộng (accordion tree) cho nhóm **Quản lý hồ sơ** (Hồ sơ nghiệp vụ) tương tự phân hệ Citizen.
+  - Hiển thị badge tổng số hồ sơ cần xử lý, mũi tên Caret xoay mượt mà khi thu gọn / mở rộng; hỗ trợ tự động mở rộng khi sidebar ở chế độ compact trên desktop.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - Playwright test: `tests/officer.spec.ts` 4/4 tests đạt.
+
 ## Sắp xếp thư mục pages — 01/10/2026
 
 - Chuyển toàn bộ 10 file trực tiếp dưới `src/pages` vào thư mục theo chức năng: `admin` (AdminPage), `auth` (AuthPage, ForgotPasswordPage, ResetPasswordPage), `public` (HomePage, FaqPage, ProceduresPage, ProcedureDetailPage), `account` (ProfilePage), `errors` (NotFoundPage).
