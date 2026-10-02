@@ -4,7 +4,56 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tích hợp API Hồ sơ cá nhân thật cho các vai trò Cán bộ, Quản lý, Quản lý thủ tục — 02/10/2026
+
+- **Yêu cầu**: Xóa bỏ dữ liệu mock hardcoded tại tab "Hồ sơ cá nhân" của Cán bộ Một cửa (`OfficerProfileView`), Quản lý Điều hành (`ManagerProfileView`), Quản lý Thủ tục (`ProcedureProfileView`). Kết nối trực tiếp vào API `GET /api/v1/users/me` và `PUT /api/v1/users/me/profile`.
+- **Hiện trạng & Triển khai**:
+  - Dữ liệu tài khoản đăng nhập hiện tại được cung cấp qua `useUserProfile()` và `useAuthStore()` (đã bao gồm `user.username`, `user.email`, `user.roles`, `profile` từ `/api/v1/users/me`).
+  - [`src/pages/manager/views/ManagerProfileView.tsx`](file:///d:/frontend/src/pages/manager/views/ManagerProfileView.tsx):
+    - Xóa bỏ mock tĩnh `Nguyễn Thế Hùng`.
+    - Kết nối với `useUserProfile()`, form chỉnh sửa họ tên, CCCD, SĐT, giới tính, ngày sinh, địa chỉ thường trú/tạm trú.
+    - Gọi API `updateMyProfile(payload)` (`PUT /api/v1/users/me/profile`) khi lưu và refetch tự động cập nhật context.
+  - [`src/pages/officer/OfficerProfileView.tsx`](file:///d:/frontend/src/pages/officer/OfficerProfileView.tsx):
+    - Xóa bỏ mock tĩnh `Lê Thu Hà`.
+    - Bổ sung nút "Chỉnh sửa" mở form cập nhật thông tin cá nhân của cán bộ.
+    - Tích hợp `updateMyProfile` và hiển thị thông tin thực tế từ `user` và `profile`.
+  - [`src/pages/procedure-manager/ProcedureProfileView.tsx`](file:///d:/frontend/src/pages/procedure-manager/ProcedureProfileView.tsx):
+    - Xóa bỏ mock tĩnh `Lê Hoàng Nam`.
+    - Bổ sung form cập nhật hồ sơ cá nhân và hiển thị chính xác email, username, vai trò hệ thống của tài khoản đang đăng nhập.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - `npx playwright test tests/manager.spec.ts`: Đạt 4/4 tests (100%).
+
+## Tích hợp API Quản lý Hồ sơ Công dân cho Quản lý (Manager) — 02/10/2026
+
+
+- **Yêu cầu**: Tích hợp nhóm API AdminProfiles (`/api/v1/users/{userId}/profile`) và Accounts (`/api/v1/accounts`) vào phân hệ Quản lý Điều hành (`ManagerPage` → `ManagerProfilesView`), xóa bỏ dữ liệu mock, tải và thao tác trực tiếp với dữ liệu thật từ máy chủ. Giữ nguyên tối đa cấu trúc UI hiện tại.
+- **Hiện trạng & Giải pháp API**:
+  - Backend IAM phân tách: `GET /api/v1/accounts` trả về danh sách tài khoản phân trang, và nhóm `GET / POST / PUT / DELETE /api/v1/users/{userId}/profile` quản lý hồ sơ theo từng `userId` (yêu cầu quyền `iam.manage`).
+  - Giải pháp Frontend:
+    1. Khi vào tab "Hồ sơ công dân", gọi `getAccounts(1, 50)` để lấy danh sách tài khoản.
+    2. Song song fetch chi tiết hồ sơ `getAdminProfile(userId)` của từng người dùng để hiển thị đầy đủ họ tên, CCCD, ngày sinh, SĐT, giới tính, địa chỉ.
+    3. Cập nhật hồ sơ bằng `updateAdminProfile(userId, data)` và xóa hồ sơ bằng `deleteAdminProfile(userId)`.
+- **Triển khai**:
+  - [`src/lib/api/index.ts`](file:///d:/frontend/src/lib/api/index.ts): Thêm 4 hàm API admin profiles: `getAdminProfile`, `createAdminProfile`, `updateAdminProfile`, `deleteAdminProfile`.
+  - [`src/pages/manager/types.ts`](file:///d:/frontend/src/pages/manager/types.ts): Mở rộng `ManagerProfileItem` thêm các trường tài khoản `userId`, `username`, `email`, `isActive`.
+  - [`src/pages/manager/mockData.ts`](file:///d:/frontend/src/pages/manager/mockData.ts): Xóa bỏ mảng mock `initialManagerProfiles`, chuyển thành mảng rỗng sẵn sàng đón dữ liệu API.
+  - [`src/pages/manager/ManagerPage.tsx`](file:///d:/frontend/src/pages/manager/ManagerPage.tsx):
+    - Tích hợp `fetchCitizenProfiles` gọi `getAccounts` và `getAdminProfile` song song qua `Promise.allSettled`.
+    - Tích hợp `handleSaveProfile` gọi `updateAdminProfile(userId, payload)` với toast thông báo và cập nhật state tối ưu.
+    - Tích hợp `handleDeleteProfile` gọi `deleteAdminProfile(userId)`.
+  - [`src/pages/manager/views/ManagerProfilesView.tsx`](file:///d:/frontend/src/pages/manager/views/ManagerProfilesView.tsx):
+    - Bổ sung nút "Làm mới", icon spinner khi tải dữ liệu, thông báo lỗi inline có nút "Thử lại".
+    - Bổ sung nút "Xóa hồ sơ" (thùng rác) với hộp thoại xác nhận an toàn trước khi gọi API xóa.
+    - Nút submit modal có trạng thái loading (`isSubmitting`) vô hiệu hóa khi đang gửi request.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - `npx playwright test tests/manager.spec.ts`: Đạt 4/4 tests (100%).
+
 ## Tích hợp API Accounts vào trang Admin — Người dùng hệ thống — 02/10/2026
+
 
 - **Yêu cầu**: Trang Admin → mục "Người dùng hệ thống" đang dùng dữ liệu hardcoded (mock). Yêu cầu xoá mock và call API thật.
 - **API backend** (`/api/v1/accounts`):
