@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import {
   Plus,
   MagnifyingGlass,
+  ArrowsClockwise,
+  Trash,
 } from '@phosphor-icons/react';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
@@ -9,13 +11,21 @@ import { ManagerProfileItem } from '../types';
 
 interface ManagerProfilesViewProps {
   profiles: ManagerProfileItem[];
-  onSaveProfile: (profile: ManagerProfileItem) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
+  onSaveProfile: (profile: ManagerProfileItem) => Promise<boolean | void> | void;
+  onDeleteProfile?: (userId: string) => Promise<boolean | void> | void;
   onSelectProfile?: (profile: ManagerProfileItem) => void;
 }
 
 export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   profiles,
+  isLoading = false,
+  error = null,
+  onRefresh,
   onSaveProfile,
+  onDeleteProfile,
   onSelectProfile,
 }) => {
   const [query, setQuery] = useState('');
@@ -23,6 +33,9 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   const [viewingProfile, setViewingProfile] = useState<ManagerProfileItem | null>(null);
   const [editingProfile, setEditingProfile] = useState<ManagerProfileItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
 
   // Form state
   const [formData, setFormData] = useState<ManagerProfileItem>({
@@ -69,7 +82,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
     setIsModalOpen(true);
   }
 
-  function handleFormSubmit(e: React.FormEvent) {
+  async function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.fullName.trim()) {
       toast.error('Vui lòng nhập họ và tên công dân');
@@ -88,9 +101,32 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
       return;
     }
 
-    onSaveProfile(formData);
-    setIsModalOpen(false);
+    try {
+      setIsSubmitting(true);
+      await onSaveProfile(formData);
+      setIsModalOpen(false);
+    } catch {
+      // Error handled by parent toast
+    } finally {
+      setIsSubmitting(false);
+    }
   }
+
+  async function handleDelete(item: ManagerProfileItem) {
+    if (!item.userId || !onDeleteProfile) return;
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ công dân của ${item.fullName}? Hành động này sẽ xóa dữ liệu hồ sơ trên hệ thống.`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(item.userId);
+      await onDeleteProfile(item.userId);
+    } catch {
+      // Handled in parent
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
 
   return (
     <section className="admin-card admin-table-card admin-content-card">
@@ -122,6 +158,19 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             <option value="Khác">Khác</option>
           </select>
 
+          {onRefresh && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-11 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              onClick={onRefresh}
+              disabled={isLoading}
+              title="Tải lại dữ liệu từ máy chủ"
+            >
+              <ArrowsClockwise size={16} className={isLoading ? 'animate-spin text-red-800' : ''} />
+              <span className="hidden sm:inline">Làm mới</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="admin-primary-action"
@@ -132,6 +181,22 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Error notification if any */}
+      {error && (
+        <div className="p-4 mx-4 my-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 flex items-center justify-between">
+          <span>{error}</span>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="font-bold underline ml-2 hover:text-red-950"
+            >
+              Thử lại
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div className="admin-table-wrap">
@@ -146,8 +211,17 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => (
-              <tr key={item.identityNumber}>
+            {isLoading && profiles.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-xs text-slate-500">
+                  <div className="inline-flex items-center gap-2">
+                    <ArrowsClockwise size={18} className="animate-spin text-red-800" />
+                    <span>Đang tải danh sách hồ sơ công dân từ máy chủ...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : filtered.map((item) => (
+              <tr key={item.userId || item.identityNumber}>
                 <td>
                   <div className="admin-person flex items-center gap-3">
                     <span className="size-9 rounded-full bg-red-100 text-red-900 font-bold text-xs flex items-center justify-center shrink-0">
@@ -165,7 +239,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     </p>
                   </div>
                 </td>
-                <td className="text-xs text-slate-700">{item.phoneNumber}</td>
+                <td className="text-xs text-slate-700">{item.phoneNumber || '—'}</td>
                 <td className="text-xs text-slate-700">{formatDate(item.dateOfBirth)}</td>
                 <td>
                   <span
@@ -198,6 +272,18 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     >
                       Chỉnh sửa
                     </button>
+                    {onDeleteProfile && item.userId && (
+                      <button
+                        type="button"
+                        aria-label="Xóa hồ sơ"
+                        title="Xóa hồ sơ công dân"
+                        disabled={deletingId === item.userId}
+                        className="text-xs text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 disabled:opacity-40"
+                        onClick={() => handleDelete(item)}
+                      >
+                        <Trash size={16} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -206,11 +292,12 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
         </table>
       </div>
 
-      {filtered.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <p className="admin-empty p-8 text-center text-xs text-slate-500">
           Không tìm thấy hồ sơ công dân nào phù hợp với từ khóa tìm kiếm.
         </p>
       )}
+
 
       {/* Modal Xem chi tiết hồ sơ công dân */}
       {viewingProfile && (
@@ -400,8 +487,16 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
               >
                 Hủy bỏ
               </button>
-              <button type="submit" className="admin-primary-action text-xs">
-                {editingProfile ? 'Cập nhật hồ sơ' : 'Lưu hồ sơ mới'}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="admin-primary-action text-xs disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? 'Đang lưu...'
+                  : editingProfile
+                  ? 'Cập nhật hồ sơ'
+                  : 'Lưu hồ sơ mới'}
               </button>
             </div>
           </form>

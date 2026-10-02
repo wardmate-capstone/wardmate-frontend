@@ -200,6 +200,29 @@ export async function updateAccountStatus(userId: string, isActive: boolean): Pr
   await api.put(`/api/v1/accounts/${userId}/status`, { isActive }, cookieConfig);
 }
 
+// -----------------------------------------------------------
+// ADMIN — Profiles API (/api/v1/users/{userId}/profile)
+// -----------------------------------------------------------
+export async function getAdminProfile(userId: string): Promise<UserProfileDto> {
+  const response = await api.get<UserProfileDto>(`/api/v1/users/${userId}/profile`, cookieConfig);
+  return response.data;
+}
+
+export async function createAdminProfile(userId: string, payload: ProfileInput): Promise<UserProfileDto> {
+  const response = await api.post<UserProfileDto>(`/api/v1/users/${userId}/profile`, payload, cookieConfig);
+  return response.data;
+}
+
+export async function updateAdminProfile(userId: string, payload: ProfileInput): Promise<UserProfileDto> {
+  const response = await api.put<UserProfileDto>(`/api/v1/users/${userId}/profile`, payload, cookieConfig);
+  return response.data;
+}
+
+export async function deleteAdminProfile(userId: string): Promise<void> {
+  await api.delete(`/api/v1/users/${userId}/profile`, cookieConfig);
+}
+
+
 export function authErrorMessage(error: unknown): string {
   if (axios.isCancel(error)) return 'Phiên đăng nhập đã thay đổi. Vui lòng thử lại.';
   if (axios.isAxiosError(error)) {

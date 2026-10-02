@@ -18,6 +18,10 @@ export type ManagerSectionId =
   | 'profile';
 
 export interface ManagerProfileItem {
+  userId?: string;
+  username?: string;
+  email?: string;
+  isActive?: boolean;
   fullName: string;
   identityNumber: string;
   phoneNumber: string;
@@ -27,6 +31,7 @@ export interface ManagerProfileItem {
   temporaryAddress: string;
   ethnicity?: string;
   vneidLevel?: number;
+
   dossierHistory?: Array<{
     code: string;
     procedureName: string;
