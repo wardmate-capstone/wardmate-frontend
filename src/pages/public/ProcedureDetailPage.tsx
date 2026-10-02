@@ -1,16 +1,18 @@
 import { useEffect, useRef } from 'react';
-import { ArrowLeft, ArrowSquareOut, CaretRight, House } from '@phosphor-icons/react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ArrowSquareOut, CaretRight, House, Sparkle } from '@phosphor-icons/react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge, buttonVariants } from '@/components/ui';
 import { mockPublicProcedures } from '@/data/mockPublicProcedures';
 import { parseProcedureContent } from '@/lib/procedureContent';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from '@/components/ui/Toast';
 
-import { ProcedureCasesAndChecklist } from './components/ProcedureCasesAndChecklist';
+import { ProcedureCasesView } from './components/ProcedureCasesView';
 
 const pending = 'Thông tin cần được cơ quan tiếp nhận xác nhận.';
 const sections = [
   ['tong-quan', 'Thông tin chung'],
-  ['thanh-phan-ho-so', 'Thành phần hồ sơ & Tình huống'],
+  ['thanh-phan-ho-so', 'Trường hợp & Quy trình'],
   ['thoi-han-le-phi', 'Thời hạn và lệ phí'],
   ['can-cu-phap-luat', 'Căn cứ pháp luật'],
   ['co-quan-tiep-nhan', 'Cơ quan tiếp nhận'],
@@ -18,7 +20,9 @@ const sections = [
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
-  const { search } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const search = location.search;
   const procedure = mockPublicProcedures.find((item) => item.id === procedureId);
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
@@ -27,7 +31,7 @@ export function ProcedureDetailPage() {
     procedure?.checklist_schema
   );
 
-
+  const authStatus = useAuthStore((state) => state.status);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -42,6 +46,49 @@ export function ProcedureDetailPage() {
     </section>
   );
 
+  const handleStartProcedure = () => {
+    const returnTo = `${location.pathname}${location.search}`;
+
+    if (authStatus !== 'authenticated') {
+      toast.info('Vui lòng đăng nhập để bắt đầu chuẩn bị hồ sơ thủ tục.');
+      navigate(`/dang-nhap?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+
+    // Đã đăng nhập: Tạo hồ sơ bản nháp mới và lưu vào localStorage để CitizenPage nạp
+    const draftCode = `HS-DRAFT-${Date.now().toString().slice(-4)}`;
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const timeStr = `${dateStr} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newDraft = {
+      code: draftCode,
+      procedureId: procedure.id,
+      procedureName: procedure.title,
+      field: procedure.category,
+      createdAt: dateStr,
+      updatedAt: timeStr,
+      status: 'Bản nháp' as const,
+      officerNote: 'Hồ sơ bản nháp mới khởi tạo. Bạn có thể xem checklist giấy tờ và kê khai tờ khai.',
+      cases: content.cases,
+      checklist: content.checklist,
+    };
+
+    try {
+      const existingDraftsJson = localStorage.getItem('wardmate_citizen_drafts');
+      const drafts = existingDraftsJson ? JSON.parse(existingDraftsJson) : [];
+      // Đưa bản nháp mới lên đầu danh sách
+      drafts.unshift(newDraft);
+      localStorage.setItem('wardmate_citizen_drafts', JSON.stringify(drafts));
+    } catch {
+      // Bỏ qua lỗi quota storage nếu có
+    }
+
+    toast.success(`Đã thêm "${procedure.title}" vào Hồ sơ bản nháp của bạn!`);
+    // Điều hướng vào trang chi tiết hồ sơ bản nháp vừa tạo để công dân chuẩn bị ngay
+    navigate(`/citizen?section=dossier_detail&dossierCode=${draftCode}`);
+  };
+
   return (
     <div className="bg-slate-50">
       <section className="border-b border-red-100 bg-white px-5 py-8 sm:px-8">
@@ -52,7 +99,25 @@ export function ProcedureDetailPage() {
             <Link to={listUrl} className="inline-flex min-h-11 items-center hover:text-red-800">Thủ tục hành chính</Link>
             <CaretRight aria-hidden="true" /><span aria-current="page">Chi tiết thủ tục</span>
           </nav>
-          <div className="flex flex-wrap gap-2"><Badge>{procedure.category}</Badge><Badge variant="warning">Dữ liệu minh họa</Badge></div>
+          
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge>{procedure.category}</Badge>
+              <Badge variant="warning">Dữ liệu minh họa</Badge>
+            </div>
+
+            {/* Nút Bắt đầu làm thủ tục trên Banner Header */}
+            <button
+              type="button"
+              onClick={handleStartProcedure}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-800 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
+            >
+              <Sparkle size={18} weight="fill" className="text-amber-300" />
+              <span>Bắt đầu làm thủ tục</span>
+              <ArrowRight size={16} weight="bold" />
+            </button>
+          </div>
+
           <h1 ref={heading} tabIndex={-1} className="mt-4 max-w-4xl break-words text-3xl font-bold leading-tight text-red-900 sm:text-4xl">{procedure.title}</h1>
           <p className="mt-3 text-sm text-slate-600">Mã minh họa: {procedure.id} · Chưa công bố dữ liệu chính thức</p>
           <p className="mt-5 max-w-4xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
@@ -68,7 +133,17 @@ export function ProcedureDetailPage() {
           <nav aria-label="Nội dung thủ tục" className="grid gap-1">
             {sections.map(([id, label]) => <a key={id} href={'#' + id} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-800">{label}</a>)}
           </nav>
-          <Link to={listUrl} className="mt-4 flex min-h-11 items-center gap-2 border-t border-slate-200 pt-3 text-sm font-bold text-red-800"><ArrowLeft aria-hidden="true" />Quay lại danh sách</Link>
+          
+          <button
+            type="button"
+            onClick={handleStartProcedure}
+            className="mt-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-900 transition-colors"
+          >
+            <span>Bắt đầu làm thủ tục</span>
+            <ArrowRight size={14} weight="bold" />
+          </button>
+
+          <Link to={listUrl} className="mt-3 flex min-h-11 items-center gap-2 border-t border-slate-200 pt-3 text-sm font-bold text-red-800"><ArrowLeft aria-hidden="true" />Quay lại danh sách</Link>
         </aside>
 
         <div className="min-w-0 space-y-6">
@@ -85,15 +160,10 @@ export function ProcedureDetailPage() {
             </dl>
           </section>
 
-          {/* Khối Thành phần hồ sơ & Tình huống (Cases & Checklist) */}
-          {(content.cases.length > 0 || content.checklist.length > 0) && (
-            <ProcedureCasesAndChecklist
-              cases={content.cases}
-              checklist={content.checklist}
-            />
+          {/* Khối Trường hợp & Quy trình (đã gỡ bỏ checklist sang trang Hồ sơ của tôi) */}
+          {content.cases.length > 0 && (
+            <ProcedureCasesView cases={content.cases} />
           )}
-
-
 
           <section id="thoi-han-le-phi" aria-labelledby="fees-title" className="procedure-detail-section">
             <h2 id="fees-title">Thời hạn và lệ phí</h2>
@@ -128,9 +198,25 @@ export function ProcedureDetailPage() {
               {agency.url && <a href={agency.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-red-800 underline">Thông tin cơ quan<span className="sr-only">: {agency.name} (mở tab mới)</span><ArrowSquareOut aria-hidden="true" /></a>}
             </li>)}</ul> : <p>{pending}</p>}
           </section>
-          <p className="text-sm leading-6 text-slate-600">Bạn chưa cần đăng nhập để xem thông tin. Chức năng chuẩn bị và gửi hồ sơ sẽ được kết nối ở bước tiếp theo.</p>
+
+          {/* Banner CTA cuối trang */}
+          <div className="rounded-xl border border-red-200 bg-white p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Sẵn sàng thực hiện thủ tục này?</h3>
+              <p className="text-sm text-slate-600 mt-1">Bấm bắt đầu để xem danh mục checklist giấy tờ đầy đủ và tải/soạn thảo các tờ khai trực tuyến.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleStartProcedure}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-red-900 transition-colors"
+            >
+              <span>Bắt đầu làm thủ tục</span>
+              <ArrowRight size={16} weight="bold" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
