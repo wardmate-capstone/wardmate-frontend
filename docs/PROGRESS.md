@@ -4,6 +4,41 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chuyển Checklist sang Hồ sơ bản nháp & Tích hợp E-Form Editor chuẩn A4 — 02/10/2026
+
+- **Yêu cầu người dùng**:
+  1. Gỡ bỏ khối checklist giấy tờ ở trang xem chi tiết thủ tục công khai (`ProcedureDetailPage`).
+  2. Bổ sung nút **"Bắt đầu làm thủ tục"** trên `ProcedureDetailPage`. Khi người dùng đã đăng nhập nhấn vào, thủ tục được chọn sẽ tự động lưu vào danh sách "Hồ sơ của tôi" (Bản nháp - Draft). Nếu chưa đăng nhập, chuyển hướng đến trang Đăng nhập kèm link quay lại an toàn.
+  3. Loại bỏ nút / hộp nhắc dư thừa ở phần icon ngôi sao trong khối trường hợp thủ tục.
+  4. Khi nhấn **Chi tiết** một hồ sơ, chuyển sang **một trang/view riêng biệt (`CitizenDossierDetailView`)** rộng rãi toàn màn hình thay vì dùng Modal nhỏ để hiển thị đầy đủ thông tin hồ sơ, ghi chú và danh mục checklist giấy tờ.
+  5. Ở từng mục biểu mẫu/tờ khai trong checklist, cung cấp 3 nút hành động:
+     - 📥 **Tải mẫu (Download Form)**: Tải file mẫu văn bản `.docx`.
+     - 👁️ **Xem trước (Preview Form)**: Mở modal xem trước trang biểu mẫu khổ A4 chuẩn thể thức hành chính Việt Nam.
+     - ✏️ **Soạn thảo (Edit Form)**: Mở Trình soạn thảo văn bản trực tuyến (lấy cảm hứng từ [editdocx.net](https://editdocx.net/editor/?doc=builtin-demo)) với giao diện mô phỏng trang giấy A4, thanh công cụ căn lề, định dạng phông chữ, in đậm/nghiêng/gạch chân, tính năng tự động điền dữ liệu công dân (Đề án 06/VNeID) và xuất file/in ấn.
+- **Hiện trạng & Triển khai**:
+  - [`src/pages/public/components/ProcedureCasesView.tsx`](file:///d:/frontend/src/pages/public/components/ProcedureCasesView.tsx):
+    - Tạo mới component hiển thị thông tin các trường hợp (Cases) và quy trình các bước thực hiện của thủ tục; loại bỏ bảng checklist giấy tờ công khai.
+    - Tích hợp nút CTA "Bắt đầu làm thủ tục".
+  - [`src/pages/public/ProcedureDetailPage.tsx`](file:///d:/frontend/src/pages/public/ProcedureDetailPage.tsx):
+    - Thay thế `ProcedureCasesAndChecklist` bằng `ProcedureCasesView`.
+    - Tích hợp nút "Bắt đầu làm thủ tục" ở Header banner, Sidebar và Footer banner.
+    - Xử lý kiểm tra auth: nếu chưa đăng nhập → chuyển hướng an toàn đến `/dang-nhap?returnTo=...`; nếu đã đăng nhập → tạo bản nháp mới lưu vào `wardmate_citizen_drafts` (localStorage) và điều hướng vào `/citizen?section=dossiers_draft&dossierCode=...`.
+  - [`src/pages/citizen/components/DossierChecklistView.tsx`](file:///d:/frontend/src/pages/citizen/components/DossierChecklistView.tsx):
+    - Tạo mới component render bảng checklist giấy tờ chuẩn DVC (Giấy tờ phải nộp & Giấy tờ phải xuất trình, checkbox tự kiểm tra, thanh tiến độ %).
+    - Cột thao tác biểu mẫu tích hợp 3 nút: **Tải mẫu**, **Xem trước**, **Soạn thảo**.
+  - [`src/pages/citizen/components/FormPreviewModal.tsx`](file:///d:/frontend/src/pages/citizen/components/FormPreviewModal.tsx):
+    - Modal xem trước tờ khai định dạng trang A4 tiêu chuẩn (Quốc hiệu, Tiêu ngữ, Kính gửi, nội dung kê khai, phần chữ ký).
+  - [`src/pages/citizen/components/FormDocxEditorModal.tsx`](file:///d:/frontend/src/pages/citizen/components/FormDocxEditorModal.tsx):
+    - Trình soạn thảo văn bản E-Form online lấy cảm hứng từ editdocx.net: Toolbar chuyên nghiệp (phông chữ, cỡ chữ, in đậm/nghiêng/gạch chân, căn trái/giữa/phải/đều, zoom phóng to/thu nhỏ, nút lưu, tải .docx, in văn bản, tự động điền thông tin định danh công dân).
+  - [`src/pages/citizen/CitizenPage.tsx`](file:///d:/frontend/src/pages/citizen/CitizenPage.tsx):
+    - Mở rộng kiểu dữ liệu `CitizenDossier` hỗ trợ `cases` và `checklist`.
+    - Đồng bộ `dossiers` với `localStorage` để đón ngay bản nháp vừa tạo từ trang chi tiết thủ tục.
+    - Tích hợp nút "Chi tiết" trên bảng hồ sơ để mở Modal chi tiết hồ sơ nháp & checklist, kết nối trơn tru với `FormPreviewModal` và `FormDocxEditorModal`.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - `npm run build`: Đạt 100% (Build thành công toàn bộ bundle).
+
 ## Tích hợp API Hồ sơ cá nhân thật cho các vai trò Cán bộ, Quản lý, Quản lý thủ tục — 02/10/2026
 
 - **Yêu cầu**: Xóa bỏ dữ liệu mock hardcoded tại tab "Hồ sơ cá nhân" của Cán bộ Một cửa (`OfficerProfileView`), Quản lý Điều hành (`ManagerProfileView`), Quản lý Thủ tục (`ProcedureProfileView`). Kết nối trực tiếp vào API `GET /api/v1/users/me` và `PUT /api/v1/users/me/profile`.
