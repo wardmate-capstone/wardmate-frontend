@@ -11,6 +11,7 @@
 - Form Login/Register dùng React Hook Form + Zod, đồng bộ ràng buộc IAM (kể cả giới hạn mật khẩu 72 byte UTF-8), lỗi tiếng Việt từng trường và ánh xạ ProblemDetails.errors. Đăng ký thành công không tạo phiên.
 - Protected Routes bảo vệ cả alias tiếng Việt: citizen/cong-dan → REGISTERED_CITIZEN; officer/can-bo → FRONT_DESK_OFFICER; manager/quan-ly → MANAGER; procedure-manager/quan-ly-thu-tuc → PROCEDURE_MANAGER hoặc IT_ADMIN; admin → IT_ADMIN. Không cấp IT_ADMIN quyền workspace khác ngầm định. Menu tài khoản công khai hiển thị workspace theo role.
 - Chưa đăng nhập → login với returnTo nội bộ; sai role → thông báo không có quyền; lỗi mạng/5xx/CSRF lúc bootstrap → trạng thái lỗi và nút thử lại trên trang riêng tư. Backend vẫn là nơi thực thi bảo mật API.
+- Login không có returnTo cụ thể: công dân về landing `/`; role nội bộ duy nhất vào workspace admin/officer/manager/procedure-manager tương ứng. Có returnTo an toàn thì giữ đích; guard vẫn kiểm tra quyền. Nhiều role/role chưa biết về trang chủ để chọn workspace, không tự chọn role chính.
 - “Ghi nhớ đăng nhập” được giữ nguyên UI và chưa nối logic theo yêu cầu. Thời hạn cookie hiện do BE quyết định.
 
 ## Component dùng chung
@@ -47,7 +48,8 @@ toast.success('Đã lưu thay đổi.');
 - Refresh: POST `/api/v1/auth/refresh-token`, không body, transport riêng tránh đệ quy.
 - `logout()`: POST `/api/v1/auth/revoke-token`, không body, Bearer + cookie. Chỉ xóa phiên/thông báo thành công khi nhận 204; 401 dùng luồng refresh/retry một lần.
 - Cả bốn POST gửi `X-CSRF-Protection: 1`, `withCredentials: true`. FE không đọc/ghi Set-Cookie. JSON login/refresh được kiểm tra tokenType và thời hạn, không nhận refresh token từ JSON.
-- `useLogout` dùng chung ở các nút Citizen/Officer/Manager/Procedure Manager. Admin hiện không có nút logout riêng, không thêm UI ngoài yêu cầu.
+- Header landing và cả năm workspace dùng chung `UserDropdown`: danh tính thật và đăng xuất. Citizen ở landing thấy liên kết Cổng công dân; trong Cổng công dân thấy “Về trang chủ”. Role nội bộ không có liên kết trang chủ; chỉ hiện workspace khác được cấp quyền, ẩn workspace đang mở (kể cả alias tiếng Việt). Sidebar các workspace không còn avatar/tên tài khoản hay nút đăng xuất trùng.
+- Mở menu không phát toast. `useLogout` chỉ báo “Đã đăng xuất.” sau khi thu hồi thành công; dùng một toast ID chung, khóa nút lúc chờ và giữ menu để thử lại khi thất bại.
 - Web Locks tuần tự hóa request auth có cookie ở các tab cùng origin; BroadcastChannel xóa phiên cũ khi tab khác logout, khôi phục danh tính mới khi tab khác login. Không truyền token qua storage hoặc channel. Browser không có Web Locks chỉ được gom refresh trong một tab; chưa bảo đảm phối hợp đa tab/cross-origin FE trên browser đó.
 
 ### Môi trường local và kiểm thử cookie
@@ -56,7 +58,7 @@ Dùng FE `http://localhost:5173`, Gateway `http://localhost:5000`; không trộn
 
 Vite đã cố định host `localhost`, port 5173 và strictPort (không tự nhảy sang 5174 khi cổng bận). Cấu hình riêng máy phát triển ở `.env.development.local`; file này được Git ignore và không áp dụng cho production build. `.env.example` chỉ là mẫu, không tự được Vite nạp. Sau khi thay `.env`, khởi động lại `npm run dev`.
 
-IAM Azure đã được cung cấp ở phiên trước. Cấu hình proxy hiện tại nhằm gửi cookie cùng origin với FE; không suy ra cookie production hoạt động chỉ từ source cấu hình. FE-TASK-03 chưa xác minh lại đăng nhập/cookie bằng tài khoản thật. Không trộn localhost và 127.0.0.1.
+Ngày 02/10/2026 đã xác minh bốn role nội bộ bằng tài khoản BE thật trên Edge tại localhost:5173 qua Vite proxy tới IAM Azure: login đúng workspace, F5 khôi phục phiên, cookie HttpOnly, logout thành công. Chưa kiểm tra FE production; không suy ra cookie production hoạt động chỉ từ local. Không trộn localhost và 127.0.0.1.
 
 Playwright ghi đè `VITE_API_BASE_URL=http://localhost:5000` trong tiến trình Vite dành cho test để mock Auth không vô tình gọi server thật từ `.env` cá nhân.
 
@@ -90,7 +92,7 @@ const authClient = createJwtClient({
 Luồng login/logout:
 1. Gọi endpoint login với `{ skipAuth: true }` (không gắn JWT/không refresh khi sai mật khẩu).
 2. Chỉ sau thành công thật, gọi `authClient.setAccessToken(accessToken)`.
-3. Điều hướng bằng `navigate(safeReturnTo(searchParams.get('returnTo')), { replace: true })`.
+3. Lấy danh tính IAM rồi điều hướng bằng `loginDestination(user.roles, returnTo)`; không suy đoán role từ username.
 4. Dùng `logout()` chung; không tự clearSession trước khi API thu hồi xác nhận thành công.
 5. Adapter cấu hình credentials/CSRF theo backend; không lưu refresh token trong JavaScript.
 

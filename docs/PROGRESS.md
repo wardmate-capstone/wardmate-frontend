@@ -1,8 +1,36 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 01/10/2026.
+Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Commit và push điều hướng/tài khoản — 02/10/2026
+
+- Đã commit và push lên `origin/main`: `5b49dfe` (điều hướng theo role IAM) và `20173b8` (dropdown theo trang, logout chung, bỏ sidebar trùng và test). Đã xác minh remote main bằng `git ls-remote` trùng HEAD `20173b8` sau push.
+- Tài liệu bàn giao và hợp đồng auth được gom vào commit tài liệu tiếp theo. Phiên commit/push không chạy lại test; kết quả kiểm tra trước commit được ghi ở các mục bên dưới. Không sửa BE, không force push.
+
+## Tinh gọn dropdown theo trang và sidebar — 02/10/2026
+
+- Người dùng xác nhận: citizen ở landing chỉ thấy liên kết Cổng công dân; trong Cổng công dân chỉ thấy “Về trang chủ”. Role nội bộ không có liên kết trang chủ; giữ workspace khác được cấp quyền và Đăng xuất. `UserDropdown.tsx` ẩn workspace đang mở, nhận diện cả alias tiếng Việt.
+- Bỏ avatar/tên tài khoản và nút đăng xuất trùng ở chân sidebar Admin, Officer, Manager, Procedure Manager; xóa hook/props logout không còn dùng. Thao tác đăng xuất tập trung trong dropdown header.
+- Kiểm tra mới: typecheck, lint, build, diff check đạt; **63/63 test đạt** gồm auth-session, JWT, design-system, landing, officer, manager và procedure-manager. Có ca citizen đi qua lại landing/cổng/alias và xác nhận từng role không còn sidebar logout hay liên kết trỏ chính workspace hiện tại. Auth dùng mock; không gọi lại IAM thật trong task này. Build còn cảnh báo chunk lớn/annotation Zod đã có.
+- Cập nhật tài liệu auth. Code đã commit/push tại `20173b8`; không sửa BE.
+
+## Dropdown tài khoản chung và trang mặc định công dân — 02/10/2026
+
+- Theo yêu cầu mới: công dân đăng nhập mặc định về landing `/`, không tự vào `/citizen`. ReturnTo nội bộ cụ thể vẫn được giữ; role nội bộ giữ workspace tương ứng.
+- Landing và header Citizen/Admin/Officer/Manager/Procedure Manager dùng chung `src/components/layout/UserDropdown.tsx`; bỏ dropdown riêng của Citizen và avatar tĩnh/toast giữ chỗ ở các header. Quy tắc liên kết menu đã được tinh gọn theo yêu cầu mới ở mục trên.
+- `src/hooks/useLogout.ts`: toast ID chung; chỉ hiện “Đã đăng xuất.” khi BE xác nhận thu hồi. Mở menu không phát toast; lúc chờ khóa nút; lỗi giữ menu để thử lại, toast thành công thay toast lỗi.
+- Kiểm tra: typecheck, lint, build và diff check đạt. Lượt auth-session/auth/officer/manager/procedure-manager **40/40 đạt**; lượt design-system/landing/jwt-client/auth-session (thêm ca logout lỗi rồi thử lại) **48/48 đạt**. Hai lượt có test trùng; auth dùng mock, chưa chạy lại IAM thật cho thay đổi dropdown. Build còn cảnh báo chunk lớn và annotation Zod đã có.
+- Cập nhật `docs/design-system-and-auth.md` theo hành vi hiện tại. Điều hướng và dropdown đã commit/push tại `5b49dfe`, `20173b8`; không sửa BE.
+
+## Điều hướng sau đăng nhập theo role IAM — 02/10/2026
+
+- Đã phát hiện login không có returnTo luôn về `/`. Sửa `src/lib/authRedirect.ts` và `src/pages/auth/AuthPage.tsx`: lấy role từ danh tính IAM sau login; mặc định IT_ADMIN → `/admin`, FRONT_DESK_OFFICER → `/officer`, MANAGER → `/manager`, PROCEDURE_MANAGER → `/procedure-manager`. REGISTERED_CITIZEN hiện về `/` theo yêu cầu mới ở mục trên. Không hardcode username.
+- Giữ returnTo nội bộ an toàn nếu đã có; ProtectedRoute tiếp tục kiểm tra quyền trang đích. Tài khoản nhiều role hoặc role chưa biết vẫn về trang chủ để chọn workspace từ menu, không suy đoán role chính. Không đổi quyền IT_ADMIN đã chốt hoặc logic ghi nhớ đăng nhập.
+- Xác minh thật: bốn tài khoản kiểm thử BE do chủ sở hữu cung cấp có đúng bốn role nội bộ trên. Edge headless tại FE `http://localhost:5173`, qua Vite proxy tới IAM Azure: **4/4 login đúng workspace, 4/4 F5 khôi phục đúng role/trang, cookie refresh HttpOnly và logout thu hồi phiên test thành công**. Không ghi thông tin đăng nhập/token vào repo. Chưa xác minh FE production, không đồng nhất với triển khai thành công.
+- Kiểm tra code: typecheck, lint đạt; `auth-session.spec.ts`, `auth.spec.ts`, `jwt-client.spec.ts`: **31/31 đạt** bằng mock. Thêm ca role default/safe returnTo; cập nhật ca bootstrap đến muộn theo trang mặc định công dân. Không chạy lại toàn bộ suite hoặc build trong task nhỏ này.
+- Git: các commit FE-TASK-03 trước đã có trên origin/main tại `2072174`; phần sửa điều hướng đã commit/push tại `5b49dfe`. Không sửa BE.
 
 ## FE-TASK-03 — Form auth, Zustand và Protected Routes — 01/10/2026
 
