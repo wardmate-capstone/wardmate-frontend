@@ -157,7 +157,7 @@
   #quy-trinh .border-l-4 { @apply rounded-2xl; }
   .cta-pattern { position: absolute; inset: 0; opacity: .14; background-image: repeating-linear-gradient(135deg, transparent 0 22px, #fff 23px 24px, transparent 25px 48px); mask-image: linear-gradient(90deg, transparent 20%, #000); }
 
-  .auth-page { @apply bg-[#faf8f5] px-5 py-12 sm:px-8 sm:py-16; }
+  .auth-page { @apply bg-[#faf8f5] px-4 py-4 sm:px-6 sm:py-6; }
   .auth-shell { @apply mx-auto grid max-w-[1080px] overflow-hidden rounded-3xl bg-white shadow-[0_28px_80px_rgba(70,20,24,.12)] lg:grid-cols-[.9fr_1.1fr]; }
   .auth-intro { @apply relative flex flex-col bg-red-800 p-7 text-white sm:p-10 lg:p-12; background-image: linear-gradient(rgba(153,29,24,.86), rgba(121,27,23,.94)), url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; }
   .auth-intro::after { content: ""; position: absolute; width: 190px; height: 190px; right: -70px; bottom: -70px; border: 1px solid rgba(234,185,76,.25); border-radius: 50%; box-shadow: 0 0 0 38px rgba(255,255,255,.035), 0 0 0 76px rgba(255,255,255,.025); }
@@ -172,14 +172,14 @@
   .auth-form-heading { @apply border-b border-slate-100 pb-7; }
   .auth-form-heading p { @apply text-xs font-bold uppercase tracking-[0.14em] text-red-700; }
   .auth-form-heading h2 { @apply mt-1 text-2xl font-bold text-slate-950 sm:text-3xl; }
-  .auth-label { @apply mb-2 block text-sm font-bold text-slate-800; }
-  .auth-input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
-  .auth-field-icon { @apply absolute left-4 top-1/2 -translate-y-1/2 text-slate-400; }
-  .auth-password-toggle { @apply absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
-  .auth-form-fields .auth-field-icon, .auth-form-fields .auth-password-toggle { top: 1.75rem; }
+  .auth-label { @apply mb-1.5 block text-xs sm:text-sm font-bold text-slate-800; }
+  .auth-input { @apply min-h-11 sm:min-h-12 w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm sm:text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .auth-field-icon { @apply absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400; }
+  .auth-password-toggle { @apply absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
+  .auth-form-fields .auth-field-icon, .auth-form-fields .auth-password-toggle { top: 1.45rem; }
   .auth-checkbox { @apply flex cursor-pointer items-start gap-2 text-slate-600; }
   .auth-checkbox input { @apply mt-0.5 size-4 accent-red-700; }
-  .auth-switch { @apply mt-7 border-t border-slate-100 pt-6 text-center text-sm text-slate-600; }
+  .auth-switch { @apply mt-5 border-t border-slate-100 pt-4 text-center text-xs sm:text-sm text-slate-600; }
   .auth-switch a { @apply font-bold text-red-800 hover:underline; }
   .auth-recovery-note { @apply rounded-xl border border-gold-100 bg-gold-50 px-4 py-3 text-sm leading-6 text-slate-600; }
   .auth-recovery-success { @apply flex min-h-[420px] flex-col justify-center; }

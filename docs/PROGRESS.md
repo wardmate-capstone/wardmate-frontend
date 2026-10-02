@@ -4,6 +4,27 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tối ưu giao diện Đăng nhập / Đăng ký đơn gọn & Fit trọn màn hình không bị scroll — 02/10/2026
+
+- **Yêu cầu người dùng**:
+  - Bỏ phần thông tin / quyền lợi bên trái (`auth-intro`) trên trang đăng nhập và đăng ký.
+  - Chỉ giữ 1 form login/register đơn gọn, căn giữa màn hình, giữ lại nút quay lại trang chủ.
+  - Tối ưu layout đứng vừa vặn với chiều cao màn hình (fit viewport height 100vh), không bị cuộn xuống.
+- **Hiện trạng & Triển khai**:
+  - [`src/components/layout/MainLayout.tsx`](file:///d:/frontend/src/components/layout/MainLayout.tsx):
+    - Ẩn phần `<footer>` lớn nhiều hàng đối với các trang xác thực (`/dang-nhap`, `/dang-ky`, `/quen-mat-khau`, `/dat-lai-mat-khau`) để không đẩy chiều cao trang vượt quá viewport.
+  - [`src/styles/globals.css`](file:///d:/frontend/src/styles/globals.css):
+    - Tối ưu padding của `.auth-page` (`py-4 sm:py-6`) và chiều cao ô nhập liệu `.auth-input` (`min-h-11 sm:min-h-12`).
+  - [`src/pages/auth/AuthPage.tsx`](file:///d:/frontend/src/pages/auth/AuthPage.tsx):
+    - Căn giữa form card toàn màn hình (`flex min-h-[calc(100vh-135px)] items-center justify-center py-2 sm:py-4`) với bề rộng chuẩn `max-w-[480px]`.
+    - Giữ nút "Quay lại trang chủ" trang nhã ngay phía trên Card.
+    - Giữ trọn vẹn toàn bộ validation Zod, xử lý lỗi API và animation chuyển tiếp mượt mà giữa đăng nhập và đăng ký.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 cảnh báo/lỗi).
+  - `npm run build`: Đạt 100% (Build thành công).
+  - `npx playwright test tests/landing.spec.ts`: Đạt 16/16 tests (100%).
+
 ## Chuyển Checklist sang Hồ sơ bản nháp & Tích hợp E-Form Editor chuẩn A4 — 02/10/2026
 
 - **Yêu cầu người dùng**:
