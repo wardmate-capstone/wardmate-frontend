@@ -1,9 +1,16 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { DossierChecklistView } from './components/DossierChecklistView';
+import { FormDocxEditorModal } from './components/FormDocxEditorModal';
+import { FormPreviewModal } from './components/FormPreviewModal';
+import type { ProcedureCase, ChecklistItem } from '@/lib/procedureContent';
+import { mockPublicProcedures } from '@/data/mockPublicProcedures';
+import { parseProcedureContent } from '@/lib/procedureContent';
 import {
   ArrowClockwise,
+  ArrowLeft,
   Bell,
   CaretDown,
   CaretRight,
@@ -65,6 +72,7 @@ export type CitizenSectionId =
   | 'dossiers_resubmitted'
   | 'dossiers_approved'
   | 'dossiers_completed'
+  | 'dossier_detail'
   // Chuẩn bị hồ sơ
   | 'prep_checklist'
   | 'prep_documents'
@@ -79,6 +87,7 @@ export type CitizenSectionId =
 // Kiểu dữ liệu hồ sơ công dân
 export interface CitizenDossier {
   code: string;
+  procedureId?: string;
   procedureName: string;
   field: string;
   createdAt: string;
@@ -92,6 +101,8 @@ export interface CitizenDossier {
     | 'Đã hoàn thành';
   officerNote?: string;
   officerName?: string;
+  cases?: ProcedureCase[];
+  checklist?: ChecklistItem[];
 }
 
 const initialDossiers: CitizenDossier[] = [
@@ -256,6 +267,7 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại', subtitle: 'Hồ sơ công dân đã hoàn thiện và gửi lại cán bộ kiểm tra' },
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm', subtitle: 'Giấy tờ hợp lệ, sẵn sàng mang bản gốc đối chiếu tại Một cửa' },
   dossiers_completed: { title: 'Hồ sơ đã hoàn thành', subtitle: 'Đã hoàn tất quy trình và nhận kết quả tại UBND phường' },
+  dossier_detail: { title: 'Chi tiết hồ sơ & Checklist chuẩn bị', subtitle: 'Kiểm tra danh mục giấy tờ, tải mẫu và kê khai biểu mẫu trực tuyến' },
   prep_checklist: { title: 'Checklist chuẩn bị hồ sơ', subtitle: 'Danh mục giấy tờ cần chuẩn bị theo từng thủ tục' },
   prep_documents: { title: 'Giấy tờ cá nhân đã tải lên', subtitle: 'Kho tài liệu điện tử dùng chung để nộp các thủ tục' },
   prep_forms: { title: 'Biểu mẫu điện tử (E-Form)', subtitle: 'Khai trực tuyến hoặc tải mẫu đơn hành chính' },
@@ -267,8 +279,12 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
 };
 
 export function CitizenPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSection = searchParams.get('section') as CitizenSectionId | null;
+  const urlDossierCode = searchParams.get('dossierCode');
+
   const { profile: userProfile, loading: profileLoading, refetch: refetchProfile } = useUserProfile();
-  const [activeSection, setActiveSection] = useState<CitizenSectionId>('dashboard');
+  const [activeSection, setActiveSection] = useState<CitizenSectionId>(() => urlSection || 'dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [query, setQuery] = useState('');
@@ -277,8 +293,30 @@ export function CitizenPage() {
   const [isDossiersExpanded, setIsDossiersExpanded] = useState(true);
   const [isPrepExpanded, setIsPrepExpanded] = useState(true);
 
-  // Data states
-  const [dossiers] = useState<CitizenDossier[]>(initialDossiers);
+  // Khởi tạo dossiers kết hợp localStorage
+  const [dossiers, setDossiers] = useState<CitizenDossier[]>(() => {
+    try {
+      const stored = localStorage.getItem('wardmate_citizen_drafts');
+      if (stored) {
+        const parsedDrafts: CitizenDossier[] = JSON.parse(stored);
+        // Trộn các bản nháp từ localStorage lên đầu danh sách mẫu
+        const existingCodes = new Set(parsedDrafts.map((d) => d.code));
+        const filteredInitial = initialDossiers.filter((d) => !existingCodes.has(d.code));
+        return [...parsedDrafts, ...filteredInitial];
+      }
+    } catch {
+      // bỏ qua lỗi đọc storage
+    }
+    return initialDossiers;
+  });
+
+  // State Modal Chi tiết hồ sơ nháp & Checklist
+  const [selectedDossierDetail, setSelectedDossierDetail] = useState<CitizenDossier | null>(null);
+
+  // State Modal Preview Form và Editor Form
+  const [previewFormItem, setPreviewFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
+  const [editFormItem, setEditFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
+
   const [notifications, setNotifications] = useState(citizenNotifications);
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -286,6 +324,30 @@ export function CitizenPage() {
     procedure: 'Chứng thực bản sao từ bản chính',
     code: 'HS-2026-00094',
   });
+
+  // Xử lý khi URL thay đổi
+  useEffect(() => {
+    if (urlSection && urlSection !== activeSection) {
+      setActiveSection(urlSection);
+    }
+    if (urlDossierCode) {
+      const found = dossiers.find((d) => d.code === urlDossierCode);
+      if (found) {
+        if (!found.checklist || found.checklist.length === 0) {
+          const matchProc = mockPublicProcedures.find(
+            (p) => p.title.toLowerCase() === found.procedureName.toLowerCase() || p.id === found.procedureId
+          );
+          if (matchProc) {
+            const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
+            found.cases = parsed.content.cases;
+            found.checklist = parsed.content.checklist;
+          }
+        }
+        setSelectedDossierDetail(found);
+        setActiveSection('dossier_detail');
+      }
+    }
+  }, [urlSection, urlDossierCode, dossiers]);
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
@@ -306,8 +368,27 @@ export function CitizenPage() {
 
   function selectSection(id: CitizenSectionId) {
     setActiveSection(id);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('section', id);
+      next.delete('dossierCode');
+      return next;
+    });
     setQuery('');
     setSidebarOpen(false);
+  }
+
+  // Cập nhật dossiers khi cần (ví dụ nộp tiền kiểm)
+  function handleUpdateDossierStatus(code: string, newStatus: CitizenDossier['status']) {
+    setDossiers((prev) => {
+      const next = prev.map((d) => (d.code === code ? { ...d, status: newStatus } : d));
+      try {
+        localStorage.setItem('wardmate_citizen_drafts', JSON.stringify(next.filter((d) => d.status === 'Bản nháp')));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
   }
 
   function handleOpenFeedback(procedure: string, code?: string) {
@@ -731,6 +812,43 @@ export function CitizenPage() {
               dossiers={dossiers}
               onOpenFeedback={handleOpenFeedback}
               onSelectSection={selectSection}
+              onOpenDossierDetail={(dossier) => {
+                // Nếu hồ sơ chưa có checklist thì thử tìm trong mockPublicProcedures
+                if (!dossier.checklist || dossier.checklist.length === 0) {
+                  const matchProc = mockPublicProcedures.find(
+                    (p) => p.title.toLowerCase() === dossier.procedureName.toLowerCase() || p.id === dossier.procedureId
+                  );
+                  if (matchProc) {
+                    const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
+                    dossier.cases = parsed.content.cases;
+                    dossier.checklist = parsed.content.checklist;
+                  }
+                }
+                setSelectedDossierDetail(dossier);
+                setActiveSection('dossier_detail');
+                setSearchParams({ section: 'dossier_detail', dossierCode: dossier.code });
+              }}
+            />
+          )}
+
+          {activeSection === 'dossier_detail' && selectedDossierDetail && (
+            <CitizenDossierDetailView
+              dossier={selectedDossierDetail}
+              onBack={() => selectSection(selectedDossierDetail.status === 'Bản nháp' ? 'dossiers_draft' : 'dossiers_all')}
+              onSubmitPrecheck={() => {
+                handleUpdateDossierStatus(selectedDossierDetail.code, 'Chờ tiền kiểm');
+                setSelectedDossierDetail((prev) => prev ? { ...prev, status: 'Chờ tiền kiểm' } : null);
+                toast.success(`Hồ sơ ${selectedDossierDetail.code} đã được nộp tiền kiểm trực tuyến thành công! Cán bộ sẽ sớm phản hồi.`);
+              }}
+              onDownloadForm={(item) => {
+                toast.success(`Đang tải mẫu văn bản: ${item.itemName} (${item.templateFormat || 'DOCX'})`);
+              }}
+              onPreviewForm={(item) => {
+                setPreviewFormItem({ item, procedureName: selectedDossierDetail.procedureName });
+              }}
+              onEditForm={(item) => {
+                setEditFormItem({ item, procedureName: selectedDossierDetail.procedureName });
+              }}
             />
           )}
 
@@ -777,6 +895,30 @@ export function CitizenPage() {
           )}
         </main>
       </div>
+
+      {/* Modal Xem trước biểu mẫu FormPreviewModal */}
+      {previewFormItem && (
+        <FormPreviewModal
+          open={!!previewFormItem}
+          onClose={() => setPreviewFormItem(null)}
+          item={previewFormItem.item}
+          procedureName={previewFormItem.procedureName}
+          onOpenEdit={(item) => {
+            setEditFormItem({ item, procedureName: previewFormItem.procedureName });
+          }}
+        />
+      )}
+
+      {/* Modal Soạn thảo biểu mẫu FormDocxEditorModal (tham khảo editdocx.net) */}
+      {editFormItem && (
+        <FormDocxEditorModal
+          open={!!editFormItem}
+          onClose={() => setEditFormItem(null)}
+          item={editFormItem.item}
+          procedureName={editFormItem.procedureName}
+          citizenName={userProfile?.fullName || 'NGUYỄN VĂN AN'}
+        />
+      )}
 
       {/* Modal Đánh giá dịch vụ */}
       <CitizenFeedbackModal
@@ -1170,11 +1312,13 @@ function CitizenDossiersView({
   dossiers,
   onOpenFeedback,
   onSelectSection,
+  onOpenDossierDetail,
 }: {
   activeSection: CitizenSectionId;
   dossiers: CitizenDossier[];
   onOpenFeedback: (procedure: string, code?: string) => void;
   onSelectSection: (id: CitizenSectionId) => void;
+  onOpenDossierDetail: (dossier: CitizenDossier) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
@@ -1282,7 +1426,17 @@ function CitizenDossiersView({
                   )}
                 </td>
                 <td>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                    {/* Nút Xem chi tiết hồ sơ & chuẩn bị checklist */}
+                    <button
+                      type="button"
+                      className="rounded-lg bg-red-800 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-900 shadow-2xs transition-colors"
+                      onClick={() => onOpenDossierDetail(item)}
+                      title="Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị"
+                    >
+                      Chi tiết
+                    </button>
+
                     {item.status === 'Cần chỉnh sửa' && (
                       <button
                         type="button"
@@ -1325,6 +1479,137 @@ function CitizenDossiersView({
         </p>
       )}
     </section>
+  );
+}
+
+// ----------------------------------------------------------------------
+// 3.1. CHI TIẾT HỒ SƠ & CHECKLIST CHUẨN BỊ (TRANG RIÊNG)
+// ----------------------------------------------------------------------
+function CitizenDossierDetailView({
+  dossier,
+  onBack,
+  onSubmitPrecheck,
+  onDownloadForm,
+  onPreviewForm,
+  onEditForm,
+}: {
+  dossier: CitizenDossier;
+  onBack: () => void;
+  onSubmitPrecheck: () => void;
+  onDownloadForm: (item: ChecklistItem) => void;
+  onPreviewForm: (item: ChecklistItem) => void;
+  onEditForm: (item: ChecklistItem) => void;
+}) {
+  return (
+    <div className="space-y-6 admin-content-card">
+      {/* Thanh điều hướng quay lại & Thông tin tổng quát */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-red-900 transition-colors shadow-2xs"
+            >
+              <ArrowLeft size={16} weight="bold" />
+              <span>Quay lại danh sách</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200" />
+            <span className="rounded-md bg-red-100 px-2.5 py-1 text-xs font-bold text-red-900">
+              Mã: {dossier.code}
+            </span>
+            <span className={`admin-status-badge ${getStatusBadgeClass(dossier.status)}`}>
+              {dossier.status}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {dossier.status === 'Bản nháp' && (
+              <button
+                type="button"
+                onClick={onSubmitPrecheck}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
+              >
+                <CheckCircle size={16} weight="bold" />
+                <span>Nộp tiền kiểm ngay</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <span className="inline-block rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 mb-1">
+            Lĩnh vực: {dossier.field}
+          </span>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+            {dossier.procedureName}
+          </h2>
+          <div className="mt-3 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-500">
+            <span>Ngày khởi tạo: <strong className="text-slate-700">{dossier.createdAt}</strong></span>
+            <span>Cập nhật gần nhất: <strong className="text-slate-700">{dossier.updatedAt}</strong></span>
+            {dossier.officerName && (
+              <span>Cán bộ phụ trách: <strong className="text-slate-700">{dossier.officerName}</strong></span>
+            )}
+          </div>
+        </div>
+
+        {dossier.officerNote && (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-xs leading-relaxed text-amber-950 flex items-start gap-2.5">
+            <span className="shrink-0 mt-0.5 font-bold text-amber-800">📌 Ghi chú cán bộ:</span>
+            <span>{dossier.officerNote}</span>
+          </div>
+        )}
+      </section>
+
+      {/* Danh mục thành phần hồ sơ và biểu mẫu */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="border-b border-slate-100 pb-4">
+          <h3 className="text-base font-bold text-slate-900">
+            Danh mục giấy tờ & Biểu mẫu cần chuẩn bị
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Xem thành phần hồ sơ theo từng trường hợp, tải tệp mẫu chuẩn và trực tiếp xem trước/soạn thảo biểu mẫu điện tử
+          </p>
+        </div>
+
+        <DossierChecklistView
+          procedureName={dossier.procedureName}
+          cases={dossier.cases || []}
+          checklist={dossier.checklist || []}
+          onDownloadForm={onDownloadForm}
+          onPreviewForm={onPreviewForm}
+          onEditForm={onEditForm}
+        />
+      </section>
+
+      {/* Thanh hành động chân trang */}
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="text-sm font-bold text-slate-900">Hoàn tất chuẩn bị giấy tờ?</h4>
+          <p className="text-xs text-slate-600 mt-0.5">
+            Kiểm tra kỹ các tệp giấy tờ và tờ khai trước khi bấm nộp để cán bộ Một cửa tiền kiểm trực tuyến nhanh nhất.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+          >
+            Quay lại danh sách
+          </button>
+          {dossier.status === 'Bản nháp' && (
+            <button
+              type="button"
+              onClick={onSubmitPrecheck}
+              className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
+            >
+              Nộp tiền kiểm ngay
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
