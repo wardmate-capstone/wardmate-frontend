@@ -16,7 +16,8 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import { Button, Input } from '@/components/ui';
-import { safeReturnTo } from '@/lib/authRedirect';
+import { loginDestination, safeReturnTo } from '@/lib/authRedirect';
+import { useAuthStore } from '@/stores/authStore';
 import { authErrorMessage, login, register } from '@/lib/api';
 
 type AuthPageProps = { mode: 'login' | 'register' };
@@ -70,7 +71,7 @@ export function AuthPage({ mode }: AuthPageProps) {
         if (!active.current) return;
         reset();
         toast.success('Đăng nhập thành công.');
-        navigate(returnTo, { replace: true });
+        navigate(loginDestination(useAuthStore.getState().user?.roles ?? [], returnTo), { replace: true });
       }
     } catch (error) {
       if (active.current) {
