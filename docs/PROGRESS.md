@@ -4,7 +4,33 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## FE-TASK-09 — Giao diện Các Trường hợp (Cases) & Checklist Giấy tờ — 02/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Tinh chỉnh giao diện hiển thị các tình huống/trường hợp (`Cases`) và danh mục giấy tờ yêu cầu (`Checklist`) chuẩn hóa hoàn toàn theo cấu trúc bảng biểu chính thức của Cổng Dịch vụ công Quốc gia ([dichvucong.gov.vn](https://dichvucong.gov.vn/)), đồng thời lược bỏ khối sơ đồ quy trình 3 bước lặp lại để giao diện cực kỳ trực quan, tập trung và dễ sử dụng nhất cho người dân.
+  - Component [src/pages/public/components/ProcedureCasesAndChecklist.tsx](file:///d:/frontend/src/pages/public/components/ProcedureCasesAndChecklist.tsx):
+    - **Thanh Tabs Trường hợp áp dụng (Cases)**: Tab bar tinh tế cho phép chuyển đổi tức thì giữa các trường hợp (ví dụ: *Đúng hạn*, *Quá hạn*, *Chưa kết hôn*...), kèm thẻ ghi chú điều kiện áp dụng ngay bên dưới.
+    - **Cấu trúc 2 Bảng biểu chuẩn Cổng DVC**:
+      1. **Bảng 1: Giấy tờ, tài liệu phải nộp** (Cơ quan lưu giữ vào hồ sơ).
+      2. **Bảng 2: Giấy tờ phải xuất trình** (Đối chiếu xong trả lại người nộp).
+    - **Các cột chuẩn hóa**:
+      - **Tự kiểm**: Ô checkbox tương tác thông minh cho phép người dân tự rà soát xem mình đã có giấy tờ đó chưa.
+      - **STT**: Đánh số thứ tự rõ ràng.
+      - **Tên giấy tờ**: Tên văn bản kèm dòng ghi chú/hướng dẫn điều kiện cụ thể.
+      - **Mẫu đơn, tờ khai**: Cung cấp nút tải về mẫu biểu (.doc/.docx/.pdf) tiện lợi.
+      - **Số lượng (Bản chính/Bản sao)**: Quy định số lượng cụ thể và rõ loại bản chính, bản sao chứng thực hay bản chụp photo.
+      - **Yêu cầu**: Huy hiệu rõ ràng `Bắt buộc` hoặc `Tùy chọn`.
+    - **Thanh tiện ích tự kiểm tiến độ**: Tự động tính tỷ lệ % hoàn thiện và số lượng giấy tờ bắt buộc đã chuẩn bị (`x / y`) giúp người dân tự tin trước khi đến UBND.
+    - **Ghi chú Đề án 06 / VNeID**: Nhắc nhở người dân các giấy tờ đã được tích hợp trên Cơ sở dữ liệu quốc gia về dân cư hoặc VNeID Mức 2 thì không phải nộp lại bản giấy.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+  - `npm run build`: Đạt 100% (Vite production bundle thành công).
+  - Playwright test: Kiểm tra tab chuyển trường hợp, hiển thị 2 bảng nộp/xuất trình, tương tác checkbox và responsive không tràn ngang (390px, 768px, 1440px): Đạt 100%.
+
+
 ## Commit và push điều hướng/tài khoản — 02/10/2026
+
 
 - Đã commit và push lên `origin/main`: `5b49dfe` (điều hướng theo role IAM) và `20173b8` (dropdown theo trang, logout chung, bỏ sidebar trùng và test). Đã xác minh remote main bằng `git ls-remote` trùng HEAD `20173b8` sau push.
 - Tài liệu bàn giao và hợp đồng auth được gom vào commit tài liệu tiếp theo. Phiên commit/push không chạy lại test; kết quả kiểm tra trước commit được ghi ở các mục bên dưới. Không sửa BE, không force push.
