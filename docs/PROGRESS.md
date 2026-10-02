@@ -4,6 +4,56 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tích hợp API Accounts vào trang Admin — Người dùng hệ thống — 02/10/2026
+
+- **Yêu cầu**: Trang Admin → mục "Người dùng hệ thống" đang dùng dữ liệu hardcoded (mock). Yêu cầu xoá mock và call API thật.
+- **API backend** (`/api/v1/accounts`):
+  - `GET /api/v1/accounts?page=1&pageSize=20` → phân trang danh sách tài khoản (`items[]`, `page`, `pageSize`, `total`).
+  - `GET /api/v1/accounts/{userId}` → chi tiết một tài khoản.
+  - `PUT /api/v1/accounts/{userId}/status` body `{ "isActive": boolean }` → kích hoạt hoặc tạm khóa, response 204.
+- **Triển khai**:
+  - [`src/lib/api/index.ts`](file:///e:/wardmate-frontend/src/lib/api/index.ts): Thêm type `AccountItem`, `AccountListResponse` và 3 functions `getAccounts`, `getAccount`, `updateAccountStatus`.
+  - [`src/pages/admin/AdminPage.tsx`](file:///e:/wardmate-frontend/src/pages/admin/AdminPage.tsx): Xóa toàn bộ mock `const users = [...]`.
+    - Thêm state `accountData`, `accountPage`, `accountLoading`, `accountError`, `togglingId`.
+    - `fetchAccounts` dùng `useCallback`; tự động gọi khi vào section `users` qua `useEffect`.
+    - `filteredAccounts` lọc theo `query` từ dữ liệu thật.
+    - `handleToggleAccountStatus` gọi `PUT /api/v1/accounts/{id}/status`, cập nhật state optimistic và toast kết quả.
+  - `UsersView` nâng cấp hoàn toàn:
+    - **Skeleton loading** (5 hàng animate-pulse) khi đang tải.
+    - **Banner lỗi** inline với nút "Thử lại" khi gọi API thất bại.
+    - Bảng hiển thị tên đăng nhập, email, ngày tạo tài khoản (format `vi-VN`), badge trạng thái Hoạt động/Tạm khóa.
+    - Nút **"Tạm khóa"** / **"Kích hoạt"** cho từng dòng; vô hiệu hóa khi đang xử lý (chống click chồng).
+    - **Phân trang** Trước/Sau khi `total > pageSize`.
+    - Nút "Tải lại" trên toolbar.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - Chưa chạy E2E với tài khoản BE thật; auth và proxy qua Vite đã hoạt động ở các task trước.
+
+## Validation Chặt Chẽ Form Cập Nhật Hồ Sơ Công Dân (Profile) — 02/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Triển khai bộ quy tắc validation toàn diện, chặt chẽ cho form cập nhật thông tin cá nhân của công dân theo contract API `PUT /api/v1/users/me/profile`.
+  - Tạo module validation Zod: [src/lib/profileSchema.ts](file:///e:/wardmate-frontend/src/lib/profileSchema.ts):
+    1. **Họ và tên (`fullName`)**: Bắt buộc; tối đa 100 ký tự; chỉ chấp nhận chữ cái tiếng Việt và khoảng trắng; yêu cầu ít nhất 2 từ (Họ và Tên).
+    2. **Số CCCD / Mã định danh (`identityNumber`)**: Tùy chọn; nếu nhập phải gồm đúng 12 chữ số theo quy chuẩn Căn cước công dân gắn chip.
+    3. **Số điện thoại di động (`phoneNumber`)**: Tùy chọn; nếu nhập phải đúng định dạng di động Việt Nam (10 số, bắt đầu bằng 03, 05, 07, 08, 09); tự động làm sạch ký tự phân tách (khoảng trắng, dấu chấm).
+    4. **Ngày sinh (`dateOfBirth`)**: Tùy chọn; kiểm tra ngày lịch thực tế hợp lệ; không vượt quá ngày hiện tại (không ở tương lai, giới hạn native `max` date input); năm sinh từ 1900 trở lại đây.
+    5. **Giới tính (`gender`)**: Chỉ chấp nhận `Nam`, `Nữ` hoặc `Khác`.
+    6. **Nơi thường trú (`permanentAddress`)** & **Địa chỉ tạm trú (`temporaryAddress`)**: Tùy chọn; nếu nhập phải từ 5 đến 255 ký tự; tránh nhập ký tự rác.
+  - Tối ưu trải nghiệm Form [src/pages/citizen/CitizenPage.tsx](file:///e:/wardmate-frontend/src/pages/citizen/CitizenPage.tsx):
+    - Tự động chuẩn hóa dữ liệu trước khi gửi lên API (loại bỏ khoảng trắng thừa, format SĐT, chuyển trường rỗng thành `null`).
+    - Báo lỗi inline chi tiết ngay dưới từng ô input có viền đỏ nổi bật (`role="alert"`, `aria-invalid`, `aria-describedby`), tự động xóa lỗi khi người dùng chỉnh sửa ô đó.
+    - Tự động focus vào trường lỗi đầu tiên khi submit không hợp lệ.
+    - Hỗ trợ map lỗi trực tiếp từ ProblemDetails 400 của máy chủ vào từng trường form.
+    - Nút "Hủy chỉnh sửa" khôi phục lại dữ liệu gốc và xóa sạch lỗi đang hiển thị.
+  - Viết bộ unit test validation [tests/profile-validation.spec.ts](file:///e:/wardmate-frontend/tests/profile-validation.spec.ts) bao quát 9 kịch bản kiểm thử các trường.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - `npx playwright test tests/profile-validation.spec.ts`: Đạt 9/9 tests (100%).
+  - `npm run build`: Đạt 100% (Vite production bundle thành công).
+
 ## FE-TASK-09 — Giao diện Các Trường hợp (Cases) & Checklist Giấy tờ — 02/10/2026
 
 - **Yêu cầu & Triển khai**:
