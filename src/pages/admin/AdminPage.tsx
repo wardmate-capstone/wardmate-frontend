@@ -1,5 +1,6 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
 import {
   Bell,
   Books,
@@ -11,7 +12,6 @@ import {
   FileText,
   Gear,
   House,
-  IdentificationCard,
   Key,
   List,
   MagnifyingGlass,
@@ -25,7 +25,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
-import { Modal } from "@/components/ui/Modal";
 import {
   Area,
   AreaChart,
@@ -37,6 +36,13 @@ import {
 } from "recharts";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
+import {
+  getAccounts,
+  updateAccountStatus,
+  authErrorMessage,
+  type AccountItem,
+  type AccountListResponse,
+} from "@/lib/api";
 
 type SectionId =
   | "overview"
@@ -44,7 +50,6 @@ type SectionId =
   | "forms"
   | "knowledge"
   | "users"
-  | "profiles"
   | "roles"
   | "integrations"
   | "audit"
@@ -85,12 +90,6 @@ const navigation: Array<{
     group: "Tài khoản & truy cập",
     items: [
       { id: "users", label: "Người dùng hệ thống", icon: Users },
-      {
-        id: "profiles",
-        label: "Hồ sơ công dân",
-        icon: IdentificationCard,
-        badge: "5",
-      },
       { id: "roles", label: "Vai trò & quyền hạn", icon: Key },
     ],
   },
@@ -135,36 +134,7 @@ const procedures = [
   },
 ];
 
-const users = [
-  {
-    name: "Nguyễn Minh Anh",
-    email: "minhanh@wardmate.vn",
-    role: "Quản trị hệ thống",
-    unit: "UBND Phường An Khánh",
-    status: "Hoạt động",
-  },
-  {
-    name: "Trần Quốc Bảo",
-    email: "quocbao@wardmate.vn",
-    role: "Quản lý thủ tục",
-    unit: "UBND Phường An Khánh",
-    status: "Hoạt động",
-  },
-  {
-    name: "Lê Thu Hà",
-    email: "thuha@wardmate.vn",
-    role: "Cán bộ Một cửa",
-    unit: "Bộ phận Một cửa",
-    status: "Hoạt động",
-  },
-  {
-    name: "Phạm Văn Nam",
-    email: "vannam@wardmate.vn",
-    role: "Cán bộ Một cửa",
-    unit: "Bộ phận Một cửa",
-    status: "Tạm khóa",
-  },
-];
+
 
 const auditLogs = [
   {
@@ -285,67 +255,7 @@ const chartData: Record<
   ],
 };
 
-export interface AdminProfileItem {
-  fullName: string;
-  identityNumber: string;
-  phoneNumber: string;
-  dateOfBirth: string;
-  gender: string;
-  permanentAddress: string;
-  temporaryAddress: string;
-}
 
-const initialAdminProfiles: AdminProfileItem[] = [
-  {
-    fullName: "Nguyễn Minh Anh",
-    identityNumber: "001092008128",
-    phoneNumber: "0900000128",
-    dateOfBirth: "1992-08-15",
-    gender: "Nữ",
-    permanentAddress: "Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội",
-    temporaryAddress: "Số 12 ngách 4/8 Phường An Khánh, Thành phố Hà Nội",
-  },
-  {
-    fullName: "Trần Quốc Bảo",
-    identityNumber: "001088002341",
-    phoneNumber: "0912345678",
-    dateOfBirth: "1988-03-24",
-    gender: "Nam",
-    permanentAddress:
-      "Số 45 Đường Giải Phóng, Phường An Khánh, Thành phố Hà Nội",
-    temporaryAddress:
-      "Số 45 Đường Giải Phóng, Phường An Khánh, Thành phố Hà Nội",
-  },
-  {
-    fullName: "Lê Thu Hà",
-    identityNumber: "001195009876",
-    phoneNumber: "0987654321",
-    dateOfBirth: "1995-11-10",
-    gender: "Nữ",
-    permanentAddress:
-      "Thôn Thượng, Xã Ninh Hiệp, Huyện Gia Lâm, Thành phố Hà Nội",
-    temporaryAddress:
-      "Căn hộ 802 Tòa Landmark, Phường An Khánh, Thành phố Hà Nội",
-  },
-  {
-    fullName: "Phạm Văn Nam",
-    identityNumber: "001085001122",
-    phoneNumber: "0933221100",
-    dateOfBirth: "1985-05-18",
-    gender: "Nam",
-    permanentAddress: "Tổ dân phố 6, Phường An Khánh, Thành phố Hà Nội",
-    temporaryAddress: "Tổ dân phố 6, Phường An Khánh, Thành phố Hà Nội",
-  },
-  {
-    fullName: "Hoàng Thị Mai",
-    identityNumber: "001199003344",
-    phoneNumber: "0944556677",
-    dateOfBirth: "1999-09-02",
-    gender: "Nữ",
-    permanentAddress: "Số 88 Ngõ 192 Lê Trọng Tấn, Thành phố Hà Nội",
-    temporaryAddress: "Số 14 Ngõ 32 Phường An Khánh, Thành phố Hà Nội",
-  },
-];
 
 const sectionMeta: Record<SectionId, { title: string }> = {
   overview: { title: "Trung tâm quản trị" },
@@ -353,7 +263,6 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   forms: { title: "Biểu mẫu & E-form" },
   knowledge: { title: "Pháp lý & tri thức AI" },
   users: { title: "Người dùng hệ thống" },
-  profiles: { title: "Quản lý hồ sơ công dân" },
   roles: { title: "Vai trò & quyền hạn" },
   integrations: { title: "Dịch vụ tích hợp" },
   audit: { title: "Nhật ký hoạt động" },
@@ -367,13 +276,70 @@ export function AdminPage() {
   const [query, setQuery] = useState("");
   const meta = sectionMeta[activeSection];
 
-  // Quản lý hồ sơ công dân (Admin Profiles)
-  const [profiles, setProfiles] =
-    useState<AdminProfileItem[]>(initialAdminProfiles);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<AdminProfileItem | null>(
-    null,
-  );
+  // --- Người dùng hệ thống (Accounts API) ---
+  const [accountData, setAccountData] = useState<AccountListResponse | null>(null);
+  const [accountPage, setAccountPage] = useState(1);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const fetchAccounts = useCallback(async (page: number) => {
+    setAccountLoading(true);
+    setAccountError(null);
+    try {
+      const data = await getAccounts(page, 20);
+      setAccountData(data);
+    } catch (err) {
+      setAccountError(authErrorMessage(err));
+    } finally {
+      setAccountLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'users') {
+      void fetchAccounts(accountPage);
+    }
+  }, [activeSection, accountPage, fetchAccounts]);
+
+  const currentUserId = useAuthStore((s) => s.user?.id);
+
+  const filteredAccounts = useMemo(() => {
+    if (!accountData) return [];
+    const q = query.toLowerCase();
+    return accountData.items.filter((item) =>
+      item.id !== currentUserId &&
+      `${item.username} ${item.email}`.toLowerCase().includes(q)
+    );
+  }, [accountData, query, currentUserId]);
+
+  async function handleToggleAccountStatus(account: AccountItem) {
+    if (togglingId) return;
+    setTogglingId(account.id);
+    const newStatus = !account.isActive;
+    try {
+      await updateAccountStatus(account.id, newStatus);
+      setAccountData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === account.id ? { ...item, isActive: newStatus } : item
+          ),
+        };
+      });
+      toast.success(
+        newStatus
+          ? `Đã kích hoạt tài khoản ${account.username}.`
+          : `Đã tạm khóa tài khoản ${account.username}.`
+      );
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
 
   const filteredProcedures = useMemo(
     () =>
@@ -384,15 +350,7 @@ export function AdminPage() {
       ),
     [query],
   );
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((item) =>
-        `${item.name} ${item.email} ${item.role}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [query],
-  );
+
 
   function selectSection(id: SectionId) {
     setActiveSection(id);
@@ -404,26 +362,6 @@ export function AdminPage() {
     toast.success(message);
   }
 
-  function handleOpenCreateProfile() {
-    setEditingProfile(null);
-    setIsProfileModalOpen(true);
-  }
-
-  function handleSaveProfile(item: AdminProfileItem) {
-    setProfiles((prev) => {
-      const idx = prev.findIndex(
-        (p) => p.identityNumber === item.identityNumber,
-      );
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = item;
-        return next;
-      }
-      return [item, ...prev];
-    });
-    setIsProfileModalOpen(false);
-    toast.success(`Đã lưu hồ sơ của công dân ${item.fullName}.`);
-  }
 
   return (
     <div className="admin-layout">
@@ -529,13 +467,7 @@ export function AdminPage() {
               <button
                 className="admin-primary-action"
                 type="button"
-                onClick={() => {
-                  if (activeSection === "profiles") {
-                    handleOpenCreateProfile();
-                  } else {
-                    demoAction("Đã mở biểu mẫu tạo mới.");
-                  }
-                }}
+                onClick={() => demoAction("Đã mở biểu mẫu tạo mới.")}
               >
                 <Plus size={18} weight="bold" /> Tạo mới
               </button>
@@ -561,19 +493,16 @@ export function AdminPage() {
             <UsersView
               query={query}
               setQuery={setQuery}
-              rows={filteredUsers}
-              onAction={demoAction}
-            />
-          )}
-          {activeSection === "profiles" && (
-            <AdminProfilesView
-              query={query}
-              setQuery={setQuery}
-              profiles={profiles}
-              onEditProfile={(item) => {
-                setEditingProfile(item);
-                setIsProfileModalOpen(true);
-              }}
+              accounts={filteredAccounts}
+              total={accountData?.total ?? 0}
+              page={accountPage}
+              pageSize={20}
+              loading={accountLoading}
+              error={accountError}
+              togglingId={togglingId}
+              onPageChange={(p) => setAccountPage(p)}
+              onRetry={() => void fetchAccounts(accountPage)}
+              onToggleStatus={handleToggleAccountStatus}
             />
           )}
           {activeSection === "roles" && <RolesView onAction={demoAction} />}
@@ -585,13 +514,6 @@ export function AdminPage() {
         </main>
       </div>
 
-      {/* Modal Quản lý hồ sơ công dân */}
-      <AdminProfileModal
-        open={isProfileModalOpen}
-        onOpenChange={setIsProfileModalOpen}
-        profile={editingProfile}
-        onSave={handleSaveProfile}
-      />
     </div>
   );
 }
@@ -1075,79 +997,188 @@ function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
 function UsersView({
   query,
   setQuery,
-  rows,
-  onAction,
+  accounts,
+  total,
+  page,
+  pageSize,
+  loading,
+  error,
+  togglingId,
+  onPageChange,
+  onRetry,
+  onToggleStatus,
 }: {
   query: string;
   setQuery: (value: string) => void;
-  rows: typeof users;
-  onAction: (message: string) => void;
+  accounts: AccountItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  error: string | null;
+  togglingId: string | null;
+  onPageChange: (page: number) => void;
+  onRetry: () => void;
+  onToggleStatus: (account: AccountItem) => void;
 }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
     <section className="admin-card admin-table-card admin-content-card">
       <div className="admin-toolbar">
         <SearchBar
           value={query}
           onChange={setQuery}
-          placeholder="Tìm tên, email hoặc vai trò..."
+          placeholder="Tìm tên đăng nhập hoặc email..."
         />
-        <button type="button">
-          <Gear size={17} /> Bộ lọc
+        <button type="button" onClick={onRetry} disabled={loading} aria-label="Tải lại danh sách">
+          <Gear size={17} /> {loading ? 'Đang tải...' : 'Tải lại'}
         </button>
       </div>
-      <div className="admin-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Người dùng</th>
-              <th>Vai trò</th>
-              <th>Đơn vị</th>
-              <th>Trạng thái</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((item) => (
-              <tr key={item.email}>
-                <td>
-                  <div className="admin-person">
-                    <span>
-                      {item.name
-                        .split(" ")
-                        .slice(-2)
-                        .map((part) => part[0])
-                        .join("")}
-                    </span>
-                    <p>
-                      <strong>{item.name}</strong>
-                      <small>{item.email}</small>
-                    </p>
-                  </div>
-                </td>
-                <td>{item.role}</td>
-                <td>{item.unit}</td>
-                <td>
-                  <span
-                    className={`admin-status-badge ${item.status === "Hoạt động" ? "is-success" : "is-warning"}`}
-                  >
-                    {item.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => onAction(`Đang mở tài khoản ${item.name}`)}
-                  >
-                    Quản lý
-                  </button>
-                </td>
+
+      {/* Lỗi */}
+      {error && !loading && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center justify-between gap-4">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-bold text-red-800 hover:bg-red-100"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* Skeleton loading */}
+      {loading && (
+        <div className="admin-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Ngày tạo</th>
+                <th>Trạng thái</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length === 0 && (
-        <p className="admin-empty">Không tìm thấy tài khoản phù hợp.</p>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
+                  <td><div className="h-4 w-40 animate-pulse rounded bg-slate-200" /></td>
+                  <td><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+                  <td><div className="h-6 w-20 animate-pulse rounded-full bg-slate-200" /></td>
+                  <td><div className="h-8 w-20 animate-pulse rounded-lg bg-slate-200" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Bảng dữ liệu thật */}
+      {!loading && !error && (
+        <div className="admin-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tên đăng nhập</th>
+                <th>Email</th>
+                <th>Ngày tạo tài khoản</th>
+                <th>Trạng thái</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((item) => {
+                const isToggling = togglingId === item.id;
+                const createdDate = new Date(item.createdAt).toLocaleDateString('vi-VN', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                });
+                const initials = item.username.slice(0, 2).toUpperCase();
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <div className="admin-person">
+                        <span>{initials}</span>
+                        <p>
+                          <strong>{item.username}</strong>
+                        </p>
+                      </div>
+                    </td>
+                    <td>
+                      <small className="text-slate-600">{item.email}</small>
+                    </td>
+                    <td>
+                      <small className="text-slate-500">{createdDate}</small>
+                    </td>
+                    <td>
+                      <span
+                        className={`admin-status-badge ${
+                          item.isActive ? 'is-success' : 'is-warning'
+                        }`}
+                      >
+                        {item.isActive ? 'Hoạt động' : 'Tạm khóa'}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        disabled={isToggling || togglingId !== null}
+                        onClick={() => onToggleStatus(item)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50 ${
+                          item.isActive
+                            ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                            : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
+                        }`}
+                        aria-label={item.isActive ? `Tạm khóa tài khoản ${item.username}` : `Kích hoạt tài khoản ${item.username}`}
+                      >
+                        {isToggling
+                          ? 'Đang xử lý...'
+                          : item.isActive ? 'Tạm khóa' : 'Kích hoạt'
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && !error && accounts.length === 0 && (
+        <p className="admin-empty">
+          {query ? 'Không tìm thấy tài khoản phù hợp.' : 'Chưa có tài khoản nào trong hệ thống.'}
+        </p>
+      )}
+
+      {/* Phân trang */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-600">
+          <span>Trang {page} / {totalPages} · Tổng {total} tài khoản</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => onPageChange(page - 1)}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            >
+              ‹ Trước
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Sau ›
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );
@@ -1326,360 +1357,3 @@ function BackupView({ onAction }: { onAction: (message: string) => void }) {
   );
 }
 
-function AdminProfilesView({
-  query,
-  setQuery,
-  profiles,
-  onEditProfile,
-}: {
-  query: string;
-  setQuery: (val: string) => void;
-  profiles: AdminProfileItem[];
-  onEditProfile: (profile: AdminProfileItem) => void;
-}) {
-  const [viewingProfile, setViewingProfile] =
-    useState<AdminProfileItem | null>(null);
-
-  const filtered = useMemo(() => {
-    return profiles.filter((p) => {
-      const matchQuery =
-        `${p.fullName} ${p.identityNumber} ${p.phoneNumber} ${p.permanentAddress} ${p.temporaryAddress}`
-          .toLowerCase()
-          .includes(query.toLowerCase());
-      return matchQuery;
-    });
-  }, [profiles, query]);
-
-  function formatDate(d: string) {
-    if (!d || !d.includes("-")) return d;
-    const [y, m, day] = d.split("-");
-    return `${day}/${m}/${y}`;
-  }
-
-  return (
-    <section className="admin-card admin-table-card admin-content-card">
-      <div className="admin-toolbar">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tìm tên, số CCCD, điện thoại hoặc địa chỉ..."
-        />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-red-800"
-            onClick={() => toast.info("Đang lọc danh sách hồ sơ công dân")}
-          >
-            <Gear size={17} /> Bộ lọc
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-table-wrap">
-        <table className="min-w-[680px]">
-          <thead>
-            <tr>
-              <th className="min-w-[170px] whitespace-nowrap">Họ và tên</th>
-              <th className="min-w-[120px] whitespace-nowrap">Số điện thoại</th>
-              <th className="min-w-[110px] whitespace-nowrap">Ngày sinh</th>
-              <th className="min-w-[90px] whitespace-nowrap">Giới tính</th>
-              <th className="min-w-[180px] whitespace-nowrap text-right">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => (
-              <tr key={item.identityNumber}>
-                <td>
-                  <div className="admin-person">
-                    <span>
-                      {item.fullName
-                        .split(" ")
-                        .slice(-2)
-                        .map((part) => part[0])
-                        .join("")}
-                    </span>
-                    <p>
-                      <strong>{item.fullName}</strong>
-                      <small>Công dân</small>
-                    </p>
-                  </div>
-                </td>
-                <td>{item.phoneNumber}</td>
-                <td>{formatDate(item.dateOfBirth)}</td>
-                <td>
-                  <span
-                    className={`admin-status-badge ${
-                      item.gender === "Nam" ? "is-info" : "is-warning"
-                    }`}
-                  >
-                    {item.gender}
-                  </span>
-                </td>
-                <td className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setViewingProfile(item)}
-                    >
-                      Xem chi tiết
-                    </button>
-                    <button type="button" onClick={() => onEditProfile(item)}>
-                      Chỉnh sửa
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filtered.length === 0 && (
-        <p className="admin-empty">
-          Không tìm thấy hồ sơ công dân nào phù hợp.
-        </p>
-      )}
-
-      <Modal
-        open={viewingProfile !== null}
-        onOpenChange={(open) => !open && setViewingProfile(null)}
-        title={
-          viewingProfile
-            ? `Chi tiết hồ sơ: ${viewingProfile.fullName}`
-            : "Chi tiết hồ sơ công dân"
-        }
-        description="Thông tin định danh và địa chỉ của công dân."
-      >
-        {viewingProfile && (
-          <dl className="grid gap-4 sm:grid-cols-2">
-            {[
-              ["Họ và tên", viewingProfile.fullName],
-              ["Số CCCD / Mã định danh", viewingProfile.identityNumber],
-              ["Số điện thoại", viewingProfile.phoneNumber],
-              ["Ngày sinh", formatDate(viewingProfile.dateOfBirth)],
-              ["Giới tính", viewingProfile.gender],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-slate-50 p-3">
-                <dt className="text-xs font-semibold text-slate-500">{label}</dt>
-                <dd className="mt-1 break-words text-sm font-bold text-slate-900">
-                  {value || "—"}
-                </dd>
-              </div>
-            ))}
-            <div className="rounded-xl bg-slate-50 p-3 sm:col-span-2">
-              <dt className="text-xs font-semibold text-slate-500">
-                Nơi thường trú
-              </dt>
-              <dd className="mt-1 text-sm font-semibold leading-relaxed text-slate-900">
-                {viewingProfile.permanentAddress || "—"}
-              </dd>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3 sm:col-span-2">
-              <dt className="text-xs font-semibold text-slate-500">
-                Nơi tạm trú
-              </dt>
-              <dd className="mt-1 text-sm font-semibold leading-relaxed text-slate-900">
-                {viewingProfile.temporaryAddress || "—"}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </Modal>
-    </section>
-  );
-}
-
-function AdminProfileModal({
-  open,
-  onOpenChange,
-  profile,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  profile: AdminProfileItem | null;
-  onSave: (item: AdminProfileItem) => void;
-}) {
-  const [formData, setFormData] = useState<AdminProfileItem>({
-    fullName: profile?.fullName || "",
-    identityNumber: profile?.identityNumber || "",
-    phoneNumber: profile?.phoneNumber || "",
-    dateOfBirth: profile?.dateOfBirth || "1995-01-01",
-    gender: profile?.gender || "Nam",
-    permanentAddress: profile?.permanentAddress || "",
-    temporaryAddress: profile?.temporaryAddress || "",
-  });
-
-  useMemo(() => {
-    if (profile) {
-      setFormData(profile);
-    } else {
-      setFormData({
-        fullName: "",
-        identityNumber: "",
-        phoneNumber: "",
-        dateOfBirth: "1995-01-01",
-        gender: "Nam",
-        permanentAddress: "",
-        temporaryAddress: "",
-      });
-    }
-  }, [profile]);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formData.fullName.trim()) {
-      toast.error("Vui lòng nhập họ và tên công dân");
-      return;
-    }
-    if (!formData.identityNumber.trim()) {
-      toast.error("Vui lòng nhập số CCCD / Mã định danh");
-      return;
-    }
-    if (!formData.phoneNumber.trim()) {
-      toast.error("Vui lòng nhập số điện thoại");
-      return;
-    }
-    onSave(formData);
-  }
-
-  return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={
-        profile
-          ? `Chỉnh sửa hồ sơ: ${profile.fullName}`
-          : "Thêm hồ sơ công dân mới"
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-bold text-slate-700">
-              Họ và tên <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.fullName}
-              onChange={(e) =>
-                setFormData({ ...formData, fullName: e.target.value })
-              }
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700">
-              Số CCCD / Mã định danh <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.identityNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, identityNumber: e.target.value })
-              }
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 font-mono text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700">
-              Số điện thoại <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="tel"
-              required
-              value={formData.phoneNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, phoneNumber: e.target.value })
-              }
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700">
-              Ngày sinh
-            </label>
-            <input
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) =>
-                setFormData({ ...formData, dateOfBirth: e.target.value })
-              }
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-slate-700">
-              Giới tính
-            </label>
-            <select
-              value={formData.gender}
-              onChange={(e) =>
-                setFormData({ ...formData, gender: e.target.value })
-              }
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            >
-              <option value="Nam">Nam</option>
-              <option value="Nữ">Nữ</option>
-              <option value="Khác">Khác</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-slate-700">
-              Nơi thường trú
-            </label>
-            <input
-              type="text"
-              value={formData.permanentAddress}
-              onChange={(e) =>
-                setFormData({ ...formData, permanentAddress: e.target.value })
-              }
-              placeholder="Địa chỉ ghi trên CCCD"
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-slate-700">
-              Nơi tạm trú
-            </label>
-            <input
-              type="text"
-              value={formData.temporaryAddress}
-              onChange={(e) =>
-                setFormData({ ...formData, temporaryAddress: e.target.value })
-              }
-              placeholder="Nơi ở hiện tại của công dân"
-              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-900 outline-none focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-            onClick={() => onOpenChange(false)}
-          >
-            Hủy bỏ
-          </button>
-          <button
-            type="submit"
-            className="rounded-lg bg-red-800 px-5 py-2 text-xs font-bold text-white hover:bg-red-900 shadow-sm"
-          >
-            Lưu hồ sơ
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}

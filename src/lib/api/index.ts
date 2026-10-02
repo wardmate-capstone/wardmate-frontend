@@ -165,6 +165,41 @@ export async function updateMyProfile(payload: ProfileInput): Promise<UserProfil
   return response.data;
 }
 
+// -----------------------------------------------------------
+// ADMIN — Accounts API
+// -----------------------------------------------------------
+export interface AccountItem {
+  id: string;
+  username: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AccountListResponse {
+  items: AccountItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export async function getAccounts(page = 1, pageSize = 20): Promise<AccountListResponse> {
+  const response = await api.get<AccountListResponse>('/api/v1/accounts', {
+    ...cookieConfig,
+    params: { page, pageSize },
+  });
+  return response.data;
+}
+
+export async function getAccount(userId: string): Promise<AccountItem> {
+  const response = await api.get<AccountItem>(`/api/v1/accounts/${userId}`, cookieConfig);
+  return response.data;
+}
+
+export async function updateAccountStatus(userId: string, isActive: boolean): Promise<void> {
+  await api.put(`/api/v1/accounts/${userId}/status`, { isActive }, cookieConfig);
+}
+
 export function authErrorMessage(error: unknown): string {
   if (axios.isCancel(error)) return 'Phiên đăng nhập đã thay đổi. Vui lòng thử lại.';
   if (axios.isAxiosError(error)) {
