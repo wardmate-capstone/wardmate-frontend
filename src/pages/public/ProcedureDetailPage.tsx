@@ -12,7 +12,7 @@ import { ProcedureCasesView } from './components/ProcedureCasesView';
 const pending = 'Thông tin cần được cơ quan tiếp nhận xác nhận.';
 const sections = [
   ['tong-quan', 'Thông tin chung'],
-  ['thanh-phan-ho-so', 'Trường hợp & Quy trình'],
+  ['thanh-phan-ho-so', 'Thành phần hồ sơ & Quy trình'],
   ['thoi-han-le-phi', 'Thời hạn và lệ phí'],
   ['can-cu-phap-luat', 'Căn cứ pháp luật'],
   ['co-quan-tiep-nhan', 'Cơ quan tiếp nhận'],
@@ -160,9 +160,9 @@ export function ProcedureDetailPage() {
             </dl>
           </section>
 
-          {/* Khối Trường hợp & Quy trình (đã gỡ bỏ checklist sang trang Hồ sơ của tôi) */}
+          {/* Khối Thành phần hồ sơ theo trường hợp (hiển thị checklist giấy tờ cần thiết để đọc và tải template, không checkbox) */}
           {content.cases.length > 0 && (
-            <ProcedureCasesView cases={content.cases} />
+            <ProcedureCasesView cases={content.cases} checklist={content.checklist} />
           )}
 
           <section id="thoi-han-le-phi" aria-labelledby="fees-title" className="procedure-detail-section">

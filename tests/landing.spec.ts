@@ -206,23 +206,35 @@ test('public procedures paginate, preserve URL state and fit mobile', async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('chi tiết thủ tục hiển thị tab các trường hợp và nút bắt đầu làm thủ tục', async ({ page }) => {
+test('chi tiết thủ tục hiển thị tab các trường hợp, danh mục giấy tờ cần chuẩn bị và nút tải mẫu', async ({ page }) => {
   // Đi vào thủ tục Đăng ký khai sinh (demo-1)
   await page.goto('/thu-tuc/demo-1');
   await expect(page.getByRole('heading', { name: 'Đăng ký khai sinh', level: 1 })).toBeVisible();
 
-  // Kiểm tra mục lục bên trái có link Trường hợp & Quy trình
-  const menuLink = page.getByRole('link', { name: 'Trường hợp & Quy trình' });
+  // Kiểm tra mục lục bên trái có link Thành phần hồ sơ & Quy trình
+  const menuLink = page.getByRole('link', { name: 'Thành phần hồ sơ & Quy trình' });
   await expect(menuLink).toBeVisible();
 
-  // Kiểm tra khối Cases & Quy trình
+  // Kiểm tra khối Cases & Checklist
   const casesSection = page.locator('#thanh-phan-ho-so');
   await expect(casesSection).toBeVisible();
-  await expect(casesSection.getByRole('heading', { name: /Trường hợp & Quy trình/ })).toBeVisible();
+  await expect(casesSection.getByRole('heading', { name: /Thành phần hồ sơ theo trường hợp/ })).toBeVisible();
 
   // Tab trường hợp mặc định là Đăng ký khai sinh đúng hạn
   const tabDungHan = page.getByRole('tab', { name: /Đăng ký khai sinh đúng hạn/ });
   await expect(tabDungHan).toHaveAttribute('aria-selected', 'true');
+
+  // Kiểm tra hiển thị danh mục giấy tờ cần chuẩn bị (không có checkbox)
+  await expect(casesSection.getByRole('heading', { name: /Giấy tờ, tài liệu cần chuẩn bị/ })).toBeVisible();
+  await expect(casesSection.getByRole('heading', { name: /Giấy tờ, tài liệu phải nộp/ })).toBeVisible();
+  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh (theo mẫu)')).toBeVisible();
+  await expect(casesSection.getByText('Giấy chứng sinh do cơ sở y tế cấp')).toBeVisible();
+
+  // Đảm bảo không có checkbox ở view công khai này
+  await expect(casesSection.getByRole('checkbox')).toHaveCount(0);
+
+  // Kiểm tra có nút Tải mẫu
+  await expect(casesSection.getByRole('button', { name: 'Tải mẫu' }).first()).toBeVisible();
 
   // Kiểm tra có nút Bắt đầu làm thủ tục
   const startButton = page.getByRole('button', { name: /Bắt đầu làm thủ tục/ }).first();
@@ -232,6 +244,7 @@ test('chi tiết thủ tục hiển thị tab các trường hợp và nút bắ
   const tabQuaHan = page.getByRole('tab', { name: /Đăng ký khai sinh quá hạn/ });
   await tabQuaHan.click();
   await expect(tabQuaHan).toHaveAttribute('aria-selected', 'true');
+  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh quá hạn')).toBeVisible();
 
   // Kiểm tra responsive không bị tràn ngang
   for (const width of [1440, 768, 390]) {

@@ -4,6 +4,28 @@ Cập nhật: 02/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Hiển thị danh mục giấy tờ cần chuẩn bị & tải mẫu (không có checkbox) ở Chi tiết thủ tục — 02/10/2026
+
+- **Yêu cầu người dùng**:
+  - Tại trang Chi tiết thủ tục công khai (`ProcedureDetailPage`): vẫn hiển thị đầy đủ checklist danh mục giấy tờ cần thiết theo từng trường hợp để mọi người đọc, tra cứu và tải mẫu văn bản (`.docx`), nhưng **không có các ô checkbox tự kiểm tra** (checkbox chỉ dành cho khu vực quản lý hồ sơ riêng của người dân).
+- **Hiện trạng & Triển khai**:
+  - [`src/pages/public/components/ProcedureCasesView.tsx`](file:///d:/frontend/src/pages/public/components/ProcedureCasesView.tsx):
+    - Tiếp nhận `checklist` và lọc danh mục giấy tờ tự động theo `caseCode` của từng trường hợp.
+    - Phân tách rõ ràng thành 2 nhóm: **Giấy tờ, tài liệu phải nộp** và **Giấy tờ phải xuất trình**.
+    - Hiển thị bảng tra cứu giấy tờ trực quan: STT, Tên giấy tờ & Ghi chú, Số lượng & Loại bản sao (bản chính, bản sao, bản chụp), Yêu cầu bắt buộc/tùy chọn.
+    - Cung cấp nút **"Tải mẫu"** (Download template) đối với các mục có biểu mẫu / tờ khai.
+    - **Hoàn toàn không có checkbox**, giữ trải nghiệm đọc và tra cứu công khai trong sáng, không gây nhầm lẫn với trạng thái chuẩn bị hồ sơ cá nhân.
+  - [`src/pages/public/ProcedureDetailPage.tsx`](file:///d:/frontend/src/pages/public/ProcedureDetailPage.tsx):
+    - Truyền `content.checklist` vào `ProcedureCasesView`.
+    - Cập nhật nhãn mục lục thành *"Thành phần hồ sơ & Quy trình"*.
+  - [`tests/landing.spec.ts`](file:///d:/frontend/tests/landing.spec.ts):
+    - Cập nhật test 16 xác minh danh mục giấy tờ xuất hiện, có nút Tải mẫu và khẳng định 0 checkbox (`toHaveCount(0)`).
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi).
+  - `npm run build`: Đạt 100% (Build thành công toàn bộ bundle).
+  - `npx playwright test tests/landing.spec.ts`: Đạt 16/16 tests (100%).
+
 ## Tối ưu giao diện Đăng nhập / Đăng ký đơn gọn & Fit trọn màn hình không bị scroll — 02/10/2026
 
 - **Yêu cầu người dùng**:
