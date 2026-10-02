@@ -1,3 +1,4 @@
+import { UserDropdown } from '@/components/layout/UserDropdown';
 import { useMemo, useState } from "react";
 import {
   Bell,
@@ -477,13 +478,6 @@ export function AdminPage() {
             </div>
           ))}
         </nav>
-        <div className="admin-sidebar-user">
-          <span>QT</span>
-          <div>
-            <strong>Quản trị viên</strong>
-            <small>admin@wardmate.vn</small>
-          </div>
-        </div>
       </aside>
 
       <div
@@ -522,18 +516,7 @@ export function AdminPage() {
               <Bell size={21} />
               <span>3</span>
             </button>
-            <button
-              type="button"
-              className="admin-user-button"
-              onClick={() => toast.info("Tài khoản quản trị hệ thống")}
-            >
-              <span>QT</span>
-              <div>
-                <strong>Quản trị viên</strong>
-                <small>System Administrator</small>
-              </div>
-              <CaretDown size={15} />
-            </button>
+            <UserDropdown />
           </div>
         </header>
 

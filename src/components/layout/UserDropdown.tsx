@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   CaretDown,
   SignOut,
@@ -10,11 +10,11 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 
 const workspaces = [
-  { path: '/citizen', label: 'Cổng dịch vụ công dân', roles: ['REGISTERED_CITIZEN'] },
-  { path: '/officer', label: 'Cổng cán bộ', roles: ['FRONT_DESK_OFFICER'] },
-  { path: '/manager', label: 'Quản lý điều hành', roles: ['MANAGER'] },
-  { path: '/procedure-manager', label: 'Quản lý thủ tục', roles: ['PROCEDURE_MANAGER', 'IT_ADMIN'] },
-  { path: '/admin', label: 'Quản trị hệ thống', roles: ['IT_ADMIN'] },
+  { path: '/citizen', alias: '/cong-dan', label: 'Cổng dịch vụ công dân', roles: ['REGISTERED_CITIZEN'] },
+  { path: '/officer', alias: '/can-bo', label: 'Cổng cán bộ', roles: ['FRONT_DESK_OFFICER'] },
+  { path: '/manager', alias: '/quan-ly', label: 'Quản lý điều hành', roles: ['MANAGER'] },
+  { path: '/procedure-manager', alias: '/quan-ly-thu-tuc', label: 'Quản lý thủ tục', roles: ['PROCEDURE_MANAGER', 'IT_ADMIN'] },
+  { path: '/admin', alias: '/admin', label: 'Quản trị hệ thống', roles: ['IT_ADMIN'] },
 ];
 
 interface UserDropdownProps {
@@ -34,7 +34,12 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
   const { handleLogout, isLoggingOut } = useLogout();
   const { profile, loading, initials } = useUserProfile();
   const user = useAuthStore(state => state.user);
-  const availableWorkspaces = workspaces.filter(workspace => user?.roles.some(role => workspace.roles.includes(role)));
+  const { pathname } = useLocation();
+  const currentWorkspace = workspaces.find(workspace => [workspace.path, workspace.alias].some(path => pathname === path || pathname.startsWith(`${path}/`)));
+  const availableWorkspaces = workspaces.filter(workspace => workspace !== currentWorkspace && user?.roles.some(role => workspace.roles.includes(role)));
+  const menuLinks = currentWorkspace?.path === '/citizen' && user?.roles.includes('REGISTERED_CITIZEN')
+    ? [{ path: '/', label: 'Về trang chủ' }, ...availableWorkspaces]
+    : availableWorkspaces;
 
   const displayName = profile?.fullName?.trim() || user?.username || 'Tài khoản';
   const displayContact = profile?.phoneNumber?.trim() || user?.email || '';
@@ -73,9 +78,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
   };
 
   const onLogoutClick = async () => {
-    setIsOpen(false);
-    onItemClick?.();
-    await handleLogout();
+    if (await handleLogout()) handleLinkClick();
   };
 
   if (isMobileDrawer) {
@@ -96,7 +99,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
         </div>
 
         <div className="space-y-1">
-          {availableWorkspaces.map(workspace => <Link
+          {menuLinks.map(workspace => <Link
             key={workspace.path}
             to={workspace.path}
             onClick={handleLinkClick}
@@ -165,7 +168,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
 
           {/* Menu links */}
           <div className="space-y-1">
-            {availableWorkspaces.map(workspace => <Link
+            {menuLinks.map(workspace => <Link
               key={workspace.path}
               to={workspace.path}
               role="menuitem"

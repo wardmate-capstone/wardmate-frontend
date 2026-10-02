@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { UserDropdown } from '@/components/layout/UserDropdown';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useLogout } from '@/hooks/useLogout';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   ArrowClockwise,
-  ArrowLeft,
   Bell,
   CaretDown,
   CaretRight,
@@ -30,7 +29,6 @@ import {
   SealCheck,
   ShieldCheck,
   SidebarSimple,
-  SignOut,
   Star,
   UploadSimple,
   User,
@@ -74,8 +72,7 @@ export type CitizenSectionId =
   | 'notifications'
   | 'qr_code'
   | 'feedback'
-  | 'profile'
-  | 'logout';
+  | 'profile';
 
 // Kiểu dữ liệu hồ sơ công dân
 export interface CitizenDossier {
@@ -265,12 +262,10 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   qr_code: { title: 'Mã QR hồ sơ điện tử', subtitle: 'Mã đối chiếu nhanh khi đến Bộ phận Một cửa UBND phường' },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng', subtitle: 'Góp ý chất lượng phục vụ tiền kiểm hồ sơ hành chính' },
   profile: { title: 'Hồ sơ cá nhân & Định danh', subtitle: 'Thông tin công dân, tài khoản VNeID và liên hệ' },
-  logout: { title: 'Đăng xuất', subtitle: 'Xác nhận thoát khỏi phiên làm việc' },
 };
 
 export function CitizenPage() {
-  const { handleLogout, isLoggingOut } = useLogout();
-  const { profile: userProfile, loading: profileLoading, initials: userInitials, refetch: refetchProfile } = useUserProfile();
+  const { profile: userProfile, loading: profileLoading, refetch: refetchProfile } = useUserProfile();
   const [activeSection, setActiveSection] = useState<CitizenSectionId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -283,38 +278,6 @@ export function CitizenPage() {
   // Data states
   const [dossiers] = useState<CitizenDossier[]>(initialDossiers);
   const [notifications, setNotifications] = useState(citizenNotifications);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const userButtonRef = useRef<HTMLButtonElement>(null);
-
-  const citizenDisplayName = userProfile?.fullName?.trim() || 'Công dân';
-  const citizenDisplayContact = userProfile?.phoneNumber?.trim() || 'Công dân điện tử';
-
-  // Close user dropdown on Escape or click outside
-  useEffect(() => {
-    if (!isUserMenuOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsUserMenuOpen(false);
-        userButtonRef.current?.focus();
-      }
-    };
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(e.target as Node)
-      ) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isUserMenuOpen]);
-
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string }>({
@@ -340,10 +303,6 @@ export function CitizenPage() {
   const meta = sectionTitles[activeSection] || { title: 'Cổng dịch vụ công dân' };
 
   function selectSection(id: CitizenSectionId) {
-    if (id === 'logout') {
-      handleLogout();
-      return;
-    }
     setActiveSection(id);
     setQuery('');
     setSidebarOpen(false);
@@ -702,102 +661,7 @@ export function CitizenPage() {
               {unreadNotificationsCount > 0 && <span>{unreadNotificationsCount}</span>}
             </button>
 
-            {/* User Dropdown */}
-            <div className="relative" ref={userMenuRef}>
-              <button
-                ref={userButtonRef}
-                type="button"
-                className="admin-user-button"
-                aria-label="Menu tài khoản công dân"
-                aria-haspopup="menu"
-                aria-expanded={isUserMenuOpen}
-                onClick={() => setIsUserMenuOpen((prev) => !prev)}
-              >
-                <span>{userInitials}</span>
-                <div>
-                  <strong>{profileLoading ? 'Đang tải...' : citizenDisplayName}</strong>
-                  <small>Công dân điện tử</small>
-                </div>
-                <CaretDown
-                  size={14}
-                  className={`text-slate-400 transition-transform duration-200 ${
-                    isUserMenuOpen ? 'rotate-180 text-red-800' : ''
-                  }`}
-                />
-              </button>
-
-              {isUserMenuOpen && (
-                <div
-                  role="menu"
-                  aria-label="Tùy chọn công dân"
-                  className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xl ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-150"
-                >
-                  <div className="border-b border-slate-100 px-3.5 py-3 mb-1.5">
-                    <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
-                      {profileLoading ? 'Đang tải thông tin...' : citizenDisplayName}
-                    </strong>
-                    <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
-                      {citizenDisplayContact}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Link
-                      to="/"
-                      role="menuitem"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                    >
-                      <ArrowLeft size={18} className="text-slate-600 shrink-0 mt-0.5" weight="bold" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold leading-tight text-slate-900">
-                          Về trang chủ
-                        </span>
-                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-0.5">
-                          Trang thông tin dịch vụ công
-                        </span>
-                      </div>
-                    </Link>
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        selectSection('dashboard');
-                      }}
-                      className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-slate-800 hover:bg-red-50 hover:text-red-900 transition-colors text-left"
-                    >
-                      <House size={18} className="text-red-700 shrink-0 mt-0.5" weight="duotone" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold leading-tight text-slate-900">
-                          Tổng quan công dân
-                        </span>
-                        <span className="block text-xs font-normal text-slate-500 leading-normal mt-0.5">
-                          Bảng điều khiển & hồ sơ
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="my-1.5 border-t border-slate-100" />
-
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={async () => {
-                      setIsUserMenuOpen(false);
-                      await handleLogout();
-                    }}
-                    disabled={isLoggingOut}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 transition-colors disabled:opacity-60"
-                  >
-                    <SignOut size={18} className="shrink-0" weight="bold" />
-                    <span>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <UserDropdown />
           </div>
         </header>
 

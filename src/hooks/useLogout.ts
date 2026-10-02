@@ -14,11 +14,11 @@ export function useLogout(redirectTo: string = '/') {
     setIsLoggingOut(true);
     try {
       await logout();
-      toast.success('Đã đăng xuất.');
+      toast.success('Đã đăng xuất.', { id: 'auth-logout' });
       navigate(redirectTo, { replace: true });
       return true;
     } catch (error) {
-      toast.error('Chưa xác nhận được việc thu hồi phiên trên máy chủ. ' + authErrorMessage(error));
+      toast.error('Chưa xác nhận được việc thu hồi phiên trên máy chủ. ' + authErrorMessage(error), { id: 'auth-logout' });
       return false;
     } finally {
       pending.current = false;

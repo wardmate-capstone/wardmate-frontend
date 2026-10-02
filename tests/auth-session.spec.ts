@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginSchema, registerSchema } from '../src/lib/authSchema';
 import { authReply } from './fixtures/auth';
+import { loginDestination } from '../src/lib/authRedirect';
 
 test.use({ baseURL: 'http://localhost:4317' });
 const tokens = { accessToken: 'session-test', tokenType: 'Bearer', accessTokenExpiresAt: new Date(Date.now() + 3600_000).toISOString(), refreshTokenExpiresAt: new Date(Date.now() + 86400_000).toISOString() };
@@ -22,6 +23,19 @@ test('Zod follows IAM rules, UTF-8 password ceiling and confirmation', () => {
     expect(registerSchema.safeParse({ ...input, ...invalid }).success).toBe(false);
   }
   expect(loginSchema.safeParse({ ...input, password: ' a ' }).success).toBe(true);
+});
+
+test('login defaults to the IAM role workspace and preserves safe returnTo', () => {
+  for (const [role, destination] of Object.entries({
+    IT_ADMIN: '/admin', FRONT_DESK_OFFICER: '/officer', MANAGER: '/manager',
+    PROCEDURE_MANAGER: '/procedure-manager', REGISTERED_CITIZEN: '/',
+  })) {
+    expect(loginDestination([role])).toBe(destination);
+    expect(loginDestination([role], 'https://example.test')).toBe(destination);
+  }
+  expect(loginDestination(['IT_ADMIN'], '/procedure-manager?tab=versions#history')).toBe('/procedure-manager?tab=versions#history');
+  expect(loginDestination(['IT_ADMIN', 'MANAGER'])).toBe('/');
+  expect(loginDestination([])).toBe('/');
 });
 
 test('anonymous deep link preserves query and hash through login', async ({ page }) => {
@@ -119,3 +133,73 @@ test('IT_ADMIN menu exposes both approved workspaces, not officer access', async
   await expect(page.getByRole('menuitem', { name: /Quản lý thủ tục/ })).toHaveAttribute('href', '/procedure-manager');
   await expect(page.getByRole('menuitem', { name: /Cổng cán bộ/ })).toHaveCount(0);
 });
+
+test('shared dropdown keeps a failed logout retryable and replaces its error toast on success', async ({ page }) => {
+  await iam(page, ['REGISTERED_CITIZEN']);
+  let requests = 0;
+  await page.route('http://localhost:5000/api/v1/auth/revoke-token', route => {
+    if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+    return authReply(route, { status: ++requests === 1 ? 503 : 204 });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
+  await expect(page.getByText(/Chưa xác nhận được việc thu hồi phiên/)).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Đăng xuất', exact: true })).toBeEnabled();
+  await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
+  await expect(page.getByText('Đã đăng xuất.', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1);
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test('citizen menu switches between landing and its workspace, including the Vietnamese alias', async ({ page }) => {
+  await iam(page, ['REGISTERED_CITIZEN']);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /Về trang chủ/ })).toHaveCount(0);
+  await page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ }).click();
+  await expect(page).toHaveURL(/\/citizen$/);
+  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ })).toHaveCount(0);
+  await page.getByRole('menuitem', { name: /Về trang chủ/ }).click();
+  await expect(page).toHaveURL('http://localhost:4317/');
+  await page.goto('/cong-dan');
+  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /Về trang chủ/ })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ })).toHaveCount(0);
+});
+
+for (const [role, path] of [
+  ['REGISTERED_CITIZEN', '/citizen'], ['IT_ADMIN', '/admin'],
+  ['FRONT_DESK_OFFICER', '/officer'], ['MANAGER', '/manager'],
+  ['PROCEDURE_MANAGER', '/procedure-manager'],
+]) {
+  test(`${role} uses the shared account dropdown and one confirmed logout toast`, async ({ page }) => {
+    await iam(page, [role]);
+    let complete!: () => void;
+    const pending = new Promise<void>(resolve => { complete = resolve; });
+    await page.route('http://localhost:5000/api/v1/auth/revoke-token', async route => {
+      if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+      expect(route.request().headers().authorization).toBe('Bearer session-test');
+      expect(route.request().postData()).toBeNull();
+      await pending;
+      await authReply(route, { status: 204 });
+    });
+    await page.goto(path);
+    await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+    await expect(page.getByRole('menu', { name: 'Tùy chọn người dùng' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /Về trang chủ/ })).toHaveCount(role === 'REGISTERED_CITIZEN' ? 1 : 0);
+    await expect(page.locator(`[role="menuitem"][href="${path}"]`)).toHaveCount(0);
+    await expect(page.locator('aside .admin-sidebar-user')).toHaveCount(0);
+    await expect(page.locator('aside').getByRole('button', { name: /Đăng xuất/ })).toHaveCount(0);
+    if (role === 'IT_ADMIN') await expect(page.getByRole('menuitem', { name: /Quản lý thủ tục/ })).toBeVisible();
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
+    await expect(page.getByRole('menuitem', { name: 'Đang đăng xuất...' })).toBeDisabled();
+    await expect(page.getByText('Đã đăng xuất.', { exact: true })).toHaveCount(0);
+    complete();
+    await expect(page).toHaveURL('http://localhost:4317/');
+    await expect(page.getByText('Đã đăng xuất.', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(1);
+  });
+}

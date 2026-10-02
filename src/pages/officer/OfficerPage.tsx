@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useLogout } from '@/hooks/useLogout';
 import { toast } from '@/components/ui/Toast';
 import {
   INITIAL_OFFICER_APPLICATIONS,
@@ -27,7 +26,6 @@ import { OfficerProfileView } from './OfficerProfileView';
 import { X, Eye, ArrowRight } from '@phosphor-icons/react';
 
 export const OfficerPage: React.FC = () => {
-  const { handleLogout, isLoggingOut } = useLogout();
 
   // Core Data States
   const [applications, setApplications] = useState<OfficerApplication[]>(INITIAL_OFFICER_APPLICATIONS);
@@ -311,8 +309,6 @@ export const OfficerPage: React.FC = () => {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         isCompact={isCompact}
-        onLogout={handleLogout}
-        isLoggingOut={isLoggingOut}
         badgeCounts={badgeCounts}
       />
 

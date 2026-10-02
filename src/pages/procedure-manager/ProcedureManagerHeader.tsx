@@ -1,3 +1,4 @@
+import { UserDropdown } from '@/components/layout/UserDropdown';
 import React from 'react';
 import {
   List,
@@ -90,7 +91,7 @@ export const ProcedureManagerHeader: React.FC<ProcedureManagerHeaderProps> = ({
     {onAddNewProcedure && <button type="button" className="admin-primary-action" onClick={onAddNewProcedure}><Plus size={18} /><span>Thêm thủ tục</span></button>}
     <div className="admin-topbar-actions">
       <button type="button" aria-label="Thông báo hệ thống"><Bell size={21} /><span>•</span></button>
-      <div className="admin-user-button"><span>HN</span><div><strong>Lê Hoàng Nam</strong><small>Quản lý thủ tục</small></div></div>
+      <UserDropdown />
     </div>
   </header>
 );

@@ -1,3 +1,4 @@
+import { UserDropdown } from '@/components/layout/UserDropdown';
 import React from 'react';
 import {
   List,
@@ -5,7 +6,6 @@ import {
   Bell,
   MagnifyingGlass,
   ArrowSquareOut,
-  CaretDown,
 } from '@phosphor-icons/react';
 import { ManagerSectionId } from './types';
 
@@ -131,20 +131,7 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
         <div className="h-6 w-px bg-slate-200 hidden sm:block mx-0.5" />
 
         {/* Cụm thông tin người dùng / avatar */}
-        <div className="admin-user-button select-none cursor-default py-1">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-red-900 text-[11px] font-bold text-white shadow-xs">
-            TH
-          </span>
-          <div className="hidden min-w-0 sm:block text-left">
-            <strong className="block text-xs font-bold text-slate-900 leading-tight">
-              Nguyễn Thế Hùng
-            </strong>
-            <small className="block text-[10px] text-slate-500 leading-tight mt-0.5 font-medium">
-              Lãnh đạo UBND
-            </small>
-          </div>
-          <CaretDown size={14} className="hidden sm:block text-slate-400 ml-0.5" />
-        </div>
+        <UserDropdown />
       </div>
     </header>
   );

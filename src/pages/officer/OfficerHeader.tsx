@@ -1,3 +1,4 @@
+import { UserDropdown } from '@/components/layout/UserDropdown';
 import React from 'react';
 import {
   List,
@@ -162,16 +163,7 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
           )}
         </button>
 
-        {/* Officer Badge */}
-        <div className="hidden sm:flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
-          <span className="grid size-7 place-items-center rounded-full bg-red-800 text-[11px] font-bold text-white">
-            TH
-          </span>
-          <div className="text-left">
-            <span className="block text-xs font-bold text-slate-900 leading-tight">Lê Thu Hà</span>
-            <span className="block text-[10px] text-emerald-700 font-semibold leading-tight">● Đang trực quầy</span>
-          </div>
-        </div>
+        <UserDropdown />
       </div>
     </header>
   );

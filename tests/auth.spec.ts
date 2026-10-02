@@ -170,7 +170,7 @@ test('revoke retries expired access once, sends no body and clears the cookie/se
   await page.goto('/dang-nhap?returnTo=%2Fcitizen');
   await fillLogin(page);
   await expect(page).toHaveURL(/\/citizen$/);
-  await page.getByRole('button', { name: 'Menu tài khoản công dân' }).click();
+  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
   await expect(page).toHaveURL('http://localhost:4317/');
   expect(events).toEqual(['/api/v1/auth/login', '/api/v1/auth/revoke-token', '/api/v1/auth/refresh-token', '/api/v1/auth/revoke-token']);
@@ -242,7 +242,7 @@ test('two tabs serialize cookie rotation and share logout invalidation without s
   await page.reload();
   expect(await Promise.all([requestPrivate(page), requestPrivate(second)])).toEqual([200, 200]);
   expect(maximum).toBe(1);
-  await second.getByRole('button', { name: 'Menu tài khoản công dân' }).click();
+  await second.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
   await second.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).click();
   await expect(second).toHaveURL('http://localhost:4317/');
   await expect.poll(() => page.evaluate(async () => {

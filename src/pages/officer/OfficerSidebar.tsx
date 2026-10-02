@@ -12,7 +12,6 @@ import {
   Tray,
   Bell,
   User,
-  SignOut,
   X,
   CaretDown,
 } from '@phosphor-icons/react';
@@ -26,8 +25,6 @@ interface OfficerSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isCompact: boolean;
-  onLogout: () => void;
-  isLoggingOut: boolean;
   badgeCounts: {
     pending: number;
     reviewing: number;
@@ -46,8 +43,6 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
   isOpen,
   onClose,
   isCompact,
-  onLogout,
-  isLoggingOut,
   badgeCounts,
 }) => {
   const isDossierActive = activeSection.startsWith('apps-');
@@ -391,41 +386,6 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
           ))}
         </nav>
 
-        {/* User Card & Logout */}
-        <footer className="p-3 border-t border-slate-100 space-y-2 shrink-0">
-          <div
-            className={`flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100 ${
-              isCompact ? 'justify-center' : ''
-            }`}
-          >
-            <span
-              className="grid size-9 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shrink-0 shadow-xs"
-              aria-hidden="true"
-            >
-              TH
-            </span>
-            {!isCompact && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 truncate">Lê Thu Hà</p>
-                <p className="text-[10px] text-slate-500 truncate">Cán bộ Tiếp nhận · Quầy 02</p>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={isLoggingOut}
-            aria-busy={isLoggingOut}
-            title={isCompact ? 'Đăng xuất' : undefined}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 hover:bg-rose-50 transition-colors ${
-              isCompact ? 'justify-center px-0' : ''
-            }`}
-          >
-            <SignOut size={18} aria-hidden="true" />
-            {!isCompact && <span>Đăng xuất</span>}
-          </button>
-        </footer>
       </aside>
     </>
   );

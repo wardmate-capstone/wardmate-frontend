@@ -14,13 +14,11 @@ import {
   PresentationChart,
   ShieldCheck,
   UserCircle,
-  SignOut,
   X,
 } from '@phosphor-icons/react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { ManagerSectionId } from './types';
-import { useLogout } from '@/hooks/useLogout';
 
 interface ManagerSidebarProps {
   currentSection: ManagerSectionId;
@@ -40,7 +38,6 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
   isCollapsedDesktop,
   profilesCount = 6,
 }) => {
-  const { handleLogout, isLoggingOut } = useLogout();
   const handleNavClick = (section: ManagerSectionId) => {
     onSelectSection(section);
     onCloseMobile();
@@ -227,33 +224,8 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
             </div>
           ))}
 
-          <div className="admin-nav-section">
-            <p>Hệ thống</p>
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi cổng Quản lý Điều hành?')) {
-                  void handleLogout();
-                }
-              }}
-              title="Đăng xuất"
-              disabled={isLoggingOut}
-              aria-busy={isLoggingOut}
-              aria-label="Đăng xuất khỏi hệ thống"
-            >
-              <SignOut size={20} />
-              <span>Đăng xuất</span>
-            </button>
-          </div>
         </nav>
 
-        <div className="admin-sidebar-user">
-          <span>TH</span>
-          <div>
-            <strong>Nguyễn Thế Hùng</strong>
-            <small>Phó Chủ tịch UBND Phường</small>
-          </div>
-        </div>
       </aside>
     </>
   );
