@@ -1,23 +1,64 @@
-// Frontend-only schema v1. Reconcile with the backend content_payload contract later.
+export type ProcedureStep = {
+  stepOrder: number;
+  stepName: string;
+  executor: string;
+  actionDetails: string;
+};
+
+export type ProcedureCase = {
+  caseCode: string;
+  caseName: string;
+  description?: string;
+  steps: ProcedureStep[];
+};
+
+export type ChecklistItem = {
+  checklistId: string;
+  caseCode?: string;
+  submissionType: 'NOP' | 'XUAT_TRINH' | string;
+  itemName: string;
+  documentCopyType: 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY' | string;
+  quantity: number;
+  conditionNote?: string;
+  isMandatory: boolean;
+  templateUrl?: string;
+  templateFormat?: 'DOCX' | 'PDF';
+};
+
+// Frontend-only schema. Reconcile with the backend content_payload and checklist_schema contract later.
 export type ProcedureContent = {
   overview: string;
   methods: { method: string; processingTime: string; fee: string; notes: string }[];
   legalBases: { number: string; title: string; url: string }[];
   receivingAgencies: { name: string; address: string; url: string }[];
+  cases: ProcedureCase[];
+  checklist: ChecklistItem[];
 };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-export function parseProcedureContent(payload: unknown): {
+export function parseProcedureContent(payload: unknown, checklistSchema?: unknown): {
   content: ProcedureContent; status: 'ready' | 'empty' | 'partial' | 'invalid';
 } {
-  const content: ProcedureContent = { overview: '', methods: [], legalBases: [], receivingAgencies: [] };
-  if (payload === null || payload === undefined || payload === '') return { content, status: 'empty' };
+  const content: ProcedureContent = {
+    overview: '',
+    methods: [],
+    legalBases: [],
+    receivingAgencies: [],
+    cases: [],
+    checklist: [],
+  };
+  if ((payload === null || payload === undefined || payload === '') &&
+      (checklistSchema === null || checklistSchema === undefined || checklistSchema === '')) {
+    return { content, status: 'empty' };
+  }
   let source: unknown = payload;
   if (typeof source === 'string') {
     try { source = JSON.parse(source); } catch { return { content, status: 'invalid' }; }
   }
-  if (!isRecord(source) || source.schemaVersion !== 1) return { content, status: 'invalid' };
+  if (!isRecord(source) || (source.schemaVersion !== 1 && source.schemaVersion !== undefined)) {
+    return { content, status: 'invalid' };
+  }
   let partial = false;
   function text(value: unknown): string {
     if (value === null || value === undefined) return '';
@@ -60,6 +101,53 @@ export function parseProcedureContent(payload: unknown): {
     if (!name) { partial = true; return []; }
     return [{ name, address: text(row.address), url: link(row.url) }];
   });
-  const hasContent = content.overview || content.methods.length || content.legalBases.length || content.receivingAgencies.length;
+
+  // Parse Cases & Steps
+  const rawCases = rows(source.cases || (source.content_payload as Record<string, unknown> | undefined)?.cases);
+  content.cases = rawCases.flatMap((c, cIdx) => {
+    const caseName = text(c.caseName) || `Trường hợp ${cIdx + 1}`;
+    const caseCode = text(c.caseCode) || `CASE_${cIdx + 1}`;
+    const description = text(c.description);
+    const steps = rows(c.steps).map((s, sIdx) => ({
+      stepOrder: typeof s.stepOrder === 'number' ? s.stepOrder : sIdx + 1,
+      stepName: text(s.stepName) || `Bước ${sIdx + 1}`,
+      executor: text(s.executor) || 'Cán bộ tiếp nhận',
+      actionDetails: text(s.actionDetails),
+    }));
+    return [{ caseCode, caseName, description, steps }];
+  });
+
+  // Parse Checklist schema (có thể nằm trong checklistSchema độc lập hoặc trong content_payload)
+  let checklistSource = checklistSchema;
+  if (!checklistSource && source.checklist_schema) checklistSource = source.checklist_schema;
+  if (!checklistSource && source.checklist) checklistSource = source.checklist;
+  if (typeof checklistSource === 'string') {
+    try { checklistSource = JSON.parse(checklistSource); } catch { /* ignore */ }
+  }
+
+  content.checklist = rows(checklistSource).flatMap((item, idx) => {
+    const itemName = text(item.itemName || item.name);
+    if (!itemName) { partial = true; return []; }
+    return [{
+      checklistId: text(item.checklistId || item.id) || `chk-${idx + 1}`,
+      caseCode: text(item.caseCode) || undefined,
+      submissionType: text(item.submissionType).toUpperCase() === 'XUAT_TRINH' ? 'XUAT_TRINH' : 'NOP',
+      itemName,
+      documentCopyType: text(item.documentCopyType).toUpperCase() || 'ORIGINAL',
+      quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+      conditionNote: text(item.conditionNote || item.notes),
+      isMandatory: item.isMandatory !== false,
+      templateUrl: link(item.templateUrl),
+      templateFormat: (text(item.templateFormat).toUpperCase() === 'PDF' ? 'PDF' : 'DOCX') as 'DOCX' | 'PDF',
+    }];
+  });
+
+  const hasContent = content.overview ||
+    content.methods.length ||
+    content.legalBases.length ||
+    content.receivingAgencies.length ||
+    content.cases.length ||
+    content.checklist.length;
+
   return { content, status: partial ? 'partial' : hasContent ? 'ready' : 'empty' };
 }

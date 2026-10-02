@@ -205,3 +205,47 @@ test('public procedures paginate, preserve URL state and fit mobile', async ({ p
   await search.fill('a'.repeat(150));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('chi tiết thủ tục hiển thị tab các trường hợp và tương tác checklist giấy tờ', async ({ page }) => {
+  // Đi vào thủ tục Đăng ký khai sinh (demo-1)
+  await page.goto('/thu-tuc/demo-1');
+  await expect(page.getByRole('heading', { name: 'Đăng ký khai sinh', level: 1 })).toBeVisible();
+
+  // Kiểm tra mục lục bên trái có link Thành phần hồ sơ
+  const menuLink = page.getByRole('link', { name: 'Thành phần hồ sơ & Tình huống' });
+  await expect(menuLink).toBeVisible();
+
+  // Kiểm tra khối Cases & Checklist
+  const casesSection = page.locator('#thanh-phan-ho-so');
+  await expect(casesSection).toBeVisible();
+  await expect(casesSection.getByRole('heading', { name: /Thành phần hồ sơ/ })).toBeVisible();
+
+  // Tab trường hợp mặc định là Đăng ký khai sinh đúng hạn
+  const tabDungHan = page.getByRole('tab', { name: /Đăng ký khai sinh đúng hạn/ });
+  await expect(tabDungHan).toHaveAttribute('aria-selected', 'true');
+
+  // Kiểm tra có nhóm Giấy tờ phải nộp & Giấy tờ phải xuất trình
+  await expect(casesSection.getByRole('heading', { name: /Giấy tờ, tài liệu phải nộp/ })).toBeVisible();
+  await expect(casesSection.getByRole('heading', { name: /Giấy tờ phải xuất trình/ })).toBeVisible();
+  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh (theo mẫu)')).toBeVisible();
+  await expect(casesSection.getByText('Giấy chứng sinh do cơ sở y tế cấp')).toBeVisible();
+
+
+  // Thử tương tác tích chọn giấy tờ (Interactive checklist)
+  const checkboxKhaiSinh = casesSection.getByRole('checkbox', { name: /Đánh dấu đã chuẩn bị Tờ khai đăng ký khai sinh/ });
+  await expect(checkboxKhaiSinh).toHaveAttribute('aria-checked', 'false');
+  await checkboxKhaiSinh.click();
+  await expect(checkboxKhaiSinh).toHaveAttribute('aria-checked', 'true');
+
+  // Chuyển sang Tab tình huống khác (Quá hạn)
+  const tabQuaHan = page.getByRole('tab', { name: /Đăng ký khai sinh quá hạn/ });
+  await tabQuaHan.click();
+  await expect(tabQuaHan).toHaveAttribute('aria-selected', 'true');
+  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh quá hạn')).toBeVisible();
+
+  // Kiểm tra responsive không bị tràn ngang
+  for (const width of [1440, 768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

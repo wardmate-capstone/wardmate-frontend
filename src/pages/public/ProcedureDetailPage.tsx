@@ -5,9 +5,12 @@ import { Badge, buttonVariants } from '@/components/ui';
 import { mockPublicProcedures } from '@/data/mockPublicProcedures';
 import { parseProcedureContent } from '@/lib/procedureContent';
 
+import { ProcedureCasesAndChecklist } from './components/ProcedureCasesAndChecklist';
+
 const pending = 'Thông tin cần được cơ quan tiếp nhận xác nhận.';
 const sections = [
   ['tong-quan', 'Thông tin chung'],
+  ['thanh-phan-ho-so', 'Thành phần hồ sơ & Tình huống'],
   ['thoi-han-le-phi', 'Thời hạn và lệ phí'],
   ['can-cu-phap-luat', 'Căn cứ pháp luật'],
   ['co-quan-tiep-nhan', 'Cơ quan tiếp nhận'],
@@ -19,7 +22,12 @@ export function ProcedureDetailPage() {
   const procedure = mockPublicProcedures.find((item) => item.id === procedureId);
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
-  const { content, status } = parseProcedureContent(procedure?.content_payload);
+  const { content, status } = parseProcedureContent(
+    procedure?.content_payload,
+    procedure?.checklist_schema
+  );
+
+
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -76,6 +84,16 @@ export function ProcedureDetailPage() {
               <div><dt className="text-sm text-slate-500">Phạm vi hỗ trợ</dt><dd className="mt-1">Chờ xác nhận thông tin chính thức</dd></div>
             </dl>
           </section>
+
+          {/* Khối Thành phần hồ sơ & Tình huống (Cases & Checklist) */}
+          {(content.cases.length > 0 || content.checklist.length > 0) && (
+            <ProcedureCasesAndChecklist
+              cases={content.cases}
+              checklist={content.checklist}
+            />
+          )}
+
+
 
           <section id="thoi-han-le-phi" aria-labelledby="fees-title" className="procedure-detail-section">
             <h2 id="fees-title">Thời hạn và lệ phí</h2>
