@@ -15,15 +15,10 @@ import {
   CaretDown,
   CaretRight,
   CheckCircle,
-  Checks,
   Clock,
-  CloudArrowUp,
   DownloadSimple,
   Eye,
-  FileCode,
   FileDashed,
-  FilePdf,
-  FileText,
   Folder,
   Funnel,
   House,
@@ -37,7 +32,6 @@ import {
   ShieldCheck,
   SidebarSimple,
   Star,
-  UploadSimple,
   User,
   WarningCircle,
   X,
@@ -73,11 +67,6 @@ export type CitizenSectionId =
   | 'dossiers_approved'
   | 'dossiers_completed'
   | 'dossier_detail'
-  // Chuẩn bị hồ sơ
-  | 'prep_checklist'
-  | 'prep_documents'
-  | 'prep_forms'
-  | 'prep_pdfs'
   // Tiện ích
   | 'notifications'
   | 'qr_code'
@@ -187,26 +176,7 @@ const citizenProcedures = [
   { code: '2.000451', name: 'Chứng thực chữ ký trong giấy tờ', field: 'Chứng thực', duration: '0,5 ngày làm việc', fee: '10.000 VNĐ / việc' },
 ];
 
-const citizenDocuments = [
-  { id: 'doc-1', name: 'CCCD_Gan_Chip_MatTruoc.jpg', type: 'Căn cước công dân (Mặt trước)', size: '1.8 MB', updatedAt: '20/09/2026', verified: true },
-  { id: 'doc-2', name: 'CCCD_Gan_Chip_MatSau.jpg', type: 'Căn cước công dân (Mặt sau)', size: '2.1 MB', updatedAt: '20/09/2026', verified: true },
-  { id: 'doc-3', name: 'Giay_Chung_Sinh_BaoKhang.pdf', type: 'Giấy chứng sinh', size: '3.4 MB', updatedAt: '27/09/2026', verified: false },
-  { id: 'doc-4', name: 'Giay_Chung_Nhan_Doc_Than.pdf', type: 'Giấy xác nhận độc thân', size: '1.2 MB', updatedAt: '15/09/2026', verified: true },
-  { id: 'doc-5', name: 'So_Ho_Khau_Dien_Tu.pdf', type: 'Xác nhận cư trú (CT07)', size: '2.7 MB', updatedAt: '10/09/2026', verified: true },
-];
 
-const citizenForms = [
-  { id: 'form-1', title: 'Tờ khai đăng ký khai sinh', code: 'TK-KS-01', fields: 18, appliesTo: 'Đăng ký khai sinh' },
-  { id: 'form-2', title: 'Tờ khai đăng ký kết hôn', code: 'TK-KH-02', fields: 24, appliesTo: 'Đăng ký kết hôn' },
-  { id: 'form-3', title: 'Tờ khai xác nhận tình trạng hôn nhân', code: 'TK-HN-03', fields: 16, appliesTo: 'Xác nhận tình trạng hôn nhân' },
-  { id: 'form-4', title: 'Giấy đề nghị chứng thực bản sao', code: 'TK-CT-04', fields: 8, appliesTo: 'Chứng thực bản sao từ bản chính' },
-];
-
-const citizenPdfs = [
-  { id: 'pdf-1', title: 'Phieu_Tien_Kiem_HS-2026-00094.pdf', code: 'HS-2026-00094', procedure: 'Chứng thực bản sao từ bản chính', date: '28/09/2026', qrCode: 'WM-QR-00094' },
-  { id: 'pdf-2', title: 'To_Khai_Khai_Sinh_HS-2026-00128.pdf', code: 'HS-2026-00128', procedure: 'Đăng ký khai sinh', date: '27/09/2026', qrCode: 'WM-QR-00128' },
-  { id: 'pdf-3', title: 'Phieu_Hen_Tiep_Nhan_HS-2026-00170.pdf', code: 'HS-2026-00170', procedure: 'Cấp trích lục hộ tịch', date: '29/09/2026', qrCode: 'WM-QR-00170' },
-];
 
 const citizenNotifications = [
   { id: 'notif-1', title: 'Hồ sơ đã được phê duyệt tiền kiểm', content: 'Hồ sơ HS-2026-00170 đã đạt yêu cầu. Bạn có thể đến bộ phận Một cửa để đối chiếu giấy tờ gốc.', time: '10 phút trước', read: false, type: 'success' },
@@ -268,10 +238,6 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm', subtitle: 'Giấy tờ hợp lệ, sẵn sàng mang bản gốc đối chiếu tại Một cửa' },
   dossiers_completed: { title: 'Hồ sơ đã hoàn thành', subtitle: 'Đã hoàn tất quy trình và nhận kết quả tại UBND phường' },
   dossier_detail: { title: 'Chi tiết hồ sơ & Checklist chuẩn bị', subtitle: 'Kiểm tra danh mục giấy tờ, tải mẫu và kê khai biểu mẫu trực tuyến' },
-  prep_checklist: { title: 'Checklist chuẩn bị hồ sơ', subtitle: 'Danh mục giấy tờ cần chuẩn bị theo từng thủ tục' },
-  prep_documents: { title: 'Giấy tờ cá nhân đã tải lên', subtitle: 'Kho tài liệu điện tử dùng chung để nộp các thủ tục' },
-  prep_forms: { title: 'Biểu mẫu điện tử (E-Form)', subtitle: 'Khai trực tuyến hoặc tải mẫu đơn hành chính' },
-  prep_pdfs: { title: 'PDF & Phiếu hẹn đã tạo', subtitle: 'Các bản in hồ sơ điện tử có mã QR tiền kiểm hợp lệ' },
   notifications: { title: 'Thông báo & Cập nhật', subtitle: 'Tin nhắn tiến độ hồ sơ từ cán bộ tiếp nhận' },
   qr_code: { title: 'Mã QR hồ sơ điện tử', subtitle: 'Mã đối chiếu nhanh khi đến Bộ phận Một cửa UBND phường' },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng', subtitle: 'Góp ý chất lượng phục vụ tiền kiểm hồ sơ hành chính' },
@@ -291,7 +257,6 @@ export function CitizenPage() {
 
   // Expandable sections in sidebar
   const [isDossiersExpanded, setIsDossiersExpanded] = useState(true);
-  const [isPrepExpanded, setIsPrepExpanded] = useState(true);
 
   // Khởi tạo dossiers kết hợp localStorage
   const [dossiers, setDossiers] = useState<CitizenDossier[]>(() => {
@@ -586,74 +551,6 @@ export function CitizenPage() {
                 </button>
               </div>
             )}
-
-            {/* Mục cha: Chuẩn bị hồ sơ */}
-            <button
-              type="button"
-              className={`admin-nav-parent mt-2 ${activeSection.startsWith('prep_') ? 'is-active' : ''}`}
-              onClick={() => setIsPrepExpanded((prev) => !prev)}
-              title={sidebarCollapsed ? 'Chuẩn bị hồ sơ' : undefined}
-              aria-expanded={isPrepExpanded}
-            >
-              <Checks size={20} aria-hidden="true" />
-              <span>Chuẩn bị hồ sơ</span>
-              {!sidebarCollapsed && (
-                <CaretDown
-                  size={14}
-                  className={`text-slate-400 transition-transform duration-200 shrink-0 ${
-                    isPrepExpanded ? '' : '-rotate-90'
-                  }`}
-                />
-              )}
-            </button>
-
-            {/* Các nhánh con của Chuẩn bị hồ sơ */}
-            {(isPrepExpanded || sidebarCollapsed) && (
-              <div className="admin-subnav-tree">
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'prep_checklist' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('prep_checklist')}
-                  title={sidebarCollapsed ? 'Checklist' : undefined}
-                >
-                  <Checks size={16} aria-hidden="true" />
-                  <span>Checklist</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'prep_documents' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('prep_documents')}
-                  title={sidebarCollapsed ? 'Giấy tờ đã tải lên' : undefined}
-                >
-                  <CloudArrowUp size={16} aria-hidden="true" />
-                  <span>Giấy tờ đã tải lên</span>
-                  <small>{citizenDocuments.length}</small>
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'prep_forms' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('prep_forms')}
-                  title={sidebarCollapsed ? 'Biểu mẫu' : undefined}
-                >
-                  <FileCode size={16} aria-hidden="true" />
-                  <span>Biểu mẫu</span>
-                  <small>{citizenForms.length}</small>
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'prep_pdfs' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('prep_pdfs')}
-                  title={sidebarCollapsed ? 'PDF đã tạo' : undefined}
-                >
-                  <FilePdf size={16} aria-hidden="true" />
-                  <span>PDF đã tạo</span>
-                  <small>{citizenPdfs.length}</small>
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Nhóm 3: Tiện ích & Cài đặt */}
@@ -780,15 +677,6 @@ export function CitizenPage() {
                   <Plus size={18} weight="bold" /> Nộp hồ sơ mới
                 </button>
               )}
-              {activeSection === 'prep_documents' && (
-                <button
-                  className="admin-primary-action"
-                  type="button"
-                  onClick={() => toast.info('Mở hộp thoại chọn giấy tờ từ máy tính hoặc điện thoại')}
-                >
-                  <UploadSimple size={18} weight="bold" /> Tải lên giấy tờ mới
-                </button>
-              )}
             </div>
           </div>
 
@@ -860,21 +748,7 @@ export function CitizenPage() {
             />
           )}
 
-          {activeSection === 'prep_checklist' && (
-            <CitizenPrepChecklistView onSelectSection={selectSection} />
-          )}
 
-          {activeSection === 'prep_documents' && (
-            <CitizenPrepDocumentsView documents={citizenDocuments} />
-          )}
-
-          {activeSection === 'prep_forms' && (
-            <CitizenPrepFormsView forms={citizenForms} />
-          )}
-
-          {activeSection === 'prep_pdfs' && (
-            <CitizenPrepPdfsView pdfs={citizenPdfs} />
-          )}
 
           {activeSection === 'notifications' && (
             <CitizenNotificationsView
@@ -966,8 +840,8 @@ function CitizenDashboardView({
 
   const quickShortcuts = [
     { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', desc: 'Xem quy định & biểu mẫu', icon: MagnifyingGlass },
-    { id: 'prep_checklist' as CitizenSectionId, title: 'Checklist giấy tờ', desc: 'Kiểm tra độ đầy đủ', icon: Checks },
-    { id: 'prep_documents' as CitizenSectionId, title: 'Kho giấy tờ số', desc: 'Quản lý CCCD & văn bản', icon: CloudArrowUp },
+    { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', desc: 'Tiếp tục hoàn thiện hồ sơ', icon: NotePencil },
+    { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', desc: 'Theo dõi tiến độ tiền kiểm', icon: Folder },
     { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', desc: 'Quét tại quầy Một cửa', icon: QrCode },
   ];
 
@@ -1294,11 +1168,11 @@ function CitizenProceduresView({
                   <button
                     type="button"
                     onClick={() => {
-                      toast.info(`Bắt đầu chuẩn bị hồ sơ: ${item.name}`);
-                      onSelectSection('prep_checklist');
+                      toast.info(`Bắt đầu làm hồ sơ: ${item.name}. Vui lòng tạo bản nháp hoặc chọn hồ sơ trong danh sách.`);
+                      onSelectSection('dossiers_all');
                     }}
                   >
-                    Chuẩn bị hồ sơ
+                    Bắt đầu làm hồ sơ
                   </button>
                 </td>
               </tr>
@@ -1620,244 +1494,7 @@ function CitizenDossierDetailView({
   );
 }
 
-// ----------------------------------------------------------------------
-// 4. CHUẨN BỊ HỒ SƠ - CHECKLIST
-// ----------------------------------------------------------------------
-function CitizenPrepChecklistView({ onSelectSection }: { onSelectSection: (id: CitizenSectionId) => void }) {
-  const [items, setItems] = useState([
-    { id: 1, name: 'Căn cước công dân gắn chip (Bản chính + Bản sao)', required: true, checked: true },
-    { id: 2, name: 'Giấy chứng sinh do cơ sở y tế có thẩm quyền cấp', required: true, checked: true },
-    { id: 3, name: 'Giấy chứng nhận kết hôn của cha mẹ', required: true, checked: false },
-    { id: 4, name: 'Tờ khai đăng ký khai sinh theo mẫu điện tử', required: true, checked: true },
-    { id: 5, name: 'Văn bản ủy quyền (nếu người nộp không phải cha/mẹ)', required: false, checked: false },
-  ]);
 
-  const checkedCount = items.filter((i) => i.checked).length;
-  const percent = Math.round((checkedCount / items.length) * 100);
-
-  function toggleItem(id: number) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i))
-    );
-  }
-
-  return (
-    <div className="space-y-4 admin-content-card">
-      <section className="admin-card p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="admin-status-badge is-info mb-1">Thủ tục: Đăng ký khai sinh</span>
-            <h2 className="text-base font-bold text-slate-950">Danh mục giấy tờ cần chuẩn bị</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Đã chuẩn bị hoàn tất {checkedCount} / {items.length} hạng mục giấy tờ ({percent}%)
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="admin-primary-action shrink-0"
-            onClick={() => onSelectSection('prep_documents')}
-          >
-            <CloudArrowUp size={18} weight="bold" /> Tải giấy tờ còn thiếu
-          </button>
-        </div>
-
-        {/* Thanh tiến độ */}
-        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full bg-red-800 transition-all duration-300"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      </section>
-
-      {/* Danh sách checklist */}
-      <section className="admin-card divide-y divide-slate-100">
-        {items.map((item) => (
-          <label
-            key={item.id}
-            className="flex items-center gap-3.5 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            <input
-              type="checkbox"
-              checked={item.checked}
-              onChange={() => toggleItem(item.id)}
-              className="size-4 rounded border-slate-300 text-red-800 focus:ring-red-500"
-            />
-            <div className="min-w-0 flex-1">
-              <span className={`text-xs font-semibold ${item.checked ? 'text-slate-800 line-through' : 'text-slate-900'}`}>
-                {item.name}
-              </span>
-              {item.required ? (
-                <span className="ml-2 text-[10px] font-bold text-red-600">Bắt buộc</span>
-              ) : (
-                <span className="ml-2 text-[10px] text-slate-400">Tùy trường hợp</span>
-              )}
-            </div>
-            {item.checked ? (
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                <CheckCircle size={16} /> Đã có
-              </span>
-            ) : (
-              <span className="text-xs text-amber-600 font-medium">Chưa chuẩn bị</span>
-            )}
-          </label>
-        ))}
-      </section>
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------------
-// 5. CHUẨN BỊ HỒ SƠ - GIẤY TỜ ĐÃ TẢI LÊN
-// ----------------------------------------------------------------------
-function CitizenPrepDocumentsView({ documents }: { documents: typeof citizenDocuments }) {
-  return (
-    <section className="admin-card admin-content-card">
-      <div className="admin-card-heading">
-        <div>
-          <h2>Kho tài liệu điện tử dùng chung</h2>
-          <p className="text-xs text-slate-500">Giấy tờ sau khi tiền kiểm hợp lệ có thể tái sử dụng cho các thủ tục khác</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => toast.success('Đã mở cửa sổ chọn tài liệu từ thiết bị')}
-        >
-          <UploadSimple size={16} /> Tải thêm giấy tờ
-        </button>
-      </div>
-
-      <div className="admin-resource-grid">
-        {documents.map((doc) => (
-          <article key={doc.id}>
-            <span>
-              <FileText size={24} />
-            </span>
-            <div>
-              <strong>{doc.name}</strong>
-              <small>
-                {doc.type} · {doc.size} · Tải lên {doc.updatedAt}
-              </small>
-            </div>
-            {doc.verified ? (
-              <em className="is-success">Hợp lệ</em>
-            ) : (
-              <em className="is-warning">Chờ thẩm tra</em>
-            )}
-            <button
-              type="button"
-              onClick={() => toast.info(`Đang mở xem trước: ${doc.name}`)}
-            >
-              Xem
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ----------------------------------------------------------------------
-// 6. CHUẨN BỊ HỒ SƠ - BIỂU MẪU
-// ----------------------------------------------------------------------
-function CitizenPrepFormsView({ forms }: { forms: typeof citizenForms }) {
-  return (
-    <section className="admin-card admin-content-card">
-      <div className="admin-card-heading">
-        <div>
-          <h2>Kho mẫu đơn & Biểu mẫu điện tử (E-Form)</h2>
-          <p className="text-xs text-slate-500">Kê khai trực tuyến để hệ thống tự động điền thông tin định danh</p>
-        </div>
-      </div>
-
-      <div className="admin-resource-grid">
-        {forms.map((form) => (
-          <article key={form.id}>
-            <span>
-              <FileCode size={24} />
-            </span>
-            <div>
-              <strong>{form.title}</strong>
-              <small>
-                Mã mẫu: {form.code} · {form.fields} trường thông tin · Áp dụng cho: {form.appliesTo}
-              </small>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="!bg-red-800 !text-white hover:!bg-red-900"
-                onClick={() => toast.success(`Đã mở giao diện kê khai trực tuyến mẫu: ${form.title}`)}
-              >
-                Khai trực tuyến
-              </button>
-              <button
-                type="button"
-                onClick={() => toast.info(`Tải xuống mẫu file Word (.docx) của ${form.code}`)}
-              >
-                Tải mẫu
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ----------------------------------------------------------------------
-// 7. CHUẨN BỊ HỒ SƠ - PDF ĐÃ TẠO
-// ----------------------------------------------------------------------
-function CitizenPrepPdfsView({ pdfs }: { pdfs: typeof citizenPdfs }) {
-  return (
-    <section className="admin-card admin-content-card">
-      <div className="admin-card-heading">
-        <div>
-          <h2>Bản in PDF & Phiếu hẹn có mã QR tiền kiểm</h2>
-          <p className="text-xs text-slate-500">Xuất trình bản in hoặc mở file PDF trên điện thoại khi đến nộp tại Một cửa</p>
-        </div>
-      </div>
-
-      <div className="admin-resource-grid is-list">
-        {pdfs.map((pdf) => (
-          <article key={pdf.id} className="flex-col sm:flex-row sm:items-center">
-            <span className="!bg-red-100 !text-red-800">
-              <FilePdf size={24} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <strong>{pdf.title}</strong>
-              <small>
-                Mã hồ sơ: {pdf.code} · {pdf.procedure} · Tạo ngày: {pdf.date}
-              </small>
-              <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                <QrCode size={13} /> {pdf.qrCode}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              <button
-                type="button"
-                onClick={() => toast.info(`Đang mở xem trước file ${pdf.title}`)}
-              >
-                <Eye size={15} /> Xem
-              </button>
-              <button
-                type="button"
-                onClick={() => toast.success(`Đang tải file ${pdf.title} về máy`)}
-              >
-                <DownloadSimple size={15} /> Tải PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => toast.info('Kết nối máy in hoàn tất')}
-              >
-                <Printer size={15} /> In
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 // ----------------------------------------------------------------------
 // 8. THÔNG BÁO

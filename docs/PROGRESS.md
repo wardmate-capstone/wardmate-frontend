@@ -4,6 +4,17 @@ Cập nhật: 03/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tinh gọn Giao diện Công dân: Gỡ bỏ Phân hệ "Chuẩn bị hồ sơ" dư thừa — 03/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Gỡ bỏ hoàn toàn nhánh menu Sidebar "Chuẩn bị hồ sơ" và 4 sub-view tĩnh không cần thiết (`prep_checklist`, `prep_documents`, `prep_forms`, `prep_pdfs`) trong [`CitizenPage.tsx`](file:///d:/frontend/src/pages/citizen/CitizenPage.tsx).
+  - Lý do: Toàn bộ quy trình chuẩn bị hồ sơ thực tế (kèm checklist, kéo thả đính kèm giấy tờ, soạn thảo biểu mẫu trực tuyến tự động điền VNeID, theo dõi tiến độ và nộp tiền kiểm) đã được tích hợp tập trung, đầy đủ theo từng hồ sơ tại view Chi tiết hồ sơ ([`DossierChecklistView.tsx`](file:///d:/frontend/src/pages/citizen/components/DossierChecklistView.tsx)). Các trang `prep_*` trước đây chỉ là mock data rời rạc, làm phân tán trải nghiệm người dùng và gây rối sidebar.
+  - Cập nhật các shortcut tại Dashboard sang các mục hữu ích: "Hồ sơ bản nháp", "Hồ sơ của tôi".
+  - Chuyển hướng nút hành động ở bảng Tra cứu thủ tục thành "Bắt đầu làm hồ sơ" đưa đến danh sách hồ sơ.
+  - Dọn dẹp các icons và mock data không còn sử dụng (`citizenDocuments`, `citizenForms`, `citizenPdfs`).
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 0 lỗi.
+
 ## Tối ưu giao diện Cột Thao tác Danh sách Hồ sơ Công dân — 03/10/2026
 
 - **Yêu cầu & Triển khai**:
