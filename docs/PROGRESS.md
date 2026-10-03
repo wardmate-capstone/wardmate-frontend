@@ -4,6 +4,17 @@ Cập nhật: 03/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Cloudflare Web Analytics — 03/10/2026
+
+- Đã chuẩn bị tích hợp FE tại `src/main.tsx`: nạp beacon bất đồng bộ chỉ ở production có `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN`; dev hoặc thiếu mã thì tắt. Không thêm dependency, không truy cập/chỉnh BE.
+- `.env.example` có biến rỗng; hướng dẫn cấu hình và xác minh tại `docs/cloudflare-web-analytics.md`. Website người dùng cung cấp: https://wardmate-frontend.vercel.app/.
+- Kiểm tra vừa chạy: `npm run build` (gồm TypeScript) và `npm run lint` đạt; build còn cảnh báo annotation Zod và bundle lớn. `git diff --check` đạt trước cập nhật tài liệu.
+- Người dùng đã cung cấp mã site; lưu trong `.env.production.local` được Git ignore, không chép giá trị vào tài liệu/commit. Script dùng `type="module"` khớp snippet được cấp.
+- Kiểm tra lại sau cấu hình: build (gồm TypeScript), lint và kiểm tra bundle có beacon cùng mã đã cấu hình đều đạt; `git check-ignore` xác nhận file cấu hình riêng bị bỏ qua. Build còn cảnh báo Zod/bundle lớn. Lệnh kiểm tra Node ban đầu lỗi quoting PowerShell, đã thay bằng kiểm tra PowerShell thành công.
+- Chưa cấu hình Vercel, deploy, xác minh beacon/dashboard thật hoặc chạy Playwright. Không coi Analytics đã hoạt động production.
+- Người dùng yêu cầu commit/push phần Analytics ngày 03/10/2026; gom code, cấu hình mẫu và hướng dẫn trong một commit. Kiểm tra lịch sử Git và `origin/main` để xác định trạng thái đồng bộ; không đưa `.env.production.local` vào Git.
+- Tiếp theo: đặt `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN` trong biến build Production của Vercel, deploy source FE mới và xác minh dữ liệu.
+
 ## FE-TASK-13, FE-TASK-14, FE-TASK-15 — Phân hệ Chuẩn bị Hồ sơ Tiền kiểm & Biểu mẫu Thông minh — 03/10/2026
 
 - **Yêu cầu & Triển khai theo định hướng trợ lý tiền kiểm**:
