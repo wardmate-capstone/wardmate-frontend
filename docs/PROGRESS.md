@@ -12,8 +12,10 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Cập nhật các shortcut tại Dashboard sang các mục hữu ích: "Hồ sơ bản nháp", "Hồ sơ của tôi".
   - Chuyển hướng nút hành động ở bảng Tra cứu thủ tục thành "Bắt đầu làm hồ sơ" đưa đến danh sách hồ sơ.
   - Dọn dẹp các icons và mock data không còn sử dụng (`citizenDocuments`, `citizenForms`, `citizenPdfs`).
-- **Kiểm tra**:
+- **Kiểm tra & Git**:
   - `npm run typecheck`: Đạt 0 lỗi.
+  - Commit: `fe22ca2` (`refactor(citizen): remove redundant profile prep module and streamline dossier detail flow`).
+  - Đã push thành công lên `origin/main`.
 
 ## Tối ưu giao diện Cột Thao tác Danh sách Hồ sơ Công dân — 03/10/2026
 
