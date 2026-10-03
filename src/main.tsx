@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Analytics } from '@vercel/analytics/react';
 import { App } from '@/app/App';
 import '@fontsource/be-vietnam-pro/300.css';
 import '@fontsource/be-vietnam-pro/400.css';
@@ -20,4 +21,9 @@ if (import.meta.env.PROD && analyticsToken) {
   document.head.appendChild(script);
 }
 
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+    {import.meta.env.PROD && <Analytics />}
+  </StrictMode>,
+);

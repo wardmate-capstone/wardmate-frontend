@@ -4,6 +4,14 @@ Cập nhật: 03/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Vercel Web Analytics — 03/10/2026
+
+- Theo yêu cầu người dùng, thêm `@vercel/analytics` 2.0.1 và `<Analytics />` từ `@vercel/analytics/react` tại root `src/main.tsx`, chỉ render trong build production. Cập nhật `package.json` và `package-lock.json`; không chỉnh BE/API/auth.
+- Giữ Cloudflare Analytics hiện có: khi cả hai được bật, cả hai dịch vụ đều nhận số liệu. Không thêm custom events hay dữ liệu nghiệp vụ.
+- Kiểm tra vừa chạy: `npm run build` (gồm TypeScript), `npm run lint`, `git diff --check` đạt. Build còn cảnh báo annotation Zod và bundle lớn. `npm audit --omit=dev` không phát hiện lỗ hổng; audit toàn bộ còn 1 cảnh báo high ở dependency dev `brace-expansion`, chưa sửa ngoài phạm vi.
+- Người dùng yêu cầu commit/push ngày 03/10/2026; gom tích hợp Vercel Analytics, dependency và bàn giao trong một commit. Đối chiếu lịch sử Git và `origin/main` để xác định đồng bộ. Chưa xác minh deployment, request hoặc dashboard Analytics thật, chưa chạy Playwright.
+- Kích hoạt: Vercel → Web Analytics/Analytics → chọn project `wardmate-frontend` → Enable; sau đó deploy bản code mới. Không cần token/biến môi trường cho Vercel Analytics. Mở website, chuyển vài trang và kiểm tra dữ liệu trên dashboard sau vài phút. Tài liệu: https://vercel.com/docs/analytics/quickstart.
+
 ## Cloudflare Web Analytics — 03/10/2026
 
 - Đã chuẩn bị tích hợp FE tại `src/main.tsx`: nạp beacon bất đồng bộ chỉ ở production có `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN`; dev hoặc thiếu mã thì tắt. Không thêm dependency, không truy cập/chỉnh BE.
