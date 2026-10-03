@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  X,
   Printer,
   DownloadSimple,
   FloppyDisk,
@@ -12,29 +11,28 @@ import {
   TextAlignCenter,
   TextAlignRight,
   TextAlignJustify,
-  ArrowCounterClockwise,
-  ArrowClockwise,
   Sparkle,
   FileDoc,
   MagnifyingGlassPlus,
   MagnifyingGlassMinus,
-  CheckCircle,
   Table,
   ListBullets,
   ListNumbers,
   TextT,
   ArrowsOut,
   ArrowsIn,
+  X,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
 import type { ChecklistItem } from '@/lib/procedureContent';
+import type { UserProfileDto } from '@/types/profile';
 
 interface FormDocxEditorModalProps {
   open: boolean;
   onClose: () => void;
   item: ChecklistItem | null;
   procedureName: string;
-  citizenName?: string;
+  userProfile?: UserProfileDto | null;
 }
 
 export function FormDocxEditorModal({
@@ -42,10 +40,10 @@ export function FormDocxEditorModal({
   onClose,
   item,
   procedureName,
-  citizenName = 'NGUYỄN VĂN AN',
+  userProfile,
 }: FormDocxEditorModalProps) {
   const [zoom, setZoom] = useState<number>(100);
-  const [isSaved, setIsSaved] = useState<boolean>(true);
+  const [, setIsSaved] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'layout'>('home');
   const [wordCount, setWordCount] = useState<number>(245);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -89,16 +87,71 @@ export function FormDocxEditorModal({
     toast.success(`Đang đóng gói và tải xuống tệp ${item.itemName}.docx`);
   };
 
+  // Tính năng Auto-fill từ User Profile (CCCD/VNeID Mức 2)
   const handleAutoFill = () => {
-    if (editorRef.current) {
-      const nameElements = editorRef.current.querySelectorAll('.fill-citizen-name');
-      nameElements.forEach((el) => {
-        el.textContent = citizenName.toUpperCase();
-      });
-      setIsSaved(false);
-      updateWordCount();
-      toast.success(`Đã tự động trích xuất & điền thông tin định danh VNeID: ${citizenName}`);
+    if (!editorRef.current) return;
+
+    if (!userProfile) {
+      toast.warning('Chưa có dữ liệu hồ sơ cá nhân để tự động điền.');
+      return;
     }
+
+    let count = 0;
+
+    // 1. Họ và tên
+    if (userProfile.fullName) {
+      editorRef.current.querySelectorAll('.fill-citizen-name').forEach((el) => {
+        el.textContent = userProfile.fullName.toUpperCase();
+        count++;
+      });
+    }
+
+    // 2. Ngày sinh
+    if (userProfile.dateOfBirth) {
+      editorRef.current.querySelectorAll('.fill-citizen-dob').forEach((el) => {
+        // Đổi YYYY-MM-DD sang DD/MM/YYYY nếu cần
+        const parts = userProfile.dateOfBirth!.split('-');
+        el.textContent = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : userProfile.dateOfBirth!;
+        count++;
+      });
+    }
+
+    // 3. Giới tính
+    if (userProfile.gender) {
+      editorRef.current.querySelectorAll('.fill-citizen-gender').forEach((el) => {
+        el.textContent = userProfile.gender!;
+        count++;
+      });
+    }
+
+    // 4. Số CCCD
+    if (userProfile.identityNumber) {
+      editorRef.current.querySelectorAll('.fill-citizen-id').forEach((el) => {
+        el.textContent = userProfile.identityNumber!;
+        count++;
+      });
+    }
+
+    // 5. Địa chỉ thường trú / tạm trú
+    const address = userProfile.permanentAddress || userProfile.temporaryAddress;
+    if (address) {
+      editorRef.current.querySelectorAll('.fill-citizen-address').forEach((el) => {
+        el.textContent = address;
+        count++;
+      });
+    }
+
+    // 6. Số điện thoại
+    if (userProfile.phoneNumber) {
+      editorRef.current.querySelectorAll('.fill-citizen-phone').forEach((el) => {
+        el.textContent = userProfile.phoneNumber!;
+        count++;
+      });
+    }
+
+    setIsSaved(false);
+    updateWordCount();
+    toast.success(`Đã tự động điền ${count} mục thông tin từ định danh cá nhân VNeID`);
   };
 
   const handleInsertTable = () => {
@@ -128,6 +181,8 @@ export function FormDocxEditorModal({
     updateWordCount();
   };
 
+  const displayName = userProfile?.fullName || 'NGUYỄN VĂN AN';
+
   return (
     <div
       role="dialog"
@@ -148,51 +203,55 @@ export function FormDocxEditorModal({
               <h1 id="editor-title" className="text-xs font-bold text-slate-100 truncate max-w-xs sm:max-w-md">
                 {item.itemName}
               </h1>
-              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono text-slate-300">
-                .docx
-              </span>
-              <span className="hidden sm:inline-block text-slate-500">|</span>
-              <span className="hidden sm:inline-block text-[11px] text-slate-400 truncate max-w-xs">
-                {procedureName}
+              <span className="hidden sm:inline-block rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">
+                A4 · Chuẩn thể thức NĐ 30/2020/NĐ-CP
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isSaved ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/80 px-2 py-0.5 text-[11px] font-medium text-emerald-300 border border-emerald-800/60">
-                <CheckCircle size={13} weight="bold" /> Đã lưu đám mây
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-2 py-0.5 text-[11px] font-medium text-amber-300 border border-amber-800/60 animate-pulse">
-                Chưa lưu thay đổi...
-              </span>
-            )}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="hidden sm:inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              title="In biểu mẫu (Ctrl+P)"
+            >
+              <Printer size={15} />
+              <span>In ấn</span>
+            </button>
 
             <button
               type="button"
-              onClick={() => setIsFullscreen((prev) => !prev)}
-              aria-label={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
-              className="grid size-7 place-items-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-              title={isFullscreen ? 'Thu nhỏ cửa sổ' : 'Phóng toàn màn hình'}
+              onClick={handleDownload}
+              className="inline-flex items-center gap-1 rounded bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Tải tệp định dạng .docx"
             >
-              {isFullscreen ? <ArrowsIn size={15} /> : <ArrowsOut size={15} />}
+              <DownloadSimple size={15} />
+              <span className="hidden sm:inline">Tải .docx</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="grid size-7 place-items-center rounded text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              title={isFullscreen ? 'Thu nhỏ cửa sổ' : 'Toàn màn hình'}
+            >
+              {isFullscreen ? <ArrowsIn size={16} /> : <ArrowsOut size={16} />}
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              aria-label="Đóng trình soạn thảo"
-              className="grid size-7 place-items-center rounded text-slate-400 hover:bg-red-700 hover:text-white transition-colors ml-1"
+              className="grid size-7 place-items-center rounded text-slate-400 hover:bg-red-900/80 hover:text-white transition-colors ml-1"
+              title="Đóng trình soạn thảo"
             >
-              <X size={17} weight="bold" />
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* ==================== 2. RIBBON TABS & ACTIONS ==================== */}
         <div className="border-b border-slate-200 bg-white shadow-2xs shrink-0">
-          {/* Menu Tab Bar */}
           <div className="flex items-center justify-between border-b border-slate-200/80 px-3 bg-slate-50 text-xs">
             <div className="flex items-center gap-1">
               <button
@@ -236,10 +295,10 @@ export function FormDocxEditorModal({
                 type="button"
                 onClick={handleAutoFill}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs"
-                title="Tự động trích xuất họ tên, CCCD, địa chỉ từ tài khoản VNeID vào biểu mẫu"
+                title="Tự động điền họ tên, CCCD, ngày sinh, địa chỉ từ tài khoản cá nhân vào biểu mẫu"
               >
                 <Sparkle size={14} weight="fill" className="text-amber-600" />
-                <span>Điền VNeID</span>
+                <span>Tự động điền từ Hồ sơ cá nhân / VNeID</span>
               </button>
               <button
                 type="button"
@@ -248,83 +307,49 @@ export function FormDocxEditorModal({
                 title="Lưu biểu mẫu"
               >
                 <FloppyDisk size={14} weight="bold" />
-                <span>Lưu</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="inline-flex items-center gap-1 rounded-lg bg-red-800 px-3 py-1 text-xs font-bold text-white hover:bg-red-900 transition-colors shadow-2xs"
-                title="Tải tệp tin DOCX về máy tính"
-              >
-                <DownloadSimple size={14} weight="bold" />
-                <span>Tải .DOCX</span>
-              </button>
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="grid size-7 place-items-center rounded border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
-                title="In văn bản (Ctrl+P)"
-              >
-                <Printer size={15} />
+                <span>Lưu văn bản</span>
               </button>
             </div>
           </div>
 
-          {/* Ribbon Toolbar Content */}
-          <div className="flex flex-wrap items-center gap-2 p-2 sm:px-4 text-xs">
+          {/* Toolbar Ribbon Controls */}
+          <div className="flex flex-wrap items-center gap-2 p-2 px-3 text-xs bg-white min-h-[44px]">
             {activeTab === 'home' && (
               <>
-                {/* Undo / Redo */}
-                <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => applyFormat('undo')}
-                    className="grid size-7 place-items-center rounded text-slate-700 hover:bg-white hover:shadow-2xs"
-                    title="Hoàn tác (Ctrl+Z)"
-                  >
-                    <ArrowCounterClockwise size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyFormat('redo')}
-                    className="grid size-7 place-items-center rounded text-slate-700 hover:bg-white hover:shadow-2xs"
-                    title="Làm lại (Ctrl+Y)"
-                  >
-                    <ArrowClockwise size={15} />
-                  </button>
-                </div>
+                {/* Font selector */}
+                <select
+                  aria-label="Phông chữ"
+                  defaultValue="Times New Roman"
+                  onChange={(e) => applyFormat('fontName', e.target.value)}
+                  className="rounded-md border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-800 font-serif focus:bg-white"
+                >
+                  <option value="Times New Roman">Times New Roman (Chuẩn văn bản)</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Calibri">Calibri</option>
+                </select>
 
-                {/* Font Selector & Size */}
-                <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-1">
-                  <select
-                    defaultValue="Times New Roman"
-                    onChange={(e) => applyFormat('fontName', e.target.value)}
-                    className="h-7 rounded border border-slate-200 bg-white px-2 font-medium text-slate-800 outline-none hover:border-slate-300"
-                  >
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Be Vietnam Pro">Be Vietnam Pro</option>
-                  </select>
+                {/* Font size */}
+                <select
+                  aria-label="Cỡ chữ"
+                  defaultValue="3"
+                  onChange={(e) => applyFormat('fontSize', e.target.value)}
+                  className="rounded-md border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-800 focus:bg-white"
+                >
+                  <option value="1">10 pt</option>
+                  <option value="2">12 pt</option>
+                  <option value="3">14 pt (Chuẩn NĐ 30)</option>
+                  <option value="4">16 pt</option>
+                  <option value="5">18 pt</option>
+                </select>
 
-                  <select
-                    defaultValue="3"
-                    onChange={(e) => applyFormat('fontSize', e.target.value)}
-                    className="h-7 rounded border border-slate-200 bg-white px-2 font-medium text-slate-800 outline-none hover:border-slate-300"
-                  >
-                    <option value="2">11 pt</option>
-                    <option value="3">13 pt (Chuẩn DVC)</option>
-                    <option value="4">14 pt (Nghị định 30)</option>
-                    <option value="5">16 pt (Tiêu đề)</option>
-                    <option value="6">18 pt</option>
-                  </select>
-                </div>
+                <div className="h-5 w-px bg-slate-200 mx-1" />
 
-                {/* Text Styling: B, I, U, S */}
+                {/* Text Formatting */}
                 <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50/80 p-0.5">
                   <button
                     type="button"
                     onClick={() => applyFormat('bold')}
-                    className="grid size-7 place-items-center rounded font-bold text-slate-800 hover:bg-white hover:shadow-2xs"
+                    className="grid size-7 place-items-center rounded text-slate-800 hover:bg-white hover:shadow-2xs"
                     title="In đậm (Ctrl+B)"
                   >
                     <TextB size={15} weight="bold" />
@@ -332,7 +357,7 @@ export function FormDocxEditorModal({
                   <button
                     type="button"
                     onClick={() => applyFormat('italic')}
-                    className="grid size-7 place-items-center rounded italic text-slate-800 hover:bg-white hover:shadow-2xs"
+                    className="grid size-7 place-items-center rounded text-slate-800 hover:bg-white hover:shadow-2xs"
                     title="In nghiêng (Ctrl+I)"
                   >
                     <TextItalic size={15} />
@@ -340,7 +365,7 @@ export function FormDocxEditorModal({
                   <button
                     type="button"
                     onClick={() => applyFormat('underline')}
-                    className="grid size-7 place-items-center rounded underline text-slate-800 hover:bg-white hover:shadow-2xs"
+                    className="grid size-7 place-items-center rounded text-slate-800 hover:bg-white hover:shadow-2xs"
                     title="Gạch chân (Ctrl+U)"
                   >
                     <TextUnderline size={15} />
@@ -445,35 +470,16 @@ export function FormDocxEditorModal({
                 >
                   <span>Đường kẻ phân cách</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const signHtml = `
-                      <div style="display: flex; justify-content: flex-end; margin-top: 32px; text-align: center;">
-                        <div style="width: 250px;">
-                          <p style="font-style: italic; font-size: 13px;">Hà Nội, ngày ... tháng ... năm ...</p>
-                          <p style="font-weight: bold; margin-top: 4px;">NGƯỜI LÀM ĐƠN</p>
-                          <p style="font-size: 11px; font-style: italic; color: #64748b;">(Ký và ghi rõ họ tên)</p>
-                          <div style="height: 70px;"></div>
-                          <p style="font-weight: bold; text-transform: uppercase;">${citizenName}</p>
-                        </div>
-                      </div>
-                    `;
-                    document.execCommand('insertHTML', false, signHtml);
-                    setIsSaved(false);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  <span>Chèn ô chữ ký chuẩn</span>
-                </button>
               </div>
             )}
 
             {activeTab === 'layout' && (
-              <div className="flex items-center gap-3 text-xs text-slate-600">
-                <span className="font-semibold text-slate-800">Khổ giấy chuẩn: <strong>A4 (210 x 297 mm)</strong></span>
-                <span className="text-slate-300">|</span>
-                <span>Căn lề chuẩn Nghị định 30/2020/NĐ-CP: <strong>Trên: 20mm · Dưới: 20mm · Trái: 30mm · Phải: 15mm</strong></span>
+              <div className="flex items-center gap-4 text-slate-700">
+                <span>Khổ giấy: <strong>A4 (210 x 297 mm)</strong></span>
+                <span>Lề trên: <strong>20 mm</strong></span>
+                <span>Lề dưới: <strong>20 mm</strong></span>
+                <span>Lề trái: <strong>30 mm</strong></span>
+                <span>Lề phải: <strong>15 mm</strong></span>
               </div>
             )}
           </div>
@@ -528,32 +534,40 @@ export function FormDocxEditorModal({
               <p>
                 <strong>1. Họ, chữ đệm, tên người yêu cầu: </strong>
                 <span className="fill-citizen-name font-bold uppercase underline decoration-dotted decoration-red-400">
-                  {citizenName}
+                  {displayName}
                 </span>
               </p>
 
               <p>
                 <strong>2. Ngày, tháng, năm sinh: </strong>
-                <span>15/08/1992</span>
+                <span className="fill-citizen-dob font-medium">
+                  {userProfile?.dateOfBirth || '...... / ...... / ............'}
+                </span>
                 <strong className="ml-10">Giới tính: </strong>
-                <span>Nam</span>
+                <span className="fill-citizen-gender font-medium">
+                  {userProfile?.gender || '............'}
+                </span>
               </p>
 
               <p>
                 <strong>3. Số Căn cước công dân / Định danh cá nhân: </strong>
-                <span className="font-mono font-bold text-slate-800">001092008921</span>
+                <span className="fill-citizen-id font-mono font-bold text-slate-800">
+                  {userProfile?.identityNumber || '....................................'}
+                </span>
               </p>
 
               <p>
                 <strong>4. Nơi cư trú hiện tại (thường trú / tạm trú): </strong>
-                <span>Số 124 đường Trần Phú, Phường Hàng Mã, Quận Hoàn Kiếm, TP. Hà Nội</span>
+                <span className="fill-citizen-address font-medium">
+                  {userProfile?.permanentAddress || userProfile?.temporaryAddress || '....................................................................................................'}
+                </span>
               </p>
 
               <p>
                 <strong>5. Số điện thoại liên hệ: </strong>
-                <span>0912 345 678</span>
-                <strong className="ml-10">Địa chỉ Email: </strong>
-                <span>nguyenvanan.citizen@gmail.com</span>
+                <span className="fill-citizen-phone font-medium">
+                  {userProfile?.phoneNumber || '....................................'}
+                </span>
               </p>
 
               <p className="pt-2">
@@ -584,7 +598,7 @@ export function FormDocxEditorModal({
                   <div className="h-24 flex items-center justify-center">
                     <span className="text-xs italic text-slate-400 font-mono">[Chữ ký số / Ký tay]</span>
                   </div>
-                  <p className="fill-citizen-name font-bold uppercase tracking-wide">{citizenName}</p>
+                  <p className="fill-citizen-name font-bold uppercase tracking-wide">{displayName}</p>
                 </div>
               </div>
             </div>
@@ -597,44 +611,25 @@ export function FormDocxEditorModal({
             <span className="font-medium">Trang 1 / 1 (Khổ A4)</span>
             <span className="text-slate-300">|</span>
             <span>Số từ: <strong>{wordCount}</strong> từ</span>
-            <span className="text-slate-300">|</span>
-            <span className="hidden sm:inline-block">Tiếng Việt (Vietnam)</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.max(60, z - 10))}
-              className="grid size-6 place-items-center rounded hover:bg-slate-100"
+              onClick={() => setZoom(Math.max(50, zoom - 10))}
+              className="p-1 hover:text-slate-900"
               title="Thu nhỏ"
             >
-              <MagnifyingGlassMinus size={13} />
+              <MagnifyingGlassMinus size={14} />
             </button>
-            <input
-              type="range"
-              min={60}
-              max={150}
-              step={5}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-20 sm:w-28 accent-red-700 h-1"
-            />
-            <span className="w-10 text-right font-mono font-semibold">{zoom}%</span>
+            <span className="w-10 text-center font-mono font-medium">{zoom}%</span>
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.min(150, z + 10))}
-              className="grid size-6 place-items-center rounded hover:bg-slate-100"
+              onClick={() => setZoom(Math.min(150, zoom + 10))}
+              className="p-1 hover:text-slate-900"
               title="Phóng to"
             >
-              <MagnifyingGlassPlus size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom(100)}
-              className="grid size-6 place-items-center rounded hover:bg-slate-100 ml-1 text-slate-500"
-              title="Khôi phục zoom 100%"
-            >
-              <ArrowCounterClockwise size={12} />
+              <MagnifyingGlassPlus size={14} />
             </button>
           </div>
         </div>
@@ -642,4 +637,3 @@ export function FormDocxEditorModal({
     </div>
   );
 }
-
