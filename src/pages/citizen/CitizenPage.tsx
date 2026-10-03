@@ -335,7 +335,11 @@ export function CitizenPage() {
       if (found) {
         if (!found.checklist || found.checklist.length === 0) {
           const matchProc = mockPublicProcedures.find(
-            (p) => p.title.toLowerCase() === found.procedureName.toLowerCase() || p.id === found.procedureId
+            (p) =>
+              p.title.toLowerCase() === found.procedureName.toLowerCase() ||
+              found.procedureName.toLowerCase().includes(p.title.toLowerCase()) ||
+              p.title.toLowerCase().includes(found.procedureName.toLowerCase()) ||
+              p.id === found.procedureId
           );
           if (matchProc) {
             const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
@@ -816,7 +820,11 @@ export function CitizenPage() {
                 // Nếu hồ sơ chưa có checklist thì thử tìm trong mockPublicProcedures
                 if (!dossier.checklist || dossier.checklist.length === 0) {
                   const matchProc = mockPublicProcedures.find(
-                    (p) => p.title.toLowerCase() === dossier.procedureName.toLowerCase() || p.id === dossier.procedureId
+                    (p) =>
+                      p.title.toLowerCase() === dossier.procedureName.toLowerCase() ||
+                      dossier.procedureName.toLowerCase().includes(p.title.toLowerCase()) ||
+                      p.title.toLowerCase().includes(dossier.procedureName.toLowerCase()) ||
+                      p.id === dossier.procedureId
                   );
                   if (matchProc) {
                     const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
@@ -916,7 +924,7 @@ export function CitizenPage() {
           onClose={() => setEditFormItem(null)}
           item={editFormItem.item}
           procedureName={editFormItem.procedureName}
-          citizenName={userProfile?.fullName || 'NGUYỄN VĂN AN'}
+          userProfile={userProfile}
         />
       )}
 
@@ -1563,19 +1571,17 @@ function CitizenDossierDetailView({
 
       {/* Danh mục thành phần hồ sơ và biểu mẫu */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="border-b border-slate-100 pb-4">
+        <div className="border-b border-slate-100 pb-3">
           <h3 className="text-base font-bold text-slate-900">
-            Danh mục giấy tờ & Biểu mẫu cần chuẩn bị
+            Danh mục giấy tờ & biểu mẫu
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Xem thành phần hồ sơ theo từng trường hợp, tải tệp mẫu chuẩn và trực tiếp xem trước/soạn thảo biểu mẫu điện tử
-          </p>
         </div>
 
         <DossierChecklistView
           procedureName={dossier.procedureName}
           cases={dossier.cases || []}
           checklist={dossier.checklist || []}
+          dossierCode={dossier.code}
           onDownloadForm={onDownloadForm}
           onPreviewForm={onPreviewForm}
           onEditForm={onEditForm}
@@ -1583,31 +1589,23 @@ function CitizenDossierDetailView({
       </section>
 
       {/* Thanh hành động chân trang */}
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h4 className="text-sm font-bold text-slate-900">Hoàn tất chuẩn bị giấy tờ?</h4>
-          <p className="text-xs text-slate-600 mt-0.5">
-            Kiểm tra kỹ các tệp giấy tờ và tờ khai trước khi bấm nộp để cán bộ Một cửa tiền kiểm trực tuyến nhanh nhất.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+        >
+          Quay lại danh sách
+        </button>
+        {dossier.status === 'Bản nháp' && (
           <button
             type="button"
-            onClick={onBack}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+            onClick={onSubmitPrecheck}
+            className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
           >
-            Quay lại danh sách
+            Nộp tiền kiểm ngay
           </button>
-          {dossier.status === 'Bản nháp' && (
-            <button
-              type="button"
-              onClick={onSubmitPrecheck}
-              className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
-            >
-              Nộp tiền kiểm ngay
-            </button>
-          )}
-        </div>
+        )}
       </section>
     </div>
   );
