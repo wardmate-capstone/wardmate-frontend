@@ -1433,43 +1433,52 @@ function CitizenDossiersView({
                     <small className="block text-[10px] text-slate-400 mt-0.5 truncate">Cán bộ: {item.officerName}</small>
                   )}
                 </td>
-                <td>
-                  <div className="flex items-center justify-end gap-2 flex-wrap">
-                    {/* Nút Xem chi tiết hồ sơ & chuẩn bị checklist */}
+                <td className="whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1.5">
+                    {/* Nút Xem chi tiết hồ sơ */}
                     <button
                       type="button"
-                      className="rounded-lg bg-red-800 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-900 shadow-2xs transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-red-900 active:scale-95"
                       onClick={() => onOpenDossierDetail(item)}
                       title="Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị"
                     >
-                      Chi tiết
+                      <Eye size={14} weight="bold" />
+                      <span>Chi tiết</span>
                     </button>
 
                     {item.status === 'Cần chỉnh sửa' && (
                       <button
                         type="button"
-                        className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
                         onClick={() => toast.info(`Mở giao diện bổ sung giấy tờ cho hồ sơ ${item.code}`)}
+                        title="Bổ sung / Chỉnh sửa hồ sơ"
                       >
-                        Chỉnh sửa
+                        <NotePencil size={14} weight="bold" />
+                        <span>Chỉnh sửa</span>
                       </button>
                     )}
+
                     {item.status === 'Đã hoàn thành' && (
                       <button
                         type="button"
-                        className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
                         onClick={() => onOpenFeedback(item.procedureName, item.code)}
+                        title="Đánh giá dịch vụ"
                       >
-                        Đánh giá
+                        <Star size={14} weight="bold" />
+                        <span>Đánh giá</span>
                       </button>
                     )}
+
+                    {/* Nút Xem mã QR */}
                     <button
                       type="button"
-                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-red-800 shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-800 active:scale-95"
                       onClick={() => onSelectSection('qr_code')}
                       title="Xem mã QR hồ sơ"
                     >
-                      Mã QR
+                      <QrCode size={14} weight="bold" />
+                      <span>Mã QR</span>
                     </button>
                   </div>
                 </td>

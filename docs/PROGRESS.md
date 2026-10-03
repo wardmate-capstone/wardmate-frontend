@@ -4,6 +4,16 @@ Cập nhật: 03/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tối ưu giao diện Cột Thao tác Danh sách Hồ sơ Công dân — 03/10/2026
+
+- **Yêu cầu & Triển khai**:
+  - Tinh chỉnh giao diện cột "Thao tác" trong bảng danh sách hồ sơ công dân ([`CitizenPage.tsx`](file:///d:/frontend/src/pages/citizen/CitizenPage.tsx)) theo phản hồi của người dùng.
+  - Khắc phục triệt để tình trạng các nút bị so le, rớt dòng vỡ layout bằng cách áp dụng `whitespace-nowrap` và flex inline đồng nhất trên một hàng.
+  - Bổ sung icon trực quan từ Phosphor Icons cho từng nút hành động (`Eye` cho Chi tiết, `NotePencil` cho Chỉnh sửa, `Star` cho Đánh giá, `QrCode` cho Mã QR).
+  - Tối ưu màu sắc, padding, viền và hiệu ứng hover/active scale để cột thao tác trông thanh lịch, hiện đại và chuẩn chỉ hơn.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 0 lỗi.
+
 ## Vercel Web Analytics — 03/10/2026
 
 - Theo yêu cầu người dùng, thêm `@vercel/analytics` 2.0.1 và `<Analytics />` từ `@vercel/analytics/react` tại root `src/main.tsx`, chỉ render trong build production. Cập nhật `package.json` và `package-lock.json`; không chỉnh BE/API/auth.
