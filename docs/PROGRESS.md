@@ -1,8 +1,33 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 02/10/2026.
+Cập nhật: 03/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## FE-TASK-13, FE-TASK-14, FE-TASK-15 — Phân hệ Chuẩn bị Hồ sơ Tiền kiểm & Biểu mẫu Thông minh — 03/10/2026
+
+- **Yêu cầu & Triển khai theo định hướng trợ lý tiền kiểm**:
+  - Tinh gọn trải nghiệm người dân: chuẩn bị hồ sơ trực tiếp ngay trên bảng Checklist của từng thủ tục, không tách trang rườm rà.
+  1. **Tích hợp Kéo thả & Đính kèm Tệp từng dòng Giấy tờ (FE-TASK-15 & FE-TASK-09)**:
+     - Nâng cấp [`DossierChecklistView.tsx`](file:///d:/frontend/src/pages/citizen/components/DossierChecklistView.tsx): mỗi dòng giấy tờ đều có nút **"Đính kèm tệp"** (hỗ trợ ảnh CCCD 2 mặt, PDF scan, tờ khai có sẵn).
+     - Khi tải lên thành công: hiển thị tên file, icon loại file, nút xem trước mắt biếc 👁️ và nút xóa 🗑️.
+     - **Tự động tick xanh ✅** và cập nhật % tiến độ chuẩn bị hồ sơ theo thời gian thực; tự động lưu vào `localStorage`.
+  2. **Trình Soạn thảo Biểu mẫu Trực tuyến & Auto-fill từ Hồ sơ cá nhân (FE-TASK-14)**:
+     - Nâng cấp [`FormDocxEditorModal.tsx`](file:///d:/frontend/src/pages/citizen/components/FormDocxEditorModal.tsx):
+       - Form khi mở là form chuẩn khổ A4 theo Nghị định 30/2020/NĐ-CP.
+       - Nút **"Tự động điền từ Hồ sơ cá nhân / VNeID"**: tự động trích xuất Họ tên, CCCD (12 số), Ngày sinh, Giới tính, Địa chỉ thường trú/tạm trú, SĐT từ `userProfile` (API `/api/v1/users/me/profile`) điền vào đúng các vị trí tương ứng trên mẫu đơn.
+       - Hỗ trợ lưu trực tuyến, in ấn và tải về định dạng `.docx`.
+  3. **Quy trình Nộp tiền kiểm tinh gọn (FE-TASK-13)**:
+     - Sau khi người dân chuẩn bị đủ giấy tờ (hoặc tự tin đã chuẩn bị xong), bấm **"Nộp tiền kiểm ngay"** để gửi hồ sơ vào hàng đợi chờ Cán bộ Một cửa tiếp nhận và phản hồi ghi chú/nhận xét.
+  4. **Tối giản hóa giao diện (Minimalist UI) & Dọn dẹp mã nguồn**:
+     - Lược bỏ các đoạn text/subtext rườm rà, giải thích thừa thãi ở tiêu đề bảng, thanh tiến độ và thanh hành động.
+     - Thu gọn tiêu đề các cột bảng giấy tờ (`Đạt`, `STT`, `Tên giấy tờ`, `Số lượng`, `Yêu cầu`, `Thao tác`).
+     - Đã dọn dẹp và xóa hoàn toàn các file mồ côi không dùng tới: `CitizenDossierWizardView.tsx`, toàn bộ thư mục `components/wizard/`, `components/form-renderer/`, `DocumentDropzoneUploader.tsx`, và `types/formSchema.ts`.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt 100% (0 lỗi).
+  - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
+  - `npm run build`: Đạt 100% (Build production thành công trong 24.01s).
+  - Playwright test: [`tests/citizen-application-wizard.spec.ts`](file:///d:/frontend/tests/citizen-application-wizard.spec.ts) đạt 1/1 test (100% pass trong 19.5s).
 
 ## Hiển thị danh mục giấy tờ cần chuẩn bị & tải mẫu (không có checkbox) ở Chi tiết thủ tục — 02/10/2026
 
