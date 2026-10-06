@@ -9,12 +9,18 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - Đã rà soát toàn bộ thư mục `src/pages/procedure-manager/` và xóa 10 file views mock cũ (mồ côi, không còn được import sau khi chuyển sang dùng API views):
   - `ProcedureListView.tsx`, `ProcedureDetailView.tsx`, `ProcedureWizardModal.tsx`, `ProcedureFormsView.tsx`, `ProcedureLegalView.tsx`, `ProcedureChecklistsView.tsx`, `ProcedureStepsView.tsx`, `ProcedureAiKnowledgeView.tsx`, `ProcedureAuditLogView.tsx`, `CitizenFormFillWorkspaceModal.tsx`.
 - Xóa file dữ liệu mock tĩnh cũ không còn sử dụng: `src/data/mockProcedureManagerData.ts`.
-- Giảm hơn 4.100 dòng code thừa, tối ưu dung lượng bundle.
-- Đã chạy kiểm tra hệ thống:
+- Rà soát toàn bộ các phân hệ UI khác ngoài Quản lý thủ tục:
+  - Phân hệ Public: Xóa file dữ liệu giả cũ `src/data/mockPublicProcedures.ts` (đã thay bằng Catalog API) và component mồ côi `src/pages/public/components/ProcedureCasesAndChecklist.tsx` (đã thay bằng `ProcedureCasesView.tsx`).
+  - Phân hệ Cán bộ tiếp nhận (`officer`), Quản trị hệ thống (`admin`), Quản lý (`manager`), Công dân (`citizen`), Xác thực (`auth`), Tài khoản (`account`): Kiểm tra toàn bộ imports, không còn file chết hoặc code debug/console sót lại.
+- Giảm hơn 4.690 dòng code thừa và mock data, tối ưu dung lượng bundle.
+- Đã chạy kiểm tra toàn diện hệ thống:
   - `npm run typecheck`: **0 lỗi**.
   - `npm run lint`: **0 cảnh báo / 0 lỗi**.
   - `npm run build`: **Build production thành công** (0 lỗi).
-- Commit & push: `4ed3f68` `chore: remove unused legacy mock views and mock procedure manager data` lên `origin/main`.
+- Commits & push:
+  - `4ed3f68`: `chore: remove unused legacy mock views and mock procedure manager data`
+  - `e70025d`: `chore: remove unused mockPublicProcedures and unused ProcedureCasesAndChecklist`
+  - Đã đẩy lên `origin/main`.
 
 ## Điều chỉnh dashboard và tìm kiếm theo phản hồi người dùng — 06/10/2026
 
