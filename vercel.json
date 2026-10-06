@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/v1/procedures/:path*",
+      "destination": "https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/procedures/:path*"
+    },
+    {
+      "source": "/api/v1/procedure-manager/:path*",
+      "destination": "https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/procedure-manager/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/:path*"
     },

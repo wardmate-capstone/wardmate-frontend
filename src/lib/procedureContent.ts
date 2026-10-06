@@ -1,3 +1,17 @@
+import type { ProcedureDetail } from '@/lib/api/procedures';
+
+export function contentFromApi(procedure: ProcedureDetail): ProcedureContent {
+  const payload = procedure.contentPayload;
+  return {
+    overview: procedure.targetAudience,
+    methods: payload.submissionMethods.map(item => ({ method: item.methodName, processingTime: `${item.estimatedDays} ngày`, fee: item.feeAmount === 0 ? 'Miễn phí' : `${item.feeAmount.toLocaleString('vi-VN')} ${item.feeUnit}`, notes: item.note ?? '' })),
+    legalBases: payload.legalReferences.map(item => ({ number: item.documentNumber, title: item.documentName, url: '' })),
+    receivingAgencies: procedure.executingAgency ? [{ name: procedure.executingAgency, address: payload.receivingAddress, url: '' }] : [],
+    cases: payload.cases,
+    checklist: (procedure.checklistSchema ?? []).map(item => ({ ...item, caseCode: item.caseCode ?? undefined, conditionNote: item.conditionNote ?? undefined })),
+  };
+}
+
 export type ProcedureStep = {
   stepOrder: number;
   stepName: string;
