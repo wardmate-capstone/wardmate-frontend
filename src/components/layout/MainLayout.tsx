@@ -28,7 +28,7 @@ export function MainLayout() {
   const location = useLocation();
   const { isAuthenticated } = useAuthState();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isAuthPage = ['/dang-nhap', '/dang-ky', '/quen-mat-khau', '/dat-lai-mat-khau'].includes(location.pathname);
+  const hideFooter = ['/quen-mat-khau', '/dat-lai-mat-khau'].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-white">
@@ -103,7 +103,7 @@ export function MainLayout() {
 
       <main id="main" tabIndex={-1}><Outlet /></main>
 
-      {!isAuthPage && (
+      {!hideFooter && (
         <footer className="bg-red-950 text-red-100">
           <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.5fr_1fr_1fr]">
             <div><div className="flex items-center gap-3"><BrandMark className="footer-brand-mark" size={46} /><BrandWordmark subtitle="Chuẩn bị đúng · Giảm đi lại" inverse /></div><p className="mt-5 max-w-lg text-sm leading-7 text-red-100/65">Đồng hành cùng người dân trong quá trình tra cứu, chuẩn bị và tiền kiểm hồ sơ trước khi đến cơ quan tiếp nhận.</p></div>
