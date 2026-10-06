@@ -239,7 +239,7 @@ export const ProcedureProfileView: React.FC = () => {
           <div className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-xs space-y-3">
             <div className="flex items-center justify-between pt-2">
               <span className="text-slate-500">Đơn vị công tác:</span>
-              <span className="font-bold text-slate-900">UBND Phường An Khánh, TP. Thủ Đức</span>
+              <span className="font-bold text-slate-900">Chưa có thông tin đơn vị công tác</span>
             </div>
             <div className="flex items-center justify-between pt-2">
               <span className="text-slate-500">Hộp thư tài khoản:</span>
@@ -259,7 +259,7 @@ export const ProcedureProfileView: React.FC = () => {
             </div>
             <div className="flex items-center justify-between pt-2">
               <span className="text-slate-500">Vai trò hệ thống:</span>
-              <span className="font-bold text-purple-900">{user?.roles.join(', ') || 'PROCEDURE_MANAGER'}</span>
+              <span className="font-bold text-purple-900">{user?.roles.join(', ') || 'Chưa có thông tin'}</span>
             </div>
           </div>
         )}

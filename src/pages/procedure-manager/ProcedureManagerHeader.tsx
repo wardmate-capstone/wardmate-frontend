@@ -3,7 +3,6 @@ import React from 'react';
 import {
   List,
   SidebarSimple,
-  Bell,
   Plus,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
@@ -21,7 +20,7 @@ interface ProcedureManagerHeaderProps {
 export const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: string }> = {
   dashboard: {
     title: 'Tổng quan Quản lý Thủ tục',
-    subtitle: 'Theo dõi 45 thủ tục công khai, 12 biểu mẫu hiện hành và trạng thái đồng bộ tri thức AI'
+    subtitle: 'Theo dõi thủ tục và dữ liệu từ máy chủ'
   },
   procedures: {
     title: 'Danh sách Thủ tục Hành chính',
@@ -90,7 +89,6 @@ export const ProcedureManagerHeader: React.FC<ProcedureManagerHeaderProps> = ({
     </div>}
     {onAddNewProcedure && <button type="button" className="admin-primary-action" onClick={onAddNewProcedure}><Plus size={18} /><span>Thêm thủ tục</span></button>}
     <div className="admin-topbar-actions">
-      <button type="button" aria-label="Thông báo hệ thống"><Bell size={21} /><span>•</span></button>
       <UserDropdown />
     </div>
   </header>

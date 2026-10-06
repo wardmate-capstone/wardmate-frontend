@@ -52,9 +52,8 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
   isOpenMobile,
   onCloseMobile,
   isCollapsedDesktop,
-  publishedCount = 45,
-  draftCount = 6,
-  activeFormsCount = 12
+  publishedCount,
+  activeFormsCount
 }) => {
   const handleNavClick = (section: ProcedureNavSection) => {
     onSelectSection(section);
@@ -69,14 +68,14 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           id: 'procedures' as ProcedureNavSection,
           label: 'Danh sách thủ tục',
           icon: Files,
-          badge: `${publishedCount} CK · ${draftCount} nháp`,
+          badge: publishedCount == null ? undefined : `${publishedCount} công khai`,
           badgeColor: 'bg-emerald-100 text-emerald-800'
         },
         {
           id: 'categories' as ProcedureNavSection,
           label: 'Danh mục thủ tục',
           icon: FolderSimple,
-          badge: '6 nhóm'
+          badge: undefined
         },
         {
           id: 'checklists' as ProcedureNavSection,
@@ -97,7 +96,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           id: 'forms' as ProcedureNavSection,
           label: 'Danh sách biểu mẫu',
           icon: FileText,
-          badge: `${activeFormsCount} mẫu`,
+          badge: activeFormsCount == null ? undefined : `${activeFormsCount} mẫu`,
           badgeColor: 'bg-blue-100 text-blue-800'
         },
         {
@@ -124,7 +123,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           id: 'legal-docs' as ProcedureNavSection,
           label: 'Văn bản pháp lý',
           icon: Scales,
-          badge: '18 VB'
+          badge: undefined
         },
         {
           id: 'procedure-legal-links' as ProcedureNavSection,
@@ -135,7 +134,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           id: 'ai-knowledge' as ProcedureNavSection,
           label: 'Dữ liệu kiến thức AI',
           icon: Brain,
-          badge: 'RAG Sync',
+          badge: undefined,
           badgeColor: 'bg-purple-100 text-purple-800'
         }
       ]
@@ -163,7 +162,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
               <p>{group.title}</p>
               {group.items.map(({ id, label, icon: Icon, badge }) => (
                 <button key={id} type="button" className={currentSection === id ? 'is-active' : ''} aria-current={currentSection === id ? 'page' : undefined} onClick={() => handleNavClick(id)} title={badge ? `${label} · ${badge}` : label} aria-label={label}>
-                  <Icon size={20} aria-hidden="true" /><span>{label}</span>{badge && <small>{id === 'procedures' ? publishedCount + draftCount : id === 'ai-knowledge' ? 'AI' : badge.split(' ')[0]}</small>}
+                  <Icon size={20} aria-hidden="true" /><span>{label}</span>{badge && <small>{badge.split(' ')[0]}</small>}
                 </button>
               ))}
             </div>
