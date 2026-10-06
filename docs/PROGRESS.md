@@ -4,6 +4,19 @@ Cập nhật: 06/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Setup nền tảng FE — 06/10/2026
+
+- `AGENTS.md` yêu cầu đọc `docs/FRONTEND_SETUP.md` trước mọi thay đổi form, dữ liệu API/cache hoặc component UI, để các phiên AI sau tái sử dụng đúng ba nền tảng đã setup.
+- Đã vận dụng TanStack Query vào ba luồng Catalog công khai: Trang chủ, danh sách thủ tục và chi tiết thủ tục. Query key phân biệt danh mục, từ khóa, lĩnh vực, trang và ID; điều hướng quay lại dùng cache trong RAM thay vì luôn tải lại.
+- Tìm kiếm ở danh sách vẫn debounce 350 ms, chuyển tiếp AbortSignal xuống Axios và hủy request cũ khi bộ lọc đổi. Lỗi API tiếp tục dùng thông báo tiếng Việt hiện có; nút Thử lại gọi refetch. Không cache dữ liệu hồ sơ tiền kiểm hoặc thay đổi quyền phía client.
+- Kiểm tra lần này: typecheck, lint, build và diff check đạt. Playwright `landing.spec.ts` in **14/14 pass**, sau đó vẫn treo khi đóng runner/web server nên đã dừng Ctrl+C; không coi là exit code 0. Cảnh báo Zod annotation và bundle lớn vẫn còn như trước.
+- Cài TanStack Query; bọc App bằng QueryProvider, staleTime 30 giây/gcTime 5 phút, retry một lần cho mạng/5xx, không retry mutation hoặc 4xx/validation. Cache RAM xóa khi đổi/mất danh tính.
+- Thêm hook `useProcedureCategories` sử dụng Catalog service + signal hiện có, sẵn dùng cho màn hình mới; chưa migrate các màn hình dùng `useProcedureQuery`. React Hook Form/Zod/resolvers đã có, tiếp tục sử dụng.
+- Thêm `components.json` cho shadcn/Vite/Tailwind v4, alias tới components/ui và cn hiện có; semantic color tokens WardMate. `shadcn info` xác nhận cấu hình hợp lệ; chưa nhập bộ component shadcn hoặc ghi đè UI hiện tại.
+- Hướng dẫn tại `docs/FRONTEND_SETUP.md`. Không sửa BE, chưa commit/push/deploy.
+- Typecheck, lint, build và diff check đạt. Build còn cảnh báo annotation Zod và bundle lớn. npm báo 2 lỗ hổng mức high, chưa xử lý audit diện rộng.
+- Playwright nhóm jwt-client/design-system/landing: 28 ca đều in kết quả pass nhưng tiến trình treo ở bước kết thúc; đã dừng bằng Ctrl+C. Lần chạy lại ngoài sandbox thất bại với EPERM khi unlink `test-results/auth-core-mobile.png`. Không coi đây là bộ test có exit code 0; cần kiểm tra quyền/khóa file kết quả và vòng đời runner/webServer trên Windows. Không xác minh đăng nhập backend thật trong task này.
+
 ## Dọn dẹp mã nguồn và gỡ bỏ file/mock data không sử dụng — 06/10/2026
 
 - Đã rà soát toàn bộ thư mục `src/pages/procedure-manager/` và xóa 10 file views mock cũ (mồ côi, không còn được import sau khi chuyển sang dùng API views):

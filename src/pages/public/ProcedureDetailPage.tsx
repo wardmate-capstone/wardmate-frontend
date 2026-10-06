@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ArrowSquareOut, CaretRight, House, Sparkle } from '@phosphor-icons/react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge, buttonVariants } from '@/components/ui';
-import { procedureApi } from '@/lib/api/procedures';
-import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { procedureError } from '@/lib/api/procedures';
+import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
 import { contentFromApi } from '@/lib/procedureContent';
@@ -26,7 +26,7 @@ export function ProcedureDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const search = location.search;
-  const result = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.detail(procedureId ?? '', signal), [procedureId]));
+  const result = usePublicProcedureDetail(procedureId);
   const procedure = result.data;
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
@@ -39,7 +39,7 @@ export function ProcedureDetailPage() {
     heading.current?.focus({ preventScroll: true });
   }, [procedureId, procedure?.id]);
 
-  if (result.loading || result.error) return <div className="mx-auto max-w-4xl p-6"><ProcedureFeedback loading={result.loading} error={result.error} retry={result.refresh} /><Link to={listUrl}>Quay lại danh sách</Link></div>;
+  if (result.isPending || result.isError) return <div className="mx-auto max-w-4xl p-6"><ProcedureFeedback loading={result.isPending} error={result.isError ? procedureError(result.error) : ''} retry={() => { void result.refetch(); }} /><Link to={listUrl}>Quay lại danh sách</Link></div>;
   if (!procedure) return (
     <section className="mx-auto max-w-3xl px-5 py-16 text-center">
       <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">Không tìm thấy thủ tục</h1>

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { m } from 'motion/react';
 import { toast } from '@/components/ui/Toast';
 import {
@@ -13,8 +13,8 @@ import { JourneySteps } from '@/components/home/JourneySteps';
 import { preparationSteps } from '@/data/landing';
 
 import { useNavigate } from 'react-router-dom';
-import { procedureApi } from '@/lib/api/procedures';
-import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { procedureError } from '@/lib/api/procedures';
+import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
 const reveal = {
@@ -29,8 +29,8 @@ export function HomePage() {
   const [submittedQuery, setSubmittedQuery] = useState('');
 
   const navigate = useNavigate();
-  const categories = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.categories(signal), []));
-  const procedures = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.list({ keyword: submittedQuery || undefined, pageSize: 5 }, false, signal), [submittedQuery]));
+  const categories = useProcedureCategories();
+  const procedures = usePublicProcedureList({ keyword: submittedQuery || undefined, pageSize: 5 });
   const searchResults = procedures.data?.items ?? [];
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -84,7 +84,7 @@ export function HomePage() {
             <div><p className="section-label">Thông tin và dịch vụ</p><h2>Lĩnh vực thủ tục hành chính</h2><p>Chọn lĩnh vực gần nhất với nhu cầu của bạn để xem hướng dẫn phù hợp.</p></div>
             <Button variant="outline" className="hidden sm:inline-flex" onClick={() => navigate('/thu-tuc')}>Xem tất cả lĩnh vực <ArrowRight size={17} aria-hidden="true" /></Button>
           </m.div>
-          <ProcedureFeedback loading={categories.loading} error={categories.error} retry={categories.refresh} /><div className="service-grid relative z-10">
+          <ProcedureFeedback loading={categories.isPending} error={categories.isError ? procedureError(categories.error) : ''} retry={() => { void categories.refetch(); }} /><div className="service-grid relative z-10">
             {(categories.data ?? []).map((group, index) => (
               <m.button {...reveal} transition={{ duration: 0.35, delay: index * 0.04 }} key={group.id} type="button" onClick={() => navigate('/thu-tuc?category=' + group.id)} className="service-group group">
                 <span className="service-icon"><FileSearch size={25} strokeWidth={1.7} aria-hidden="true" /></span>
@@ -100,7 +100,7 @@ export function HomePage() {
             <div><p className="section-label">Danh mục công khai</p><h2 className="mt-2 text-3xl font-bold text-slate-950">Thủ tục hành chính</h2></div>
             {submittedQuery && <button type="button" onClick={() => { setQuery(''); setSubmittedQuery(''); }} className="min-h-11 self-start text-sm font-bold text-red-800 underline decoration-red-200 underline-offset-4 sm:self-auto">Xóa từ khóa “{submittedQuery}”</button>}
           </div>
-          <ProcedureFeedback loading={procedures.loading} error={procedures.error} retry={procedures.refresh} />{searchResults.length > 0 ? (
+          <ProcedureFeedback loading={procedures.isPending} error={procedures.isError ? procedureError(procedures.error) : ''} retry={() => { void procedures.refetch(); }} />{searchResults.length > 0 ? (
             <div className="procedure-list relative z-10">
               {searchResults.map((procedure, index) => (
                 <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
@@ -110,7 +110,7 @@ export function HomePage() {
                 </button>
               ))}
             </div>
-          ) : !procedures.loading && !procedures.error ? (
+          ) : !procedures.isPending && !procedures.isError ? (
             <div className="mt-7 border border-dashed border-red-200 bg-red-50/50 px-5 py-12 text-center"><FileSearch className="mx-auto text-red-400" size={34} aria-hidden="true" /><h3 className="mt-4 text-lg font-bold text-slate-950">Chưa tìm thấy thủ tục phù hợp</h3><p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-600">Thử dùng từ khóa ngắn hơn như “khai sinh”, “kết hôn” hoặc chọn một lĩnh vực phía trên.</p></div>
           ) : null}
         </div>

@@ -1,9 +1,9 @@
-import { type FormEvent, useRef, useCallback } from 'react';
+import { type FormEvent, useRef } from 'react';
 import { ArrowRight, CaretLeft, CaretRight, House, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
-import { procedureApi } from '@/lib/api/procedures';
-import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { procedureError } from '@/lib/api/procedures';
+import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
 const PAGE_SIZE = 5;
@@ -12,22 +12,15 @@ export function ProceduresPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const query = searchParams.get('q') ?? '';
-  const categoryQuery = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.categories(signal), []));
+  const categoryQuery = useProcedureCategories();
   const categories = [{ id: 0, categoryName: 'Tất cả' }, ...(categoryQuery.data ?? [])];
   const selectedCategory = searchParams.get('category') ?? '0';
   const requestedPage = Number(searchParams.get('page') ?? 1);
   const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const result = useProcedureQuery(useCallback(async (signal: AbortSignal) => {
-    // Wait for typing to settle; cleanup also cancels a pending timer.
-    if (query) await new Promise<void>((resolve, reject) => {
-      const timer = window.setTimeout(resolve, 350);
-      signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
-    });
-    return procedureApi.list({
+  const result = usePublicProcedureList({
     keyword: query || undefined, categoryId: Number(selectedCategory) > 0 ? Number(selectedCategory) : undefined,
     pageNumber: currentPage, pageSize: PAGE_SIZE,
-    }, false, signal);
-  }, [query, selectedCategory, currentPage]));
+  }, true);
   const totalPages = result.data?.totalPages ?? 0;
   const totalCount = result.data?.totalCount ?? 0;
   const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -112,7 +105,7 @@ export function ProceduresPage() {
         </aside>
 
         <div className="procedures-results">
-          <ProcedureFeedback loading={result.loading || categoryQuery.loading} error={result.error || categoryQuery.error} retry={() => { result.refresh(); categoryQuery.refresh(); }} />
+          <ProcedureFeedback loading={result.isPending || categoryQuery.isPending} error={(result.isError && procedureError(result.error)) || (categoryQuery.isError && procedureError(categoryQuery.error)) || ''} retry={() => { void result.refetch(); void categoryQuery.refetch(); }} />
           <div className="procedures-results-heading">
             <div><p>Kết quả tra cứu</p><h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">{totalCount} thủ tục phù hợp</h2></div>
             {hasFilters && <button type="button" onClick={clearFilters}>Xóa bộ lọc</button>}
@@ -122,7 +115,7 @@ export function ProceduresPage() {
             {selectedCategory !== '0' && <Button variant="outline" className="min-h-11 px-3" onClick={() => updateFilter('category', '')} aria-label="Bỏ bộ lọc lĩnh vực">{categories.find(c => String(c.id) === selectedCategory)?.categoryName ?? 'Danh mục'}<X aria-hidden="true" /></Button>}
           </div>}
 
-          {!result.loading && !result.error && visibleProcedures.length > 0 ? (
+          {!result.isPending && !result.isError && visibleProcedures.length > 0 ? (
             <>
               <p className="mt-4 text-sm text-slate-600" role="status">Hiển thị {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, totalCount)} / {totalCount} thủ tục · Trang {currentPage}/{totalPages}</p>
               <ul className="procedures-list">
@@ -144,7 +137,7 @@ export function ProceduresPage() {
                 <Button variant="outline" className="min-h-11 px-3" disabled={!result.data?.hasNext} onClick={() => changePage(currentPage + 1)} aria-label="Trang sau"><span className="hidden sm:inline">Sau</span><CaretRight aria-hidden="true" /></Button>
               </nav>
             </>
-          ) : !result.loading && !result.error ? (
+          ) : !result.isPending && !result.isError ? (
             <div className="procedures-empty" role="status">
               <span><MagnifyingGlass size={28} aria-hidden="true" /></span>
               <h2>Chưa tìm thấy thủ tục phù hợp</h2>

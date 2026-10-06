@@ -5,7 +5,7 @@
 1. Đọc `docs/PROGRESS.md` để biết trạng thái bàn giao, quyết định đã chốt và việc còn chờ.
 2. Kiểm tra `git status --short --branch`, lịch sử commit gần nhất và mã nguồn liên quan trước khi sửa.
 3. Đối chiếu ghi chú với code hiện tại. Ghi chú là ảnh chụp trạng thái, không phải bằng chứng rằng test vẫn đạt hoặc API đã có.
-4. Khi làm UI, đọc `UI_UX_DESIGN_STANDARD.md`. Khi làm core/auth, đọc `docs/design-system-and-auth.md`. Đọc `Officer.md` hoặc `Procedure Management.md` nếu công việc thuộc các workspace đó.
+4. Khi làm UI, đọc `UI_UX_DESIGN_STANDARD.md`. Khi làm core/auth, đọc `docs/design-system-and-auth.md`. Khi thêm/sửa form, dữ liệu API, cache hoặc component UI, đọc `docs/FRONTEND_SETUP.md` trước để dùng React Hook Form/Zod, TanStack Query và shadcn đúng cách. Đọc `Officer.md` hoặc `Procedure Management.md` nếu công việc thuộc các workspace đó.
 5. Tiếp tục theo yêu cầu mới nhất của người dùng; không tự thực hiện mọi mục trong danh sách chờ.
 
 ## Cách phối hợp với người dùng
