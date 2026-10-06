@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, ArrowRight, ArrowSquareOut, CaretRight, House, Sparkle } from '@phosphor-icons/react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge, buttonVariants } from '@/components/ui';
-import { mockPublicProcedures } from '@/data/mockPublicProcedures';
-import { parseProcedureContent } from '@/lib/procedureContent';
+import { procedureApi } from '@/lib/api/procedures';
+import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
+import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
+import { contentFromApi } from '@/lib/procedureContent';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/components/ui/Toast';
 
@@ -23,25 +26,24 @@ export function ProcedureDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const search = location.search;
-  const procedure = mockPublicProcedures.find((item) => item.id === procedureId);
+  const result = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.detail(procedureId ?? '', signal), [procedureId]));
+  const procedure = result.data;
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
-  const { content, status } = parseProcedureContent(
-    procedure?.content_payload,
-    procedure?.checklist_schema
-  );
+  const content = procedure ? contentFromApi(procedure) : { overview: '', methods: [], legalBases: [], receivingAgencies: [], cases: [], checklist: [] };
 
   const authStatus = useAuthStore((state) => state.status);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     heading.current?.focus({ preventScroll: true });
-  }, [procedureId]);
+  }, [procedureId, procedure?.id]);
 
+  if (result.loading || result.error) return <div className="mx-auto max-w-4xl p-6"><ProcedureFeedback loading={result.loading} error={result.error} retry={result.refresh} /><Link to={listUrl}>Quay lại danh sách</Link></div>;
   if (!procedure) return (
     <section className="mx-auto max-w-3xl px-5 py-16 text-center">
       <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">Không tìm thấy thủ tục</h1>
-      <p className="my-5 text-slate-600">Thủ tục này chưa có trong danh mục minh họa. Bạn có thể quay lại để chọn thủ tục khác.</p>
+      <p className="my-5 text-slate-600">Thủ tục này chưa có trong danh mục đang công khai. Bạn có thể quay lại để chọn thủ tục khác.</p>
       <Link to={listUrl} className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" />Quay lại danh sách</Link>
     </section>
   );
@@ -55,38 +57,8 @@ export function ProcedureDetailPage() {
       return;
     }
 
-    // Đã đăng nhập: Tạo hồ sơ bản nháp mới và lưu vào localStorage để CitizenPage nạp
-    const draftCode = `HS-DRAFT-${Date.now().toString().slice(-4)}`;
-    const now = new Date();
-    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-    const timeStr = `${dateStr} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    toast.info('Chức năng tạo hồ sơ cần kết nối dịch vụ Hồ sơ công dân. Bạn có thể tra cứu giấy tờ và quy trình bên dưới.');
 
-    const newDraft = {
-      code: draftCode,
-      procedureId: procedure.id,
-      procedureName: procedure.title,
-      field: procedure.category,
-      createdAt: dateStr,
-      updatedAt: timeStr,
-      status: 'Bản nháp' as const,
-      officerNote: 'Hồ sơ bản nháp mới khởi tạo. Bạn có thể xem checklist giấy tờ và kê khai tờ khai.',
-      cases: content.cases,
-      checklist: content.checklist,
-    };
-
-    try {
-      const existingDraftsJson = localStorage.getItem('wardmate_citizen_drafts');
-      const drafts = existingDraftsJson ? JSON.parse(existingDraftsJson) : [];
-      // Đưa bản nháp mới lên đầu danh sách
-      drafts.unshift(newDraft);
-      localStorage.setItem('wardmate_citizen_drafts', JSON.stringify(drafts));
-    } catch {
-      // Bỏ qua lỗi quota storage nếu có
-    }
-
-    toast.success(`Đã thêm "${procedure.title}" vào Hồ sơ bản nháp của bạn!`);
-    // Điều hướng vào trang chi tiết hồ sơ bản nháp vừa tạo để công dân chuẩn bị ngay
-    navigate(`/citizen?section=dossier_detail&dossierCode=${draftCode}`);
   };
 
   return (
@@ -99,11 +71,11 @@ export function ProcedureDetailPage() {
             <Link to={listUrl} className="inline-flex min-h-11 items-center hover:text-red-800">Thủ tục hành chính</Link>
             <CaretRight aria-hidden="true" /><span aria-current="page">Chi tiết thủ tục</span>
           </nav>
-          
+
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
-              <Badge>{procedure.category}</Badge>
-              <Badge variant="warning">Dữ liệu minh họa</Badge>
+              <Badge>{procedure.categoryName}</Badge>
+
             </div>
 
             {/* Nút Bắt đầu làm thủ tục trên Banner Header */}
@@ -119,9 +91,8 @@ export function ProcedureDetailPage() {
           </div>
 
           <h1 ref={heading} tabIndex={-1} className="mt-4 max-w-4xl break-words text-3xl font-bold leading-tight text-red-900 sm:text-4xl">{procedure.title}</h1>
-          <p className="mt-3 text-sm text-slate-600">Mã minh họa: {procedure.id} · Chưa công bố dữ liệu chính thức</p>
+          <p className="mt-3 text-sm text-slate-600">Mã thủ tục: {procedure.procedureCode} · {procedure.levelOfImplementation}</p>
           <p className="mt-5 max-w-4xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            Đây là bản xem trước giao diện. Lệ phí, thời hạn, căn cứ pháp luật và cơ quan tiếp nhận chưa được xác minh.
             Tiền kiểm hồ sơ không thay thế việc tiếp nhận và giải quyết thủ tục chính thức.
           </p>
         </div>
@@ -133,7 +104,7 @@ export function ProcedureDetailPage() {
           <nav aria-label="Nội dung thủ tục" className="grid gap-1">
             {sections.map(([id, label]) => <a key={id} href={'#' + id} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-800">{label}</a>)}
           </nav>
-          
+
           <button
             type="button"
             onClick={handleStartProcedure}
@@ -147,27 +118,23 @@ export function ProcedureDetailPage() {
         </aside>
 
         <div className="min-w-0 space-y-6">
-          {status === 'invalid' && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900">Chưa thể hiển thị nội dung thủ tục do dữ liệu không hợp lệ. Vui lòng quay lại danh sách và thử lại sau.</p>}
-          {status === 'partial' && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">Một phần nội dung chưa hiển thị được. Các thông tin còn lại được giữ bên dưới.</p>}
-          {status === 'empty' && <p role="status" className="rounded-xl border border-slate-200 bg-white p-4 text-slate-600">Nội dung chi tiết đang được cập nhật.</p>}
-
           <section id="tong-quan" aria-labelledby="overview-title" className="procedure-detail-section">
             <h2 id="overview-title">Thông tin chung</h2>
-            <p className="whitespace-pre-line break-words">{content.overview || procedure.description || pending}</p>
+            <p className="whitespace-pre-line break-words">{content.overview || pending}</p>
             <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
-              <div><dt className="text-sm text-slate-500">Lĩnh vực</dt><dd className="mt-1 font-semibold">{procedure.category}</dd></div>
-              <div><dt className="text-sm text-slate-500">Phạm vi hỗ trợ</dt><dd className="mt-1">Chờ xác nhận thông tin chính thức</dd></div>
+              <div><dt className="text-sm text-slate-500">Lĩnh vực</dt><dd className="mt-1 font-semibold">{procedure.categoryName}</dd></div>
+              <div><dt className="text-sm text-slate-500">Phạm vi hỗ trợ</dt><dd className="mt-1">{procedure.levelOfImplementation}</dd></div>
             </dl>
           </section>
 
           {/* Khối Thành phần hồ sơ theo trường hợp (hiển thị checklist giấy tờ cần thiết để đọc và tải template, không checkbox) */}
-          {content.cases.length > 0 && (
-            <ProcedureCasesView cases={content.cases} checklist={content.checklist} />
+          {(content.cases.length > 0 || content.checklist.length > 0) && (
+            <ProcedureCasesView key={procedure.id} cases={content.cases} checklist={content.checklist} />
           )}
 
           <section id="thoi-han-le-phi" aria-labelledby="fees-title" className="procedure-detail-section">
             <h2 id="fees-title">Thời hạn và lệ phí</h2>
-            <p className="mb-4 text-sm text-slate-600">Các hình thức dưới đây dùng để minh họa bố cục, chưa xác nhận áp dụng cho thủ tục này.</p>
+            <p className="mb-4 text-sm text-slate-600">{procedure.processingTimeSummary} · {procedure.feeSummary}</p>
             <table className="procedure-detail-table">
               <caption className="sr-only">Cách thức thực hiện, thời hạn giải quyết và phí, lệ phí</caption>
               <thead><tr><th scope="col">Cách thức thực hiện</th><th scope="col">Thời hạn giải quyết</th><th scope="col">Phí, lệ phí</th></tr></thead>
@@ -199,6 +166,8 @@ export function ProcedureDetailPage() {
             </li>)}</ul> : <p>{pending}</p>}
           </section>
 
+          <section className="procedure-detail-section"><h2>Kết quả và biểu mẫu</h2><ul className="list-inside list-disc">{procedure.contentPayload.results.map((text, index) => <li key={index}>{text}</li>)}</ul>{(procedure.formDefinitions ?? []).map((form, index) => <p className="mt-3" key={index}>{form.formCode} · {form.formName} · {form.quantity} bản{form.isMandatory ? ' · Bắt buộc khi áp dụng' : ''}</p>)}<p className="mt-3 text-sm text-slate-600">Tải và soạn biểu mẫu cần kết nối dịch vụ Biểu mẫu.</p></section>
+          {procedure.pdfFileName && <section className="procedure-detail-section"><h2>PDF nguồn</h2><p className="mb-3">{procedure.pdfFileName}</p><PdfSource id={procedure.id} /></section>}
           {/* Banner CTA cuối trang */}
           <div className="rounded-xl border border-red-200 bg-white p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -219,4 +188,3 @@ export function ProcedureDetailPage() {
     </div>
   );
 }
-

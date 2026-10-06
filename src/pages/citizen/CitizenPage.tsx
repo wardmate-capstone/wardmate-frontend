@@ -6,8 +6,7 @@ import { DossierChecklistView } from './components/DossierChecklistView';
 import { FormDocxEditorModal } from './components/FormDocxEditorModal';
 import { FormPreviewModal } from './components/FormPreviewModal';
 import type { ProcedureCase, ChecklistItem } from '@/lib/procedureContent';
-import { mockPublicProcedures } from '@/data/mockPublicProcedures';
-import { parseProcedureContent } from '@/lib/procedureContent';
+import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import {
   ArrowClockwise,
   ArrowLeft,
@@ -166,18 +165,6 @@ const initialDossiers: CitizenDossier[] = [
   },
 ];
 
-const citizenProcedures = [
-  { code: '1.001193', name: 'Đăng ký khai sinh', field: 'Hộ tịch', duration: 'Trong ngày làm việc', fee: 'Miễn phí' },
-  { code: '2.000815', name: 'Chứng thực bản sao từ bản chính', field: 'Chứng thực', duration: '0,5 ngày làm việc', fee: '2.000 VNĐ / trang' },
-  { code: '1.000894', name: 'Đăng ký kết hôn', field: 'Hộ tịch', duration: 'Trong ngày làm việc', fee: 'Miễn phí' },
-  { code: '2.001123', name: 'Xác nhận tình trạng hôn nhân', field: 'Hộ tịch', duration: '03 ngày làm việc', fee: '15.000 VNĐ' },
-  { code: '1.000782', name: 'Đăng ký khai tử', field: 'Hộ tịch', duration: 'Trong ngày làm việc', fee: 'Miễn phí' },
-  { code: '3.000214', name: 'Đăng ký biến động quyền sử dụng đất', field: 'Địa chính', duration: '10 ngày làm việc', fee: 'Theo quy định' },
-  { code: '2.000451', name: 'Chứng thực chữ ký trong giấy tờ', field: 'Chứng thực', duration: '0,5 ngày làm việc', fee: '10.000 VNĐ / việc' },
-];
-
-
-
 const citizenNotifications = [
   { id: 'notif-1', title: 'Hồ sơ đã được phê duyệt tiền kiểm', content: 'Hồ sơ HS-2026-00170 đã đạt yêu cầu. Bạn có thể đến bộ phận Một cửa để đối chiếu giấy tờ gốc.', time: '10 phút trước', read: false, type: 'success' },
   { id: 'notif-2', title: 'Yêu cầu chỉnh sửa ảnh giấy chứng sinh', content: 'Hồ sơ HS-2026-00128 cần chụp lại giấy chứng sinh do bị mờ góc dưới bên phải.', time: '2 giờ trước', read: false, type: 'warning' },
@@ -253,7 +240,6 @@ export function CitizenPage() {
   const [activeSection, setActiveSection] = useState<CitizenSectionId>(() => urlSection || 'dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [query, setQuery] = useState('');
 
   // Expandable sections in sidebar
   const [isDossiersExpanded, setIsDossiersExpanded] = useState(true);
@@ -298,20 +284,6 @@ export function CitizenPage() {
     if (urlDossierCode) {
       const found = dossiers.find((d) => d.code === urlDossierCode);
       if (found) {
-        if (!found.checklist || found.checklist.length === 0) {
-          const matchProc = mockPublicProcedures.find(
-            (p) =>
-              p.title.toLowerCase() === found.procedureName.toLowerCase() ||
-              found.procedureName.toLowerCase().includes(p.title.toLowerCase()) ||
-              p.title.toLowerCase().includes(found.procedureName.toLowerCase()) ||
-              p.id === found.procedureId
-          );
-          if (matchProc) {
-            const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
-            found.cases = parsed.content.cases;
-            found.checklist = parsed.content.checklist;
-          }
-        }
         setSelectedDossierDetail(found);
         setActiveSection('dossier_detail');
       }
@@ -343,7 +315,6 @@ export function CitizenPage() {
       next.delete('dossierCode');
       return next;
     });
-    setQuery('');
     setSidebarOpen(false);
   }
 
@@ -690,12 +661,7 @@ export function CitizenPage() {
           )}
 
           {activeSection === 'procedures' && (
-            <CitizenProceduresView
-              query={query}
-              setQuery={setQuery}
-              procedures={citizenProcedures}
-              onSelectSection={selectSection}
-            />
+            <ProceduresPage />
           )}
 
           {isDossierSection && (
@@ -705,21 +671,6 @@ export function CitizenPage() {
               onOpenFeedback={handleOpenFeedback}
               onSelectSection={selectSection}
               onOpenDossierDetail={(dossier) => {
-                // Nếu hồ sơ chưa có checklist thì thử tìm trong mockPublicProcedures
-                if (!dossier.checklist || dossier.checklist.length === 0) {
-                  const matchProc = mockPublicProcedures.find(
-                    (p) =>
-                      p.title.toLowerCase() === dossier.procedureName.toLowerCase() ||
-                      dossier.procedureName.toLowerCase().includes(p.title.toLowerCase()) ||
-                      p.title.toLowerCase().includes(dossier.procedureName.toLowerCase()) ||
-                      p.id === dossier.procedureId
-                  );
-                  if (matchProc) {
-                    const parsed = parseProcedureContent(matchProc.content_payload, matchProc.checklist_schema);
-                    dossier.cases = parsed.content.cases;
-                    dossier.checklist = parsed.content.checklist;
-                  }
-                }
                 setSelectedDossierDetail(dossier);
                 setActiveSection('dossier_detail');
                 setSearchParams({ section: 'dossier_detail', dossierCode: dossier.code });
@@ -1090,102 +1041,6 @@ function CitizenUsageChart() {
 // ----------------------------------------------------------------------
 // 2. TRA CỨU THỦ TỤC
 // ----------------------------------------------------------------------
-function CitizenProceduresView({
-  query,
-  setQuery,
-  procedures,
-  onSelectSection,
-}: {
-  query: string;
-  setQuery: (q: string) => void;
-  procedures: typeof citizenProcedures;
-  onSelectSection: (id: CitizenSectionId) => void;
-}) {
-  const [selectedField, setSelectedField] = useState('all');
-
-  const filtered = useMemo(() => {
-    return procedures.filter((p) => {
-      const matchQuery = `${p.code} ${p.name} ${p.field}`.toLowerCase().includes(query.toLowerCase());
-      const matchField = selectedField === 'all' || p.field === selectedField;
-      return matchQuery && matchField;
-    });
-  }, [procedures, query, selectedField]);
-
-  return (
-    <section className="admin-card admin-table-card admin-content-card">
-      <div className="admin-toolbar">
-        <label className="admin-search">
-          <MagnifyingGlass size={18} />
-          <span className="sr-only">Tìm kiếm thủ tục</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo mã thủ tục, tên thủ tục hoặc lĩnh vực..."
-          />
-        </label>
-
-        <div className="flex items-center gap-2">
-          <select
-            className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none"
-            value={selectedField}
-            onChange={(e) => setSelectedField(e.target.value)}
-          >
-            <option value="all">Tất cả lĩnh vực</option>
-            <option value="Hộ tịch">Hộ tịch</option>
-            <option value="Chứng thực">Chứng thực</option>
-            <option value="Địa chính">Địa chính</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="admin-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Mã thủ tục</th>
-              <th>Tên thủ tục hành chính</th>
-              <th>Lĩnh vực</th>
-              <th>Thời hạn giải quyết</th>
-              <th>Lệ phí</th>
-              <th className="text-right">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => (
-              <tr key={item.code}>
-                <td>
-                  <strong>{item.code}</strong>
-                </td>
-                <td>
-                  <span className="font-semibold text-slate-900">{item.name}</span>
-                </td>
-                <td>
-                  <span className="admin-status-badge is-info">{item.field}</span>
-                </td>
-                <td>{item.duration}</td>
-                <td className="font-medium text-slate-800">{item.fee}</td>
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toast.info(`Bắt đầu làm hồ sơ: ${item.name}. Vui lòng tạo bản nháp hoặc chọn hồ sơ trong danh sách.`);
-                      onSelectSection('dossiers_all');
-                    }}
-                  >
-                    Bắt đầu làm hồ sơ
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filtered.length === 0 && <p className="admin-empty">Không tìm thấy thủ tục nào phù hợp với từ khóa.</p>}
-    </section>
-  );
-}
-
 // ----------------------------------------------------------------------
 // 3. HỒ SƠ CỦA TÔI (TẤT CẢ VÀ CÁC SUB-ITEMS THEO TRẠNG THÁI)
 // ----------------------------------------------------------------------
@@ -1415,7 +1270,7 @@ function CitizenDossierDetailView({
           </div>
 
           <div className="flex items-center gap-2">
-            {dossier.status === 'Bản nháp' && (
+            {dossier.status === 'Bản nháp' && dossier.checklist !== undefined && (
               <button
                 type="button"
                 onClick={onSubmitPrecheck}
@@ -1460,7 +1315,7 @@ function CitizenDossierDetailView({
           </h3>
         </div>
 
-        <DossierChecklistView
+        {dossier.checklist === undefined ? <p role="status">Chưa có danh mục giấy tờ được xác minh cho hồ sơ này. Cần kết nối dịch vụ Hồ sơ công dân với thủ tục trước khi chuẩn bị và nộp tiền kiểm.</p> : <DossierChecklistView
           procedureName={dossier.procedureName}
           cases={dossier.cases || []}
           checklist={dossier.checklist || []}
@@ -1468,7 +1323,7 @@ function CitizenDossierDetailView({
           onDownloadForm={onDownloadForm}
           onPreviewForm={onPreviewForm}
           onEditForm={onEditForm}
-        />
+        />}
       </section>
 
       {/* Thanh hành động chân trang */}
@@ -1480,7 +1335,7 @@ function CitizenDossierDetailView({
         >
           Quay lại danh sách
         </button>
-        {dossier.status === 'Bản nháp' && (
+        {dossier.status === 'Bản nháp' && dossier.checklist !== undefined && (
           <button
             type="button"
             onClick={onSubmitPrecheck}

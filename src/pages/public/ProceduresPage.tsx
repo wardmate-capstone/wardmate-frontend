@@ -1,36 +1,42 @@
-import { type FormEvent, useRef } from 'react';
+import { type FormEvent, useRef, useCallback } from 'react';
 import { ArrowRight, CaretLeft, CaretRight, House, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Input, Badge } from '@/components/ui';
-import { mockPublicProcedures } from '@/data/mockPublicProcedures';
+import { Button, Input } from '@/components/ui';
+import { procedureApi } from '@/lib/api/procedures';
+import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
-const categories = ['Tất cả', ...new Set(mockPublicProcedures.map((item) => item.category))];
 const PAGE_SIZE = 5;
-
-function normalizeVietnamese(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim().replace(/\s+/g, ' ');
-}
 
 export function ProceduresPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const query = searchParams.get('q') ?? '';
-  const selectedCategory = categories.includes(searchParams.get('category') ?? '') ? searchParams.get('category')! : 'Tất cả';
-  const words = normalizeVietnamese(query).split(' ').filter(Boolean);
-  const filteredProcedures = mockPublicProcedures.filter((procedure) =>
-    (selectedCategory === 'Tất cả' || procedure.category === selectedCategory) &&
-    words.every((word) => normalizeVietnamese(procedure.title + ' ' + procedure.category).includes(word)),
-  );
-  const totalPages = Math.max(1, Math.ceil(filteredProcedures.length / PAGE_SIZE));
+  const categoryQuery = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.categories(signal), []));
+  const categories = [{ id: 0, categoryName: 'Tất cả' }, ...(categoryQuery.data ?? [])];
+  const selectedCategory = searchParams.get('category') ?? '0';
   const requestedPage = Number(searchParams.get('page') ?? 1);
-  const currentPage = Number.isSafeInteger(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
+  const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const result = useProcedureQuery(useCallback(async (signal: AbortSignal) => {
+    // Wait for typing to settle; cleanup also cancels a pending timer.
+    if (query) await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(resolve, 350);
+      signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+    });
+    return procedureApi.list({
+    keyword: query || undefined, categoryId: Number(selectedCategory) > 0 ? Number(selectedCategory) : undefined,
+    pageNumber: currentPage, pageSize: PAGE_SIZE,
+    }, false, signal);
+  }, [query, selectedCategory, currentPage]));
+  const totalPages = result.data?.totalPages ?? 0;
+  const totalCount = result.data?.totalCount ?? 0;
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const visibleProcedures = filteredProcedures.slice(startIndex, startIndex + PAGE_SIZE);
-  const hasFilters = Boolean(query || selectedCategory !== 'Tất cả');
+  const visibleProcedures = result.data?.items ?? [];
+  const hasFilters = Boolean(query || selectedCategory !== '0');
 
   function updateFilter(key: 'q' | 'category', value: string) {
     const next = new URLSearchParams(searchParams);
-    if (value && value !== 'Tất cả') next.set(key, value);
+    if (value && value !== '0') next.set(key, value);
     else next.delete(key);
     next.delete('page');
     setSearchParams(next, { replace: key === 'q' });
@@ -95,10 +101,10 @@ export function ProceduresPage() {
           <div className="procedures-filter-heading"><h2>Lĩnh vực</h2><span>{categories.length - 1} nhóm</span></div>
           <div className="procedures-filter-list">
             {categories.map((category) => {
-              const count = category === 'Tất cả' ? mockPublicProcedures.length : mockPublicProcedures.filter((item) => item.category === category).length;
+
               return (
-                <button key={category} type="button" className={selectedCategory === category ? 'is-selected' : ''} aria-pressed={selectedCategory === category} onClick={() => updateFilter('category', category)}>
-                  <span>{category}</span><small>{count}</small>
+                <button key={category.id} type="button" className={selectedCategory === String(category.id) ? 'is-selected' : ''} aria-pressed={selectedCategory === String(category.id)} onClick={() => updateFilter('category', String(category.id))}>
+                  <span>{category.categoryName}</span>
                 </button>
               );
             })}
@@ -106,49 +112,46 @@ export function ProceduresPage() {
         </aside>
 
         <div className="procedures-results">
-          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            <Badge variant="warning">Dữ liệu minh họa</Badge>
-            <p className="mt-2">Danh mục dùng để trải nghiệm giao diện, chưa phải thông tin thủ tục chính thức. Cơ quan tiếp nhận và mức hỗ trợ sẽ được xác nhận khi có dữ liệu chính thức.</p>
-          </div>
+          <ProcedureFeedback loading={result.loading || categoryQuery.loading} error={result.error || categoryQuery.error} retry={() => { result.refresh(); categoryQuery.refresh(); }} />
           <div className="procedures-results-heading">
-            <div><p>Kết quả tra cứu</p><h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">{filteredProcedures.length} thủ tục phù hợp</h2></div>
+            <div><p>Kết quả tra cứu</p><h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">{totalCount} thủ tục phù hợp</h2></div>
             {hasFilters && <button type="button" onClick={clearFilters}>Xóa bộ lọc</button>}
           </div>
           {hasFilters && <div className="mt-3 flex flex-wrap gap-2" aria-label="Bộ lọc đang áp dụng">
             {query && <Button variant="outline" className="h-auto min-h-11 max-w-full px-3 text-left" onClick={() => updateFilter('q', '')} aria-label="Bỏ bộ lọc từ khóa"><span className="break-all">Từ khóa: {query}</span><X className="shrink-0" aria-hidden="true" /></Button>}
-            {selectedCategory !== 'Tất cả' && <Button variant="outline" className="min-h-11 px-3" onClick={() => updateFilter('category', '')} aria-label="Bỏ bộ lọc lĩnh vực">{selectedCategory}<X aria-hidden="true" /></Button>}
+            {selectedCategory !== '0' && <Button variant="outline" className="min-h-11 px-3" onClick={() => updateFilter('category', '')} aria-label="Bỏ bộ lọc lĩnh vực">{categories.find(c => String(c.id) === selectedCategory)?.categoryName ?? 'Danh mục'}<X aria-hidden="true" /></Button>}
           </div>}
 
-          {filteredProcedures.length > 0 ? (
+          {!result.loading && !result.error && visibleProcedures.length > 0 ? (
             <>
-              <p className="mt-4 text-sm text-slate-600" role="status">Hiển thị {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, filteredProcedures.length)} / {filteredProcedures.length} thủ tục · Trang {currentPage}/{totalPages}</p>
+              <p className="mt-4 text-sm text-slate-600" role="status">Hiển thị {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, totalCount)} / {totalCount} thủ tục · Trang {currentPage}/{totalPages}</p>
               <ul className="procedures-list">
                 {visibleProcedures.map((procedure, index) => (
                   <li key={procedure.id}>
                     <Link to={'/thu-tuc/' + procedure.id + (searchParams.size ? '?' + searchParams.toString() : '')} className="procedure-result-row" aria-label={'Xem ' + procedure.title}>
                       <span className="procedure-result-number">{String(startIndex + index + 1).padStart(2, '0')}</span>
-                      <span className="procedure-result-copy"><small>{procedure.category}</small><strong>{procedure.title}</strong><span className="mt-1 block text-sm leading-6 text-slate-600">{procedure.description}</span></span>
+                      <span className="procedure-result-copy"><small>{procedure.categoryName}</small><strong>{procedure.title}</strong><span className="mt-1 block text-sm leading-6 text-slate-600">{procedure.processingTimeSummary} · {procedure.feeSummary}</span></span>
                       <span className="procedure-result-action"><span className="hidden sm:inline">Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
                     </Link>
                   </li>
                 ))}
               </ul>
               <nav aria-label="Phân trang thủ tục" className="mt-6 flex flex-wrap items-center justify-center gap-2">
-                <Button variant="outline" className="min-h-11 px-3" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)} aria-label="Trang trước"><CaretLeft aria-hidden="true" /><span className="hidden sm:inline">Trước</span></Button>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <Button variant="outline" className="min-h-11 px-3" disabled={!result.data?.hasPrevious} onClick={() => changePage(currentPage - 1)} aria-label="Trang trước"><CaretLeft aria-hidden="true" /><span className="hidden sm:inline">Trước</span></Button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, index) => Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + index).map((page) => (
                   <Button key={page} variant={page === currentPage ? 'primary' : 'outline'} className="min-h-11 min-w-11 px-3" aria-label={'Trang ' + page} aria-current={page === currentPage ? 'page' : undefined} onClick={() => changePage(page)}>{page}</Button>
                 ))}
-                <Button variant="outline" className="min-h-11 px-3" disabled={currentPage === totalPages} onClick={() => changePage(currentPage + 1)} aria-label="Trang sau"><span className="hidden sm:inline">Sau</span><CaretRight aria-hidden="true" /></Button>
+                <Button variant="outline" className="min-h-11 px-3" disabled={!result.data?.hasNext} onClick={() => changePage(currentPage + 1)} aria-label="Trang sau"><span className="hidden sm:inline">Sau</span><CaretRight aria-hidden="true" /></Button>
               </nav>
             </>
-          ) : (
+          ) : !result.loading && !result.error ? (
             <div className="procedures-empty" role="status">
               <span><MagnifyingGlass size={28} aria-hidden="true" /></span>
               <h2>Chưa tìm thấy thủ tục phù hợp</h2>
               <p>Thử dùng từ khóa ngắn hơn hoặc chọn lại lĩnh vực.</p>
               <button type="button" onClick={clearFilters}>Xem tất cả thủ tục</button>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

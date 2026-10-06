@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useState } from 'react';
 import { m } from 'motion/react';
 import { toast } from '@/components/ui/Toast';
 import {
@@ -10,11 +10,12 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
 import { JourneySteps } from '@/components/home/JourneySteps';
-import { popularProcedures, preparationSteps, serviceGroups } from '@/data/landing';
+import { preparationSteps } from '@/data/landing';
 
-function normalizeVietnamese(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-}
+import { useNavigate } from 'react-router-dom';
+import { procedureApi } from '@/lib/api/procedures';
+import { useProcedureQuery } from '@/hooks/useProcedureQuery';
+import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
 const reveal = {
   initial: { opacity: 0, y: 18 },
@@ -27,11 +28,10 @@ export function HomePage() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
 
-  const searchResults = useMemo(() => {
-    if (!submittedQuery) return popularProcedures;
-    const normalized = normalizeVietnamese(submittedQuery);
-    return popularProcedures.filter((item) => normalizeVietnamese(`${item.title} ${item.category}`).includes(normalized));
-  }, [submittedQuery]);
+  const navigate = useNavigate();
+  const categories = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.categories(signal), []));
+  const procedures = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.list({ keyword: submittedQuery || undefined, pageSize: 5 }, false, signal), [submittedQuery]));
+  const searchResults = procedures.data?.items ?? [];
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,10 +42,6 @@ export function HomePage() {
     }
     setSubmittedQuery(cleaned);
     document.querySelector('#ket-qua-tra-cuu')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function demoNotice(label: string) {
-    toast.info(`${label} sẽ được kết nối ở màn hình chức năng tiếp theo.`);
   }
 
   return (
@@ -86,14 +82,14 @@ export function HomePage() {
           <img src="/lotus-corner-small.png" alt="" className="service-lotus service-lotus-right" aria-hidden="true" />
           <m.div {...reveal} className="section-title-row relative z-10">
             <div><p className="section-label">Thông tin và dịch vụ</p><h2>Lĩnh vực thủ tục hành chính</h2><p>Chọn lĩnh vực gần nhất với nhu cầu của bạn để xem hướng dẫn phù hợp.</p></div>
-            <Button variant="outline" className="hidden sm:inline-flex">Xem tất cả lĩnh vực <ArrowRight size={17} aria-hidden="true" /></Button>
+            <Button variant="outline" className="hidden sm:inline-flex" onClick={() => navigate('/thu-tuc')}>Xem tất cả lĩnh vực <ArrowRight size={17} aria-hidden="true" /></Button>
           </m.div>
-          <div className="service-grid relative z-10">
-            {serviceGroups.map(({ icon: Icon, ...group }, index) => (
-              <m.button {...reveal} transition={{ duration: 0.35, delay: index * 0.04 }} key={group.label} type="button" onClick={() => { setQuery(group.label); setSubmittedQuery(group.label); }} className="service-group group">
-                <span className="service-icon"><Icon size={25} strokeWidth={1.7} aria-hidden="true" /></span>
-                <span className="service-content"><strong>{group.label}</strong><span>{group.description}</span></span>
-                <span className="service-meta"><small>{group.count}</small><ChevronDown className="-rotate-90" size={18} aria-hidden="true" /></span>
+          <ProcedureFeedback loading={categories.loading} error={categories.error} retry={categories.refresh} /><div className="service-grid relative z-10">
+            {(categories.data ?? []).map((group, index) => (
+              <m.button {...reveal} transition={{ duration: 0.35, delay: index * 0.04 }} key={group.id} type="button" onClick={() => navigate('/thu-tuc?category=' + group.id)} className="service-group group">
+                <span className="service-icon"><FileSearch size={25} strokeWidth={1.7} aria-hidden="true" /></span>
+                <span className="service-content"><strong>{group.categoryName}</strong><span>{group.description}</span></span>
+                <span className="service-meta"><ChevronDown className="-rotate-90" size={18} aria-hidden="true" /></span>
               </m.button>
             ))}
           </div>
@@ -101,22 +97,22 @@ export function HomePage() {
 
         <div id="ket-qua-tra-cuu" className="mt-14 scroll-mt-52 border-t border-slate-200 pt-10">
           <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div><p className="section-label">Được quan tâm</p><h2 className="mt-2 text-3xl font-bold text-slate-950">Thủ tục phổ biến</h2></div>
+            <div><p className="section-label">Danh mục công khai</p><h2 className="mt-2 text-3xl font-bold text-slate-950">Thủ tục hành chính</h2></div>
             {submittedQuery && <button type="button" onClick={() => { setQuery(''); setSubmittedQuery(''); }} className="min-h-11 self-start text-sm font-bold text-red-800 underline decoration-red-200 underline-offset-4 sm:self-auto">Xóa từ khóa “{submittedQuery}”</button>}
           </div>
-          {searchResults.length > 0 ? (
+          <ProcedureFeedback loading={procedures.loading} error={procedures.error} retry={procedures.refresh} />{searchResults.length > 0 ? (
             <div className="procedure-list relative z-10">
               {searchResults.map((procedure, index) => (
-                <button key={procedure.title} type="button" onClick={() => demoNotice(procedure.title)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
+                <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
                   <span className="procedure-index">{String(index + 1).padStart(2, '0')}</span>
-                  <span className="procedure-content"><span>{procedure.category}</span><strong>{procedure.title}</strong></span>
+                  <span className="procedure-content"><span>{procedure.categoryName}</span><strong>{procedure.title}</strong></span>
                   <span className="procedure-link"><span>Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !procedures.loading && !procedures.error ? (
             <div className="mt-7 border border-dashed border-red-200 bg-red-50/50 px-5 py-12 text-center"><FileSearch className="mx-auto text-red-400" size={34} aria-hidden="true" /><h3 className="mt-4 text-lg font-bold text-slate-950">Chưa tìm thấy thủ tục phù hợp</h3><p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-600">Thử dùng từ khóa ngắn hơn như “khai sinh”, “kết hôn” hoặc chọn một lĩnh vực phía trên.</p></div>
-          )}
+          ) : null}
         </div>
       </section>
 

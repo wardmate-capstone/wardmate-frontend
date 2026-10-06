@@ -6,7 +6,6 @@ import {
   DownloadSimple
 } from '@phosphor-icons/react';
 import type { ProcedureCase, ChecklistItem } from '@/lib/procedureContent';
-import { toast } from '@/components/ui/Toast';
 
 interface ProcedureCasesViewProps {
   cases: ProcedureCase[];
@@ -29,15 +28,17 @@ export function ProcedureCasesView({
   // Lọc danh mục giấy tờ theo trường hợp (những item có caseCode trùng hoặc áp dụng chung)
   const currentChecklist = checklist.filter((item) => {
     if (!item.caseCode) return true;
-    if (!selectedCaseCode) return true;
-    return item.caseCode === selectedCaseCode;
+    if (!activeCase) return true;
+    return item.caseCode === activeCase.caseCode;
   });
 
   const nopItems = currentChecklist.filter((item) => item.submissionType === 'NOP');
   const xuatTrinhItems = currentChecklist.filter((item) => item.submissionType === 'XUAT_TRINH');
 
   const handleDownloadTemplate = (item: ChecklistItem) => {
-    toast.success(`Đang tải mẫu văn bản: ${item.itemName} (${item.templateFormat || 'DOCX'})`);
+    if (!item.templateUrl) return;
+    const url = new URL(item.templateUrl);
+    if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) window.open(url.href, '_blank', 'noopener,noreferrer');
   };
 
   const renderDocumentList = (items: ChecklistItem[], title: string, badgeColor: string) => {
@@ -65,7 +66,7 @@ export function ProcedureCasesView({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((item, idx) => {
-                const isForm = !!(item.templateUrl || item.itemName.toLowerCase().includes('đơn') || item.itemName.toLowerCase().includes('tờ khai'));
+                const isForm = !!item.templateUrl;
 
                 return (
                   <tr key={item.checklistId} className="hover:bg-slate-50/70 transition-colors">
@@ -90,8 +91,8 @@ export function ProcedureCasesView({
                     <td className="py-3 px-4 text-center align-middle">
                       <span className="font-bold text-slate-900">{item.quantity}</span>{' '}
                       {item.documentCopyType === 'ORIGINAL' && <span className="text-xs font-semibold text-blue-700">bản chính</span>}
-                      {item.documentCopyType === 'CERTIFIED_COPY' && <span className="text-xs font-semibold text-purple-700">bản sao</span>}
-                      {item.documentCopyType === 'REGULAR_COPY' && <span className="text-xs text-slate-600">bản chụp</span>}
+                      {item.documentCopyType === 'CERTIFIED_COPY' && <span className="text-xs font-semibold text-purple-700">bản sao chứng thực</span>}
+                      {item.documentCopyType === 'REGULAR_COPY' && <span className="text-xs text-slate-600">bản sao thường</span>}
                     </td>
 
                     {/* Yêu cầu */}
@@ -180,6 +181,13 @@ export function ProcedureCasesView({
                   aria-controls={`panel-${c.caseCode}`}
                   tabIndex={isSelected ? 0 : -1}
                   onClick={() => setSelectedCaseCode(c.caseCode)}
+                  onKeyDown={event => {
+                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                    event.preventDefault();
+                    const next = event.key === 'Home' ? 0 : event.key === 'End' ? cases.length - 1 : (idx + (event.key === 'ArrowRight' ? 1 : -1) + cases.length) % cases.length;
+                    setSelectedCaseCode(cases[next].caseCode);
+                    document.getElementById(`tab-${cases[next].caseCode}`)?.focus();
+                  }}
                   className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                     isSelected
                       ? 'bg-red-800 text-white shadow-sm ring-2 ring-red-800/20'
@@ -215,7 +223,7 @@ export function ProcedureCasesView({
               <div>
                 <strong className="font-semibold text-slate-900">Điều kiện trường hợp: </strong>
                 <span className="text-slate-700 leading-relaxed">
-                  {activeCase.description || 'Áp dụng cho các trường hợp đủ điều kiện thực hiện theo quy định.'}
+                  {activeCase.description || activeCase.caseName}
                 </span>
               </div>
             </div>
