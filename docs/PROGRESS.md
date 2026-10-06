@@ -4,6 +4,18 @@ Cập nhật: 06/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Dọn dẹp mã nguồn và gỡ bỏ file/mock data không sử dụng — 06/10/2026
+
+- Đã rà soát toàn bộ thư mục `src/pages/procedure-manager/` và xóa 10 file views mock cũ (mồ côi, không còn được import sau khi chuyển sang dùng API views):
+  - `ProcedureListView.tsx`, `ProcedureDetailView.tsx`, `ProcedureWizardModal.tsx`, `ProcedureFormsView.tsx`, `ProcedureLegalView.tsx`, `ProcedureChecklistsView.tsx`, `ProcedureStepsView.tsx`, `ProcedureAiKnowledgeView.tsx`, `ProcedureAuditLogView.tsx`, `CitizenFormFillWorkspaceModal.tsx`.
+- Xóa file dữ liệu mock tĩnh cũ không còn sử dụng: `src/data/mockProcedureManagerData.ts`.
+- Giảm hơn 4.100 dòng code thừa, tối ưu dung lượng bundle.
+- Đã chạy kiểm tra hệ thống:
+  - `npm run typecheck`: **0 lỗi**.
+  - `npm run lint`: **0 cảnh báo / 0 lỗi**.
+  - `npm run build`: **Build production thành công** (0 lỗi).
+- Commit & push: `4ed3f68` `chore: remove unused legacy mock views and mock procedure manager data` lên `origin/main`.
+
 ## Điều chỉnh dashboard và tìm kiếm theo phản hồi người dùng — 06/10/2026
 
 - Điều chỉnh tiếp: bỏ ba card chỉ số “Biểu mẫu đang dùng”, “Biểu mẫu cần cập nhật”, “Văn bản pháp lý”; giữ Đang công khai/Bản nháp/Tạm ngừng. Dọn import icon và cập nhật kỳ vọng số card trong test hiện có. Không chạy test/lint/build cho thay đổi này theo yêu cầu người dùng; kết quả bên dưới thuộc lần sửa trước.
