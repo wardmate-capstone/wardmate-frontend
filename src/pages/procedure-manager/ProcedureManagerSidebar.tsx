@@ -3,6 +3,7 @@ import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import {
   SquaresFour,
   Files,
+  FileDashed,
   FolderSimple,
   ListChecks,
   Path,
@@ -21,6 +22,7 @@ import {
 export type ProcedureNavSection = 
   | 'dashboard'
   | 'procedures'
+  | 'drafts'
   | 'categories'
   | 'checklists'
   | 'steps'
@@ -70,6 +72,12 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           icon: Files,
           badge: publishedCount == null ? undefined : `${publishedCount} công khai`,
           badgeColor: 'bg-emerald-100 text-emerald-800'
+        },
+        {
+          id: 'drafts' as ProcedureNavSection,
+          label: 'PDF & Bản nháp',
+          icon: FileDashed,
+          badge: undefined
         },
         {
           id: 'categories' as ProcedureNavSection,

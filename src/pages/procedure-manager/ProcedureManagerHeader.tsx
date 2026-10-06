@@ -26,6 +26,10 @@ export const sectionTitles: Record<ProcedureNavSection, { title: string; subtitl
     title: 'Danh sách Thủ tục Hành chính',
     subtitle: 'Quản lý vòng đời, xuất bản, biểu mẫu và cấu hình E-form cho từng thủ tục'
   },
+  drafts: {
+    title: 'PDF & Bản nháp Thủ tục',
+    subtitle: 'Tải lên PDF quyết định công bố, xử lý trích xuất và đối soát dữ liệu bản nháp'
+  },
   categories: {
     title: 'Danh mục Thủ tục',
     subtitle: 'Phân loại các lĩnh vực hành chính cấp xã/phường (Hộ tịch, Đất đai, Chứng thực...)'
