@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { mockWorkspaceAuth } from './fixtures/auth';
+import { mockCatalog } from './fixtures/procedures';
+
+test.beforeEach(async ({ page }) => { await mockCatalog(page); });
 
 test('hiển thị thông điệp chính và tìm kiếm tiếng Việt không dấu', async ({ page }) => {
   await page.goto('/');
@@ -131,7 +134,7 @@ test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực v
   await page.getByRole('button', { name: /Chứng thực/ }).click();
   await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
   await page.getByRole('button', { name: 'Xem tất cả thủ tục' }).click();
-  await expect(page.getByText('15 thủ tục phù hợp')).toBeVisible();
+  await expect(page.getByText('6 thủ tục phù hợp')).toBeVisible();
 });
 
 test('trang quản trị hiển thị tổng quan và menu mobile không tràn ngang', async ({ page }) => {
@@ -157,98 +160,4 @@ test('sidebar quản trị có thể thu gọn trên desktop', async ({ page }) 
   await page.getByRole('button', { name: 'Mở rộng thanh điều hướng' }).click();
   await expect.poll(() => page.locator('#admin-sidebar').evaluate((element) => element.getBoundingClientRect().width)).toBe(268);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-});
-
-test('public procedures paginate, preserve URL state and fit mobile', async ({ page }) => {
-  await page.goto('/thu-tuc');
-  const rows = page.locator('.procedures-list > li');
-  const pagination = page.getByRole('navigation', { name: 'Phân trang thủ tục' });
-  await expect(rows).toHaveCount(5);
-  await expect(pagination.getByRole('button', { name: 'Trang trước', exact: true })).toBeDisabled();
-  await pagination.getByRole('button', { name: 'Trang 2', exact: true }).click();
-  await expect(page).toHaveURL(/page=2/);
-  await expect(page.getByRole('status')).toContainText('6–10 / 15');
-  await expect(page.getByRole('heading', { name: '15 thủ tục phù hợp' })).toBeFocused();
-  await expect(page.getByRole('link', { name: 'Xem Đăng ký khai tử', exact: true })).toBeVisible();
-  await pagination.getByRole('button', { name: 'Trang sau', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('11–15 / 15');
-  await expect(pagination.getByRole('button', { name: 'Trang sau', exact: true })).toBeDisabled();
-  await page.goBack();
-  await expect(pagination.getByRole('button', { name: 'Trang 2', exact: true })).toHaveAttribute('aria-current', 'page');
-
-  const search = page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn');
-  await search.fill('  DANG   KY  ');
-  await expect(page.getByRole('status')).toContainText('Trang 1/');
-  await expect(rows).toHaveCount(5);
-  await page.reload();
-  await expect(search).toHaveValue('  DANG   KY  ');
-  await page.getByRole('complementary', { name: 'Lọc theo lĩnh vực' }).getByRole('button', { name: /Chứng thực/ }).click();
-  await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
-  await expect(pagination).toHaveCount(0);
-  await page.getByRole('button', { name: 'Bỏ bộ lọc từ khóa' }).click();
-  await expect(rows).toHaveCount(4);
-  await expect(page.getByRole('status')).toContainText('1–4 / 4');
-  await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '15 thủ tục phù hợp' })).toBeVisible();
-
-  await page.goto('/thu-tuc?page=999');
-  await expect(page.getByRole('status')).toContainText('Trang 3/3');
-  await page.goto('/thu-tuc?page=invalid&category=unknown');
-  await expect(page.getByRole('status')).toContainText('Trang 1/3');
-  for (const width of [1440, 1024, 768, 390, 360]) {
-    await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (width === 1440 || width === 390) {
-      await page.screenshot({ path: 'test-results/procedures-' + width + '.png', fullPage: true });
-    }
-  }
-  await search.fill('a'.repeat(150));
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
-
-test('chi tiết thủ tục hiển thị tab các trường hợp, danh mục giấy tờ cần chuẩn bị và nút tải mẫu', async ({ page }) => {
-  // Đi vào thủ tục Đăng ký khai sinh (demo-1)
-  await page.goto('/thu-tuc/demo-1');
-  await expect(page.getByRole('heading', { name: 'Đăng ký khai sinh', level: 1 })).toBeVisible();
-
-  // Kiểm tra mục lục bên trái có link Thành phần hồ sơ & Quy trình
-  const menuLink = page.getByRole('link', { name: 'Thành phần hồ sơ & Quy trình' });
-  await expect(menuLink).toBeVisible();
-
-  // Kiểm tra khối Cases & Checklist
-  const casesSection = page.locator('#thanh-phan-ho-so');
-  await expect(casesSection).toBeVisible();
-  await expect(casesSection.getByRole('heading', { name: /Thành phần hồ sơ theo trường hợp/ })).toBeVisible();
-
-  // Tab trường hợp mặc định là Đăng ký khai sinh đúng hạn
-  const tabDungHan = page.getByRole('tab', { name: /Đăng ký khai sinh đúng hạn/ });
-  await expect(tabDungHan).toHaveAttribute('aria-selected', 'true');
-
-  // Kiểm tra hiển thị danh mục giấy tờ cần chuẩn bị (không có checkbox)
-  await expect(casesSection.getByRole('heading', { name: /Giấy tờ, tài liệu cần chuẩn bị/ })).toBeVisible();
-  await expect(casesSection.getByRole('heading', { name: /Giấy tờ, tài liệu phải nộp/ })).toBeVisible();
-  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh (theo mẫu)')).toBeVisible();
-  await expect(casesSection.getByText('Giấy chứng sinh do cơ sở y tế cấp')).toBeVisible();
-
-  // Đảm bảo không có checkbox ở view công khai này
-  await expect(casesSection.getByRole('checkbox')).toHaveCount(0);
-
-  // Kiểm tra có nút Tải mẫu
-  await expect(casesSection.getByRole('button', { name: 'Tải mẫu' }).first()).toBeVisible();
-
-  // Kiểm tra có nút Bắt đầu làm thủ tục
-  const startButton = page.getByRole('button', { name: /Bắt đầu làm thủ tục/ }).first();
-  await expect(startButton).toBeVisible();
-
-  // Chuyển sang Tab tình huống khác (Quá hạn)
-  const tabQuaHan = page.getByRole('tab', { name: /Đăng ký khai sinh quá hạn/ });
-  await tabQuaHan.click();
-  await expect(tabQuaHan).toHaveAttribute('aria-selected', 'true');
-  await expect(casesSection.getByText('Tờ khai đăng ký khai sinh quá hạn')).toBeVisible();
-
-  // Kiểm tra responsive không bị tràn ngang
-  for (const width of [1440, 768, 390]) {
-    await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
 });

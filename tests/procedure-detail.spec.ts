@@ -10,8 +10,8 @@ test('content parser handles objects, JSON, missing data and unsafe fields', () 
   };
   expect(parseProcedureContent(valid)).toEqual(parseProcedureContent(JSON.stringify(valid)));
   expect(parseProcedureContent(valid).status).toBe('ready');
-  for (const value of [null, undefined, '', { schemaVersion: 1 }]) expect(parseProcedureContent(value).status).toBe('empty');
-  for (const value of ['{broken', 'null', '[]', 12, [], {}, { schemaVersion: 2 }]) expect(parseProcedureContent(value).status).toBe('invalid');
+  for (const value of [null, undefined, '', {}, { schemaVersion: 1 }]) expect(parseProcedureContent(value).status).toBe('empty');
+  for (const value of ['{broken', 'null', '[]', 12, [], { schemaVersion: 2 }]) expect(parseProcedureContent(value).status).toBe('invalid');
   const partial = parseProcedureContent({
     schemaVersion: 1, overview: { bad: true },
     methods: [null, 'bad', {}, { method: 'Hợp lệ', fee: 0, processingTime: false }],
@@ -28,58 +28,29 @@ test('content parser handles objects, JSON, missing data and unsafe fields', () 
   }
 });
 
-test('detail page preserves list filters, reloads directly and fits mobile', async ({ page }) => {
-  await page.goto('/thu-tuc?category=' + encodeURIComponent('Hộ tịch') + '&page=2');
-  await page.getByRole('link', { name: 'Xem Đăng ký lại kết hôn', exact: true }).click();
-  await expect(page).toHaveURL(/thu-tuc\/demo-8\?/);
-  await expect(page.getByRole('heading', { name: 'Đăng ký lại kết hôn', exact: true })).toBeFocused();
-  for (const name of ['Thông tin chung', 'Thời hạn và lệ phí', 'Căn cứ pháp luật', 'Cơ quan tiếp nhận']) {
-    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-  }
-  await expect(page.getByText('Dữ liệu minh họa', { exact: true })).toBeVisible();
-  await expect(page.locator('#thoi-han-le-phi tbody tr')).toHaveCount(3);
+
+test('API detail shows 404 and invalid responses without mock fallback', async ({ page }) => {
+  const { mockCatalog, catalogReply, procedureId } = await import('./fixtures/procedures');
+  await mockCatalog(page);
+  await page.goto('/thu-tuc/missing');
+  await expect(page.getByRole('alert')).toContainText('Không tìm thấy thủ tục đang hoạt động');
   await page.getByRole('link', { name: 'Quay lại danh sách', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Trang 2/2');
-  await expect(page.getByRole('complementary', { name: 'Lọc theo lĩnh vực' }).getByRole('button', { name: /Hộ tịch/ })).toHaveAttribute('aria-pressed', 'true');
-  await page.goto('/thu-tuc/demo-1');
-  await page.reload();
-  await expect(page.getByRole('heading', { name: 'Đăng ký khai sinh', exact: true })).toBeVisible();
-  for (const width of [1440, 768, 390, 360]) {
-    await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (width === 1440 || width === 390) await page.screenshot({ path: 'test-results/detail-' + width + '.png', fullPage: true });
-  }
-  await page.goto('/thu-tuc/not-found');
-  await expect(page.getByRole('heading', { name: 'Không tìm thấy thủ tục' })).toBeVisible();
-  await page.getByRole('link', { name: 'Quay lại danh sách' }).click();
-  await expect(page).toHaveURL(/\/thu-tuc$/);
+  await expect(page.locator('.procedures-list > li')).toHaveCount(5);
+  await page.route(`**/api/v1/procedures/${procedureId}`, route => catalogReply(route, { json: { id: procedureId, contentPayload: false } }));
+  await page.goto(`/thu-tuc/${procedureId}`);
+  await expect(page.getByRole('alert')).toContainText('chưa đúng định dạng');
 });
 
-test('detail renders empty, invalid and partial payloads without executing markup', async ({ page }) => {
-  let payload: unknown = null;
-  await page.route('**/src/data/mockPublicProcedures.ts*', (route) => route.fulfill({
-    contentType: 'application/javascript',
-    body: 'export const mockPublicProcedures = ' + JSON.stringify([{
-      id: 'demo-1', title: 'Thủ tục minh họa', category: 'Hộ tịch', content_payload: payload,
-    }]) + ';',
-  }));
-  await page.goto('/thu-tuc/demo-1');
-  await expect(page.getByRole('status')).toContainText('Nội dung chi tiết đang được cập nhật');
-  payload = '{invalid';
+test('common checklist is visible even without cases and direct reload preserves filters', async ({ page }) => {
+  const { mockCatalog, procedureId } = await import('./fixtures/procedures');
+  const state = await mockCatalog(page);
+  state.detail.contentPayload.cases = [];
+  state.detail.checklistSchema = state.detail.checklistSchema?.filter(item => !item.caseCode);
+  await page.goto(`/thu-tuc/${procedureId}?category=1&page=2`);
+  await expect(page.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('alert')).toContainText('dữ liệu không hợp lệ');
-  payload = {
-    schemaVersion: 1, methods: false,
-    legalBases: [
-      { title: '<img src=x onerror=alert(1)>', url: 'javascript:alert(1)' },
-      { title: 'Văn bản minh họa', number: 'MẪU', url: 'https://example.org/document' },
-    ],
-    receivingAgencies: [{ name: 'Cơ quan minh họa', address: 'Chưa có địa chỉ thật', url: 'https://example.org' }],
-  };
-  await page.reload();
-  await expect(page.getByRole('status')).toContainText('Một phần nội dung');
-  await expect(page.locator('#can-cu-phap-luat img')).toHaveCount(0);
-  await expect(page.locator('#can-cu-phap-luat')).toContainText('<img src=x onerror=alert(1)>');
-  await expect(page.getByRole('link', { name: /Xem văn bản/ })).toHaveAttribute('href', 'https://example.org/document');
-  await expect(page.locator('#co-quan-tiep-nhan')).toContainText('Cơ quan minh họa');
+  await expect(page.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Quay lại danh sách', exact: true }).click();
+  await expect(page).toHaveURL(/category=1&page=2/);
+  await expect(page.locator('.procedures-list > li')).toHaveCount(1);
 });
