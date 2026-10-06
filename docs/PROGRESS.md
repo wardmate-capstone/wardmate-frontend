@@ -1,8 +1,36 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 03/10/2026.
+Cập nhật: 06/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Điều chỉnh dashboard và tìm kiếm theo phản hồi người dùng — 06/10/2026
+
+- Điều chỉnh tiếp: bỏ ba card chỉ số “Biểu mẫu đang dùng”, “Biểu mẫu cần cập nhật”, “Văn bản pháp lý”; giữ Đang công khai/Bản nháp/Tạm ngừng. Dọn import icon và cập nhật kỳ vọng số card trong test hiện có. Không chạy test/lint/build cho thay đổi này theo yêu cầu người dùng; kết quả bên dưới thuộc lần sửa trước.
+- Khôi phục `ProcedureDashboardView`: sáu thẻ chỉ số, mục cần chú ý, thủ tục cập nhật gần đây và khu vực biểu mẫu/pháp lý như bố cục cũ. Dashboard không còn bảng tìm kiếm/phân trang trùng danh sách thủ tục. Chỉ số đang công khai/tạm ngừng và cập nhật gần đây lấy API; phần chưa có nguồn ghi chưa có dữ liệu, không phục hồi mock.
+- `ProceduresPage` chờ 350 ms khi tìm với từ khóa, hủy timer/request cũ khi điều kiện thay đổi. URL vẫn giữ từ khóa/lĩnh vực/trang; không thêm dependency.
+- Người dùng báo các API 1, 3–5, 7–9, 11–16 OK; 6 và 10 chưa test; 17 và 18 chưa test được. API 2 được yêu cầu giảm request khi gõ. Đây là phản hồi kiểm tra của người dùng, không thay cho bằng chứng tự chạy môi trường thật của agent.
+- Người dùng đã hiểu và xác nhận BE cần API detail riêng cho quản lý để xem/sửa inactive; không sửa BE trong task này.
+- Kiểm tra lần này: typecheck/lint/build và diff check đạt (còn cảnh báo build Zod/bundle). Playwright 32/33 đạt lần đầu, một ca detail timeout khi tải trang; chạy lại riêng toàn bộ nhóm detail đạt 3/3, không đổi code/test để bỏ qua lỗi. Hai ca mới xác nhận gõ nhanh chỉ gọi một request từ khóa và dashboard không có bảng danh sách đều đạt. Đã xem ảnh dashboard mobile.
+- Đã chia 4 commits theo yêu cầu:
+  1. `ddd5e92` `feat(api): integrate procedure catalog client and proxy configuration`
+  2. `b5e1e0e` `feat(public): connect home, procedure lookup, and detail pages to catalog API`
+  3. `accb123` `feat(procedure-manager): add workspace, api list, detail, and editor flows`
+  4. `9200a9c` `test: update playwright suites and add procedure mock fixtures`
+- Commit thứ 5 (tài liệu bàn giao, API guide, backend gaps & progress) sẵn sàng gửi cùng khi push.
+
+## Tích hợp Procedure Catalog API — 06/10/2026
+
+- Theo quyết định người dùng: chỉ sửa FE, không sửa backend; báo các hợp đồng thiếu để BE bổ sung. Chưa commit/push/deploy. Giữ nguyên thay đổi có sẵn của người dùng ở `.env.example` và `vite.config.ts`.
+- Thêm `src/lib/api/procedures.ts` với validation response, dùng HTTP/auth client chung, public không gửi JWT. Kết nối 18 endpoint: danh mục, public list/detail/source; manager list/create/update/status/versions/publish; draft preview/upload/list/detail/source/save/retry/publish. Không fallback dữ liệu giả khi API lỗi.
+- Manager dùng các component `ProcedureApiList/Detail/Editor`, `ProcedureDraftWorkspace`; giữ layout/sidebar/component chung. PDF có polling, revision, lỗi 409 giữ nội dung đang nhập, save trước publish, đối chiếu trạng thái nếu mất response publish. SAS chỉ giữ trong RAM và hết hạn theo response. Không tự nhập hoặc xuất bản PDF mẫu.
+- Trang chủ, tra cứu công khai, chi tiết và tra cứu trong tài khoản công dân lấy Catalog. Bỏ đoán checklist từ tên thủ tục; hồ sơ cũ thiếu checklist không còn báo đủ điều kiện/nộp. CTA Catalog không tạo hồ sơ localStorage rồi báo thành công. Các phân hệ hồ sơ công dân khác vẫn là phạm vi chưa tích hợp, không được coi toàn bộ ứng dụng đã dùng dữ liệu thật.
+- Không hiển thị số liệu giả trên dashboard/sidebar quản lý. Các mục kho DOCX/e-form, AI, audit và kho pháp lý độc lập báo chưa có kết nối. Inactive vẫn xem lịch sử/đổi trạng thái, chưa sửa được vì BE thiếu detail riêng.
+- Thêm rewrite Catalog vào `vercel.json` trước IAM; chưa xác minh deployment. Hướng dẫn từng API: `docs/PROCEDURE_API_USER_GUIDE.md`. Danh sách gửi BE: `docs/PROCEDURE_BACKEND_GAPS.md`. Bản đối chiếu ban đầu: `docs/IMPLEMENT_PROCEDURE_API.md`.
+- Kiểm tra API public thật trên Azure: health/categories/list/detail đều 200; hiện chỉ có seed `DEMO-KET-HON` ghi rõ dữ liệu minh họa. Đây là response server, chưa phải dữ liệu nghiệp vụ đã đối soát. Chưa xác minh manager/upload/Blob/AIOCR/publish thật vì chưa có phiên tài khoản thử có quyền.
+- PDF khai sinh mẫu 11 trang đã đọc ở bước chuẩn bị. Các nhóm “Trường hợp 1–4” không tự coi là lựa chọn loại trừ nhau; ghi chú chung, điều kiện và số lượng chưa xác định cần BE bổ sung. Không đưa PDF gốc vào repo.
+- Kiểm tra vừa chạy: `npm run typecheck`, `npm run lint`, `npm run build` đạt; build còn cảnh báo annotation Zod/bundle lớn. Playwright Edge: 33/33 đạt trong `procedure-manager`, `procedure-detail`, `landing`, `citizen-application-wizard` (mock HTTP, không phải manager thật). Đã xem ảnh detail mobile và editor mobile, kiểm tra tràn ngang/focus trong test. `git diff --check` đạt.
+- Bước tiếp: dùng tài khoản manager/admin trên môi trường được phép để smoke test hướng dẫn từng API; xác minh phiên bản Catalog deploy, JWT liên dịch vụ, Blob và extraction. BE cần ưu tiên detail inactive, mô hình ghi chú/nhóm hồ sơ và nháp thủ công không PDF.
 
 ## Tinh gọn Giao diện Công dân: Gỡ bỏ Phân hệ "Chuẩn bị hồ sơ" dư thừa — 03/10/2026
 
