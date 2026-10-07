@@ -4,6 +4,28 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Lời chào theo thời gian thực (Time-based Greetings) cho Admin, Procedure Manager và Manager — 07/10/2026
+
+- **1. Helper dùng chung `getGreeting` (`src/lib/utils.ts`)**:
+  - Export hàm chuẩn `getGreeting(): string` tính theo giờ trong ngày:
+    - 05:00 - 11:59: "Chào buổi sáng"
+    - 12:00 - 17:59: "Chào buổi chiều"
+    - 18:00 - 04:59: "Chào buổi tối"
+  - Tái sử dụng đồng bộ cho toàn bộ các phân hệ (`officer`, `admin`, `procedure-manager`, `manager`). Gỡ bỏ hàm cục bộ trùng lặp trong `OfficerDashboardView.tsx`.
+- **2. Phân hệ Quản trị hệ thống (`admin`)**:
+  - Tại `AdminPage.tsx`: Hiển thị `{getGreeting()}, Quản trị viên {adminName}` ngay dưới tiêu đề `Trung tâm quản trị` ở chế độ `overview`.
+  - Giữ nguyên thẻ `<h1>{meta.title}</h1>` để đảm bảo 100% tương thích với Playwright test assertions (`landing.spec.ts`).
+- **3. Phân hệ Quản lý thủ tục (`procedure-manager`)**:
+  - Tại `ProcedureManagerPage.tsx`: Hiển thị `{getGreeting()}, Chuyên viên {procedureManagerName}` ở chế độ `dashboard` ("Tổng quan Quản lý Thủ tục").
+  - Đưa nút "Thêm thủ tục" ra thanh tác vụ header chung khi xem overview để chuyên viên có thể tạo mới thủ tục trực tiếp từ Dashboard.
+- **4. Phân hệ Quản lý Điều hành (`manager`)**:
+  - Tại `ManagerPage.tsx`: Hiển thị `{getGreeting()}, Lãnh đạo {managerName}` ngay dưới tiêu đề `Thống kê Hồ sơ Hành chính` ở trang tổng quan mặc định `stats-dossiers`.
+  - Giữ nguyên heading exact `Thống kê Hồ sơ Hành chính` để pass toàn bộ `tests/manager.spec.ts`.
+- **5. Kiểm thử & Đảm bảo chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi.
+  - `npm run lint`: Đạt 0 lỗi.
+  - Playwright E2E: Toàn bộ 38/38 ca kiểm thử liên quan (`landing.spec.ts`, `manager.spec.ts`, `officer.spec.ts`, `procedure-manager.spec.ts`) đều PASS 100%.
+
 ## Tối ưu hóa UI/UX, Module hóa CitizenPage và Route Code-Splitting — 07/10/2026
 
 - **1. Trình soạn thảo thủ tục & Đối soát bản nháp (`procedure-manager`)**:
