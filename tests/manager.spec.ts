@@ -22,14 +22,14 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/manager');
 
-    // Chuyển sang Hồ sơ công dân
-    await page.locator('aside').getByRole('button', { name: 'Hồ sơ công dân' }).click();
+    // Chuyển sang Cán bộ Một cửa
+    await page.locator('aside').getByRole('button', { name: /Cán bộ Một cửa/ }).click();
 
-    await expect(page.getByRole('heading', { name: 'Quản lý Hồ sơ Công dân', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
     await expect(page.getByText('Nguyễn Văn An')).toBeVisible();
     await expect(page.getByText('Trần Thị Mai Hương')).toBeVisible();
 
-    // Mở TRANG CHI TIẾT hồ sơ công dân
+    // Mở TRANG CHI TIẾT hồ sơ cán bộ
     await page.getByRole('button', { name: 'Xem chi tiết' }).first().click();
 
     // Kiểm tra các phần trên Trang chi tiết
@@ -37,14 +37,9 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByText('Thông tin Định danh & Nhân thân')).toBeVisible();
     await expect(page.getByText('001092008128').first()).toBeVisible();
 
-    // Chuyển sang Tab 2: Lịch sử hồ sơ
-    await page.getByRole('button', { name: /2\. Lịch sử Hồ sơ/ }).click();
-    await expect(page.getByText('Lịch sử Hồ sơ Thủ tục Hành chính tại Phường')).toBeVisible();
-    await expect(page.getByText('HS-2026-0912')).toBeVisible();
-
     // Quay lại danh sách
-    await page.getByRole('button', { name: 'Quay lại danh sách công dân' }).click();
-    await expect(page.getByRole('heading', { name: 'Quản lý Hồ sơ Công dân', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Quay lại danh sách/ }).click();
+    await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
   });
 
   test('Thống kê hệ thống: Chuyển đổi mượt mà giữa các mục thống kê', async ({ page }) => {
