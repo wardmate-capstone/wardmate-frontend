@@ -4,6 +4,22 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Thống nhất Nhãn 'Tổng quan' trên Tất cả Sidebar & Tối ưu Cột Người dùng — 07/10/2026
+
+- **1. Thống nhất nhãn mục đầu tiên thành 'Tổng quan' trên toàn bộ Sidebar**:
+  - `AdminPage.tsx`: Đổi nhãn `Trung tâm quản trị` thành `Tổng quan` (tiêu đề và breadcrumb đồng bộ).
+  - `ProcedureManagerSidebar.tsx`: Đổi nhãn `Dashboard` thành `Tổng quan`.
+  - `OfficerSidebar.tsx`: Đổi nhãn `Dashboard` thành `Tổng quan`.
+  - `CitizenPage.tsx`: Đổi nhãn `Dashboard` thành `Tổng quan`.
+  - Toàn bộ 4 phân hệ hiện đã đồng nhất 100% về từ ngữ thuần Việt, trang nhã, đúng quy chuẩn cơ quan Nhà nước.
+- **2. Tối ưu hiển thị Cột Người dùng (`AdminPage.tsx`)**:
+  - Đổi tiêu đề cột từ `Người dùng & Họ tên` thành `Người dùng` tinh gọn.
+  - Tự động khử trùng lặp: Nếu tài khoản chưa có họ tên riêng (hoặc họ tên trùng username như `ducanh1`), chỉ hiển thị đúng 1 dòng `@username` font mono rõ ràng, không lặp lại 2 dòng chữ giống nhau gây rối mắt.
+- **3. Kiểm tra chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi (Exit code 0).
+  - `npm run lint`: Đạt 0 lỗi (Exit code 0).
+  - `npm run build`: Đạt 0 lỗi (Vite bundle hoàn tất thành công).
+
 ## Tinh chỉnh Vị trí Hồ sơ cá nhân Sidebar Admin — 07/10/2026
 
 - **1. Chuyển mục Hồ sơ cá nhân xuống vị trí cuối cùng**:
