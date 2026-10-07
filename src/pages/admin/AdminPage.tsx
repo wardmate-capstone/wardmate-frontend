@@ -106,7 +106,6 @@ const navigation: Array<{
   {
     group: "Tài khoản & truy cập",
     items: [
-      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
       { id: "users", label: "Người dùng hệ thống", icon: Users },
       { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings },
       { id: "roles", label: "Vai trò & quyền hạn", icon: Key },
@@ -118,6 +117,7 @@ const navigation: Array<{
       { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack },
       { id: "audit", label: "Nhật ký hoạt động", icon: Activity },
       { id: "backup", label: "Bảo mật & sao lưu", icon: Database },
+      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
     ],
   },
 ];
