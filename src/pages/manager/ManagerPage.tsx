@@ -8,7 +8,7 @@ import { ManagerPerformanceView } from './views/ManagerPerformanceView';
 import { ManagerFeedbackView } from './views/ManagerFeedbackView';
 import { ManagerReportsView } from './views/ManagerReportsView';
 import { ManagerPermissionsView } from './views/ManagerPermissionsView';
-import { ManagerProfileView } from './views/ManagerProfileView';
+import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
 import {
@@ -215,8 +215,8 @@ export const ManagerPage: React.FC = () => {
         />
 
         <main id="manager-main" className="admin-main" tabIndex={-1}>
-          {/* Page Heading (Ẩn khi đang xem chi tiết công dân vì view chi tiết có header riêng) */}
-          {!selectedProfile && (
+          {/* Page Heading (Ẩn khi đang xem chi tiết công dân hoặc xem hồ sơ cá nhân vì view chi tiết có header riêng) */}
+          {!selectedProfile && currentSection !== 'profile' && (
             <div className="admin-page-heading mb-6">
               <div>
                 <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
@@ -283,7 +283,7 @@ export const ManagerPage: React.FC = () => {
 
           {currentSection === 'permissions' && <ManagerPermissionsView />}
 
-          {currentSection === 'profile' && <ManagerProfileView />}
+          {currentSection === 'profile' && <UnifiedSelfProfileView />}
         </main>
       </div>
     </div>

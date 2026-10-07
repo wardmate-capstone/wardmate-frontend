@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   SidebarSimple,
   Stack,
+  UserCircle,
   Users,
   X,
 } from "@phosphor-icons/react";
@@ -55,6 +56,7 @@ import {
   type UserProfileDto,
 } from "@/lib/api";
 import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
+import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import type { ManagerProfileItem } from '@/pages/manager/types';
 
 type SectionId =
@@ -67,7 +69,8 @@ type SectionId =
   | "roles"
   | "integrations"
   | "audit"
-  | "backup";
+  | "backup"
+  | "profile";
 
 const navigation: Array<{
   group: string;
@@ -103,6 +106,7 @@ const navigation: Array<{
   {
     group: "Tài khoản & truy cập",
     items: [
+      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
       { id: "users", label: "Người dùng hệ thống", icon: Users },
       { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings },
       { id: "roles", label: "Vai trò & quyền hạn", icon: Key },
@@ -283,6 +287,7 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   integrations: { title: "Dịch vụ tích hợp" },
   audit: { title: "Nhật ký hoạt động" },
   backup: { title: "Bảo mật & sao lưu" },
+  profile: { title: "Hồ sơ cá nhân" },
 };
 
 export function AdminPage() {
@@ -534,7 +539,7 @@ export function AdminPage() {
         </header>
 
         <main id="admin-main" className="admin-main" tabIndex={-1}>
-          {!(activeSection === "users" && selectedUser) && (
+          {!(activeSection === "users" && selectedUser) && activeSection !== "profile" && (
             <div className="admin-page-heading">
               <div>
                 <h1>{meta.title}</h1>
@@ -562,6 +567,7 @@ export function AdminPage() {
           {activeSection === "knowledge" && (
             <KnowledgeView onAction={demoAction} />
           )}
+          {activeSection === "profile" && <UnifiedSelfProfileView />}
           {activeSection === "users" && (
             selectedUser ? (
               detailLoading ? (
@@ -1290,8 +1296,7 @@ function UsersView({
             <thead>
               <tr>
                 <th>Người dùng</th>
-                <th>Phường công tác</th>
-                <th>Vai trò</th>
+                <th>Vai trò & Đơn vị</th>
                 <th>Trạng thái</th>
                 <th />
               </tr>
@@ -1301,7 +1306,6 @@ function UsersView({
                 <tr key={i}>
                   <td><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
                   <td><div className="h-4 w-28 animate-pulse rounded bg-slate-200" /></td>
-                  <td><div className="h-4 w-20 animate-pulse rounded bg-slate-200" /></td>
                   <td><div className="h-6 w-20 animate-pulse rounded-full bg-slate-200" /></td>
                   <td><div className="h-8 w-20 animate-pulse rounded-lg bg-slate-200" /></td>
                 </tr>
@@ -1318,8 +1322,7 @@ function UsersView({
             <thead>
               <tr>
                 <th>Người dùng & Họ tên</th>
-                <th>Phường công tác</th>
-                <th>Vai trò</th>
+                <th>Vai trò & Đơn vị</th>
                 <th>Trạng thái</th>
                 <th className="text-right">Thao tác</th>
               </tr>
@@ -1347,40 +1350,40 @@ function UsersView({
                       </div>
                     </td>
                     <td>
-                      {isStaff ? (
-                        <select
-                          value={item.wardId || ''}
-                          onChange={(e) => onAssignWard(item.id, e.target.value || null)}
-                          className="text-xs bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-800"
-                        >
-                          <option value="">(Chưa gán phường)</option>
-                          {wards.map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">
-                          Không áp dụng
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="flex flex-wrap gap-1">
-                        {item.roles.length > 0 ? (
-                          item.roles.map((r) => (
-                            <span
-                              key={r.id}
-                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border ${getRoleBadgeClass(
-                                r.roleName
-                              )}`}
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {item.roles.length > 0 ? (
+                            item.roles.map((r) => (
+                              <span
+                                key={r.id}
+                                className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border ${getRoleBadgeClass(
+                                  r.roleName
+                                )}`}
+                              >
+                                {formatRoleLabel(r.roleName)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </div>
+                        {isStaff && (
+                          <div className="flex items-center gap-1.5">
+                            <Buildings size={14} className="text-slate-400 shrink-0" />
+                            <select
+                              value={item.wardId || ''}
+                              onChange={(e) => onAssignWard(item.id, e.target.value || null)}
+                              className="text-[11px] bg-slate-50 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-800"
+                              title="Gán đơn vị phường công tác cho cán bộ"
                             >
-                              {formatRoleLabel(r.roleName)}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
+                              <option value="">(Chưa gán phường)</option>
+                              {wards.map((w) => (
+                                <option key={w.id} value={w.id}>
+                                  {w.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         )}
                       </div>
                     </td>

@@ -22,7 +22,7 @@ import { OfficerReviewWorkspaceView } from './OfficerReviewWorkspaceView';
 import { OfficerReceiptWorkspaceView } from './OfficerReceiptWorkspaceView';
 import { OfficerAuditLogView } from './OfficerAuditLogView';
 import { OfficerNotificationView } from './OfficerNotificationView';
-import { OfficerProfileView } from './OfficerProfileView';
+import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { X, Eye, ArrowRight } from '@phosphor-icons/react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
@@ -413,7 +413,7 @@ export const OfficerPage: React.FC = () => {
               )}
 
               {/* SECTION 6: HỒ SƠ CÁ NHÂN & QUẦY TRỰC */}
-              {activeSection === 'profile' && <OfficerProfileView />}
+              {activeSection === 'profile' && <UnifiedSelfProfileView />}
             </>
           )}
         </main>

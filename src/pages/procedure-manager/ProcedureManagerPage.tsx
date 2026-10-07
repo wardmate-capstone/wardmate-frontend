@@ -8,7 +8,7 @@ import {
   ProcedureManagerHeader,
   sectionTitles,
 } from "./ProcedureManagerHeader";
-import { ProcedureProfileView } from "./ProcedureProfileView";
+import { UnifiedSelfProfileView } from "@/components/profile/UnifiedSelfProfileView";
 import { Button, Modal } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
@@ -161,7 +161,7 @@ export function ProcedureManagerPage() {
               }}
             />
           ) : section === "profile" ? (
-            <ProcedureProfileView />
+            <UnifiedSelfProfileView />
           ) : section === "categories" ? (
             <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
           ) : section === "dashboard" ? (
