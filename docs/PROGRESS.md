@@ -4,6 +4,31 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Dọn dẹp Mã nguồn & Loại bỏ các File không sử dụng (Dead Code Cleanup) — 07/10/2026
+
+- **1. Rà soát & Loại bỏ các file mồ côi (Unused / Dead Code)**:
+  - **3 View Profile cũ sau khi đồng nhất sang `UnifiedSelfProfileView`**:
+    - `src/pages/manager/views/ManagerProfileView.tsx` (Đã được thay thế hoàn toàn bởi `UnifiedSelfProfileView.tsx`).
+    - `src/pages/officer/OfficerProfileView.tsx` (Đã được thay thế hoàn toàn bởi `UnifiedSelfProfileView.tsx`).
+    - `src/pages/procedure-manager/ProcedureProfileView.tsx` (Đã được thay thế hoàn toàn bởi `UnifiedSelfProfileView.tsx`).
+  - **Trang Profile cũ không còn route**:
+    - `src/pages/account/ProfilePage.tsx` (Route `/tai-khoan` đã gỡ bỏ từ trước, không còn bất kỳ import hay tham chiếu nào trong dự án).
+  - **Các component thừa không còn sử dụng**:
+    - `src/components/brand/NationalEmblem.tsx` (Component vẽ SVG quốc huy không được sử dụng ở bất kỳ màn hình nào).
+    - `src/components/home/NoticeCarousel.tsx` (Carousel thông báo cũ không được gọi trong trang chủ hay bất cứ trang nào).
+  - **Types cũ không còn sử dụng**:
+    - `src/types/procedureManager.ts` (Type mock cũ của Procedure Manager, đã được thay thế hoàn toàn bởi `src/lib/api/procedures.ts`).
+- **2. Cập nhật Fixture & Test Playwright**:
+  - `tests/fixtures/auth.ts`: Bổ sung mock cho endpoint `/api/v1/users/profiles` (API 60) đảm bảo test môi trường giả lập cán bộ chạy chuẩn xác.
+  - `tests/manager.spec.ts`: Cập nhật nhãn tìm kiếm nút Sidebar và Header từ context cũ sang context mới *"Cán bộ Một cửa"*.
+- **3. Kiểm tra chất lượng sau dọn dẹp**:
+  - `npm run typecheck`: Đạt 0 lỗi (Exit code 0).
+  - `npm run lint`: Đạt 0 lỗi (Exit code 0).
+  - `npm run build`: Đạt 0 lỗi, bundle thành công 100% trong 10.29s.
+  - Playwright E2E:
+    - `tests/manager.spec.ts` & `tests/officer.spec.ts`: **8/8 tests pass (100%)**.
+    - `tests/procedure-manager.spec.ts`: **20/20 tests pass (100%)**.
+
 ## Tối ưu Bảng Người dùng Admin & Đồng nhất Hồ sơ cá nhân 4 Vai trò Cán bộ — 07/10/2026
 
 - **1. Tối ưu Bảng Danh sách Người dùng Admin (`UsersView` trong `AdminPage.tsx`)**:
