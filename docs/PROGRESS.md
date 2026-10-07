@@ -4,6 +4,35 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tối ưu Bảng Người dùng Admin & Đồng nhất Hồ sơ cá nhân 4 Vai trò Cán bộ — 07/10/2026
+
+- **1. Tối ưu Bảng Danh sách Người dùng Admin (`UsersView` trong `AdminPage.tsx`)**:
+  - **Gộp cột "Phường công tác" vào "Vai trò" thành `Vai trò & Đơn vị`**:
+    - Xóa bỏ cột riêng "Phường công tác" vốn làm 90% dòng công dân bị trống trải và hiện dòng chữ "Không áp dụng" mất mỹ quan.
+    - Bảng rút gọn thành 4 cột cân đối, thanh lịch: `Người dùng & Họ tên` | `Vai trò & Đơn vị` | `Trạng thái` | `Thao tác`.
+  - **Phân cấp hiển thị theo vai trò**:
+    - **Công dân (`REGISTERED_CITIZEN`)**: Chỉ hiển thị huy hiệu `Công dân` nhẹ nhàng, gọn gàng; không có dòng phụ, không có ô chọn thừa.
+    - **Cán bộ địa phương (`MANAGER`, `FRONT_DESK_OFFICER`)**: Hiển thị huy hiệu vai trò chuẩn, kèm cụm icon `Buildings` và dropdown chọn Phường nhỏ gọn ngay bên dưới để Admin gán/chuyển đổi đơn vị nhanh.
+    - **Quản trị viên / Quản lý thủ tục**: Hiển thị huy hiệu vai trò chuyên biệt tương ứng.
+- **2. Đồng nhất 100% Hồ sơ cá nhân cho cả 4 vai trò Cán bộ (`UnifiedSelfProfileView`)**:
+  - **Lấy chuẩn gốc Admin (`ManagerProfileDetailView`) làm chuẩn thiết kế**:
+    - Tạo component dùng chung [`UnifiedSelfProfileView.tsx`](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx).
+    - **Hero Banner nhận diện cán bộ**: Ảnh bìa cờ hoa trang trọng, avatar ký tự tên viết tắt, nhãn vai trò và đơn vị hành chính.
+    - **Thẻ CCCD gắn chip chuẩn Quốc gia**: Thiết kế mô phỏng thẻ Căn cước công dân gắn chip với dải gradient đỏ - vàng ánh kim, chip bảo mật vàng, quốc hiệu, mã QR tra cứu và nút sao chép số CCCD 1 chạm có thông báo Toast.
+    - **Khối Thông tin Định danh & Nhân thân (API 06/07)**: Họ tên, Ngày tháng năm sinh, Giới tính, Số điện thoại liên hệ (chuẩn hóa nhãn *"Chưa được cập nhật"* khi trống).
+    - **Khối Nơi cư trú**: Địa chỉ thường trú và Địa chỉ tạm trú (kèm thẻ chip Đơn vị công tác nếu có).
+    - **Khối Tài khoản & Quyền hạn công vụ (API 05)**: Tên đăng nhập, Email liên kết, Vai trò hệ thống, và Đơn vị Phường/Xã công tác đối chiếu từ danh mục API `getWards()`.
+    - **Thao tác hành động**: Nút "Chỉnh sửa hồ sơ" mở Modal cập nhật thông tin gọi API `PUT /api/v1/users/me/profile` (tự động cập nhật store và làm mới giao diện) + Nút "In phiếu thông tin" (`window.print()`).
+  - **Tích hợp đồng bộ vào cả 4 vai trò**:
+    - **Admin (`AdminPage.tsx`)**: Bổ sung mục "Hồ sơ cá nhân" (icon `UserCircle`, tab `profile`) trong nhóm *Tài khoản & truy cập* tại Sidebar, kết nối trực tiếp với `UnifiedSelfProfileView`.
+    - **Lãnh đạo UBND (`ManagerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, đồng thời ẩn heading phụ tránh đúp tiêu đề.
+    - **Cán bộ Một cửa (`OfficerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, gỡ bỏ hoàn toàn view cũ giả lập ca trực hardcode.
+    - **Quản lý Thủ tục (`ProcedureManagerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, đồng nhất 100% trải nghiệm người dùng.
+- **3. Kiểm tra chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi (TypeScript 100% type-safe).
+  - `npm run lint`: Đạt 0 lỗi (ESLint pass).
+  - `npm run build`: Đạt 0 lỗi (Vite bundle thành công trong 18.14s, code-splitting tự động `UnifiedSelfProfileView-BawAj_0i.js`).
+
 ## Chuẩn hóa & Hoàn thiện Tích hợp IAM Service API (API 09, 15, 16, 54–58, 60) — 07/10/2026
 
 - **1. Trả lời & Xác minh các API IAM theo câu hỏi của người dùng**:
