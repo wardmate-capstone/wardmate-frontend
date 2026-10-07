@@ -11,7 +11,7 @@ import {
   ClipboardText,
   Tray,
   Bell,
-  User,
+  UserCircle,
   X,
   CaretDown,
 } from '@phosphor-icons/react';
@@ -104,7 +104,7 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
         {
           id: 'profile' as OfficerSection,
           label: 'Hồ sơ cá nhân',
-          icon: User,
+          icon: UserCircle,
         },
       ],
     },

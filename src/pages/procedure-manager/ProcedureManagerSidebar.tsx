@@ -1,8 +1,8 @@
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import {
-  SquaresFour,
-  Files,
+  House,
+  ClipboardText,
   FileDashed,
   FolderSimple,
   ListChecks,
@@ -12,8 +12,7 @@ import {
   Scales,
   LinkBreak,
   Brain,
-  Article,
-  UserGear,
+  UserCircle,
   X,
   UploadSimple,
   LinkSimple
@@ -69,7 +68,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
         {
           id: 'procedures' as ProcedureNavSection,
           label: 'Danh sách thủ tục',
-          icon: Files,
+          icon: ClipboardText,
           badge: publishedCount == null ? undefined : `${publishedCount} công khai`,
           badgeColor: 'bg-emerald-100 text-emerald-800'
         },
@@ -162,7 +161,7 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           <div className="admin-nav-section">
             <p>Tổng quan</p>
             <button type="button" className={currentSection === 'dashboard' ? 'is-active' : ''} aria-current={currentSection === 'dashboard' ? 'page' : undefined} onClick={() => handleNavClick('dashboard')} title="Tổng quan">
-              <SquaresFour size={20} /><span>Tổng quan</span>
+              <House size={20} /><span>Tổng quan</span>
             </button>
           </div>
           {navGroups.map(group => (
@@ -177,8 +176,8 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
           ))}
           <div className="admin-nav-section">
             <p>Hệ thống</p>
-            <button type="button" className={currentSection === 'audit-logs' ? 'is-active' : ''} onClick={() => handleNavClick('audit-logs')} title="Lịch sử cập nhật"><Article size={20} /><span>Lịch sử cập nhật</span></button>
-            <button type="button" className={currentSection === 'profile' ? 'is-active' : ''} onClick={() => handleNavClick('profile')} title="Hồ sơ cá nhân"><UserGear size={20} /><span>Hồ sơ cá nhân</span></button>
+            <button type="button" className={currentSection === 'audit-logs' ? 'is-active' : ''} onClick={() => handleNavClick('audit-logs')} title="Lịch sử cập nhật"><ClockCounterClockwise size={20} /><span>Lịch sử cập nhật</span></button>
+            <button type="button" className={currentSection === 'profile' ? 'is-active' : ''} onClick={() => handleNavClick('profile')} title="Hồ sơ cá nhân"><UserCircle size={20} /><span>Hồ sơ cá nhân</span></button>
           </div>
         </nav>
       </aside>

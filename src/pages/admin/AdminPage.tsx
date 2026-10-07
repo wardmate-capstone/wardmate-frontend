@@ -21,6 +21,7 @@ import {
   MagnifyingGlass,
   Plus,
   Pulse as Activity,
+  ClockCounterClockwise,
   Robot,
   ShieldCheck,
   SidebarSimple,
@@ -115,7 +116,7 @@ const navigation: Array<{
     group: "Vận hành hệ thống",
     items: [
       { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack },
-      { id: "audit", label: "Nhật ký hoạt động", icon: Activity },
+      { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise },
       { id: "backup", label: "Bảo mật & sao lưu", icon: Database },
       { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
     ],
