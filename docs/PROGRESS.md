@@ -1,8 +1,36 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 06/10/2026.
+Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Tối ưu hóa UI/UX, Module hóa CitizenPage và Route Code-Splitting — 07/10/2026
+
+- **1. Trình soạn thảo thủ tục & Đối soát bản nháp (`procedure-manager`)**:
+  - Tại `ProcedureApiEditor.tsx`: Thêm badge đếm số lượng bản ghi thực tế trên từng tab (Thành phần hồ sơ, Quy trình, Thời hạn/Lệ phí, Biểu mẫu, Căn cứ pháp lý). Thêm thanh điều hướng chân trang (`← Phần trước` và `Phần tiếp theo →`) giúp chuyển tab mượt mà mà không phải cuộn ngược lên đầu trang.
+  - Tại `ProcedureDraftWorkspace.tsx`: Cố định thanh thao tác bản nháp (`sticky bottom-2`) chứa checkbox xác nhận đối soát, nút "Lưu bản nháp" và "Xác nhận xuất bản", giúp luôn hiển thị rõ ràng trong tầm nhìn khi cuộn xem form dữ liệu dài.
+- **2. Đồng bộ danh tính Cán bộ Tiếp nhận Một cửa (`officer`)**:
+  - Gỡ bỏ hoàn toàn tên cán bộ hardcode tĩnh "Cán bộ Lê Thu Hà" ở tất cả các màn hình: Dashboard chào mừng (`OfficerDashboardView`), Thẻ ca trực quầy Một cửa, Quầy tiếp nhận cấp biên nhận (`OfficerReceiptWorkspaceView`), Workspace nhận xét/đối chiếu (`OfficerReviewWorkspaceView`) và Timeline/Audit Logs (`OfficerPage`).
+  - Lấy thông tin họ tên động qua `useUserProfile()` và `useAuthStore` (fallback an toàn theo tài khoản).
+  - Cập nhật test `tests/officer.spec.ts` để kiểm tra regex tên cán bộ linh hoạt.
+- **3. Tái cấu trúc module hóa phân hệ Công dân (`citizen`)**:
+  - Tách nhỏ file nguyên khối `CitizenPage.tsx` (từ 2.010 dòng xuống còn ~350 dòng).
+  - Tạo cấu trúc thư mục chuẩn `src/pages/citizen/views/`:
+    - `CitizenDashboardView.tsx`: Thẻ chỉ số, biểu đồ xu hướng tra cứu & lưu ý Một cửa.
+    - `CitizenDossiersView.tsx`: Bảng danh sách & bộ lọc trạng thái hồ sơ.
+    - `CitizenDossierDetailView.tsx`: Chi tiết hồ sơ, thanh trạng thái & bảng checklist.
+    - `CitizenNotificationsView.tsx`: Hộp thư thông báo tiến độ.
+    - `CitizenQrCodeView.tsx`: Khu vực hiển thị mã QR hồ sơ điện tử đã duyệt.
+    - `CitizenFeedbackView.tsx`: Đánh giá dịch vụ & khảo sát sự hài lòng.
+    - `CitizenProfileView.tsx`: Form thông tin cá nhân & định danh công dân.
+  - Tách file kiểu dữ liệu và mock data dùng chung sang `src/pages/citizen/types.ts`.
+- **4. Hiệu năng & Route Code-Splitting (`performance`)**:
+  - Tại `src/app/App.tsx`: Chuyển 5 phân hệ nội bộ (`AdminPage`, `CitizenPage`, `OfficerPage`, `ProcedureManagerPage`, `ManagerPage`) sang `React.lazy()` và bọc trong `<Suspense fallback={<WorkspaceLoadingFallback />}>`. Giúp người dùng/khách vãng lai vào Trang chủ `/` hoặc Tra cứu `/thu-tuc` không bị tải trước hàng trăm KB mã nguồn của các phân hệ quản trị.
+  - Tại `vite.config.ts`: Cấu hình `manualChunks` tách riêng `react-vendor`, `charts` (Recharts) và `icons` (Phosphor/Lucide).
+- **Kiểm tra**:
+  - `npm run typecheck`: **0 lỗi** (100% pass).
+  - `npm run lint`: **0 lỗi / 0 cảnh báo** (100% pass).
+  - Không sửa BE, chưa commit/push/deploy theo quy định.
 
 ## Setup nền tảng FE — 06/10/2026
 
