@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
 import {
   MagnifyingGlass,
   CheckSquare,
@@ -25,6 +27,9 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
   onConfirmReceipt,
   onViewApplication,
 }) => {
+  const { profile } = useUserProfile();
+  const user = useAuthStore((state) => state.user);
+  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<OfficerApplication | null>(null);
 
@@ -84,7 +89,7 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
     if (!selectedApp) return;
     onConfirmReceipt(selectedApp.id, {
       receivedAt: '21/09/2026 10:15',
-      receivedBy: 'Cán bộ Lê Thu Hà',
+      receivedBy: `Cán bộ ${officerName}`,
       deskNumber: 'Quầy 02',
       receiptNumber,
       appointmentDate,

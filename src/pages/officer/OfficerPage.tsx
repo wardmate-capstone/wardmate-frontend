@@ -24,8 +24,13 @@ import { OfficerAuditLogView } from './OfficerAuditLogView';
 import { OfficerNotificationView } from './OfficerNotificationView';
 import { OfficerProfileView } from './OfficerProfileView';
 import { X, Eye, ArrowRight } from '@phosphor-icons/react';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
 
 export const OfficerPage: React.FC = () => {
+  const { profile } = useUserProfile();
+  const user = useAuthStore((state) => state.user);
+  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
   // Core Data States
   const [applications, setApplications] = useState<OfficerApplication[]>(INITIAL_OFFICER_APPLICATIONS);
@@ -68,15 +73,15 @@ export const OfficerPage: React.FC = () => {
           ...app,
           status: 'UNDER_REVIEW' as const,
           reviewStartedAt: now,
-          reviewedBy: 'Lê Thu Hà',
-          assignedOfficer: 'Lê Thu Hà',
+          reviewedBy: officerName,
+          assignedOfficer: officerName,
           timeline: [
             ...app.timeline,
             {
               id: `t-${Date.now()}`,
               time: now,
-              title: 'Cán bộ Lê Thu Hà đã nhận xử lý hồ sơ',
-              actor: 'Lê Thu Hà',
+              title: `Cán bộ ${officerName} đã nhận xử lý hồ sơ`,
+              actor: officerName,
               type: 'officer' as const,
               status: 'done' as const,
             },
@@ -96,7 +101,7 @@ export const OfficerPage: React.FC = () => {
       citizenName: targetApp.citizen.fullName,
       action: 'Nhận xử lý hồ sơ',
       details: 'Chuyển trạng thái sang ĐANG KIỂM TRA và mở workspace đối chiếu',
-      officerName: 'Lê Thu Hà',
+      officerName,
       badgeTone: 'info',
     };
     setAuditLogs([newLog, ...auditLogs]);
@@ -125,7 +130,7 @@ export const OfficerPage: React.FC = () => {
               id: `t-${Date.now()}`,
               time: now,
               title: 'Cán bộ yêu cầu chỉnh sửa / bổ sung hồ sơ',
-              actor: 'Lê Thu Hà',
+              actor: officerName,
               description: notes || 'Yêu cầu khắc phục các lỗi kê khai và bổ sung giấy tờ',
               type: 'officer' as const,
               status: 'done' as const,
@@ -146,7 +151,7 @@ export const OfficerPage: React.FC = () => {
       citizenName: targetApp.citizen.fullName,
       action: 'Yêu cầu bổ sung',
       details: notes || `Yêu cầu chỉnh sửa ${issues.length} mục`,
-      officerName: 'Lê Thu Hà',
+      officerName,
       badgeTone: 'warning',
     };
     setAuditLogs([newLog, ...auditLogs]);
@@ -174,7 +179,7 @@ export const OfficerPage: React.FC = () => {
               id: `t-${Date.now()}`,
               time: now,
               title: 'Đã duyệt tiền kiểm hợp lệ',
-              actor: 'Lê Thu Hà',
+              actor: officerName,
               description: 'Hồ sơ đã sẵn sàng để công dân nộp tại UBND Phường An Khánh',
               type: 'officer' as const,
               status: 'done' as const,
@@ -195,7 +200,7 @@ export const OfficerPage: React.FC = () => {
       citizenName: targetApp.citizen.fullName,
       action: 'Duyệt tiền kiểm',
       details: 'Hồ sơ đạt mọi tiêu chí, chuyển sang Chờ tiếp nhận chính thức',
-      officerName: 'Lê Thu Hà',
+      officerName,
       badgeTone: 'success',
     };
     setAuditLogs([newLog, ...auditLogs]);
@@ -233,7 +238,7 @@ export const OfficerPage: React.FC = () => {
               id: `t-${Date.now()}`,
               time: now,
               title: 'Đã tiếp nhận hồ sơ chính thức tại quầy Một cửa',
-              actor: 'Lê Thu Hà',
+              actor: officerName,
               description: `Đã đối chiếu hồ sơ giấy và cấp số biên nhận ${receiptData.receiptNumber}`,
               type: 'officer' as const,
               status: 'done' as const,
@@ -254,7 +259,7 @@ export const OfficerPage: React.FC = () => {
       citizenName: targetApp.citizen.fullName,
       action: 'Tiếp nhận chính thức',
       details: `Cấp biên nhận ${receiptData.receiptNumber}, hẹn trả lúc ${receiptData.appointmentDate}`,
-      officerName: 'Lê Thu Hà',
+      officerName,
       badgeTone: 'success',
     };
     setAuditLogs([newLog, ...auditLogs]);

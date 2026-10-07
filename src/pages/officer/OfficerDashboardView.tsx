@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
 import {
   FileText,
   ArrowRight,
@@ -46,6 +48,9 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   onQuickPreview,
 }) => {
   const [chartView, setChartView] = useState<'hourly' | 'summary'>('hourly');
+  const { profile } = useUserProfile();
+  const user = useAuthStore((state) => state.user);
+  const officerName = profile?.fullName?.trim() || user?.username || 'Lê Thu Hà';
 
   // Hồ sơ gửi lại cần ưu tiên & hồ sơ chờ tiếp nhận
   const resubmittedApps = applications.filter((a) => a.status === 'RESUBMITTED');
@@ -70,9 +75,8 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {getGreeting()}, Cán bộ Lê Thu Hà
+          {getGreeting()}, Cán bộ {officerName}
         </h1>
-
       </div>
 
 
@@ -380,7 +384,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             <dl className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Cán bộ phụ trách:</dt>
-                <dd className="font-bold text-slate-900">Lê Thu Hà</dd>
+                <dd className="font-bold text-slate-900">{officerName}</dd>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Vị trí:</dt>

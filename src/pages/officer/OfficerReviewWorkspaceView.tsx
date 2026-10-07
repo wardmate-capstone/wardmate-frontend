@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
 import {
   ArrowLeft,
   CheckCircle,
@@ -49,6 +51,9 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
   onApproveApplication,
   onUpdateComments,
 }) => {
+  const { profile } = useUserProfile();
+  const user = useAuthStore((state) => state.user);
+  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
   const [activeTab, setActiveTab] = useState<ReviewTab>('citizen-info');
 
   // Interactive workspace states
@@ -87,7 +92,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
       target: commentTarget || 'Nhận xét chung',
       content: newCommentInput.trim(),
       createdAt: 'Vừa xong',
-      officerName: 'Lê Thu Hà',
+      officerName,
     };
     const updated = [...comments, newC];
     setComments(updated);

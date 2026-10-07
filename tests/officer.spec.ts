@@ -7,7 +7,7 @@ test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và khôn
   await page.goto('/officer');
 
   // Check header / title
-  await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), Cán bộ Lê Thu Hà$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), Cán bộ .+$/ })).toBeVisible();
 
   // Check stat cards exist
   await expect(page.getByText('Chờ tiền kiểm').first()).toBeVisible();
