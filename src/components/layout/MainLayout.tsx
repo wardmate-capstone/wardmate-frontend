@@ -16,6 +16,8 @@ import { buttonVariants } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { useAuthState } from '@/hooks/useAuthState';
+import { useAuthStore } from '@/stores/authStore';
+import { getManagementHome } from '@/lib/authRedirect';
 
 const navigation = [
   { href: '/', label: 'Trang chủ' },
@@ -27,6 +29,8 @@ const navigation = [
 export function MainLayout() {
   const location = useLocation();
   const { isAuthenticated } = useAuthState();
+  const user = useAuthStore((state) => state.user);
+  const logoTarget = getManagementHome(user?.roles) ?? '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const hideFooter = ['/quen-mat-khau', '/dat-lai-mat-khau'].includes(location.pathname);
 
@@ -46,7 +50,7 @@ export function MainLayout() {
 
       <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 shadow-[0_3px_18px_rgba(70,16,20,.06)] backdrop-blur-lg">
         <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
-          <Link to="/" className="flex min-w-0 items-center gap-3" aria-label="WardMate - Trang chủ">
+          <Link to={logoTarget} className="flex min-w-0 items-center gap-3" aria-label="WardMate - Trang chủ">
             <BrandMark className="brand-mark" size={56} />
             <BrandWordmark subtitle="Dịch vụ công xã - phường" />
           </Link>

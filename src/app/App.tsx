@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/Toast';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -13,6 +13,8 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { UserProfileProvider } from '@/hooks/useUserProfile';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuthStore } from '@/stores/authStore';
+import { getManagementHome } from '@/lib/authRedirect';
 
 // Lazy-loaded heavy role workspaces for optimal initial bundle size
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage').then((m) => ({ default: m.AdminPage })));
@@ -20,6 +22,17 @@ const CitizenPage = lazy(() => import('@/pages/citizen').then((m) => ({ default:
 const OfficerPage = lazy(() => import('@/pages/officer/OfficerPage').then((m) => ({ default: m.OfficerPage })));
 const ProcedureManagerPage = lazy(() => import('@/pages/procedure-manager/ProcedureManagerPage').then((m) => ({ default: m.ProcedureManagerPage })));
 const ManagerPage = lazy(() => import('@/pages/manager/ManagerPage').then((m) => ({ default: m.ManagerPage })));
+
+function HomeRoute() {
+  const user = useAuthStore((state) => state.user);
+  const mgmtHome = getManagementHome(user?.roles);
+
+  if (mgmtHome) {
+    return <Navigate to={mgmtHome} replace />;
+  }
+
+  return <HomePage />;
+}
 
 function WorkspaceLoadingFallback() {
   return (
@@ -58,7 +71,7 @@ export function App() {
                   <Route path="admin" element={<AdminPage />} />
                 </Route>
                 <Route element={<MainLayout />}>
-                  <Route index element={<HomePage />} />
+                  <Route index element={<HomeRoute />} />
                   <Route path="dang-nhap" element={<AuthPage key="login" mode="login" />} />
                   <Route path="dang-ky" element={<AuthPage key="register" mode="register" />} />
                   <Route path="quen-mat-khau" element={<ForgotPasswordPage />} />

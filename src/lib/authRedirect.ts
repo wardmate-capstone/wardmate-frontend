@@ -14,6 +14,19 @@ export function loginDestination(roles: string[], returnTo?: string | null): str
   return roles.length === 1 ? roleHomes[roles[0]] ?? '/' : '/';
 }
 
+/**
+ * Trả về trang làm việc quản trị chính đối với các vai trò công vụ chuyên trách.
+ * Chỉ áp dụng cho IT_ADMIN, MANAGER, FRONT_DESK_OFFICER.
+ * PROCEDURE_MANAGER và REGISTERED_CITIZEN không bị ép buộc rời khỏi cổng công khai.
+ */
+export function getManagementHome(roles?: string[] | null): string | null {
+  if (!roles || roles.length === 0) return null;
+  if (roles.includes('IT_ADMIN')) return '/admin';
+  if (roles.includes('MANAGER')) return '/manager';
+  if (roles.includes('FRONT_DESK_OFFICER')) return '/officer';
+  return null;
+}
+
 /** Only allow a local path; reject external URLs and authentication loops. */
 export function safeReturnTo(value: string | null | undefined): string {
   if (!value || !value.startsWith('/') || value.startsWith('//') || /[\\\r\n]/.test(value)) return '/';
