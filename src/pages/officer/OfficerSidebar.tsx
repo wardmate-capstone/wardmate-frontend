@@ -62,7 +62,7 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
       items: [
         {
           id: 'dashboard' as OfficerSection,
-          label: 'Dashboard',
+          label: 'Tổng quan',
           icon: House,
         },
       ],
@@ -214,7 +214,7 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
                 onSelectSection('dashboard');
                 onClose();
               }}
-              title={isCompact ? 'Dashboard' : undefined}
+              title={isCompact ? 'Tổng quan' : undefined}
               aria-current={activeSection === 'dashboard' ? 'page' : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-colors text-left ${
                 activeSection === 'dashboard'
@@ -228,7 +228,7 @@ export const OfficerSidebar: React.FC<OfficerSidebarProps> = ({
                 className={activeSection === 'dashboard' ? 'text-red-700 shrink-0' : 'text-slate-500 shrink-0'}
                 aria-hidden="true"
               />
-              {!isCompact && <span className="min-w-0 flex-1 truncate">Dashboard</span>}
+              {!isCompact && <span className="min-w-0 flex-1 truncate">Tổng quan</span>}
             </button>
           </div>
 

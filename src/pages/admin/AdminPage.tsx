@@ -83,7 +83,7 @@ const navigation: Array<{
 }> = [
   {
     group: "Tổng quan",
-    items: [{ id: "overview", label: "Trung tâm quản trị", icon: House }],
+    items: [{ id: "overview", label: "Tổng quan", icon: House }],
   },
   {
     group: "Nội dung nghiệp vụ",
@@ -277,7 +277,7 @@ const chartData: Record<
 
 
 const sectionMeta: Record<SectionId, { title: string }> = {
-  overview: { title: "Trung tâm quản trị" },
+  overview: { title: "Tổng quan" },
   procedures: { title: "Quản lý thủ tục hành chính" },
   forms: { title: "Biểu mẫu & E-form" },
   knowledge: { title: "Pháp lý & tri thức AI" },
@@ -1321,7 +1321,7 @@ function UsersView({
           <table>
             <thead>
               <tr>
-                <th>Người dùng & Họ tên</th>
+                <th>Người dùng</th>
                 <th>Vai trò & Đơn vị</th>
                 <th>Trạng thái</th>
                 <th className="text-right">Thao tác</th>
@@ -1330,7 +1330,8 @@ function UsersView({
             <tbody>
               {displayUsers.map((item) => {
                 const isToggling = togglingId === item.id;
-                const displayName = item.profile?.fullName || item.username;
+                const hasCustomName = Boolean(item.profile?.fullName && item.profile.fullName.trim() !== item.username);
+                const displayName = hasCustomName ? item.profile!.fullName : item.username;
                 const initials = displayName.slice(0, 2).toUpperCase();
                 const isStaff = item.roles.some((r) => {
                   const cfg = getRoleConfig(r.roleName);
@@ -1342,10 +1343,18 @@ function UsersView({
                       <div className="admin-person">
                         <span>{initials}</span>
                         <div>
-                          <p>
-                            <strong>{displayName}</strong>
-                          </p>
-                          <small className="text-slate-500 font-mono">@{item.username}</small>
+                          {hasCustomName ? (
+                            <>
+                              <p>
+                                <strong>{displayName}</strong>
+                              </p>
+                              <small className="text-slate-500 font-mono text-[11px]">@{item.username}</small>
+                            </>
+                          ) : (
+                            <p>
+                              <strong className="font-mono text-slate-800">@{item.username}</strong>
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>

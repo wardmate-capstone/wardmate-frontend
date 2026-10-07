@@ -218,10 +218,10 @@ export function CitizenPage() {
               className={activeSection === 'dashboard' ? 'is-active' : ''}
               aria-current={activeSection === 'dashboard' ? 'page' : undefined}
               onClick={() => selectSection('dashboard')}
-              title={sidebarCollapsed ? 'Dashboard' : undefined}
+              title={sidebarCollapsed ? 'Tổng quan' : undefined}
             >
               <House size={20} aria-hidden="true" weight={activeSection === 'dashboard' ? 'fill' : 'regular'} />
-              <span>Dashboard</span>
+              <span>Tổng quan</span>
             </button>
             <button
               type="button"

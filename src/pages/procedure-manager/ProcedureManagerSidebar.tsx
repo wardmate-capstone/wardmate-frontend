@@ -161,8 +161,8 @@ export const ProcedureManagerSidebar: React.FC<ProcedureManagerSidebarProps> = (
         <nav className="admin-nav">
           <div className="admin-nav-section">
             <p>Tổng quan</p>
-            <button type="button" className={currentSection === 'dashboard' ? 'is-active' : ''} aria-current={currentSection === 'dashboard' ? 'page' : undefined} onClick={() => handleNavClick('dashboard')} title="Dashboard">
-              <SquaresFour size={20} /><span>Dashboard</span>
+            <button type="button" className={currentSection === 'dashboard' ? 'is-active' : ''} aria-current={currentSection === 'dashboard' ? 'page' : undefined} onClick={() => handleNavClick('dashboard')} title="Tổng quan">
+              <SquaresFour size={20} /><span>Tổng quan</span>
             </button>
           </div>
           {navGroups.map(group => (
