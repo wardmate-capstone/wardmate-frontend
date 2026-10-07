@@ -4,6 +4,14 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tinh chỉnh Vị trí Hồ sơ cá nhân Sidebar Admin — 07/10/2026
+
+- **1. Chuyển mục Hồ sơ cá nhân xuống vị trí cuối cùng**:
+  - `src/pages/admin/AdminPage.tsx`: Di chuyển `{ id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle }` từ đầu nhóm "Tài khoản & truy cập" xuống vị trí cuối cùng của nhóm "Vận hành hệ thống" (dưới mục "Bảo mật & sao lưu"), đảm bảo nằm ở đáy của Sidebar Admin tương đồng với các vai trò khác.
+- **2. Kiểm tra chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi (Exit code 0).
+  - `npm run lint`: Đạt 0 lỗi (Exit code 0).
+
 ## Dọn dẹp Mã nguồn & Loại bỏ các File không sử dụng (Dead Code Cleanup) — 07/10/2026
 
 - **1. Rà soát & Loại bỏ các file mồ côi (Unused / Dead Code)**:
