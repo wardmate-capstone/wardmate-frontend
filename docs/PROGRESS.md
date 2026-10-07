@@ -4,6 +4,20 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Đồng nhất Icon Hệ thống trên Toàn bộ Sidebar (Chuẩn `@phosphor-icons/react`) — 07/10/2026
+
+- **1. Thống nhất Icon đại diện cho các mục cùng chức năng**:
+  - **Mục "Tổng quan"**: Chuẩn hóa dùng icon `House` (Ngôi nhà) trên tất cả phân hệ (`Admin`, `Procedure Manager`, `Officer`, `Citizen`). Thay thế icon `SquaresFour` ở Quản lý thủ tục.
+  - **Mục "Thủ tục hành chính" / "Danh sách thủ tục"**: Chuẩn hóa dùng icon `ClipboardText` trên tất cả phân hệ (`Admin`, `Manager`, `Procedure Manager`). Thay thế icon `Files` ở Quản lý thủ tục.
+  - **Mục "Hồ sơ cá nhân"**: Chuẩn hóa dùng icon `UserCircle` trên cả 4 vai trò cán bộ (`Admin`, `Manager`, `Officer`, `Procedure Manager`). Thay thế icon `User` ở Cán bộ Một cửa và `UserGear` ở Quản lý thủ tục.
+  - **Mục "Nhật ký hoạt động" / "Lịch sử cập nhật"**: Chuẩn hóa dùng icon `ClockCounterClockwise` trên tất cả phân hệ (`Admin`, `Officer`, `Procedure Manager`). Thay thế icon `Article` ở Quản lý thủ tục và `Activity` ở Admin.
+- **2. Đồng nhất 1 Thư viện Icon duy nhất**:
+  - Xác nhận 100% icon trên hệ thống sử dụng **duy nhất một thư viện chuẩn: `@phosphor-icons/react`**. Không có thư viện ngoài nào bị trộn lẫn.
+- **3. Kiểm tra chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi (Exit code 0).
+  - `npm run lint`: Đạt 0 lỗi (Exit code 0).
+  - `npm run build`: Đạt 0 lỗi, bundle thành công 100% trong 10.99s.
+
 ## Thống nhất Nhãn 'Tổng quan' trên Tất cả Sidebar & Tối ưu Cột Người dùng — 07/10/2026
 
 - **1. Thống nhất nhãn mục đầu tiên thành 'Tổng quan' trên toàn bộ Sidebar**:
