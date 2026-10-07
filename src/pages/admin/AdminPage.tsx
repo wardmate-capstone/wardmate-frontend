@@ -1,6 +1,8 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { getGreeting } from "@/lib/utils";
 import {
   Bell,
   Books,
@@ -275,6 +277,9 @@ export function AdminPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [query, setQuery] = useState("");
   const meta = sectionMeta[activeSection];
+  const { profile } = useUserProfile();
+  const user = useAuthStore((s) => s.user);
+  const adminName = profile?.fullName?.trim() || user?.username || 'Quản trị viên';
 
   // --- Người dùng hệ thống (Accounts API) ---
   const [accountData, setAccountData] = useState<AccountListResponse | null>(null);
@@ -462,6 +467,11 @@ export function AdminPage() {
           <div className="admin-page-heading">
             <div>
               <h1>{meta.title}</h1>
+              {activeSection === "overview" && (
+                <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+                  {getGreeting()}, Quản trị viên {adminName}
+                </p>
+              )}
             </div>
             {activeSection !== "overview" && (
               <button

@@ -29,6 +29,9 @@ import {
 import { ProcedureDraftWorkspace } from "./ProcedureDraftWorkspace";
 import { ProcedureVersionsModal } from "./ProcedureVersionsModal";
 import { toast } from "@/components/ui/Toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuthStore } from "@/stores/authStore";
+import { getGreeting } from "@/lib/utils";
 
 export function ProcedureManagerPage() {
   const [params, setParams] = useSearchParams();
@@ -46,6 +49,10 @@ export function ProcedureManagerPage() {
   const [error, setError] = useState("");
   const [draftPending, setDraftPending] = useState(false);
   const lock = useRef(false);
+  const { profile } = useUserProfile();
+  const user = useAuthStore((s) => s.user);
+  const procedureManagerName =
+    profile?.fullName?.trim() || user?.username || "Chuyên viên";
   const categories = useProcedureQuery(
     useCallback((signal: AbortSignal) => procedureApi.categories(signal), []),
   );
@@ -114,14 +121,19 @@ export function ProcedureManagerPage() {
         >
           {!drafts && !selected && section !== "profile" && (
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h1 className="text-2xl font-bold">
-                {sectionTitles[section].title}
-              </h1>
-              {section === "procedures" && (
-                <div className="flex flex-wrap gap-3">
-                  <Button onClick={openCreate}>Thêm thủ tục</Button>
-                </div>
-              )}
+              <div>
+                <h1 className="text-2xl font-bold">
+                  {sectionTitles[section].title}
+                </h1>
+                {section === "dashboard" && (
+                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+                    {getGreeting()}, Chuyên viên {procedureManagerName}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={openCreate}>Thêm thủ tục</Button>
+              </div>
             </div>
           )}
           <ProcedureFeedback
@@ -177,7 +189,7 @@ export function ProcedureManagerPage() {
           ) : (
             <section className="admin-card space-y-3 p-6">
               <h2 className="text-lg font-bold">
-                {sectionTitles[section]?.title || "Thông tin phân hệ"}
+                Chưa có kết nối cho chức năng này
               </h2>
               <p>
                 {section === "checklists"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
+import { getGreeting } from '@/lib/utils';
 import {
   FileText,
   ArrowRight,
@@ -55,17 +56,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   // Hồ sơ gửi lại cần ưu tiên & hồ sơ chờ tiếp nhận
   const resubmittedApps = applications.filter((a) => a.status === 'RESUBMITTED');
   const readySubmitApps = applications.filter((a) => a.status === 'READY_TO_SUBMIT');
-
-  const getGreeting = (): string => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) {
-      return 'Chào buổi sáng';
-    }
-    if (hour >= 12 && hour < 18) {
-      return 'Chào buổi chiều';
-    }
-    return 'Chào buổi tối';
-  };
 
   // Top hồ sơ gửi lại cần ưu tiên xem ngay (tối đa 2 hồ sơ để tổng quan không bị dài)
   const priorityResubmittedApps = resubmittedApps.slice(0, 2);

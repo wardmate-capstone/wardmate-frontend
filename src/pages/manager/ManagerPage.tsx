@@ -18,6 +18,9 @@ import {
   deleteAdminProfile,
   authErrorMessage,
 } from '@/lib/api';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
+import { getGreeting } from '@/lib/utils';
 
 export const ManagerPage: React.FC = () => {
   // Thay dashboard bằng trang thống kê hồ sơ làm mặc định
@@ -25,6 +28,9 @@ export const ManagerPage: React.FC = () => {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { profile } = useUserProfile();
+  const user = useAuthStore((s) => s.user);
+  const managerName = profile?.fullName?.trim() || user?.username || 'Lãnh đạo';
 
   // Quản lý danh sách hồ sơ công dân & xem chi tiết từ API
   const [profiles, setProfiles] = useState<ManagerProfileItem[]>([]);
@@ -230,6 +236,11 @@ export const ManagerPage: React.FC = () => {
             <div className="admin-page-heading mb-6">
               <div>
                 <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
+                {currentSection === 'stats-dossiers' && (
+                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+                    {getGreeting()}, Lãnh đạo {managerName}
+                  </p>
+                )}
               </div>
             </div>
           )}
