@@ -27,10 +27,13 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **4. Hiệu năng & Route Code-Splitting (`performance`)**:
   - Tại `src/app/App.tsx`: Chuyển 5 phân hệ nội bộ (`AdminPage`, `CitizenPage`, `OfficerPage`, `ProcedureManagerPage`, `ManagerPage`) sang `React.lazy()` và bọc trong `<Suspense fallback={<WorkspaceLoadingFallback />}>`. Giúp người dùng/khách vãng lai vào Trang chủ `/` hoặc Tra cứu `/thu-tuc` không bị tải trước hàng trăm KB mã nguồn của các phân hệ quản trị.
   - Tại `vite.config.ts`: Cấu hình `manualChunks` tách riêng `react-vendor`, `charts` (Recharts) và `icons` (Phosphor/Lucide).
-- **Kiểm tra**:
-  - `npm run typecheck`: **0 lỗi** (100% pass).
-  - `npm run lint`: **0 lỗi / 0 cảnh báo** (100% pass).
-  - Không sửa BE, chưa commit/push/deploy theo quy định.
+- **Commits & Push**:
+  - Đã chia thành 4 commits theo đúng hạng mục và đẩy thành công lên `origin/main`:
+    1. `190c1b8`: `feat(procedure-manager): enhance editor tab navigation with count badges and sticky action bar`
+    2. `bd35dbf`: `feat(officer): bind dynamic officer identity from user profile and auth store`
+    3. `d6a3e80`: `refactor(citizen): modularize CitizenPage into dedicated view components`
+    4. `65d671a`: `perf(app): implement route code-splitting with React.lazy and manualChunks`
+  - Đã kiểm tra trạng thái remote đồng bộ, không sửa BE.
 
 ## Setup nền tảng FE — 06/10/2026
 
