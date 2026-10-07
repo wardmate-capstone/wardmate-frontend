@@ -235,13 +235,13 @@ export function ProcedureApiEditor({
     onChange({ ...value, [key]: next });
   const setContent = (key: string, next: unknown) =>
     set("contentPayload", { ...content, [key]: next });
-  const tabs = [
-    "Thông tin chung",
-    "Thành phần hồ sơ",
-    "Quy trình",
-    "Thời hạn & lệ phí",
-    "Biểu mẫu",
-    "Căn cứ pháp lý",
+  const tabItems = [
+    { label: "Thông tin chung", count: null },
+    { label: "Thành phần hồ sơ", count: rows(value.checklistSchema).length },
+    { label: "Quy trình", count: rows(content.cases).length },
+    { label: "Thời hạn & lệ phí", count: rows(content.submissionMethods).length },
+    { label: "Biểu mẫu", count: rows(value.formDefinitions).length },
+    { label: "Căn cứ pháp lý", count: rows(content.legalReferences).length },
   ];
   return (
     <div className="min-w-0 space-y-5">
@@ -249,19 +249,30 @@ export function ProcedureApiEditor({
         className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1.5 text-xs font-semibold"
         aria-label="Các phần nội dung thủ tục"
       >
-        {tabs.map((tab, index) => (
+        {tabItems.map((tab, index) => (
           <button
             type="button"
-            key={tab}
+            key={tab.label}
             onClick={() => setStep(index)}
             aria-pressed={step === index}
-            className={`rounded-xl px-3.5 py-2 transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 transition-all ${
               step === index
                 ? "bg-white font-bold text-red-900 shadow-sm"
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
-            {tab}
+            <span>{tab.label}</span>
+            {tab.count != null && tab.count > 0 && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  step === index
+                    ? "bg-red-100 text-red-800"
+                    : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -501,6 +512,29 @@ export function ProcedureApiEditor({
             ]}
           />
         )}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="small"
+            disabled={step === 0}
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+          >
+            ← Phần trước ({tabItems[step - 1]?.label ?? ''})
+          </Button>
+          <span className="text-xs font-semibold text-slate-500">
+            Phần {step + 1} / {tabItems.length}: {tabItems[step].label}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="small"
+            disabled={step === tabItems.length - 1}
+            onClick={() => setStep((s) => Math.min(tabItems.length - 1, s + 1))}
+          >
+            Phần tiếp theo ({tabItems[step + 1]?.label ?? ''}) →
+          </Button>
+        </div>
         <p className="text-sm text-slate-500">
           Thông tin chưa rõ cần được đối chiếu với nguồn. Không tự điền lệ phí,
           thời hạn hoặc giấy tờ mặc định.
