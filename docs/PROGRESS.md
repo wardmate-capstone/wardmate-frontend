@@ -4,6 +4,101 @@ Cập nhật: 07/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chuẩn hóa & Hoàn thiện Tích hợp IAM Service API (API 09, 15, 16, 54–58, 60) — 07/10/2026
+
+- **1. Trả lời & Xác minh các API IAM theo câu hỏi của người dùng**:
+  - **API 09 (`DELETE /api/v1/users/me/profile`)**: Đã được khai báo và export trong `src/lib/api/index.ts` (`deleteMyProfile()`), nhưng **chưa được gắn vào UI** do người dùng thông thường không có nhu cầu xóa trắng hồ sơ định danh gốc của chính mình.
+  - **API 15 (`GET /api/v1/accounts/{id}`) & API 60 (`GET /api/v1/users/profiles`)**: Xác nhận người dùng nhận định **chính xác 100%**. Trước đó Admin chỉ có bảng tài khoản và nút Khóa/Mở, chưa có nút "Xem chi tiết". Nay đã bổ sung Modal "Chi tiết tài khoản & Người dùng" cho Admin, hiển thị đầy đủ thông tin tài khoản (API 15) và hồ sơ cá nhân/định danh (API 60/61).
+  - **API 16 (`PUT /api/v1/accounts/{id}/status`)**: Xác nhận người dùng nhận định **chính xác 100%**. Trước đó Manager chỉ có thao tác Xem/Sửa/Xóa hồ sơ, chưa có nút Khóa/Mở khóa tài khoản cho cán bộ cấp dưới. Nay đã bổ sung cột Trạng thái và nút "Tạm khóa / Kích hoạt" trong `ManagerProfilesView.tsx`.
+- **2. Thực hiện Mục 3: Chuẩn hóa UX Frontend "hết kì" và mượt mà 100%**:
+  - **Đổi ngữ cảnh Manager (`/quan-ly`)**: Cập nhật nhãn Sidebar và Header từ "Hồ sơ công dân" thành "Nhân sự Một cửa / Cán bộ Một cửa", tiêu đề "Quản lý Cán bộ Một cửa", phản ánh đúng bản chất cán bộ cấp dưới trong phường quản lý.
+  - **Xử lý thân thiện khi Manager gặp lỗi 403 (chưa có Phường)**: Thay vì báo lỗi chung chung, hiển thị Alert hướng dẫn rõ ràng: *"Tài khoản Lãnh đạo của bạn chưa được phân bổ Phường công tác trong hệ thống. Vui lòng liên hệ Quản trị viên hệ thống (Admin) để gán Phường trước khi quản lý cán bộ Một cửa."*
+  - **Admin Xem chi tiết (API 15 & API 60)**: Bổ sung nút "Xem chi tiết" và Modal hiển thị toàn diện thông tin tài khoản (username, email, ward, roles, trạng thái) và hồ sơ định danh (CCCD, họ tên, ngày sinh, giới tính, thường trú, tạm trú).
+  - **Manager Khóa/Mở tài khoản (API 16)**: Bổ sung cột Trạng thái và nút "Khóa / Kích hoạt" trực tiếp cho từng cán bộ Một cửa trong bảng `ManagerProfilesView.tsx`.
+- **3. Tinh chỉnh UI theo yêu cầu người dùng**:
+  - **Bỏ cột Email khỏi bảng Người dùng Admin**: Email đã có đầy đủ trong popup "Xem chi tiết", giúp bảng thông thoáng.
+  - **Đồng bộ nút Làm mới**: Thống nhất dùng icon `ArrowsClockwise` xoay khi đang tải, nhãn chữ "Làm mới", chiều cao `h-10 px-3.5` cho cả Admin và Manager.
+  - **Đồng bộ cột thao tác Manager**: Đổi từ các chữ trần (`Chi tiết`, `Khóa`, `Sửa`) sang các nút bo góc viền chuẩn UI (`Xem chi tiết`, `Tạm khóa/Kích hoạt`, `Chỉnh sửa`, icon xóa) đồng bộ 100% với Admin.
+  - **Đơn giản hóa khóa tài khoản**: Bỏ nút khóa/mở trong Modal xem chi tiết của Admin, chỉ quản lý 1 nơi duy nhất tại bảng danh sách.
+  - **Tách riêng trang Quản lý đơn vị Phường / Xã (`WardsView`)**: Thêm mục menu "Đơn vị Phường / Xã" trong nhóm Tài khoản & truy cập; chuyển toàn bộ nút "Thêm phường" và bảng danh sách phường sang view riêng này.
+  - **Tối ưu phân cấp quản trị cán bộ Một cửa & Tinh gọn dropdown Phường**:
+    - Gỡ bỏ hoàn toàn nút "Thêm Cán bộ Một cửa" khỏi trang Admin; chức năng này giao riêng cho Lãnh đạo cấp phường (`Manager`) tại `/quan-ly`.
+    - Dropdown chọn phường công tác trong bảng Người dùng chỉ hiển thị tên phường thuần túy (`w.name`, ví dụ: *Phường Bình Hòa*), bỏ mã code kỹ thuật trong ngoặc đơn (`(PHUONG_BINH_HOA)`) giúp giao diện gọn gàng, tự nhiên.
+  - **Bổ sung & Chuẩn hóa bộ lọc Vai trò (Role Filter) tinh gọn cho Admin**:
+    - Chuẩn hóa chỉ giữ đúng các vai trò đối tượng mà Admin cần quản trị: `Tất cả vai trò`, `Lãnh đạo UBND`, `Cán bộ Một cửa`, `Quản lý thủ tục`, `Công dân`.
+    - Loại bỏ tùy chọn `Quản trị viên` khỏi dropdown bộ lọc (`ROLE_FILTER_OPTIONS`), do Admin không cần tự lọc chính mình trên danh sách quản trị người dùng.
+    - Loại bỏ triệt để các mã kỹ thuật tiếng Anh thô (`REGISTERED_CITIZEN`, `FRONT_DESK_OFFICER`,...), loại bỏ các hậu tố ngoặc đơn dài dòng (`(Admin)`, `(Manager)`), gom các biến thể dữ liệu trùng lặp về cùng một vai trò chuẩn.
+  - **Chuẩn hóa & Phân tách rõ Phường công tác theo Vai trò (Cán bộ vs Công dân/Admin)**:
+    - **Bảng Người dùng Admin (`AdminPage.tsx`)**: Chỉ hiển thị dropdown chọn Phường công tác đối với các tài khoản Cán bộ địa phương (`MANAGER`, `FRONT_DESK_OFFICER`). Đối với tài khoản Công dân (`REGISTERED_CITIZEN`) và Quản trị viên/khác, hiển thị nhãn nhẹ nhàng `Không áp dụng` thay vì dropdown và chữ `(Chưa gán phường)`.
+    - **Trang Xem chi tiết (`ManagerProfileDetailView.tsx`)**: 
+      - Tự động ẩn huy hiệu `Đơn vị: ...` ở Banner nếu tài khoản không phải Cán bộ địa phương.
+      - Tại khối Thông tin Tài khoản: Nếu là Công dân/Admin, hiển thị `Phạm vi quản trị: Toàn hệ thống (Không áp dụng)`. Nơi ở của công dân được thể hiện chuẩn mực qua 2 trường cư trú độc lập: `Địa chỉ thường trú` và `Địa chỉ tạm trú`.
+  - **Cơ chế Điều hướng Thông minh giữ Cán bộ / Quản lý trong Dashboard nghiệp vụ**:
+    - **Tách biệt ngữ cảnh công vụ vs cổng công dân**: Các tài khoản Cán bộ chuyên trách (`IT_ADMIN`, `MANAGER`, `FRONT_DESK_OFFICER`) được giữ cố định trong môi trường làm việc công vụ tương ứng (`/admin`, `/quan-ly`, `/can-bo`).
+    - **Tự động chuyển hướng tại Route Trang chủ (`/`)**: Bổ sung `HomeRoute` tại route index của [`App.tsx`](file:///d:/frontend/src/app/App.tsx). Khi Cán bộ bấm Back trình duyệt về `/` hoặc nhập URL `/`, hệ thống tự động redirect về đúng Dashboard chuyên trách (`replace: true`).
+    - **Đảm bảo tính linh hoạt cho `PROCEDURE_MANAGER` và `REGISTERED_CITIZEN`**: Procedure Manager và Công dân vẫn được xem và hoạt động bình thường trên Landing Page và danh mục thủ tục công khai (`/thu-tuc`).
+    - **Logo Header thông minh ([`MainLayout.tsx`](file:///d:/frontend/src/components/layout/MainLayout.tsx))**: Click vào Logo WardMate sẽ tự động đưa Cán bộ về Dashboard của họ thay vì ra Landing Page của công dân.
+  - **Trang Xem chi tiết toàn diện dạng View cho Admin & Phân tách Tab theo vai trò**:
+    - **Admin (`AdminPage.tsx`)**: Chuyển đổi toàn bộ cơ chế xem chi tiết người dùng từ Modal popup nhỏ sang giao diện trang xem chi tiết (`ManagerProfileDetailView.tsx`), có nút quay lại bảng danh sách mượt mà và màn hình loading xoay khi đang lấy dữ liệu API 61 (`getAdminProfile`).
+    - **Quản lý User (Admin)**: Hiển thị đầy đủ cả 3 mục như trong thiết kế:
+      - **Mục 1. Thông tin cá nhân**: Thông tin định danh & nhân thân (CCCD với nút sao chép, Họ tên, Ngày sinh, Giới tính, Dân tộc, SĐT), Địa chỉ thường trú / tạm trú, và khối Thông tin Tài khoản & Quyền truy cập (Username, Email, Phường công tác, Vai trò).
+      - **Mục 2. Lịch sử Hồ sơ**: Danh sách các hồ sơ thủ tục hành chính công dân đã thực hiện tại Phường.
+      - **Mục 3. Giấy tờ điện tử đã nộp**: Tệp đính kèm và tài liệu số hóa của công dân.
+      - **Tối ưu hiển thị**: Tự động ẩn tiêu đề `<h1>Người dùng hệ thống</h1>` khi Admin đang xem chi tiết, tránh tình trạng bị dính chữ phía trên thanh điều hướng `← Quay lại danh sách người dùng` (đồng bộ với cơ chế của Manager).
+    - **Quản lý Cán bộ Một cửa (Manager - `/quan-ly`)**: Đặt cờ `isFrontDesk={true}`, **ẩn hoàn toàn Mục 2 (Lịch sử hồ sơ) và Mục 3 (Giấy tờ điện tử)**; chỉ giữ lại Mục 1 phục vụ quản lý nhân sự nội bộ.
+  - **Chuẩn hóa Hồ sơ cá nhân Cán bộ Một cửa (`OfficerProfileView.tsx`) dùng 100% dữ liệu API thật**:
+    - Loại bỏ hoàn toàn khối giả lập hardcode *"Phân công quầy tiếp nhận"* (cơ quan giả UBND Phường An Khánh, vị trí trực giả, lĩnh vực phụ trách giả, lịch trực tuần giả, badge giả "Đang trong ca trực").
+    - Chuyển sang hiển thị 100% dữ liệu thực từ backend IAM:
+      - **Thông tin Định danh & Nhân thân (API 06/07)**: Thẻ CCCD gắn chip (kèm nút sao chép), Họ tên, Ngày tháng năm sinh, Giới tính, Số điện thoại liên hệ, Địa chỉ thường trú và Tạm trú.
+      - **Thông tin Tài khoản & Quyền hạn công vụ (API 05)**: Tên đăng nhập, Email, Đơn vị Phường công tác thực tế (đối chiếu `wardId` qua API `getWards()`), Vai trò Việt hóa chuẩn (`Cán bộ Một cửa`), và số lượng quyền nghiệp vụ IAM.
+      - Cho phép chỉnh sửa và cập nhật hồ sơ cá nhân thời gian thực qua `updateMyProfile` (`PUT /api/v1/users/me/profile`).
+  - **Tối ưu hóa UI chi tiết Phường và Bảng Cán bộ Một cửa theo phản hồi người dùng**:
+    - **Manager Quản lý Cán bộ Một cửa (`ManagerProfilesView.tsx`)**: Bỏ cột "Số điện thoại" trong bảng danh sách giúp bảng thông thoáng; chuyển thông tin số điện thoại vào trong màn hình Xem chi tiết.
+    - **Làm rõ UI Đơn vị Phường trong Xem chi tiết (`ManagerProfileDetailView.tsx`)**:
+      - Bổ sung icon `Buildings` kèm nhãn rõ ràng `Đơn vị: {wardName}` dạng thẻ badge trang nhã ở Header Banner thay vì thẻ xám không rõ ý nghĩa.
+      - Xóa bỏ hoàn toàn dòng text phụ dính nhau `@username · email` ở Banner; gom toàn bộ dữ liệu tài khoản và quyền truy cập về **1 chỗ duy nhất** ở khối *"Thông tin Tài khoản & Quyền truy cập"* ở cuối trang với nhãn đầy đủ cho từng trường dữ liệu.
+    - **Chuẩn hóa thông báo trường dữ liệu trống**: Thay thế toàn bộ dấu gạch thô `'—'` hoặc chữ `'Chưa cập nhật'` thành dòng chữ chuẩn **`"Chưa được cập nhật"`** (dạng chữ nghiêng màu xám thanh lịch) cho toàn bộ các trường dữ liệu chưa có (Số CCCD, Họ tên, Ngày sinh, Giới tính, Số điện thoại, Địa chỉ thường trú, Tạm trú, Email, Đơn vị Phường, Vai trò).
+- **4. Kiểm tra chất lượng & Commit phân tách**:
+  - `npm run typecheck`: Đạt 0 lỗi.
+  - `npm run lint`: Đạt 0 lỗi.
+  - Playwright test: `npx playwright test tests/procedure-manager.spec.ts` đạt **20/20 tests** (100% pass).
+  - **Commit phân tách đã thực hiện**:
+    - `f8e040b` — `feat(procedure-manager): add version rollback, delete draft modal, and category refresh`
+    - `6fb70c1` — `feat(iam): integrate real profile APIs, full-page detail view, and role-based ward display`
+    - `47ba1c9` — `feat(navigation): add smart home route and brand logo redirect for staff roles`
+
+## Tối ưu hóa UI/UX Quản lý thủ tục, Hộp thoại xóa và Khôi phục phiên bản — 07/10/2026
+
+- **1. Hoàn thiện tính năng Khôi phục phiên bản (Rollback)**:
+  - Bổ sung nút "Khôi phục phiên bản này" trực tiếp trong từng bản ghi lịch sử tại trang Chi tiết thủ tục (`ProcedureApiDetail.tsx`), đồng bộ với `ProcedureVersionsModal.tsx`.
+  - Hộp thoại khôi phục yêu cầu nhập đầy đủ: Lý do khôi phục, Số quyết định, Ngày hiệu lực mới theo hợp đồng API 71 (`POST /api/v1/procedure-manager/procedures/{id}/versions/{v}/rollback`).
+  - Tự động làm mới dữ liệu chi tiết và danh sách phiên bản sau khi khôi phục thành công.
+- **2. Tinh gọn & Chuẩn hóa Modal xác nhận xóa (`ConfirmDeleteModal.tsx`)**:
+  - Tạo component dùng chung `ConfirmDeleteModal` có đầy đủ nút "Hủy bỏ" và "Xác nhận xóa" màu đỏ nổi bật (`bg-red-700 hover:bg-red-800`), kèm icon thùng rác và spinner khi đang xóa.
+  - Tách biệt hoàn toàn biến `deleteBusy` và `deleteError` độc lập trong cả `ProcedureDraftWorkspace.tsx` và `ProcedureCategoriesView.tsx`. Khắc phục triệt để tình trạng xoay loading ở 2 nút cùng lúc ("Xác nhận xóa" và "Tải lên và tạo bản nháp").
+  - Gỡ bỏ banner báo lỗi màu đỏ tràn viền thô kệch; sử dụng Sonner Toast và hiển thị lỗi inline ngay trong modal khi server trả 409 conflict.
+  - Nội dung câu chữ xác nhận xóa được tinh gọn, tự nhiên, không bị nặng nề.
+- **3. Cải tiến nút thao tác trên Thẻ & Bảng**:
+  - Bổ sung icon `Trash` cho nút Xóa, hiệu ứng hover màu đỏ nhạt (`hover:bg-red-50 hover:text-red-700`), phân tách rõ ràng với nút "Chỉnh sửa".
+- **4. Kiểm thử & Đảm bảo chất lượng**:
+  - `npm run typecheck`: Đạt 0 lỗi.
+  - `npm run lint`: Đạt 0 lỗi.
+  - `npm run build`: Đạt 0 lỗi (Vite/Rollup hoàn tất thành công).
+  - Playwright test: `npx playwright test tests/procedure-manager.spec.ts` đạt **20/20 tests** (100% pass trong 1.6m).
+
+## Tích hợp Procedure Administration API 66–73 — 07/10/2026
+
+- FE đã đối chiếu và tích hợp các contract mới từ Procedure Catalog BE; không sửa IAM hoặc backend.
+- Màn chi tiết quản lý dùng `GET /api/v1/procedure-manager/procedures/{id}`, nên xem và chỉnh sửa được cả thủ tục đã ngừng công khai.
+- Màn danh mục hỗ trợ tạo, sửa, xóa qua API quản trị; giữ lỗi 409 từ BE khi danh mục còn được sử dụng.
+- Workspace PDF hỗ trợ xóa bản nháp có xác nhận qua `DELETE /api/v1/procedure-manager/drafts/{id}`.
+- Lịch sử phiên bản hỗ trợ xem PDF nguồn bằng SAS có thời hạn và rollback có lý do, số quyết định, ngày hiệu lực. Không tự retry rollback khi chưa biết kết quả.
+- Tab Biểu mẫu tìm và chọn dữ liệu thật từ proxy `GET /api/v1/procedure-manager/document-forms`; không còn yêu cầu nhập GUID thủ công. Endpoint BE trả mảng nên FE chưa dựng tổng trang giả.
+- Client API, UI và mock-contract tests được cập nhật tại `src/lib/api/procedures.ts`, `src/pages/procedure-manager/` và `tests/`.
+- Kiểm tra vừa chạy: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` đạt; Playwright `tests/procedure-manager.spec.ts` đạt 20/20. Build còn cảnh báo Zod annotation và chunk lớn như trước. Đây là kiểm thử mock HTTP, chưa smoke test API 66–73 trên môi trường deploy thật.
+- `npm install` chỉ khôi phục 2 package TanStack Query đã có trong lockfile vào `node_modules`; npm vẫn báo 2 lỗ hổng high hiện hữu, chưa chạy audit fix ngoài phạm vi.
+- Chưa commit/push. Bước tiếp theo: smoke test bằng tài khoản ProcedureManager sau khi backend mới được deploy, đặc biệt DocumentForm proxy, Blob SAS, xóa draft lỗi 503 và rollback mất phản hồi.
+
 ## Lời chào theo thời gian thực (Time-based Greetings) cho Admin, Procedure Manager và Manager — 07/10/2026
 
 - **1. Helper dùng chung `getGreeting` (`src/lib/utils.ts`)**:
