@@ -67,8 +67,8 @@ const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string 
     subtitle: 'Cập nhật biến động hồ sơ và thông tin điều hành nội bộ',
   },
   profile: {
-    title: 'Hồ sơ cá nhân & Quầy trực',
-    subtitle: 'Thông tin phân công nhiệm vụ, quầy làm việc và ca trực',
+    title: 'Hồ sơ cá nhân',
+    subtitle: 'Thông tin định danh, tài khoản công vụ và đơn vị công tác',
   },
 };
 

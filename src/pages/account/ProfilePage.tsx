@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useEffect } from 'react';
 import {
   CalendarBlank,
   CaretRight,
@@ -18,60 +18,62 @@ import { toast } from '@/components/ui/Toast';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import type { CitizenFeedback } from '@/types/feedback';
 
-const initialProfile = {
-  fullName: 'Nguyễn Minh Anh',
-  birthDate: '1992-08-15',
-  phone: '090 000 0128',
-  email: 'minhanh@example.com',
-  address: 'Phường Minh Khai, Thành phố Hà Nội',
-};
-
-const initialApplications = [
-  {
-    code: 'HS-2026-00094',
-    procedure: 'Chứng thực bản sao từ bản chính',
-    statusLabel: 'Đã duyệt tiền kiểm',
-    badgeClass: 'bg-emerald-100 text-emerald-800',
-    updatedAt: '08:15, 28/09/2026',
-    nextStep: 'Sẵn sàng mang giấy tờ đến UBND',
-    canFeedback: true,
-  },
-  {
-    code: 'HS-2026-00128',
-    procedure: 'Đăng ký khai sinh',
-    statusLabel: 'Cần bổ sung',
-    badgeClass: 'bg-amber-100 text-amber-800',
-    updatedAt: '09:42, 28/09/2026',
-    nextStep: 'Cần chụp lại ảnh giấy chứng sinh',
-    canFeedback: false,
-  },
-  {
-    code: 'HS-2026-00052',
-    procedure: 'Đăng ký kết hôn',
-    statusLabel: 'Chờ tiền kiểm',
-    badgeClass: 'bg-blue-100 text-blue-800',
-    updatedAt: '16:30, 27/09/2026',
-    nextStep: 'Cán bộ đang kiểm tra',
-    canFeedback: false,
-  },
-];
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuthStore } from '@/stores/authStore';
+import { updateMyProfile, authErrorMessage } from '@/lib/api';
 
 function formatDate(value: string) {
+  if (!value) return '';
+  if (!value.includes('-')) return value;
   const [year, month, day] = value.split('-');
   return `${day}/${month}/${year}`;
 }
 
 export function ProfilePage() {
-  const [profile, setProfile] = useState(initialProfile);
-  const [draft, setDraft] = useState(initialProfile);
+  const { profile: apiProfile, refetch } = useUserProfile();
+  const user = useAuthStore((s) => s.user);
+
+  const currentProfile = {
+    fullName: apiProfile?.fullName || user?.username || '',
+    birthDate: apiProfile?.dateOfBirth || '',
+    phone: apiProfile?.phoneNumber || '',
+    email: user?.email || '',
+    address: apiProfile?.permanentAddress || '',
+  };
+
+  const [profile, setProfile] = useState(currentProfile);
+  const [draft, setDraft] = useState(currentProfile);
   const [isEditing, setIsEditing] = useState(false);
-  const [myApplications] = useState(initialApplications);
+  const [myApplications] = useState<Array<{
+    code: string;
+    procedure: string;
+    statusLabel: string;
+    badgeClass: string;
+    updatedAt: string;
+    nextStep: string;
+    canFeedback: boolean;
+  }>>([]);
+
+  // Cập nhật khi apiProfile load xong
+  useEffect(() => {
+    if (apiProfile || user) {
+      const updated = {
+        fullName: apiProfile?.fullName || user?.username || '',
+        birthDate: apiProfile?.dateOfBirth || '',
+        phone: apiProfile?.phoneNumber || '',
+        email: user?.email || '',
+        address: apiProfile?.permanentAddress || '',
+      };
+      setProfile(updated);
+      setDraft(updated);
+    }
+  }, [apiProfile, user]);
 
   // Feedback modal state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackTarget, setFeedbackTarget] = useState<{ procedure: string; code?: string }>({
     procedure: 'Chứng thực bản sao từ bản chính',
-    code: 'HS-2026-00094',
+    code: '',
   });
 
   function handleOpenFeedback(procedure: string, code?: string) {
@@ -93,11 +95,22 @@ export function ProfilePage() {
     setIsEditing(false);
   }
 
-  function handleSave(event: FormEvent<HTMLFormElement>) {
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setProfile(draft);
-    setIsEditing(false);
-    toast.success('Đã lưu thay đổi thông tin cá nhân.');
+    try {
+      await updateMyProfile({
+        fullName: draft.fullName.trim(),
+        phoneNumber: draft.phone.trim() || null,
+        dateOfBirth: (draft.birthDate.trim() || null) as unknown as import('@/types/profile').ProfileInput['dateOfBirth'],
+        permanentAddress: draft.address.trim() || null,
+      });
+      setProfile(draft);
+      setIsEditing(false);
+      await refetch();
+      toast.success('Đã lưu thay đổi thông tin cá nhân.');
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    }
   }
 
   return (

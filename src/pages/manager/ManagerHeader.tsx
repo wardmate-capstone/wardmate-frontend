@@ -14,7 +14,7 @@ export const managerSectionTitles: Record<ManagerSectionId, { title: string; sub
   'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
   'stats-searches': { title: 'Thống kê Lượt tra cứu', subtitle: 'Lưu lượng tìm kiếm và quan tâm của người dân qua cổng trực tuyến' },
   'stats-forms': { title: 'Thống kê Biểu mẫu & E-Form', subtitle: 'Tình hình sử dụng, tải mẫu đơn và kê khai trực tuyến' },
-  profiles: { title: 'Quản lý Hồ sơ Công dân', subtitle: 'Cơ sở dữ liệu định danh và thông tin công dân trên địa bàn' },
+  profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
   'perf-processing-time': { title: 'Hiệu suất Thời gian Xử lý', subtitle: 'So sánh thời gian giải quyết thực tế so với quy định pháp luật' },
   'perf-completion-rate': { title: 'Tỷ lệ Hoàn thành Hồ sơ', subtitle: 'Tỷ lệ giải quyết trước hạn, đúng hạn và trả kết quả thành công' },
   'perf-supplement-rate': { title: 'Tỷ lệ Cần bổ sung Hồ sơ', subtitle: 'Thống kê hồ sơ chưa đạt chuẩn và phân tích nguyên nhân lỗi' },

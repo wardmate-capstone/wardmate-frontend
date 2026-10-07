@@ -165,6 +165,12 @@ export async function updateMyProfile(payload: ProfileInput): Promise<UserProfil
   return response.data;
 }
 
+export async function deleteMyProfile(): Promise<void> {
+  const owner = useAuthStore.getState().user;
+  await api.delete('/api/v1/users/me/profile', cookieConfig);
+  if (owner && useAuthStore.getState().user === owner) useAuthStore.setState({ user: { ...owner, profile: null } });
+}
+
 // -----------------------------------------------------------
 // ADMIN — Accounts API
 // -----------------------------------------------------------
@@ -220,6 +226,108 @@ export async function updateAdminProfile(userId: string, payload: ProfileInput):
 
 export async function deleteAdminProfile(userId: string): Promise<void> {
   await api.delete(`/api/v1/users/${userId}/profile`, cookieConfig);
+}
+
+// -----------------------------------------------------------
+// ADMIN & MANAGER — Profiles List API (API 60: /api/v1/users/profiles)
+// -----------------------------------------------------------
+export interface ProfileListItemDto {
+  userId: string;
+  fullName: string;
+  identityNumber?: string | null;
+  phoneNumber?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  permanentAddress?: string | null;
+  temporaryAddress?: string | null;
+  updatedAt: string;
+}
+
+export interface ProfileListResponse {
+  items: ProfileListItemDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export async function getUserProfiles(page = 1, pageSize = 20): Promise<ProfileListResponse> {
+  const response = await api.get<ProfileListResponse>('/api/v1/users/profiles', {
+    ...cookieConfig,
+    params: { page, pageSize },
+  });
+  return response.data;
+}
+
+// -----------------------------------------------------------
+// ADMIN & MANAGER — Staff Administration & Wards (API 54-58)
+// -----------------------------------------------------------
+export interface ManagedRoleDto {
+  id: number;
+  roleName: string;
+}
+
+export interface ManagedUserDto {
+  id: string;
+  username: string;
+  email: string;
+  isActive: boolean;
+  wardId?: string | null;
+  wardName?: string | null;
+  profile?: UserProfileDto | null;
+  roles: ManagedRoleDto[];
+}
+
+export interface ManagedUserPage {
+  items: ManagedUserDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface WardDto {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface CreateFrontDeskInput {
+  username: string;
+  email: string;
+  password: string;
+  fullName: string;
+  wardId?: string | null;
+}
+
+export interface CreateWardInput {
+  code: string;
+  name: string;
+}
+
+export async function getManagedUsers(page = 1, pageSize = 20): Promise<ManagedUserPage> {
+  const response = await api.get<ManagedUserPage>('/api/v1/users', {
+    ...cookieConfig,
+    params: { page, pageSize },
+  });
+  return response.data;
+}
+
+export async function createFrontDeskAccount(payload: CreateFrontDeskInput): Promise<ManagedUserDto> {
+  const response = await api.post<ManagedUserDto>('/api/v1/accounts/front-desk', payload, cookieConfig);
+  return response.data;
+}
+
+export async function getWards(): Promise<WardDto[]> {
+  const response = await api.get<WardDto[]>('/api/v1/accounts/wards', cookieConfig);
+  return response.data;
+}
+
+export async function createWard(payload: CreateWardInput): Promise<WardDto> {
+  const response = await api.post<WardDto>('/api/v1/accounts/wards', payload, cookieConfig);
+  return response.data;
+}
+
+export async function assignUserWard(userId: string, wardId: string | null): Promise<void> {
+  await api.put(`/api/v1/accounts/${userId}/ward`, { wardId }, cookieConfig);
 }
 
 

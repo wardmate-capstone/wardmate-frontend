@@ -8,6 +8,7 @@ export type CurrentUser = {
   profile: UserProfileDto | null;
   roles: string[];
   permissions: string[];
+  wardId?: string | null;
 };
 
 // Session metadata only; refresh cookies stay HttpOnly and access tokens stay in the client RAM.

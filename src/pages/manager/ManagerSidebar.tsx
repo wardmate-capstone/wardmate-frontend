@@ -189,16 +189,16 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = ({
           </div>
 
           <div className="admin-nav-section">
-            <p>Hồ sơ công dân</p>
+            <p>Nhân sự Một cửa</p>
             <button
               type="button"
               className={currentSection === 'profiles' ? 'is-active' : ''}
               aria-current={currentSection === 'profiles' ? 'page' : undefined}
               onClick={() => handleNavClick('profiles')}
-              title={`Hồ sơ công dân (${profilesCount})`}
+              title={`Cán bộ Một cửa (${profilesCount})`}
             >
               <IdentificationCard size={20} />
-              <span>Hồ sơ công dân</span>
+              <span>Cán bộ Một cửa</span>
               <small>{profilesCount}</small>
             </button>
           </div>

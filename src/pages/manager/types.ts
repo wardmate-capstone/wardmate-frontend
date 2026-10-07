@@ -18,7 +18,7 @@ export type ManagerSectionId =
   | 'profile';
 
 export interface ManagerProfileItem {
-  userId?: string;
+  userId: string;
   username?: string;
   email?: string;
   isActive?: boolean;
@@ -29,6 +29,7 @@ export interface ManagerProfileItem {
   gender: 'Nam' | 'Nữ' | 'Khác';
   permanentAddress: string;
   temporaryAddress: string;
+  updatedAt?: string;
   ethnicity?: string;
   vneidLevel?: number;
 

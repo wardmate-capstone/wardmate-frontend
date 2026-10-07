@@ -4,8 +4,10 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { getGreeting } from "@/lib/utils";
 import {
+  ArrowsClockwise,
   Bell,
   Books,
+  Buildings,
   CaretDown,
   ClipboardText,
   CloudArrowUp,
@@ -38,13 +40,22 @@ import {
 } from "recharts";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
+import { Modal } from "@/components/ui/Modal";
 import {
-  getAccounts,
+  getManagedUsers,
+  getAdminProfile,
   updateAccountStatus,
+  getWards,
+  createWard,
+  assignUserWard,
   authErrorMessage,
-  type AccountItem,
-  type AccountListResponse,
+  type ManagedUserDto,
+  type ManagedUserPage,
+  type WardDto,
+  type UserProfileDto,
 } from "@/lib/api";
+import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
+import type { ManagerProfileItem } from '@/pages/manager/types';
 
 type SectionId =
   | "overview"
@@ -52,6 +63,7 @@ type SectionId =
   | "forms"
   | "knowledge"
   | "users"
+  | "wards"
   | "roles"
   | "integrations"
   | "audit"
@@ -92,6 +104,7 @@ const navigation: Array<{
     group: "Tài khoản & truy cập",
     items: [
       { id: "users", label: "Người dùng hệ thống", icon: Users },
+      { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings },
       { id: "roles", label: "Vai trò & quyền hạn", icon: Key },
     ],
   },
@@ -265,6 +278,7 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   forms: { title: "Biểu mẫu & E-form" },
   knowledge: { title: "Pháp lý & tri thức AI" },
   users: { title: "Người dùng hệ thống" },
+  wards: { title: "Quản lý đơn vị Phường / Xã" },
   roles: { title: "Vai trò & quyền hạn" },
   integrations: { title: "Dịch vụ tích hợp" },
   audit: { title: "Nhật ký hoạt động" },
@@ -281,50 +295,63 @@ export function AdminPage() {
   const user = useAuthStore((s) => s.user);
   const adminName = profile?.fullName?.trim() || user?.username || 'Quản trị viên';
 
-  // --- Người dùng hệ thống (Accounts API) ---
-  const [accountData, setAccountData] = useState<AccountListResponse | null>(null);
-  const [accountPage, setAccountPage] = useState(1);
-  const [accountLoading, setAccountLoading] = useState(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
+  // --- Người dùng hệ thống (API 54: Users & API 56-58: Wards) ---
+  const [userData, setUserData] = useState<ManagedUserPage | null>(null);
+  const [userPage, setUserPage] = useState(1);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [wards, setWards] = useState<WardDto[]>([]);
 
-  const fetchAccounts = useCallback(async (page: number) => {
-    setAccountLoading(true);
-    setAccountError(null);
+  const fetchUsers = useCallback(async (page: number) => {
+    setUserLoading(true);
+    setUserError(null);
     try {
-      const data = await getAccounts(page, 20);
-      setAccountData(data);
+      const data = await getManagedUsers(page, 20);
+      setUserData(data);
     } catch (err) {
-      setAccountError(authErrorMessage(err));
+      setUserError(authErrorMessage(err));
     } finally {
-      setAccountLoading(false);
+      setUserLoading(false);
+    }
+  }, []);
+
+  const fetchWards = useCallback(async () => {
+    try {
+      const data = await getWards();
+      setWards(data);
+    } catch {
+      // Ignored or handled softly
     }
   }, []);
 
   useEffect(() => {
-    if (activeSection === 'users') {
-      void fetchAccounts(accountPage);
+    if (activeSection === 'users' || activeSection === 'wards') {
+      void fetchUsers(userPage);
+      void fetchWards();
     }
-  }, [activeSection, accountPage, fetchAccounts]);
+  }, [activeSection, userPage, fetchUsers, fetchWards]);
 
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  const filteredAccounts = useMemo(() => {
-    if (!accountData) return [];
+  const filteredUsers = useMemo(() => {
+    if (!userData) return [];
     const q = query.toLowerCase();
-    return accountData.items.filter((item) =>
+    return userData.items.filter((item) =>
       item.id !== currentUserId &&
-      `${item.username} ${item.email}`.toLowerCase().includes(q)
+      `${item.username} ${item.email} ${item.profile?.fullName ?? ''} ${item.wardName ?? ''}`
+        .toLowerCase()
+        .includes(q)
     );
-  }, [accountData, query, currentUserId]);
+  }, [userData, query, currentUserId]);
 
-  async function handleToggleAccountStatus(account: AccountItem) {
+  async function handleToggleAccountStatus(account: ManagedUserDto) {
     if (togglingId) return;
     setTogglingId(account.id);
     const newStatus = !account.isActive;
     try {
       await updateAccountStatus(account.id, newStatus);
-      setAccountData((prev) => {
+      setUserData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -345,6 +372,27 @@ export function AdminPage() {
     }
   }
 
+  async function handleAssignWard(userId: string, wardId: string | null) {
+    try {
+      await assignUserWard(userId, wardId);
+      const chosenWard = wards.find((w) => w.id === wardId);
+      setUserData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((u) =>
+            u.id === userId
+              ? { ...u, wardId, wardName: chosenWard ? chosenWard.name : null }
+              : u
+          ),
+        };
+      });
+      toast.success('Đã cập nhật phường công tác thành công.');
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    }
+  }
+
 
   const filteredProcedures = useMemo(
     () =>
@@ -357,8 +405,30 @@ export function AdminPage() {
   );
 
 
+  const [selectedUser, setSelectedUser] = useState<ManagedUserDto | null>(null);
+  const [detailProfile, setDetailProfile] = useState<UserProfileDto | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  async function handleOpenUserDetail(user: ManagedUserDto) {
+    setSelectedUser(user);
+    setDetailProfile(user.profile ?? null);
+    setDetailLoading(true);
+    try {
+      const freshProfile = await getAdminProfile(user.id);
+      setDetailProfile(freshProfile);
+    } catch {
+      if (!user.profile) {
+        setDetailProfile(null);
+      }
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
   function selectSection(id: SectionId) {
     setActiveSection(id);
+    setSelectedUser(null);
+    setDetailProfile(null);
     setQuery("");
     setSidebarOpen(false);
   }
@@ -464,25 +534,18 @@ export function AdminPage() {
         </header>
 
         <main id="admin-main" className="admin-main" tabIndex={-1}>
-          <div className="admin-page-heading">
-            <div>
-              <h1>{meta.title}</h1>
-              {activeSection === "overview" && (
-                <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                  {getGreeting()}, Quản trị viên {adminName}
-                </p>
-              )}
+          {!(activeSection === "users" && selectedUser) && (
+            <div className="admin-page-heading">
+              <div>
+                <h1>{meta.title}</h1>
+                {activeSection === "overview" && (
+                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+                    {getGreeting()}, Quản trị viên {adminName}
+                  </p>
+                )}
+              </div>
             </div>
-            {activeSection !== "overview" && (
-              <button
-                className="admin-primary-action"
-                type="button"
-                onClick={() => demoAction("Đã mở biểu mẫu tạo mới.")}
-              >
-                <Plus size={18} weight="bold" /> Tạo mới
-              </button>
-            )}
-          </div>
+          )}
 
           {activeSection === "overview" && (
             <Overview onSelect={selectSection} />
@@ -500,19 +563,70 @@ export function AdminPage() {
             <KnowledgeView onAction={demoAction} />
           )}
           {activeSection === "users" && (
-            <UsersView
-              query={query}
-              setQuery={setQuery}
-              accounts={filteredAccounts}
-              total={accountData?.total ?? 0}
-              page={accountPage}
-              pageSize={20}
-              loading={accountLoading}
-              error={accountError}
-              togglingId={togglingId}
-              onPageChange={(p) => setAccountPage(p)}
-              onRetry={() => void fetchAccounts(accountPage)}
-              onToggleStatus={handleToggleAccountStatus}
+            selectedUser ? (
+              detailLoading ? (
+                <div className="admin-card p-12 text-center space-y-3">
+                  <ArrowsClockwise size={32} className="animate-spin text-red-800 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-700">Đang tải thông tin định danh & hồ sơ chi tiết...</p>
+                </div>
+              ) : (
+                <ManagerProfileDetailView
+                  profile={({
+                    userId: selectedUser.id,
+                    username: selectedUser.username,
+                    email: selectedUser.email,
+                    isActive: selectedUser.isActive,
+                    fullName: detailProfile?.fullName || selectedUser.profile?.fullName || selectedUser.username,
+                    identityNumber: detailProfile?.identityNumber || selectedUser.profile?.identityNumber || 'Chưa được cập nhật',
+                    phoneNumber: detailProfile?.phoneNumber || selectedUser.profile?.phoneNumber || 'Chưa được cập nhật',
+                    dateOfBirth: detailProfile?.dateOfBirth || selectedUser.profile?.dateOfBirth || '',
+                    gender: ((detailProfile?.gender || selectedUser.profile?.gender) === 'Nữ' || (detailProfile?.gender || selectedUser.profile?.gender) === 'Khác'
+                      ? (detailProfile?.gender || selectedUser.profile?.gender)
+                      : 'Nam') as 'Nam' | 'Nữ' | 'Khác',
+                    permanentAddress: detailProfile?.permanentAddress || selectedUser.profile?.permanentAddress || 'Chưa được cập nhật',
+                    temporaryAddress: detailProfile?.temporaryAddress || selectedUser.profile?.temporaryAddress || 'Chưa được cập nhật',
+                  }) as ManagerProfileItem}
+                  isFrontDesk={false}
+                  backLabel="Quay lại danh sách người dùng"
+                  onBack={() => {
+                    setSelectedUser(null);
+                    setDetailProfile(null);
+                  }}
+                  accountInfo={{
+                    username: selectedUser.username,
+                    email: selectedUser.email,
+                    wardName: selectedUser.wardName,
+                    roles: selectedUser.roles,
+                    isActive: selectedUser.isActive,
+                  }}
+                />
+              )
+            ) : (
+              <UsersView
+                query={query}
+                setQuery={setQuery}
+                users={filteredUsers}
+                wards={wards}
+                total={userData?.total ?? 0}
+                page={userPage}
+                pageSize={20}
+                loading={userLoading}
+                error={userError}
+                togglingId={togglingId}
+                onPageChange={(p) => setUserPage(p)}
+                onRetry={() => void fetchUsers(userPage)}
+                onToggleStatus={handleToggleAccountStatus}
+                onAssignWard={handleAssignWard}
+                onSelectUser={handleOpenUserDetail}
+              />
+            )
+          )}
+          {activeSection === "wards" && (
+            <WardsView
+              wards={wards}
+              users={userData?.items ?? []}
+              onRetry={() => void fetchWards()}
+              onWardCreated={() => void fetchWards()}
             />
           )}
           {activeSection === "roles" && <RolesView onAction={demoAction} />}
@@ -1004,10 +1118,79 @@ function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
   );
 }
 
+interface SystemRoleConfig {
+  value: string;
+  label: string;
+  keywords: string[];
+  badgeClass: string;
+}
+
+const SYSTEM_ROLE_CONFIGS: SystemRoleConfig[] = [
+  {
+    value: 'ADMIN',
+    label: 'Quản trị viên',
+    keywords: ['ADMIN', 'QUẢN TRỊ'],
+    badgeClass: 'bg-red-50 text-red-800 border-red-200',
+  },
+  {
+    value: 'MANAGER',
+    label: 'Lãnh đạo UBND',
+    keywords: ['MANAGER', 'LÃNH ĐẠO'],
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+  },
+  {
+    value: 'FRONT_DESK_OFFICER',
+    label: 'Cán bộ Một cửa',
+    keywords: ['FRONT_DESK', 'FRONTDESK', 'OFFICER', 'MỘT CỬA'],
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  },
+  {
+    value: 'PROCEDURE_MANAGER',
+    label: 'Quản lý thủ tục',
+    keywords: ['PROCEDURE', 'THỦ TỤC'],
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  {
+    value: 'REGISTERED_CITIZEN',
+    label: 'Công dân',
+    keywords: ['CITIZEN', 'CÔNG DÂN'],
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+  },
+];
+
+const ROLE_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'Tất cả vai trò' },
+  ...SYSTEM_ROLE_CONFIGS.filter((c) => c.value !== 'ADMIN').map((c) => ({ value: c.value, label: c.label })),
+];
+
+function getRoleConfig(rawName: string): SystemRoleConfig | undefined {
+  if (!rawName) return undefined;
+  const upper = rawName.toUpperCase();
+  if (upper.includes('FRONT_DESK') || upper.includes('FRONTDESK') || upper.includes('OFFICER') || upper.includes('MỘT CỬA')) {
+    return SYSTEM_ROLE_CONFIGS.find((c) => c.value === 'FRONT_DESK_OFFICER');
+  }
+  if (upper.includes('PROCEDURE') || upper.includes('THỦ TỤC')) {
+    return SYSTEM_ROLE_CONFIGS.find((c) => c.value === 'PROCEDURE_MANAGER');
+  }
+  return SYSTEM_ROLE_CONFIGS.find((c) => c.keywords.some((k) => upper.includes(k)));
+}
+
+function formatRoleLabel(roleName: string): string {
+  if (!roleName) return 'Chưa phân vai trò';
+  const config = getRoleConfig(roleName);
+  return config ? config.label : roleName;
+}
+
+function getRoleBadgeClass(roleName: string): string {
+  const config = getRoleConfig(roleName);
+  return config ? config.badgeClass : 'bg-slate-100 text-slate-700 border-slate-200';
+}
+
 function UsersView({
   query,
   setQuery,
-  accounts,
+  users,
+  wards,
   total,
   page,
   pageSize,
@@ -1017,10 +1200,13 @@ function UsersView({
   onPageChange,
   onRetry,
   onToggleStatus,
+  onAssignWard,
+  onSelectUser,
 }: {
   query: string;
   setQuery: (value: string) => void;
-  accounts: AccountItem[];
+  users: ManagedUserDto[];
+  wards: WardDto[];
   total: number;
   page: number;
   pageSize: number;
@@ -1029,26 +1215,63 @@ function UsersView({
   togglingId: string | null;
   onPageChange: (page: number) => void;
   onRetry: () => void;
-  onToggleStatus: (account: AccountItem) => void;
+  onToggleStatus: (user: ManagedUserDto) => void;
+  onAssignWard: (userId: string, wardId: string | null) => void;
+  onSelectUser: (user: ManagedUserDto) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  // Bộ lọc vai trò người dùng (chuẩn hóa 5 vai trò tinh gọn)
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+
+  const displayUsers = useMemo(() => {
+    if (roleFilter === 'ALL') return users;
+    return users.filter((u) =>
+      u.roles.some((r) => {
+        const config = getRoleConfig(r.roleName);
+        return config?.value === roleFilter;
+      })
+    );
+  }, [users, roleFilter]);
+
   return (
     <section className="admin-card admin-table-card admin-content-card">
-      <div className="admin-toolbar">
+      <div className="admin-toolbar flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
         <SearchBar
           value={query}
           onChange={setQuery}
-          placeholder="Tìm tên đăng nhập hoặc email..."
+          placeholder="Tìm tên đăng nhập, họ tên, email hoặc phường..."
         />
-        <button type="button" onClick={onRetry} disabled={loading} aria-label="Tải lại danh sách">
-          <Gear size={17} /> {loading ? 'Đang tải...' : 'Tải lại'}
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
+            aria-label="Lọc theo vai trò"
+          >
+            {ROLE_FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
+            aria-label="Tải lại danh sách"
+          >
+            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
+            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Lỗi */}
       {error && !loading && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center justify-between gap-4">
+        <div className="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center justify-between gap-4">
           <span>{error}</span>
           <button
             type="button"
@@ -1067,8 +1290,8 @@ function UsersView({
             <thead>
               <tr>
                 <th>Người dùng</th>
-                <th>Email</th>
-                <th>Ngày tạo</th>
+                <th>Phường công tác</th>
+                <th>Vai trò</th>
                 <th>Trạng thái</th>
                 <th />
               </tr>
@@ -1077,8 +1300,8 @@ function UsersView({
               {Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
                   <td><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
-                  <td><div className="h-4 w-40 animate-pulse rounded bg-slate-200" /></td>
-                  <td><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+                  <td><div className="h-4 w-28 animate-pulse rounded bg-slate-200" /></td>
+                  <td><div className="h-4 w-20 animate-pulse rounded bg-slate-200" /></td>
                   <td><div className="h-6 w-20 animate-pulse rounded-full bg-slate-200" /></td>
                   <td><div className="h-8 w-20 animate-pulse rounded-lg bg-slate-200" /></td>
                 </tr>
@@ -1088,41 +1311,78 @@ function UsersView({
         </div>
       )}
 
-      {/* Bảng dữ liệu thật */}
+      {/* Bảng dữ liệu thật (API 54) */}
       {!loading && !error && (
         <div className="admin-table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Tên đăng nhập</th>
-                <th>Email</th>
-                <th>Ngày tạo tài khoản</th>
+                <th>Người dùng & Họ tên</th>
+                <th>Phường công tác</th>
+                <th>Vai trò</th>
                 <th>Trạng thái</th>
-                <th />
+                <th className="text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {accounts.map((item) => {
+              {displayUsers.map((item) => {
                 const isToggling = togglingId === item.id;
-                const createdDate = new Date(item.createdAt).toLocaleDateString('vi-VN', {
-                  day: '2-digit', month: '2-digit', year: 'numeric',
+                const displayName = item.profile?.fullName || item.username;
+                const initials = displayName.slice(0, 2).toUpperCase();
+                const isStaff = item.roles.some((r) => {
+                  const cfg = getRoleConfig(r.roleName);
+                  return cfg?.value === 'MANAGER' || cfg?.value === 'FRONT_DESK_OFFICER';
                 });
-                const initials = item.username.slice(0, 2).toUpperCase();
                 return (
                   <tr key={item.id}>
                     <td>
                       <div className="admin-person">
                         <span>{initials}</span>
-                        <p>
-                          <strong>{item.username}</strong>
-                        </p>
+                        <div>
+                          <p>
+                            <strong>{displayName}</strong>
+                          </p>
+                          <small className="text-slate-500 font-mono">@{item.username}</small>
+                        </div>
                       </div>
                     </td>
                     <td>
-                      <small className="text-slate-600">{item.email}</small>
+                      {isStaff ? (
+                        <select
+                          value={item.wardId || ''}
+                          onChange={(e) => onAssignWard(item.id, e.target.value || null)}
+                          className="text-xs bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-800"
+                        >
+                          <option value="">(Chưa gán phường)</option>
+                          {wards.map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">
+                          Không áp dụng
+                        </span>
+                      )}
                     </td>
                     <td>
-                      <small className="text-slate-500">{createdDate}</small>
+                      <div className="flex flex-wrap gap-1">
+                        {item.roles.length > 0 ? (
+                          item.roles.map((r) => (
+                            <span
+                              key={r.id}
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border ${getRoleBadgeClass(
+                                r.roleName
+                              )}`}
+                            >
+                              {formatRoleLabel(r.roleName)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span
@@ -1133,23 +1393,32 @@ function UsersView({
                         {item.isActive ? 'Hoạt động' : 'Tạm khóa'}
                       </span>
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        disabled={isToggling || togglingId !== null}
-                        onClick={() => onToggleStatus(item)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50 ${
-                          item.isActive
-                            ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                            : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
-                        }`}
-                        aria-label={item.isActive ? `Tạm khóa tài khoản ${item.username}` : `Kích hoạt tài khoản ${item.username}`}
-                      >
-                        {isToggling
-                          ? 'Đang xử lý...'
-                          : item.isActive ? 'Tạm khóa' : 'Kích hoạt'
-                        }
-                      </button>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onSelectUser(item)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-red-900 transition-colors"
+                        >
+                          Xem chi tiết
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isToggling || togglingId !== null}
+                          onClick={() => onToggleStatus(item)}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50 ${
+                            item.isActive
+                              ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                              : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
+                          }`}
+                          aria-label={item.isActive ? `Tạm khóa tài khoản ${item.username}` : `Kích hoạt tài khoản ${item.username}`}
+                        >
+                          {isToggling
+                            ? 'Đang xử lý...'
+                            : item.isActive ? 'Tạm khóa' : 'Kích hoạt'
+                          }
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1160,16 +1429,18 @@ function UsersView({
       )}
 
       {/* Empty */}
-      {!loading && !error && accounts.length === 0 && (
-        <p className="admin-empty">
-          {query ? 'Không tìm thấy tài khoản phù hợp.' : 'Chưa có tài khoản nào trong hệ thống.'}
+      {!loading && !error && displayUsers.length === 0 && (
+        <p className="admin-empty p-8 text-center text-xs text-slate-500">
+          {query || roleFilter !== 'ALL'
+            ? 'Không tìm thấy người dùng phù hợp với bộ lọc tìm kiếm hoặc vai trò.'
+            : 'Chưa có người dùng nào trong phạm vi quản lý.'}
         </p>
       )}
 
       {/* Phân trang */}
       {!loading && !error && totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-600">
-          <span>Trang {page} / {totalPages} · Tổng {total} tài khoản</span>
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-4 text-xs text-slate-600">
+          <span>Trang {page} / {totalPages} · Tổng {total} người dùng</span>
           <div className="flex gap-1">
             <button
               type="button"
@@ -1189,6 +1460,193 @@ function UsersView({
             </button>
           </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function WardsView({
+  wards,
+  users,
+  loading = false,
+  onRetry,
+  onWardCreated,
+}: {
+  wards: WardDto[];
+  users: ManagedUserDto[];
+  loading?: boolean;
+  onRetry: () => void;
+  onWardCreated: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [wardModalOpen, setWardModalOpen] = useState(false);
+  const [wardSubmitting, setWardSubmitting] = useState(false);
+  const [wardInput, setWardInput] = useState({ code: '', name: '' });
+
+  const filteredWards = useMemo(() => {
+    const q = query.toLowerCase();
+    return wards.filter(
+      (w) => w.name.toLowerCase().includes(q) || w.code.toLowerCase().includes(q)
+    );
+  }, [wards, query]);
+
+  async function handleCreateWard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!wardInput.code.trim() || !wardInput.name.trim()) {
+      toast.error('Vui lòng điền mã và tên phường.');
+      return;
+    }
+    setWardSubmitting(true);
+    try {
+      await createWard({
+        code: wardInput.code.trim().toUpperCase(),
+        name: wardInput.name.trim(),
+      });
+      toast.success(`Đã khởi tạo phường ${wardInput.name}.`);
+      setWardModalOpen(false);
+      setWardInput({ code: '', name: '' });
+      onWardCreated();
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    } finally {
+      setWardSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="admin-card admin-table-card admin-content-card">
+      <div className="admin-toolbar flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Tìm theo tên hoặc mã phường / xã..."
+        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
+            aria-label="Tải lại danh sách phường"
+          >
+            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
+            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setWardModalOpen(true)}
+            className="admin-primary-action h-10 text-xs"
+          >
+            <Plus size={16} weight="bold" /> Thêm Phường / Xã mới
+          </button>
+        </div>
+      </div>
+
+      {/* Bảng danh sách phường */}
+      <div className="admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th className="min-w-[130px]">Mã phường</th>
+              <th className="min-w-[200px]">Tên đơn vị Phường / Xã</th>
+              <th className="min-w-[160px]">Số cán bộ & Nhân sự</th>
+              <th className="min-w-[220px]">Mã định danh (ID)</th>
+              <th className="min-w-[110px]">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredWards.map((w) => {
+              const count = users.filter((u) => u.wardId === w.id).length;
+              return (
+                <tr key={w.id}>
+                  <td>
+                    <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200">
+                      {w.code}
+                    </span>
+                  </td>
+                  <td>
+                    <strong className="text-slate-900 text-xs">{w.name}</strong>
+                  </td>
+                  <td>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+                      <span className="font-bold text-red-900">{count}</span> nhân sự trực thuộc
+                    </span>
+                  </td>
+                  <td>
+                    <span className="font-mono text-[11px] text-slate-500">{w.id}</span>
+                  </td>
+                  <td>
+                    <span className="admin-status-badge is-success">
+                      Hoạt động
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {filteredWards.length === 0 && (
+        <p className="admin-empty p-8 text-center text-xs text-slate-500">
+          {query ? 'Không tìm thấy phường / xã phù hợp.' : 'Chưa có đơn vị phường / xã nào được khởi tạo.'}
+        </p>
+      )}
+
+      {/* Modal tạo Phường công tác mới (API 57) */}
+      {wardModalOpen && (
+        <Modal
+          open={wardModalOpen}
+          onOpenChange={setWardModalOpen}
+          title="Thêm Phường / Xã mới"
+        >
+          <form onSubmit={handleCreateWard} className="space-y-4 py-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Mã phường * (chữ in hoa, số, gạch nối)
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={50}
+                placeholder="Ví dụ: PHUONG_BEN_NGHE"
+                value={wardInput.code}
+                onChange={(e) => setWardInput({ ...wardInput, code: e.target.value.toUpperCase() })}
+                className="w-full h-10 px-3 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Tên phường *
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={255}
+                placeholder="Ví dụ: Phường Bến Nghé"
+                value={wardInput.name}
+                onChange={(e) => setWardInput({ ...wardInput, name: e.target.value })}
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setWardModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={wardSubmitting}
+                className="admin-primary-action text-xs disabled:opacity-50"
+              >
+                {wardSubmitting ? 'Đang khởi tạo...' : 'Khởi tạo'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </section>
   );

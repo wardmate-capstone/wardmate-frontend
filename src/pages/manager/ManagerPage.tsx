@@ -12,10 +12,10 @@ import { ManagerProfileView } from './views/ManagerProfileView';
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
 import {
-  getAccounts,
+  getUserProfiles,
   getAdminProfile,
   updateAdminProfile,
-  deleteAdminProfile,
+  updateAccountStatus,
   authErrorMessage,
 } from '@/lib/api';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -32,78 +32,36 @@ export const ManagerPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const managerName = profile?.fullName?.trim() || user?.username || 'Lãnh đạo';
 
-  // Quản lý danh sách hồ sơ công dân & xem chi tiết từ API
+  // Quản lý danh sách hồ sơ công dân & xem chi tiết từ API 60
   const [profiles, setProfiles] = useState<ManagerProfileItem[]>([]);
+  const [profilesPage, setProfilesPage] = useState(1);
+  const [profilesTotal, setProfilesTotal] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<ManagerProfileItem | null>(null);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
 
-  const fetchCitizenProfiles = useCallback(async () => {
+  const fetchProfiles = useCallback(async (page: number) => {
     setIsLoadingProfiles(true);
     setProfilesError(null);
     try {
-      // 1. Lấy danh sách account
-      const accountPage = await getAccounts(1, 50);
-      const accounts = accountPage.items || [];
-
-      // 2. Fetch thông tin profile tương ứng của từng account
-      const profileResults = await Promise.allSettled(
-        accounts.map(async (acc) => {
-          try {
-            const p = await getAdminProfile(acc.id);
-            const item: ManagerProfileItem = {
-              userId: acc.id,
-              username: acc.username,
-              email: acc.email,
-              isActive: acc.isActive,
-              fullName: p.fullName || acc.username,
-              identityNumber: p.identityNumber || '',
-              phoneNumber: p.phoneNumber || '',
-              dateOfBirth: p.dateOfBirth || '',
-              gender: (p.gender === 'Nữ' || p.gender === 'Khác' ? p.gender : 'Nam'),
-              permanentAddress: p.permanentAddress || '',
-              temporaryAddress: p.temporaryAddress || '',
-              dossierHistory: [
-                {
-                  code: 'HS-2026-0912',
-                  procedureName: 'Đăng ký khai sinh',
-                  field: 'Hộ tịch',
-                  submittedAt: '28/09/2026',
-                  status: 'Đã hoàn thành',
-                  officer: 'Nguyễn Minh Anh',
-                },
-              ],
-            };
-            return item;
-          } catch {
-            // Trường hợp tài khoản chưa có profile hoặc chưa thiết lập đầy đủ
-            const fallbackItem: ManagerProfileItem = {
-              userId: acc.id,
-              username: acc.username,
-              email: acc.email,
-              isActive: acc.isActive,
-              fullName: acc.username,
-              identityNumber: '',
-              phoneNumber: '',
-              dateOfBirth: '',
-              gender: 'Nam',
-              permanentAddress: '',
-              temporaryAddress: '',
-            };
-            return fallbackItem;
-          }
-        })
-      );
-
-      const items: ManagerProfileItem[] = profileResults
-        .filter((r): r is PromiseFulfilledResult<ManagerProfileItem> => r.status === 'fulfilled')
-        .map((r) => r.value);
-
+      const data = await getUserProfiles(page, 20);
+      setProfilesTotal(data.total);
+      const items: ManagerProfileItem[] = data.items.map((p) => ({
+        userId: p.userId,
+        fullName: p.fullName,
+        identityNumber: p.identityNumber || '',
+        phoneNumber: p.phoneNumber || '',
+        dateOfBirth: p.dateOfBirth || '',
+        gender: (p.gender === 'Nữ' || p.gender === 'Khác' ? p.gender : 'Nam'),
+        permanentAddress: p.permanentAddress || '',
+        temporaryAddress: p.temporaryAddress || '',
+        updatedAt: p.updatedAt,
+      }));
       setProfiles(items);
     } catch (err: unknown) {
       const msg = authErrorMessage(err);
       setProfilesError(msg);
-      toast.error(`Không thể tải dữ liệu hồ sơ công dân: ${msg}`);
+      toast.error(`Không thể tải dữ liệu hồ sơ: ${msg}`);
     } finally {
       setIsLoadingProfiles(false);
     }
@@ -111,9 +69,9 @@ export const ManagerPage: React.FC = () => {
 
   useEffect(() => {
     if (currentSection === 'profiles') {
-      void fetchCitizenProfiles();
+      void fetchProfiles(profilesPage);
     }
-  }, [currentSection, fetchCitizenProfiles]);
+  }, [currentSection, profilesPage, fetchProfiles]);
 
   const handleSaveProfile = async (profile: ManagerProfileItem) => {
     if (profile.userId) {
@@ -173,21 +131,47 @@ export const ManagerPage: React.FC = () => {
     }
   };
 
-  const handleDeleteProfile = async (userId: string) => {
+  const handleToggleAccountStatus = async (item: ManagerProfileItem) => {
+    const newStatus = !(item.isActive ?? true);
     try {
-      await deleteAdminProfile(userId);
-      setProfiles((prev) => prev.filter((p) => p.userId !== userId));
-      if (selectedProfile && selectedProfile.userId === userId) {
-        setSelectedProfile(null);
-      }
-      toast.success('Đã xóa hồ sơ công dân thành công.');
+      await updateAccountStatus(item.userId, newStatus);
+      setProfiles((prev) =>
+        prev.map((p) => (p.userId === item.userId ? { ...p, isActive: newStatus } : p))
+      );
+      toast.success(
+        newStatus
+          ? `Đã kích hoạt tài khoản cán bộ ${item.fullName}.`
+          : `Đã tạm khóa tài khoản cán bộ ${item.fullName}.`
+      );
     } catch (err: unknown) {
-      const msg = authErrorMessage(err);
-      toast.error(`Xóa hồ sơ thất bại: ${msg}`);
-      throw err;
+      toast.error(authErrorMessage(err));
     }
   };
 
+  const handleSelectProfile = async (item: ManagerProfileItem) => {
+    setSelectedProfile(item);
+    if (item.userId) {
+      try {
+        const fresh = await getAdminProfile(item.userId);
+        setSelectedProfile((prev) =>
+          prev && prev.userId === item.userId
+            ? {
+                ...prev,
+                fullName: fresh.fullName,
+                identityNumber: fresh.identityNumber || '',
+                phoneNumber: fresh.phoneNumber || '',
+                dateOfBirth: fresh.dateOfBirth || '',
+                gender: (fresh.gender === 'Nữ' || fresh.gender === 'Khác' ? fresh.gender : 'Nam'),
+                permanentAddress: fresh.permanentAddress || '',
+                temporaryAddress: fresh.temporaryAddress || '',
+              }
+            : prev
+        );
+      } catch {
+        // Giữ thông tin đã có từ danh sách
+      }
+    }
+  };
 
   const handleExportQuickReport = () => {
     toast.success('Đang kết xuất báo cáo nhanh định kỳ (PDF)...');
@@ -250,6 +234,8 @@ export const ManagerPage: React.FC = () => {
             selectedProfile ? (
               <ManagerProfileDetailView
                 profile={selectedProfile}
+                isFrontDesk={true}
+                backLabel="Quay lại danh sách cán bộ Một cửa"
                 onBack={() => setSelectedProfile(null)}
                 onEdit={(p) => {
                   setSelectedProfile(null);
@@ -259,12 +245,17 @@ export const ManagerPage: React.FC = () => {
             ) : (
               <ManagerProfilesView
                 profiles={profiles}
+                total={profilesTotal}
+                page={profilesPage}
+                pageSize={20}
                 isLoading={isLoadingProfiles}
                 error={profilesError}
-                onRefresh={fetchCitizenProfiles}
+                onRefresh={() => void fetchProfiles(profilesPage)}
+                onPageChange={(p) => setProfilesPage(p)}
                 onSaveProfile={handleSaveProfile}
-                onDeleteProfile={handleDeleteProfile}
-                onSelectProfile={(p) => setSelectedProfile(p)}
+                onToggleStatus={handleToggleAccountStatus}
+                onSelectProfile={handleSelectProfile}
+                onFrontDeskCreated={() => void fetchProfiles(profilesPage)}
               />
             )
           )}
