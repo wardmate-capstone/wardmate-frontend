@@ -77,19 +77,69 @@ test('manager edit preserves unseen nested data and uses PUT with effective date
   expect(request?.authorization).toBe('Bearer ui-test-token');
 });
 
-test('inactive procedure exposes status/history but does not fetch public detail to edit', async ({ page }) => {
+test('inactive procedure uses manager detail and remains editable', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']); const state = await mockCatalog(page); state.detail.isActive = false;
   await page.goto('/procedure-manager');
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
-  await expect(page.getByRole('button', { name: 'Chỉnh sửa', exact: true })).toBeDisabled();
-  await expect(page.getByText(/Backend chưa cung cấp API chi tiết/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chỉnh sửa', exact: true })).toBeEnabled();
   expect(state.requests.some(r => r.path === `/api/v1/procedures/${procedureId}`)).toBe(false);
+  expect(state.requests.some(r => r.path === `/api/v1/procedure-manager/procedures/${procedureId}`)).toBe(true);
   await page.getByRole('button', { name: 'Mở công khai', exact: true }).click();
   await page.getByRole('dialog').getByLabel('Lý do (không bắt buộc)').fill('Đã đối soát');
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Chỉnh sửa', exact: true })).toBeEnabled();
   expect(state.requests.find(r => r.method === 'PATCH')?.body).toEqual({ isActive: true, reason: 'Đã đối soát' });
+});
+
+test('manager administers categories through catalog API', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Danh mục thủ tục', exact: true }).click();
+  await page.getByRole('button', { name: 'Thêm danh mục', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Tên danh mục').fill('Danh mục mới');
+  await dialog.getByLabel('Mô tả').fill('Mô tả kiểm thử');
+  await dialog.getByRole('button', { name: 'Lưu danh mục' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(state.requests.find(r => r.path === '/api/v1/procedure-manager/categories' && r.method === 'POST')?.body).toEqual({ categoryName: 'Danh mục mới', description: 'Mô tả kiểm thử' });
+});
+
+test('manager deletes an unused draft through administration API', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager?section=drafts');
+  await page.getByRole('button', { name: 'Xóa', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(state.requests.some(r => r.path.endsWith(`/drafts/${draftId}`) && r.method === 'DELETE')).toBe(true);
+});
+
+test('manager rolls back a version with required audit fields', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
+  await page.getByTitle('Xem lịch sử phiên bản').first().click();
+  await page.getByText(/Phiên bản 1 · QĐ:/).click();
+  await page.getByRole('button', { name: 'Xem PDF nguồn' }).click();
+  await expect(page.getByTitle('PDF nguồn thủ tục')).toHaveAttribute('src', 'https://example.test/source.pdf');
+  await page.getByRole('button', { name: 'Khôi phục phiên bản này' }).click();
+  const rollback = page.getByRole('dialog').last();
+  await rollback.getByLabel('Lý do khôi phục').fill('Khôi phục nội dung đúng');
+  await rollback.getByLabel('Số quyết định').fill('QĐ-ROLLBACK');
+  await rollback.getByLabel('Ngày hiệu lực').fill('2026-10-07');
+  await rollback.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
+  await expect.poll(() => state.requests.find(r => r.path.endsWith('/versions/1/rollback'))?.body).toEqual({ reason: 'Khôi phục nội dung đúng', decisionNumber: 'QĐ-ROLLBACK', effectiveDate: '2026-10-07' });
+});
+
+test('procedure editor selects a real DocumentForm option instead of a manual id', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /Biểu mẫu/ }).click();
+  await expect(page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
+  await page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' }).click();
+  await expect(page.getByRole('paragraph').filter({ hasText: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
+  expect(state.requests.some(r => r.path.endsWith('/document-forms'))).toBe(true);
 });
 
 for (const mode of ['create', 'publish'] as const) test(`manager ${mode} sends full reviewed form without invented defaults`, async ({ page }) => {

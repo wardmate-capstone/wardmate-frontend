@@ -5,6 +5,7 @@ export const procedureId = '07000000-0000-0000-0000-000000000001';
 export const draftId = '07000000-0000-0000-0000-000000000002';
 export const initialRevision = '07000000-0000-0000-0000-000000000003';
 export const savedRevision = '07000000-0000-0000-0000-000000000004';
+export const formTemplateId = '07000000-0000-0000-0000-000000000005';
 export const sampleProcedure: ProcedureDetail = {
   id: procedureId, categoryId: 1, categoryName: 'Hộ tịch', procedureCode: 'TEST-KS', title: 'Đăng ký khai sinh từ API',
   levelOfImplementation: 'Cấp Xã', targetAudience: 'Công dân Việt Nam', feeSummary: 'Theo nội dung đối soát', processingTimeSummary: 'Trong ngày', isActive: true,
@@ -20,7 +21,7 @@ export const sampleProcedure: ProcedureDetail = {
   createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-06T00:00:00Z',
 };
 export function catalogReply(route: Route, options: Parameters<Route['fulfill']>[0]) {
-  return route.fulfill({ ...options, headers: { 'access-control-allow-origin': route.request().headers().origin || 'http://127.0.0.1:4317', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': 'Content-Type,Authorization,X-CSRF-Protection', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,OPTIONS' } });
+  return route.fulfill({ ...options, headers: { 'access-control-allow-origin': route.request().headers().origin || 'http://127.0.0.1:4317', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': 'Content-Type,Authorization,X-CSRF-Protection', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' } });
 }
 export async function mockCatalog(page: Page) {
   const state = {
@@ -39,13 +40,18 @@ export async function mockCatalog(page: Page) {
     const reply = (json: unknown, status = 200) => catalogReply(route, { status, json });
     const draft = () => ({ id: draftId, status: state.draftStatus, pdfFileName: 'khai-sinh.pdf', payload: state.detail, warnings: ['Cần đối soát PDF gốc.'], extractedText: 'Văn bản PDF kiểm thử', revision: state.revision, createdAt: state.detail.createdAt, updatedAt: state.detail.updatedAt, ...(state.draftStatus === 'Published' ? { publishedProcedureId: procedureId } : {}) });
     if (path.endsWith('/source')) return reply({ url: 'https://example.test/source.pdf', expiresInSeconds: 600 });
-    if (path.endsWith('/categories')) return reply([{ id: 1, categoryName: 'Hộ tịch' }, { id: 2, categoryName: 'Chứng thực' }]);
+    if (path === '/api/v1/procedures/categories') return reply([{ id: 1, categoryName: 'Hộ tịch' }, { id: 2, categoryName: 'Chứng thực' }]);
+    if (path === '/api/v1/procedure-manager/categories' && method === 'POST') return reply({ id: 3, ...body }, 201);
+    if (path.startsWith('/api/v1/procedure-manager/categories/') && method === 'PUT') return reply({ id: Number(path.split('/').at(-1)), ...body });
+    if (path.startsWith('/api/v1/procedure-manager/categories/') && method === 'DELETE') return catalogReply(route, { status: 204 });
+    if (path.endsWith('/document-forms')) return reply([{ id: formTemplateId, formCode: 'BM-01', formName: 'Tờ khai điện tử', formType: 'ONLINE_INTERACTIVE' }]);
     if (path.endsWith('/extract-preview')) return reply({ payload: state.detail, warnings: ['Chỉ đọc thử, chưa lưu.'], extractedText: 'Nội dung đọc thử từ PDF' });
     if (path.endsWith('/drafts')) {
       if (method === 'POST') { state.draftStatus = state.queued ? 'Queued' : 'NeedsReview'; return reply(draft(), 202); }
       return reply(url.searchParams.get('page') === '2' ? [] : [draft()]);
     }
     if (path.includes('/drafts/')) {
+      if (method === 'DELETE') return catalogReply(route, { status: 204 });
       if (path.endsWith('/retry')) { state.draftStatus = 'Queued'; state.queued = true; return reply(draft()); }
       if (path.endsWith('/publish')) {
         if (body?.revision !== state.revision) return reply({ title: 'Revision không hợp lệ.' }, 409);
@@ -61,7 +67,8 @@ export async function mockCatalog(page: Page) {
       if (state.queued && ['Queued', 'Processing'].includes(state.draftStatus) && state.draftReads > 1) state.draftStatus = 'NeedsReview';
       return reply(draft());
     }
-    if (path.endsWith('/versions')) return reply([{ id: draftId, versionNumber: 1, decisionNumber: 'TEST-QD', effectiveDate: '2026-10-01', snapshotData: state.detail, createdAt: state.detail.createdAt }]);
+    if (path.endsWith('/versions')) return reply([{ id: draftId, versionNumber: 1, decisionNumber: 'TEST-QD', effectiveDate: '2026-10-01', snapshotData: state.detail, createdAt: state.detail.createdAt, pdfFileName: 'khai-sinh-v1.pdf' }]);
+    if (path.endsWith('/rollback')) { state.detail = { ...state.detail, ...(state.detail as ProcedureDetail) }; return reply(state.detail); }
     if (path.endsWith('/status')) { state.detail.isActive = body?.isActive === true; return reply({ id: procedureId, isActive: state.detail.isActive, reason: body?.reason, updatedAt: state.detail.updatedAt }); }
     if (method === 'POST' || method === 'PUT') { state.detail = { ...state.detail, ...body } as ProcedureDetail; return reply(state.detail, method === 'POST' && !path.endsWith('/publish') ? 201 : 200); }
     if (path.endsWith('/procedures')) {
@@ -76,6 +83,7 @@ export async function mockCatalog(page: Page) {
       return reply({ items, currentPage: pageNumber, pageSize: size, totalCount, totalPages: Math.ceil(totalCount / size), hasPrevious: pageNumber > 1, hasNext: pageNumber * size < totalCount });
     }
     if (path === `/api/v1/procedures/${procedureId}` && state.detail.isActive) return reply(state.detail);
+    if (path === `/api/v1/procedure-manager/procedures/${procedureId}`) return reply(state.detail);
     return reply({ title: 'Không tìm thấy thủ tục đang hoạt động.' }, 404);
   }
   return state;

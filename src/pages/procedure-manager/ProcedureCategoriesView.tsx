@@ -1,24 +1,72 @@
-import { FolderSimple, Info } from '@phosphor-icons/react';
-import { type Category } from '@/lib/api/procedures';
+import { useRef, useState } from 'react';
+import { FolderSimple, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { Button, Input, Modal, ConfirmDeleteModal } from '@/components/ui';
+import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
+import { toast } from '@/components/ui/Toast';
+import { procedureApi, procedureError, type Category } from '@/lib/api/procedures';
 
 interface ProcedureCategoriesViewProps {
   categories: Category[];
+  onChange: () => void;
 }
 
-export function ProcedureCategoriesView({ categories }: ProcedureCategoriesViewProps) {
+export function ProcedureCategoriesView({ categories, onChange }: ProcedureCategoriesViewProps) {
+  const [editing, setEditing] = useState<Category | null | undefined>();
+  const [deleting, setDeleting] = useState<Category>();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const lock = useRef(false);
+
+  const open = (category: Category | null) => {
+    setEditing(category);
+    setName(category?.categoryName ?? '');
+    setDescription(category?.description ?? '');
+    setError('');
+  };
+
+  const run = async (action: () => Promise<void>) => {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await action();
+    } catch (e) {
+      setError(procedureError(e));
+    } finally {
+      setBusy(false);
+      lock.current = false;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      await procedureApi.deleteCategory(deleting.id);
+      setDeleting(undefined);
+      onChange();
+      toast.success('Đã xóa danh mục thành công.');
+    } catch (e) {
+      const msg = procedureError(e);
+      setDeleteError(msg);
+      toast.error(msg);
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
-      {/* Header & Notice */}
-      <div className="admin-card p-5 space-y-2 border-l-4 border-l-amber-500">
-        <div className="flex items-start gap-3">
-          <Info size={20} className="text-amber-600 shrink-0 mt-0.5" weight="fill" />
-          <div className="space-y-1">
-            <h2 className="text-sm font-bold text-slate-900">Danh mục lĩnh vực thủ tục hành chính</h2>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Dữ liệu được đồng bộ trực tiếp từ hệ thống Backend Catalog. Hiện tại Backend chỉ cung cấp API tra cứu danh mục, các thao tác thêm, sửa hoặc xóa danh mục sẽ được cập nhật khi có phiên bản API mới.
-            </p>
-          </div>
-        </div>
+      <div className="flex justify-end">
+        <Button onClick={() => open(null)}>
+          <Plus size={18} /> Thêm danh mục
+        </Button>
       </div>
 
       {/* Categories Grid */}
@@ -43,6 +91,22 @@ export function ProcedureCategoriesView({ categories }: ProcedureCategoriesViewP
                 {cat.description || 'Chưa có mô tả chi tiết cho lĩnh vực này.'}
               </p>
             </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <Button size="small" variant="outline" className="flex-1" onClick={() => open(cat)}>
+                <PencilSimple size={15} /> Chỉnh sửa
+              </Button>
+              <Button
+                size="small"
+                variant="ghost"
+                className="text-slate-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => {
+                  setDeleting(cat);
+                  setDeleteError('');
+                }}
+              >
+                <Trash size={15} /> Xóa
+              </Button>
+            </div>
           </div>
         ))}
 
@@ -52,6 +116,78 @@ export function ProcedureCategoriesView({ categories }: ProcedureCategoriesViewP
           </div>
         )}
       </div>
+
+      {/* Modal Thêm / Chỉnh sửa */}
+      <Modal
+        open={editing !== undefined}
+        onOpenChange={(value) => {
+          if (!value && !busy) setEditing(undefined);
+        }}
+        title={editing ? 'Chỉnh sửa danh mục' : 'Thêm danh mục'}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => setEditing(undefined)}
+            >
+              Hủy
+            </Button>
+            <Button
+              loading={busy}
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const input = {
+                    categoryName: name.trim(),
+                    description: description.trim() || null,
+                  };
+                  if (!input.categoryName) throw new Error('Tên danh mục không được để trống.');
+                  if (editing) await procedureApi.updateCategory(editing.id, input);
+                  else await procedureApi.createCategory(input);
+                  setEditing(undefined);
+                  onChange();
+                  toast.success(editing ? 'Đã cập nhật danh mục.' : 'Đã thêm danh mục.');
+                })
+              }
+            >
+              Lưu danh mục
+            </Button>
+          </>
+        }
+      >
+        <ProcedureFeedback error={error} />
+        <div className="space-y-4">
+          <Input
+            label="Tên danh mục"
+            value={name}
+            disabled={busy}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            label="Mô tả"
+            value={description}
+            disabled={busy}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+      </Modal>
+
+      {/* Modal Xác nhận Xóa */}
+      <ConfirmDeleteModal
+        open={!!deleting}
+        onOpenChange={(value) => {
+          if (!value && !deleteBusy) setDeleting(undefined);
+        }}
+        title="Xóa danh mục"
+        itemName={deleting?.categoryName}
+        description="Thao tác này sẽ xóa danh mục nếu không còn thủ tục nào liên kết."
+        loading={deleteBusy}
+        onConfirm={() => void handleDelete()}
+      >
+        <ProcedureFeedback error={deleteError} />
+      </ConfirmDeleteModal>
     </div>
   );
 }

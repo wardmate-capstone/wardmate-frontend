@@ -163,7 +163,7 @@ export function ProcedureManagerPage() {
           ) : section === "profile" ? (
             <ProcedureProfileView />
           ) : section === "categories" ? (
-            <ProcedureCategoriesView categories={categories.data ?? []} />
+            <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
           ) : section === "dashboard" ? (
             <>
               <ProcedureFeedback
@@ -301,6 +301,7 @@ export function ProcedureManagerPage() {
             procedure={viewingVersions}
             categories={categories.data ?? []}
             onClose={() => setViewingVersions(null)}
+            onChanged={() => setRevision(value => value + 1)}
           />
         </main>
       </div>

@@ -2,4 +2,5 @@ export { Button, buttonVariants, type ButtonProps } from './Button';
 export { Input, type InputProps } from './Input';
 export { Badge, type BadgeProps } from './Badge';
 export { Modal, type ModalProps } from './Modal';
+export { ConfirmDeleteModal, type ConfirmDeleteModalProps } from './ConfirmDeleteModal';
 export { Toaster, toast } from './Toast';

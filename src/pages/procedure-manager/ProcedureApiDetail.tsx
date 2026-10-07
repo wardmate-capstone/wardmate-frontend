@@ -7,6 +7,7 @@ import {
   procedureError,
   type Category,
   type ProcedureSummary,
+  type ProcedureVersion,
 } from "@/lib/api/procedures";
 import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
 import { PdfSource } from "./ProcedureDraftWorkspace";
@@ -25,11 +26,8 @@ export function ProcedureApiDetail({
 }) {
   const detail = useProcedureQuery(
     useCallback(
-      (signal: AbortSignal) =>
-        row.isActive
-          ? procedureApi.detail(row.id, signal)
-          : Promise.resolve(null),
-      [row.id, row.isActive],
+      (signal: AbortSignal) => procedureApi.managerDetail(row.id, signal),
+      [row.id],
     ),
   );
   const versions = useProcedureQuery(
@@ -42,6 +40,10 @@ export function ProcedureApiDetail({
   const [date, setDate] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [rollback, setRollback] = useState<ProcedureVersion>();
+  const [rollbackReason, setRollbackReason] = useState("");
+  const [rollbackDecision, setRollbackDecision] = useState("");
+  const [rollbackDate, setRollbackDate] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -99,16 +101,6 @@ export function ProcedureApiDetail({
         error={detail.error}
         retry={detail.refresh}
       />
-      {!row.isActive && (
-        <p
-          role="status"
-          className="rounded-xl border border-amber-200 bg-amber-50 p-5"
-        >
-          Backend chưa cung cấp API chi tiết cho thủ tục ngừng công khai. Bạn
-          vẫn có thể xem bản lưu và đổi trạng thái; chỉnh sửa sẽ được hỗ trợ khi
-          BE bổ sung API.
-        </p>
-      )}
       {detail.data && (
         <div className="admin-card space-y-5 p-5">
           <ProcedureApiEditor
@@ -146,14 +138,91 @@ export function ProcedureApiDetail({
               disabled
             />
             {version.pdfFileName && (
-              <p className="mt-3 text-sm">
-                PDF lịch sử: {version.pdfFileName}. Chưa có API cấp liên kết PDF
-                lịch sử.
-              </p>
+              <div className="mt-3"><p className="mb-2 text-sm">PDF lịch sử: {version.pdfFileName}</p><PdfSource id={row.id} versionId={version.id} /></div>
             )}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <Button
+                size="small"
+                variant="outline"
+                onClick={() => {
+                  setRollback(version);
+                  setRollbackReason('');
+                  setRollbackDecision('');
+                  setRollbackDate('');
+                  setError('');
+                }}
+              >
+                Khôi phục phiên bản này
+              </Button>
+            </div>
           </details>
         ))}
       </section>
+      <Modal
+        open={!!rollback}
+        onOpenChange={(open) => {
+          if (!open && !busy) setRollback(undefined);
+        }}
+        title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ''}`}
+        description="Backend sẽ tạo một phiên bản mới từ bản lưu này; lịch sử cũ vẫn được giữ nguyên."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => setRollback(undefined)}
+            >
+              Hủy
+            </Button>
+            <Button
+              loading={busy}
+              onClick={() =>
+                void run(async () => {
+                  if (!rollback) return;
+                  if (!rollbackReason.trim() || !rollbackDecision.trim() || !rollbackDate) {
+                    throw new Error('Nhập đủ lý do, số quyết định và ngày hiệu lực.');
+                  }
+                  await procedureApi.rollback(row.id, rollback.versionNumber, {
+                    reason: rollbackReason.trim(),
+                    decisionNumber: rollbackDecision.trim(),
+                    effectiveDate: rollbackDate,
+                  });
+                  setRollback(undefined);
+                  detail.refresh();
+                  versions.refresh();
+                  onChange(!!row.isActive);
+                  toast.success('Đã khôi phục nội dung và tạo phiên bản mới.');
+                })
+              }
+            >
+              Xác nhận khôi phục
+            </Button>
+          </>
+        }
+      >
+        <ProcedureFeedback error={error} />
+        <div className="space-y-4">
+          <Input
+            label="Lý do khôi phục"
+            value={rollbackReason}
+            disabled={busy}
+            onChange={(e) => setRollbackReason(e.target.value)}
+          />
+          <Input
+            label="Số quyết định"
+            value={rollbackDecision}
+            disabled={busy}
+            onChange={(e) => setRollbackDecision(e.target.value)}
+          />
+          <Input
+            label="Ngày hiệu lực"
+            type="date"
+            value={rollbackDate}
+            disabled={busy}
+            onChange={(e) => setRollbackDate(e.target.value)}
+          />
+        </div>
+      </Modal>
       <Modal
         open={!!editing}
         onOpenChange={(open) => {

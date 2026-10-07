@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
+import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import {
+  procedureApi,
+  procedureError,
   procedureInputSchema,
   type Category,
   type ProcedureInput,
@@ -160,6 +163,33 @@ function RowEditor({
       </Button>
     </section>
   );
+}
+
+function FormDefinitionsEditor({ value, change, disabled }: { value: unknown; change: (value: Row[]) => void; disabled: boolean }) {
+  const list = rows(value);
+  const [search, setSearch] = useState('');
+  const [options, setOptions] = useState<Awaited<ReturnType<typeof procedureApi.documentForms>>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (disabled) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true); setError('');
+      try { setOptions(await procedureApi.documentForms(search.trim(), controller.signal)); }
+      catch (e) { if (!controller.signal.aborted) setError(procedureError(e)); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [search, disabled]);
+  return <section className="space-y-4">
+    <h3 className="font-bold">Biểu mẫu</h3>
+    {!disabled && <label className="grid gap-2 text-sm font-semibold">Tìm biểu mẫu theo mã<input className={box} value={search} onChange={e => setSearch(e.target.value)} /></label>}
+    <ProcedureFeedback loading={loading} error={error} />
+    {!disabled && <div className="flex flex-wrap gap-2">{options.map(option => <Button key={option.id} size="small" variant="outline" disabled={list.some(row => row.formTemplateId === option.id)} onClick={() => change([...list, { formTemplateId: option.id, formCode: option.formCode, formName: option.formName, formType: option.formType, caseCode: null, quantity: 1, isMandatory: true }])}>{option.formCode} · {option.formName}</Button>)}</div>}
+    {list.map((row, index) => <div key={index} className="space-y-3 rounded-xl border border-slate-200 p-4"><p className="font-semibold">{String(row.formCode)} · {String(row.formName)}</p>{!disabled && <><div className="grid gap-4 sm:grid-cols-2"><FieldInput field={{ key: 'caseCode', label: 'Mã trường hợp (nếu có)' }} value={row.caseCode} change={next => change(list.map((item, i) => i === index ? { ...item, caseCode: next || null } : item))} /><FieldInput field={{ key: 'quantity', label: 'Số lượng', kind: 'number' }} value={row.quantity} change={next => change(list.map((item, i) => i === index ? { ...item, quantity: next } : item))} /><FieldInput field={{ key: 'isMandatory', label: 'Bắt buộc', kind: 'boolean' }} value={row.isMandatory} change={next => change(list.map((item, i) => i === index ? { ...item, isMandatory: next } : item))} /></div><Button size="small" variant="ghost" onClick={() => change(list.filter((_, i) => i !== index))}>Bỏ biểu mẫu</Button></>}</div>)}
+    {!loading && !error && options.length === 0 && <p className="text-sm text-slate-500">Không tìm thấy biểu mẫu phù hợp.</p>}
+  </section>;
 }
 export const emptyProcedure = (): Row => ({
   procedureCode: "",
@@ -460,12 +490,11 @@ export function ProcedureApiEditor({
         {step === 4 && (
           <>
             <p className="text-sm text-slate-600">
-              Liên kết ID biểu mẫu đã có từ dịch vụ Biểu mẫu. Không phải tải PDF
-              mô tả thủ tục.
+              Chọn biểu mẫu đang hoạt động từ dịch vụ Biểu mẫu. Không nhập ID thủ công.
             </p>
-            <RowEditor
-              title="Biểu mẫu"
+            <FormDefinitionsEditor
               value={value.formDefinitions}
+              disabled={disabled}
               change={(next) =>
                 set(
                   "formDefinitions",
@@ -475,19 +504,6 @@ export function ProcedureApiEditor({
                   })),
                 )
               }
-              fields={[
-                { key: "formCode", label: "Mã biểu mẫu" },
-                { key: "formName", label: "Tên biểu mẫu" },
-                { key: "caseCode", label: "Mã trường hợp (nếu có)" },
-                { key: "formTemplateId", label: "ID biểu mẫu đã có (nếu có)" },
-                {
-                  key: "formType",
-                  label: "Loại biểu mẫu",
-                  options: ["ONLINE_INTERACTIVE", "DOCX_TEMPLATE"],
-                },
-                { key: "quantity", label: "Số lượng", kind: "number" },
-                { key: "isMandatory", label: "Bắt buộc", kind: "boolean" },
-              ]}
             />
           </>
         )}
@@ -512,34 +528,34 @@ export function ProcedureApiEditor({
             ]}
           />
         )}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="small"
-            disabled={step === 0}
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
-          >
-            ← Phần trước ({tabItems[step - 1]?.label ?? ''})
-          </Button>
-          <span className="text-xs font-semibold text-slate-500">
-            Phần {step + 1} / {tabItems.length}: {tabItems[step].label}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="small"
-            disabled={step === tabItems.length - 1}
-            onClick={() => setStep((s) => Math.min(tabItems.length - 1, s + 1))}
-          >
-            Phần tiếp theo ({tabItems[step + 1]?.label ?? ''}) →
-          </Button>
-        </div>
-        <p className="text-sm text-slate-500">
-          Thông tin chưa rõ cần được đối chiếu với nguồn. Không tự điền lệ phí,
-          thời hạn hoặc giấy tờ mặc định.
-        </p>
       </fieldset>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          size="small"
+          disabled={step === 0}
+          onClick={() => setStep((s) => Math.max(0, s - 1))}
+        >
+          ← Phần trước ({tabItems[step - 1]?.label ?? ''})
+        </Button>
+        <span className="text-xs font-semibold text-slate-500">
+          Phần {step + 1} / {tabItems.length}: {tabItems[step].label}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="small"
+          disabled={step === tabItems.length - 1}
+          onClick={() => setStep((s) => Math.min(tabItems.length - 1, s + 1))}
+        >
+          Phần tiếp theo ({tabItems[step + 1]?.label ?? ''}) →
+        </Button>
+      </div>
+      <p className="text-sm text-slate-500">
+        Thông tin chưa rõ cần được đối chiếu với nguồn. Không tự điền lệ phí,
+        thời hạn hoặc giấy tờ mặc định.
+      </p>
     </div>
   );
 }
