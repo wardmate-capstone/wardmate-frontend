@@ -28,7 +28,6 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
           </span>
           <div>
             <h3 className="text-base font-bold text-slate-950">Thông báo ca làm việc</h3>
-            <p className="text-xs text-slate-500">Cập nhật theo thời gian thực về các hồ sơ được công dân nộp và gửi lại</p>
           </div>
         </div>
 

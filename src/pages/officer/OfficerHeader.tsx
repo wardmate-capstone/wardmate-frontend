@@ -18,58 +18,19 @@ interface OfficerHeaderProps {
 }
 
 const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string }> = {
-  dashboard: {
-    title: 'Tổng quan công việc Cán bộ Một cửa',
-    subtitle: 'Theo dõi tiến độ tiền kiểm, hàng đợi tiếp nhận và hiệu suất xử lý hồ sơ',
-  },
-  'apps-all': {
-    title: 'Tất cả hồ sơ',
-    subtitle: 'Danh mục toàn bộ hồ sơ đang lưu chuyển trên hệ thống',
-  },
-  'apps-pending': {
-    title: 'Hồ sơ chờ tiền kiểm',
-    subtitle: 'Các hồ sơ người dân vừa nộp điện tử cần cán bộ tiếp nhận kiểm tra',
-  },
-  'apps-reviewing': {
-    title: 'Hồ sơ đang kiểm tra',
-    subtitle: 'Danh sách hồ sơ bạn đã nhận xử lý và đang trong quá trình đối chiếu',
-  },
-  'apps-need-revision': {
-    title: 'Hồ sơ cần bổ sung',
-    subtitle: 'Các hồ sơ đã gửi yêu cầu chỉnh sửa và đang chờ người dân cập nhật',
-  },
-  'apps-resubmitted': {
-    title: 'Hồ sơ đã gửi lại',
-    subtitle: 'Người dân vừa hoàn thiện bổ sung thông tin theo yêu cầu, cần ưu tiên xem lại',
-  },
-  'apps-approved': {
-    title: 'Hồ sơ đã duyệt tiền kiểm',
-    subtitle: 'Hồ sơ điện tử hợp lệ, sẵn sàng để người dân đến cơ quan tiếp nhận',
-  },
-  'apps-ready-submit': {
-    title: 'Chờ tiếp nhận chính thức',
-    subtitle: 'Người dân đã hoàn thiện hồ sơ và chuẩn bị đến nộp trực tiếp tại quầy',
-  },
-  'receipt-waiting': {
-    title: 'Tiếp nhận hồ sơ tại quầy',
-    subtitle: 'Tra cứu hồ sơ đã duyệt, đối chiếu giấy tờ thực tế và xác nhận tiếp nhận',
-  },
-  'receipt-received': {
-    title: 'Hồ sơ đã tiếp nhận chính thức',
-    subtitle: 'Lưu trữ các hồ sơ đã hoàn thành tiếp nhận tại bộ phận Một cửa',
-  },
-  'audit-log': {
-    title: 'Lịch sử xử lý của cán bộ',
-    subtitle: 'Nhật ký các thao tác tiếp nhận, đánh giá và giải quyết hồ sơ trong ca trực',
-  },
-  notifications: {
-    title: 'Thông báo ca trực',
-    subtitle: 'Cập nhật biến động hồ sơ và thông tin điều hành nội bộ',
-  },
-  profile: {
-    title: 'Hồ sơ cá nhân',
-    subtitle: 'Thông tin định danh, tài khoản công vụ và đơn vị công tác',
-  },
+  dashboard: { title: 'Tổng quan công việc Cán bộ Một cửa' },
+  'apps-all': { title: 'Tất cả hồ sơ' },
+  'apps-pending': { title: 'Hồ sơ chờ tiền kiểm' },
+  'apps-reviewing': { title: 'Hồ sơ đang kiểm tra' },
+  'apps-need-revision': { title: 'Hồ sơ cần bổ sung' },
+  'apps-resubmitted': { title: 'Hồ sơ đã gửi lại' },
+  'apps-approved': { title: 'Hồ sơ đã duyệt tiền kiểm' },
+  'apps-ready-submit': { title: 'Chờ tiếp nhận chính thức' },
+  'receipt-waiting': { title: 'Tiếp nhận hồ sơ tại quầy' },
+  'receipt-received': { title: 'Hồ sơ đã tiếp nhận chính thức' },
+  'audit-log': { title: 'Lịch sử xử lý của cán bộ' },
+  notifications: { title: 'Thông báo ca trực' },
+  profile: { title: 'Hồ sơ cá nhân' },
 };
 
 export const OfficerHeader: React.FC<OfficerHeaderProps> = ({

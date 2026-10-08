@@ -65,9 +65,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                   <h2 id="chart-heading" className="text-base font-bold text-slate-900">
                     Tiến độ xử lý hồ sơ trong ca trực
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Đối chiếu số lượng hồ sơ tiếp nhận vào quầy & số lượng đã hoàn thành tiền kiểm
-                  </p>
                 </div>
               </div>
             </div>
@@ -92,7 +89,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                   <h3 id="priority-action-heading" className="text-base font-bold text-slate-900">
                     Hồ sơ ưu tiên xử lý ngay ({resubmittedApps.length})
                   </h3>
-                  <p className="text-xs text-slate-500">Ưu tiên tiền kiểm hồ sơ công dân đã sửa và nộp lại</p>
                 </div>
               </div>
               <button
@@ -176,9 +172,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 {readySubmitApps.length} chờ tiếp nhận
               </span>
             </div>
-            <p className="text-xs text-teal-900 leading-relaxed">
-              Đối chiếu trực tiếp bản chính với hồ sơ điện tử đã duyệt tiền kiểm và cấp Giấy tiếp nhận & hẹn trả kết quả chính thức.
-            </p>
             <button
               type="button"
               onClick={() => onSelectSection('receipt-waiting')}

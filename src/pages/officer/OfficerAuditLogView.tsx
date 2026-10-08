@@ -45,7 +45,6 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
             </span>
             <div>
               <h3 className="text-base font-bold text-slate-950">Lịch sử xử lý trong ca trực</h3>
-              <p className="text-xs text-slate-500">Toàn bộ thao tác tiếp nhận, đánh giá, góp ý và phê duyệt của cán bộ</p>
             </div>
           </div>
 

@@ -243,7 +243,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-950">Kiểm tra thông tin người dân</h3>
-                <p className="text-xs text-slate-500">Đối chiếu thông tin kê khai của công dân với cơ sở dữ liệu định danh</p>
               </div>
               <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
                 ✓ Dữ liệu khớp VNeID
@@ -362,7 +361,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Kiểm tra điều kiện thủ tục</h3>
-              <p className="text-xs text-slate-500">Đối chiếu tính hợp pháp và quyền lợi của người thực hiện thủ tục</p>
             </div>
 
             <ul className="space-y-3">
@@ -401,7 +399,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Kiểm tra Checklist thành phần hồ sơ</h3>
-              <p className="text-xs text-slate-500">Đối chiếu danh mục tài liệu công dân đã chuẩn bị với quy định của bộ phận tiếp nhận</p>
             </div>
 
             <div className="space-y-3">
@@ -457,7 +454,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Kiểm tra giấy tờ đính kèm ({application.documents.length})</h3>
-              <p className="text-xs text-slate-500">Xem trước chi tiết từng tệp tin ảnh chụp, scan; zoom để kiểm tra con dấu và chữ ký</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -618,7 +614,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Kiểm tra dữ liệu tờ khai E-form</h3>
-              <p className="text-xs text-slate-500">Cán bộ đối chiếu các trường thông tin. Cán bộ không sửa dữ liệu của công dân, chỉ Review và Góp ý.</p>
             </div>
 
             <div className="rounded-xl border border-slate-200 overflow-hidden">
@@ -690,7 +685,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Kiểm tra kết xuất PDF tờ khai</h3>
-              <p className="text-xs text-slate-500">Đảm bảo bản in PDF đúng mẫu quy định, chuẩn version và không bị lỗi tràn trang</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -828,7 +822,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-950">Tổng hợp nhận xét / góp ý ({comments.length})</h3>
-                <p className="text-xs text-slate-500">Các nội dung này sẽ được gửi trực tiếp đến người dân khi bạn chọn Yêu cầu bổ sung</p>
               </div>
             </div>
 
@@ -932,7 +925,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Lịch sử phiên bản & Đối chiếu thay đổi</h3>
-              <p className="text-xs text-slate-500">Xem sự khác biệt giữa các phiên bản khi người dân nộp lại hồ sơ sau góp ý</p>
             </div>
 
             {application.revisionHistory.length === 0 ? (
@@ -991,7 +983,6 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950">Dòng thời gian sự kiện hồ sơ</h3>
-              <p className="text-xs text-slate-500">Toàn bộ lịch sử từ khi khởi tạo, tiền kiểm cho đến các quyết định</p>
             </div>
 
             <ol className="relative border-l border-slate-200 ml-4 space-y-6">
