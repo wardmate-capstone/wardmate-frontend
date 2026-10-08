@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Modal, Button, Input } from '@/components/ui';
+import { Modal, Button, Input, ListSkeleton } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, procedureError, type Category, type ProcedureSummary, type ProcedureVersion } from '@/lib/api/procedures';
@@ -41,7 +41,8 @@ export function ProcedureVersionsModal({ procedure, categories, onClose, onChang
       footer={<Button variant="outline" onClick={onClose}>Đóng</Button>}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        <ProcedureFeedback loading={versions.loading} error={versions.error} retry={versions.refresh} />
+        <ProcedureFeedback error={versions.error} retry={versions.refresh} />
+        {versions.loading && <ListSkeleton rows={4} />}
 
         {versions.data?.length === 0 && !versions.loading && (
           <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">

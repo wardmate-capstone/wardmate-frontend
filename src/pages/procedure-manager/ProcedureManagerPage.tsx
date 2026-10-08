@@ -6,7 +6,7 @@ import {
   sectionTitles,
 } from "./ProcedureManagerHeader";
 import { UnifiedSelfProfileView } from "@/components/profile/UnifiedSelfProfileView";
-import { Button, Modal } from "@/components/ui";
+import { Button, Modal, TableSkeleton } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import {
@@ -128,16 +128,16 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                   </p>
                 )}
               </div>
-              <div className="flex flex-wrap gap-3">
+              {["dashboard", "procedures"].includes(section) && <div className="flex flex-wrap gap-3">
                 <Button onClick={openCreate}>Thêm thủ tục</Button>
-              </div>
+              </div>}
             </div>
           )}
           <ProcedureFeedback
-            loading={categories.loading}
             error={categories.error}
             retry={categories.refresh}
           />
+          {section === "categories" && categories.loading && <TableSkeleton columns={3} />}
           {drafts ? (
             <ProcedureDraftWorkspace
               onPendingChange={setDraftPending}
