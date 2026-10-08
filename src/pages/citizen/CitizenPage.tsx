@@ -46,20 +46,20 @@ export type { CitizenSectionId, CitizenDossier } from './types';
 // export { initialDossiers } đã xóa — không còn dùng mock data
 
 const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string }> = {
-  dashboard: { title: 'Tổng quan công dân', subtitle: 'Theo dõi tiến độ hồ sơ & chuẩn bị dịch vụ công trực tuyến' },
-  procedures: { title: 'Tra cứu thủ tục hành chính', subtitle: 'Tìm kiếm, xem quy trình và chuẩn bị hồ sơ tiền kiểm' },
-  dossiers_all: { title: 'Tất cả hồ sơ của tôi', subtitle: 'Danh sách toàn bộ hồ sơ đang thực hiện và lịch sử' },
-  dossiers_draft: { title: 'Hồ sơ bản nháp', subtitle: 'Các hồ sơ đang soạn thảo, chưa gửi tiền kiểm' },
-  dossiers_pending: { title: 'Hồ sơ chờ tiền kiểm', subtitle: 'Hồ sơ đã gửi, đang chờ cán bộ Một cửa thẩm tra giấy tờ' },
-  dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa', subtitle: 'Hồ sơ cán bộ phản hồi cần bổ sung hoặc chụp lại giấy tờ' },
-  dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại', subtitle: 'Hồ sơ công dân đã hoàn thiện và gửi lại cán bộ kiểm tra' },
-  dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm', subtitle: 'Giấy tờ hợp lệ, sẵn sàng mang bản gốc đối chiếu tại Một cửa' },
-  dossiers_completed: { title: 'Hồ sơ đã hoàn thành', subtitle: 'Đã hoàn tất quy trình và nhận kết quả tại UBND phường' },
-  dossier_detail: { title: 'Chi tiết hồ sơ & Checklist chuẩn bị', subtitle: 'Kiểm tra danh mục giấy tờ, tải mẫu và kê khai biểu mẫu trực tuyến' },
-  notifications: { title: 'Thông báo & Cập nhật', subtitle: 'Tin nhắn tiến độ hồ sơ từ cán bộ tiếp nhận' },
-  qr_code: { title: 'Mã QR hồ sơ điện tử', subtitle: 'Mã đối chiếu nhanh khi đến Bộ phận Một cửa UBND phường' },
-  feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng', subtitle: 'Góp ý chất lượng phục vụ tiền kiểm hồ sơ hành chính' },
-  profile: { title: 'Hồ sơ cá nhân & Định danh', subtitle: 'Thông tin công dân, tài khoản VNeID và liên hệ' },
+  dashboard: { title: 'Tổng quan công dân' },
+  procedures: { title: 'Tra cứu thủ tục' },
+  dossiers_all: { title: 'Hồ sơ của tôi' },
+  dossiers_draft: { title: 'Hồ sơ bản nháp' },
+  dossiers_pending: { title: 'Hồ sơ chờ tiền kiểm' },
+  dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa' },
+  dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
+  dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
+  dossiers_completed: { title: 'Hồ sơ đã hoàn thành' },
+  dossier_detail: { title: 'Chi tiết hồ sơ & Checklist chuẩn bị' },
+  notifications: { title: 'Thông báo & Cập nhật' },
+  qr_code: { title: 'Mã QR hồ sơ điện tử' },
+  feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
+  profile: { title: 'Hồ sơ cá nhân & Định danh' },
 };
 
 export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: { embedded?: boolean; initialSection?: CitizenSectionId } = {}) {
@@ -219,7 +219,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           <div className="admin-page-heading">
             <div>
               <h1>{meta.title}</h1>
-              {meta.subtitle && <p className="mt-1 text-xs text-slate-500">{meta.subtitle}</p>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

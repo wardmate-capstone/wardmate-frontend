@@ -15,7 +15,6 @@ export function CitizenNotificationsView({
       <div className="admin-card-heading">
         <div>
           <h2>Hộp thư thông báo tiến độ</h2>
-          <p className="text-xs text-slate-500">Cập nhật kết quả tiền kiểm hồ sơ hành chính</p>
         </div>
         <button type="button" onClick={onMarkAllRead}>
           Đánh dấu đã đọc tất cả

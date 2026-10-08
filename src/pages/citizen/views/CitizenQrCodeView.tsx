@@ -10,8 +10,20 @@ interface CitizenQrCodeViewProps {
 }
 
 export function CitizenQrCodeView({ dossiers }: CitizenQrCodeViewProps) {
-  const [selectedCode, setSelectedCode] = useState(dossiers[0]?.code || 'HS-2026-00094');
+  const [selectedCode, setSelectedCode] = useState(dossiers[0]?.code || '');
   const activeDossier = dossiers.find((d) => d.code === selectedCode) || dossiers[0];
+
+  if (!activeDossier) {
+    return (
+      <section className="admin-card admin-content-card p-12 text-center text-slate-500">
+        <QrCode size={48} className="mx-auto text-slate-300 mb-3" />
+        <h3 className="text-base font-bold text-slate-800">Chưa có mã QR hồ sơ</h3>
+        <p className="text-xs text-slate-400 mt-1 italic">
+          ⚠️ API mã QR hồ sơ điện tử sẽ được tích hợp sau.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <div className="admin-split-view admin-content-card">

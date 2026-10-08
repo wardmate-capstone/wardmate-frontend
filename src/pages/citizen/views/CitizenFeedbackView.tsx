@@ -11,9 +11,6 @@ export function CitizenFeedbackView({ onOpenFeedback }: CitizenFeedbackViewProps
         <div>
           <span className="admin-status-badge is-success mb-1">Khảo sát sự hài lòng</span>
           <h2 className="text-base font-bold text-slate-950">Góp ý chất lượng phục vụ công dân</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Mỗi ý kiến đóng góp của bạn giúp nâng cao trải nghiệm giải quyết thủ tục hành chính tại phường
-          </p>
         </div>
 
         <button

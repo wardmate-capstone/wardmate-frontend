@@ -30,24 +30,24 @@ export function CitizenDashboardView({
   const completedCount = dossiers.filter((d) => d.status === 'Đã hoàn thành').length;
 
   const stats = [
-    { label: 'Hồ sơ đang xử lý', value: `${pendingCount + revisionCount}`, icon: Clock, tone: 'info', sub: 'Đang thẩm tra & bổ sung' },
-    { label: 'Cần bổ sung gấp', value: `${revisionCount}`, icon: WarningCircle, tone: 'danger', sub: 'Yêu cầu chụp lại giấy tờ' },
-    { label: 'Đã duyệt tiền kiểm', value: `${approvedCount}`, icon: CheckCircle, tone: 'warning', sub: 'Sẵn sàng mang đến Một cửa' },
-    { label: 'Đã hoàn tất thủ tục', value: `${completedCount}`, icon: SealCheck, tone: 'success', sub: 'Đã nhận kết quả bản gốc' },
+    { label: 'Hồ sơ đang xử lý', value: `${pendingCount + revisionCount}`, icon: Clock, tone: 'info' },
+    { label: 'Cần bổ sung gấp', value: `${revisionCount}`, icon: WarningCircle, tone: 'danger' },
+    { label: 'Đã duyệt tiền kiểm', value: `${approvedCount}`, icon: CheckCircle, tone: 'warning' },
+    { label: 'Đã hoàn tất thủ tục', value: `${completedCount}`, icon: SealCheck, tone: 'success' },
   ];
 
   const quickShortcuts = [
-    { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', desc: 'Xem quy định & biểu mẫu', icon: MagnifyingGlass },
-    { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', desc: 'Tiếp tục hoàn thiện hồ sơ', icon: NotePencil },
-    { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', desc: 'Theo dõi tiến độ tiền kiểm', icon: Folder },
-    { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', desc: 'Quét tại quầy Một cửa', icon: QrCode },
+    { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', icon: MagnifyingGlass },
+    { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', icon: NotePencil },
+    { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', icon: Folder },
+    { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', icon: QrCode },
   ];
 
   return (
     <>
       {/* 4 Thẻ chỉ số */}
       <section className="admin-stat-grid" aria-label="Chỉ số hồ sơ của tôi">
-        {stats.map(({ label, value, icon: Icon, tone, sub }) => (
+        {stats.map(({ label, value, icon: Icon, tone }) => (
           <article key={label} className={`admin-stat-card is-${tone}`}>
             <div>
               <span>
@@ -56,7 +56,6 @@ export function CitizenDashboardView({
               <small>{label}</small>
             </div>
             <strong>{value}</strong>
-            <p className="mt-1 text-[11px] text-slate-500">{sub}</p>
           </article>
         ))}
       </section>
@@ -72,14 +71,13 @@ export function CitizenDashboardView({
           </div>
         </div>
         <div className="admin-module-grid">
-          {quickShortcuts.map(({ id, title, desc, icon: Icon }) => (
+          {quickShortcuts.map(({ id, title, icon: Icon }) => (
             <button key={id} type="button" onClick={() => onSelectSection(id)}>
               <span>
                 <Icon size={22} weight="duotone" />
               </span>
               <div>
                 <strong>{title}</strong>
-                <p className="text-[11px] text-slate-500 mt-0.5">{desc}</p>
               </div>
               <CaretDown size={16} />
             </button>
