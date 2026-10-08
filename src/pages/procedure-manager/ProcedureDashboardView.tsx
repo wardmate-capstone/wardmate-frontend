@@ -3,7 +3,7 @@ import { Files, FileDashed, Prohibit, WarningCircle, ArrowRight } from '@phospho
 import { procedureApi, type ProcedureSummary } from '@/lib/api/procedures';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
-import type { ProcedureNavSection } from './ProcedureManagerSidebar';
+import type { ProcedureNavSection } from '@/components/layout/RoleWorkspaceSidebars';
 
 interface ProcedureDashboardViewProps {
   stats?: { active: number; inactive: number };

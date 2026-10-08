@@ -3,8 +3,9 @@ import { Button } from '@/components/ui';
 import { restoreSession } from '@/lib/api';
 import { safeReturnTo } from '@/lib/authRedirect';
 import { useAuthStore } from '@/stores/authStore';
+import { hasAnyPermission } from '@/lib/navigationAccess';
 
-export function ProtectedRoute({ roles }: { roles: string[] }) {
+export function ProtectedRoute({ roles, permissions = [] }: { roles: string[]; permissions?: string[] }) {
   const { status, user, error, expired } = useAuthStore();
   const location = useLocation();
   if (status === 'restoring') return <p role="status" className="p-8 text-center">Đang khôi phục phiên đăng nhập...</p>;
@@ -18,7 +19,7 @@ export function ProtectedRoute({ roles }: { roles: string[] }) {
     const returnTo = safeReturnTo(location.pathname + location.search + location.hash);
     return <Navigate to={'/dang-nhap?returnTo=' + encodeURIComponent(returnTo) + (expired ? '&reason=session-expired' : '')} replace />;
   }
-  if (!user?.roles.some(role => roles.includes(role))) return <main className="mx-auto max-w-lg space-y-4 p-8">
+  if (!user || (!user.roles.some(role => roles.includes(role)) && !hasAnyPermission(user.permissions, permissions))) return <main className="mx-auto max-w-lg space-y-4 p-8">
     <h1 className="text-xl font-bold">Bạn không có quyền truy cập trang này</h1>
     <p>Vui lòng sử dụng workspace phù hợp với vai trò được cấp cho tài khoản.</p>
     <Link to="/" className="block underline">Về trang chủ</Link>

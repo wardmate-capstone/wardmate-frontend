@@ -1,9 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  ProcedureManagerSidebar,
-  type ProcedureNavSection,
-} from "./ProcedureManagerSidebar";
+import { UnifiedProcedureSidebar as ProcedureManagerSidebar, type ProcedureNavSection } from "@/components/layout/RoleWorkspaceSidebars";
 import {
   ProcedureManagerHeader,
   sectionTitles,
@@ -33,9 +30,9 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { getGreeting } from "@/lib/utils";
 
-export function ProcedureManagerPage() {
+export function ProcedureManagerPage({ embedded = false, initialSection = "dashboard" }: { embedded?: boolean; initialSection?: ProcedureNavSection } = {}) {
   const [params, setParams] = useSearchParams();
-  const [section, setSection] = useState<ProcedureNavSection>("dashboard");
+  const [section, setSection] = useState<ProcedureNavSection>(initialSection);
   const [mobile, setMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<ProcedureSummary>();
@@ -93,11 +90,11 @@ export function ProcedureManagerPage() {
     setCreating(true);
   };
   return (
-    <div className="admin-layout procedure-manager-layout">
-      <a href="#procedure-manager-main" className="skip-link">
+    <div className={embedded ? "" : "admin-layout procedure-manager-layout"}>
+      {!embedded && <a href="#procedure-manager-main" className="skip-link">
         Đến nội dung chính
-      </a>
-      <ProcedureManagerSidebar
+      </a>}
+      {!embedded && <ProcedureManagerSidebar
         currentSection={section}
         onSelectSection={navigate}
         isOpenMobile={mobile}
@@ -105,18 +102,18 @@ export function ProcedureManagerPage() {
         isCollapsedDesktop={collapsed}
         onToggleCollapseDesktop={() => setCollapsed(!collapsed)}
         publishedCount={stats.data?.active}
-      />
+      />}
       <div
-        className={`admin-workspace ${collapsed ? "is-sidebar-collapsed" : ""}`}
+        className={embedded ? "" : `admin-workspace ${collapsed ? "is-sidebar-collapsed" : ""}`}
       >
-        <ProcedureManagerHeader
+        {!embedded && <ProcedureManagerHeader
           onOpenMobileSidebar={() => setMobile(true)}
           isCollapsedDesktop={collapsed}
           onToggleCollapseDesktop={() => setCollapsed(!collapsed)}
-        />
+        />}
         <main
-          id="procedure-manager-main"
-          className="admin-main space-y-5"
+          id={embedded ? undefined : "procedure-manager-main"}
+          className={embedded ? "space-y-5" : "admin-main space-y-5"}
           tabIndex={-1}
         >
           {!drafts && !selected && section !== "profile" && (

@@ -6,7 +6,7 @@ import {
   Plus,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
-import { ProcedureNavSection } from './ProcedureManagerSidebar';
+import type { ProcedureNavSection } from '@/components/layout/RoleWorkspaceSidebars';
 
 interface ProcedureManagerHeaderProps {
   onOpenMobileSidebar: () => void;

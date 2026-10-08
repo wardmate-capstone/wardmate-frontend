@@ -14,7 +14,7 @@ import type {
   OfficialReceiptData,
 } from '@/types/officer';
 
-import { OfficerSidebar } from './OfficerSidebar';
+import { UnifiedOfficerSidebar as OfficerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
 import { OfficerHeader } from './OfficerHeader';
 import { OfficerDashboardView } from './OfficerDashboardView';
 import { OfficerApplicationListView } from './OfficerApplicationListView';

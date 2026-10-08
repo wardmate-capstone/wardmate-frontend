@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ManagerSidebar } from './ManagerSidebar';
+import { UnifiedManagerSidebar as ManagerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
 import { ManagerHeader, managerSectionTitles } from './ManagerHeader';
 import { ManagerProfilesView } from './views/ManagerProfilesView';
 import { ManagerProfileDetailView } from './views/ManagerProfileDetailView';

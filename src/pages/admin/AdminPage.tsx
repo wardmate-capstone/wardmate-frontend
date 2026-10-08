@@ -1,4 +1,5 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
+import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -28,7 +29,6 @@ import {
   Stack,
   UserCircle,
   Users,
-  X,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
 import {
@@ -40,8 +40,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BrandMark } from "@/components/brand/BrandMark";
-import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { Modal } from "@/components/ui/Modal";
 import {
   getManagedUsers,
@@ -59,6 +57,7 @@ import {
 import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import type { ManagerProfileItem } from '@/pages/manager/types';
+import { AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
 
 type SectionId =
   | "overview"
@@ -73,52 +72,44 @@ type SectionId =
   | "backup"
   | "profile";
 
-const navigation: Array<{
-  group: string;
-  items: Array<{
-    id: SectionId;
-    label: string;
-    icon: typeof House;
-    badge?: string;
-  }>;
-}> = [
+const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
-    group: "Tổng quan",
-    items: [{ id: "overview", label: "Tổng quan", icon: House }],
+    title: "Tổng quan",
+    items: [{ id: "overview", label: "Tổng quan", icon: House, fallbackRoles: ['IT_ADMIN'] }],
   },
   {
-    group: "Nội dung nghiệp vụ",
+    title: "Nội dung nghiệp vụ",
     items: [
       {
         id: "procedures",
         label: "Thủ tục hành chính",
         icon: ClipboardText,
-        badge: "126",
+        fallbackRoles: ['IT_ADMIN'],
       },
-      { id: "forms", label: "Biểu mẫu & E-form", icon: FileCode },
+      { id: "forms", label: "Biểu mẫu & E-form", icon: FileCode, fallbackRoles: ['IT_ADMIN'] },
       {
         id: "knowledge",
         label: "Pháp lý & tri thức AI",
         icon: Books,
-        badge: "3",
+        fallbackRoles: ['IT_ADMIN'],
       },
     ],
   },
   {
-    group: "Tài khoản & truy cập",
+    title: "Tài khoản & truy cập",
     items: [
-      { id: "users", label: "Người dùng hệ thống", icon: Users },
-      { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings },
-      { id: "roles", label: "Vai trò & quyền hạn", icon: Key },
+      { id: "users", label: "Người dùng hệ thống", icon: Users, permissions: ['iam.accounts.'] },
+      { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings, permissions: ['iam.wards.'] },
+      { id: "roles", label: "Vai trò & quyền hạn", icon: Key, permissions: ['iam.rbac.manage'] },
     ],
   },
   {
-    group: "Vận hành hệ thống",
+    title: "Vận hành hệ thống",
     items: [
-      { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack },
-      { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise },
-      { id: "backup", label: "Bảo mật & sao lưu", icon: Database },
-      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
+      { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
+      { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, permissions: ['iam.audit.read'] },
+      { id: "backup", label: "Bảo mật & sao lưu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
+      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ],
   },
 ];
@@ -156,37 +147,6 @@ const procedures = [
 
 
 
-const auditLogs = [
-  {
-    time: "17/09/2026 · 09:42",
-    actor: "Trần Quốc Bảo",
-    action: "Cập nhật thủ tục",
-    target: "Đăng ký khai sinh",
-    ip: "10.10.24.18",
-  },
-  {
-    time: "17/09/2026 · 09:15",
-    actor: "Nguyễn Minh Anh",
-    action: "Thay đổi vai trò",
-    target: "Lê Thu Hà",
-    ip: "10.10.24.06",
-  },
-  {
-    time: "17/09/2026 · 08:30",
-    actor: "Hệ thống",
-    action: "Đồng bộ tri thức RAG",
-    target: "Nghị định 104/2022",
-    ip: "Internal",
-  },
-  {
-    time: "16/09/2026 · 23:00",
-    actor: "Hệ thống",
-    action: "Sao lưu định kỳ",
-    target: "wardmate-prod",
-    ip: "Internal",
-  },
-];
-
 const services = [
   {
     name: "AI Assistant / RAG",
@@ -204,28 +164,6 @@ const services = [
     meta: "1.248 lượt tháng này",
   },
   { name: "SMS Gateway", status: "Cảnh báo", meta: "12 tin đang chờ" },
-];
-
-const roles = [
-  {
-    name: "Quản trị hệ thống",
-    users: 3,
-    permissions: "Toàn quyền",
-    tone: "danger",
-  },
-  { name: "Quản lý thủ tục", users: 8, permissions: "18 quyền", tone: "info" },
-  {
-    name: "Cán bộ Một cửa",
-    users: 24,
-    permissions: "12 quyền",
-    tone: "success",
-  },
-  {
-    name: "Quản lý báo cáo",
-    users: 5,
-    permissions: "6 quyền",
-    tone: "warning",
-  },
 ];
 
 type ChartRange = "day" | "week" | "month" | "year";
@@ -291,8 +229,8 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   profile: { title: "Hồ sơ cá nhân" },
 };
 
-export function AdminPage() {
-  const [activeSection, setActiveSection] = useState<SectionId>("overview");
+export function AdminPage({ embedded = false, initialSection = "overview" }: { embedded?: boolean; initialSection?: SectionId } = {}) {
+  const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [query, setQuery] = useState("");
@@ -412,6 +350,7 @@ export function AdminPage() {
 
 
   const [selectedUser, setSelectedUser] = useState<ManagedUserDto | null>(null);
+  const [roleUser, setRoleUser] = useState<ManagedUserDto>();
   const [detailProfile, setDetailProfile] = useState<UserProfileDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -445,64 +384,16 @@ export function AdminPage() {
 
 
   return (
-    <div className="admin-layout">
-      <a href="#admin-main" className="skip-link">
+    <div className={embedded ? "" : "admin-layout"}>
+      {!embedded && <a href="#admin-main" className="skip-link">
         Đến nội dung chính
-      </a>
-      {sidebarOpen && (
-        <button
-          className="admin-sidebar-overlay"
-          type="button"
-          aria-label="Đóng menu quản trị"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <aside
-        id="admin-sidebar"
-        className={`admin-sidebar ${sidebarOpen ? "is-open" : ""} ${sidebarCollapsed ? "is-compact" : ""}`}
-        aria-label="Điều hướng quản trị"
-      >
-        <div className="admin-brand">
-          <BrandMark className="admin-brand-mark" size={42} />
-          <div>
-            <BrandWordmark subtitle="Quản trị hệ thống" compact />
-          </div>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Đóng menu"
-          >
-            <X size={21} />
-          </button>
-        </div>
-        <nav className="admin-nav">
-          {navigation.map((group) => (
-            <div className="admin-nav-section" key={group.group}>
-              <p>{group.group}</p>
-              {group.items.map(({ id, label, icon: Icon, badge }) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={activeSection === id ? "is-active" : ""}
-                  aria-current={activeSection === id ? "page" : undefined}
-                  onClick={() => selectSection(id)}
-                  title={sidebarCollapsed ? label : undefined}
-                >
-                  <Icon size={20} aria-hidden="true" />
-                  <span>{label}</span>
-                  {badge && <small>{badge}</small>}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-      </aside>
+      </a>}
+      {!embedded && <WorkspaceSidebar workspace="admin" subtitle="Quản trị hệ thống" activeSection={activeSection} groups={navigation} onSelectSection={selectSection} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isCompact={sidebarCollapsed} />}
 
       <div
-        className={`admin-workspace ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`}
+        className={embedded ? "" : `admin-workspace ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`}
       >
-        <header className="admin-topbar">
+        {!embedded && <header className="admin-topbar">
           <button
             type="button"
             className="admin-menu-toggle"
@@ -537,11 +428,11 @@ export function AdminPage() {
             </button>
             <UserDropdown />
           </div>
-        </header>
+        </header>}
 
-        <main id="admin-main" className="admin-main" tabIndex={-1}>
+        <main id={embedded ? undefined : "admin-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {!(activeSection === "users" && selectedUser) && activeSection !== "profile" && (
-            <div className="admin-page-heading">
+            <div className="admin-page-heading mb-6">
               <div>
                 <h1>{meta.title}</h1>
                 {activeSection === "overview" && (
@@ -625,6 +516,7 @@ export function AdminPage() {
                 onToggleStatus={handleToggleAccountStatus}
                 onAssignWard={handleAssignWard}
                 onSelectUser={handleOpenUserDetail}
+                onManageRoles={setRoleUser}
               />
             )
           )}
@@ -636,15 +528,15 @@ export function AdminPage() {
               onWardCreated={() => void fetchWards()}
             />
           )}
-          {activeSection === "roles" && <RolesView onAction={demoAction} />}
+          {activeSection === "roles" && <AdminRolesView />}
           {activeSection === "integrations" && (
             <IntegrationsView onAction={demoAction} />
           )}
-          {activeSection === "audit" && <AuditView />}
+          {activeSection === "audit" && <AdminRbacAuditView />}
           {activeSection === "backup" && <BackupView onAction={demoAction} />}
         </main>
       </div>
-
+      <UserRolesModal user={roleUser} onClose={() => setRoleUser(undefined)} onChanged={() => void fetchUsers(userPage)} />
     </div>
   );
 }
@@ -721,18 +613,7 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
               Xem nhật ký
             </button>
           </div>
-          <div className="admin-activity-list">
-            {auditLogs.slice(0, 3).map((log) => (
-              <div key={log.time}>
-                <span>{log.actor.slice(0, 1)}</span>
-                <p>
-                  <strong>{log.actor}</strong> {log.action.toLowerCase()}{" "}
-                  <b>{log.target}</b>
-                  <small>{log.time}</small>
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="p-5 text-sm text-slate-600">Xem toàn bộ lịch sử thay đổi vai trò, phân quyền và điều động tài khoản trên hệ thống.</p>
         </article>
         <article className="admin-card">
           <div className="admin-card-heading">
@@ -1209,6 +1090,7 @@ function UsersView({
   onToggleStatus,
   onAssignWard,
   onSelectUser,
+  onManageRoles,
 }: {
   query: string;
   setQuery: (value: string) => void;
@@ -1225,6 +1107,7 @@ function UsersView({
   onToggleStatus: (user: ManagedUserDto) => void;
   onAssignWard: (userId: string, wardId: string | null) => void;
   onSelectUser: (user: ManagedUserDto) => void;
+  onManageRoles: (user: ManagedUserDto) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -1408,6 +1291,13 @@ function UsersView({
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onManageRoles(item)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-red-900 transition-colors"
+                        >
+                          Phân vai trò
+                        </button>
                         <button
                           type="button"
                           onClick={() => onSelectUser(item)}
@@ -1665,36 +1555,6 @@ function WardsView({
   );
 }
 
-function RolesView({ onAction }: { onAction: (message: string) => void }) {
-  return (
-    <div className="admin-role-grid">
-      {roles.map((role) => (
-        <article className="admin-card" key={role.name}>
-          <div>
-            <span className={`is-${role.tone}`}>
-              <Key size={22} />
-            </span>
-            <button
-              type="button"
-              onClick={() => onAction(`Đang mở vai trò ${role.name}`)}
-            >
-              Chỉnh sửa
-            </button>
-          </div>
-          <h2>{role.name}</h2>
-          <footer>
-            <Users size={17} />
-            <strong>{role.users}</strong>
-            <span>người dùng</span>
-            <ShieldCheck size={17} />
-            <strong>{role.permissions}</strong>
-          </footer>
-        </article>
-      ))}
-    </div>
-  );
-}
-
 function IntegrationsView({
   onAction,
 }: {
@@ -1728,51 +1588,6 @@ function IntegrationsView({
         </article>
       ))}
     </div>
-  );
-}
-
-function AuditView() {
-  return (
-    <section className="admin-card admin-table-card admin-content-card">
-      <div className="admin-toolbar">
-        <SearchBar
-          value=""
-          onChange={() => undefined}
-          placeholder="Tìm người thực hiện, thao tác..."
-        />
-        <button type="button">
-          <Gear size={17} /> 17/09/2026
-        </button>
-      </div>
-      <div className="admin-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Thời gian</th>
-              <th>Người thực hiện</th>
-              <th>Hành động</th>
-              <th>Đối tượng</th>
-              <th>Địa chỉ IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {auditLogs.map((log) => (
-              <tr key={log.time}>
-                <td>{log.time}</td>
-                <td>
-                  <strong>{log.actor}</strong>
-                </td>
-                <td>{log.action}</td>
-                <td>{log.target}</td>
-                <td>
-                  <code>{log.ip}</code>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
   );
 }
 

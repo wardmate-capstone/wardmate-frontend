@@ -70,7 +70,8 @@ export function AuthPage({ mode }: AuthPageProps) {
         if (!active.current) return;
         reset();
         toast.success('Đăng nhập thành công.');
-        navigate(loginDestination(useAuthStore.getState().user?.roles ?? [], returnTo), { replace: true });
+        const user = useAuthStore.getState().user;
+        navigate(loginDestination(user?.roles ?? [], returnTo, user?.permissions ?? []), { replace: true });
       }
     } catch (error) {
       if (active.current) {

@@ -30,7 +30,7 @@ export function MainLayout() {
   const location = useLocation();
   const { isAuthenticated } = useAuthState();
   const user = useAuthStore((state) => state.user);
-  const logoTarget = getManagementHome(user?.roles) ?? '/';
+  const logoTarget = getManagementHome(user?.roles, user?.permissions) ?? '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const hideFooter = ['/quen-mat-khau', '/dat-lai-mat-khau'].includes(location.pathname);
 

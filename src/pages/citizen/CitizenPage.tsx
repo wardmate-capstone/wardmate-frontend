@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UserDropdown } from '@/components/layout/UserDropdown';
-import { BrandMark } from '@/components/brand/BrandMark';
-import { BrandWordmark } from '@/components/brand/BrandWordmark';
+import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import type { CitizenFeedback } from '@/types/feedback';
@@ -15,7 +14,6 @@ import { FormPreviewModal } from './components/FormPreviewModal';
 // Icons
 import {
   Bell,
-  CaretDown,
   CaretRight,
   Folder,
   House,
@@ -26,7 +24,6 @@ import {
   SidebarSimple,
   Star,
   User,
-  X,
 } from '@phosphor-icons/react';
 
 // Types & Views
@@ -61,18 +58,15 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   profile: { title: 'Hồ sơ cá nhân & Định danh', subtitle: 'Thông tin công dân, tài khoản VNeID và liên hệ' },
 };
 
-export function CitizenPage() {
+export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: { embedded?: boolean; initialSection?: CitizenSectionId } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSection = searchParams.get('section') as CitizenSectionId | null;
   const urlDossierCode = searchParams.get('dossierCode');
 
   const { profile: userProfile, loading: profileLoading, refetch: refetchProfile } = useUserProfile();
-  const [activeSection, setActiveSection] = useState<CitizenSectionId>(() => urlSection || 'dashboard');
+  const [activeSection, setActiveSection] = useState<CitizenSectionId>(() => embedded ? initialSection : urlSection || initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // Expandable sections in sidebar
-  const [isDossiersExpanded, setIsDossiersExpanded] = useState(true);
 
   // Khởi tạo dossiers kết hợp localStorage
   const [dossiers, setDossiers] = useState<CitizenDossier[]>(() => {
@@ -170,228 +164,42 @@ export function CitizenPage() {
   }
 
   const isDossierSection = activeSection.startsWith('dossiers_');
+  const citizenRole = ['REGISTERED_CITIZEN'];
+  const citizenNavigation: WorkspaceNavGroup<CitizenSectionId>[] = [
+    { title: 'Tổng quan', items: [
+      { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
+      { id: 'procedures', label: 'Tra cứu thủ tục', icon: MagnifyingGlass, fallbackRoles: citizenRole },
+    ] },
+    { title: 'Hồ sơ & Chuẩn bị', items: [
+      { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: List, badge: dossierCounts.all, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
+      { id: 'dossiers_draft', label: 'Hồ sơ bản nháp', icon: Folder, badge: dossierCounts.draft, permissions: ['document.submissions.write'] },
+      { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Folder, badge: dossierCounts.pending, permissions: ['document.submissions.read'] },
+      { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: Folder, badge: dossierCounts.need_revision, permissions: ['document.submissions.write'] },
+      { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: Folder, badge: dossierCounts.resubmitted, permissions: ['document.submissions.read'] },
+      { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: Folder, badge: dossierCounts.approved, permissions: ['document.submissions.read'] },
+      { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: Folder, badge: dossierCounts.completed, permissions: ['document.submissions.read'] },
+    ] },
+    { title: 'Tiện ích & Hỗ trợ', items: [
+      { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotificationsCount, fallbackRoles: citizenRole },
+      { id: 'qr_code', label: 'Mã QR hồ sơ', icon: QrCode, fallbackRoles: citizenRole },
+      { id: 'feedback', label: 'Đánh giá dịch vụ', icon: Star, fallbackRoles: citizenRole },
+      { id: 'profile', label: 'Hồ sơ cá nhân', icon: User, permissions: ['iam.profile.read', 'iam.profile.write'] },
+    ] },
+  ];
 
   return (
-    <div className="admin-layout">
-      <a href="#citizen-main" className="skip-link">
+    <div className={embedded ? "" : "admin-layout"}>
+      {!embedded && <a href="#citizen-main" className="skip-link">
         Đến nội dung chính
-      </a>
+      </a>}
 
-      {sidebarOpen && (
-        <button
-          className="admin-sidebar-overlay"
-          type="button"
-          aria-label="Đóng menu công dân"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {!embedded && <WorkspaceSidebar workspace="citizen" subtitle="Dịch vụ công dân" activeSection={activeSection} groups={citizenNavigation} onSelectSection={selectSection} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isCompact={sidebarCollapsed} />}
 
-      {/* SIDEBAR GIAO DIỆN NGƯỜI DÂN */}
-      <aside
-        id="citizen-sidebar"
-        className={`admin-sidebar ${sidebarOpen ? 'is-open' : ''} ${sidebarCollapsed ? 'is-compact' : ''}`}
-        aria-label="Điều hướng công dân"
-      >
-        <div className="admin-brand">
-          <Link
-            to="/"
-            className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-85 focus:outline-none"
-            title="Về trang chủ WardMate"
-            aria-label="Về trang chủ WardMate"
-          >
-            <BrandMark className="admin-brand-mark" size={40} />
-            <div>
-              <BrandWordmark subtitle="Dịch vụ công dân" compact />
-            </div>
-          </Link>
-          <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu">
-            <X size={20} />
-          </button>
-        </div>
-
-        <nav className="admin-nav">
-          {/* Nhóm 1: Tổng quan */}
-          <div className="admin-nav-section">
-            <p>Tổng quan</p>
-            <button
-              type="button"
-              className={activeSection === 'dashboard' ? 'is-active' : ''}
-              aria-current={activeSection === 'dashboard' ? 'page' : undefined}
-              onClick={() => selectSection('dashboard')}
-              title={sidebarCollapsed ? 'Tổng quan' : undefined}
-            >
-              <House size={20} aria-hidden="true" weight={activeSection === 'dashboard' ? 'fill' : 'regular'} />
-              <span>Tổng quan</span>
-            </button>
-            <button
-              type="button"
-              className={activeSection === 'procedures' ? 'is-active' : ''}
-              aria-current={activeSection === 'procedures' ? 'page' : undefined}
-              onClick={() => selectSection('procedures')}
-              title={sidebarCollapsed ? 'Tra cứu thủ tục' : undefined}
-            >
-              <MagnifyingGlass size={20} aria-hidden="true" />
-              <span>Tra cứu thủ tục</span>
-            </button>
-          </div>
-
-          {/* Nhóm 2: Hồ sơ & Chuẩn bị */}
-          <div className="admin-nav-section">
-            <p>Hồ sơ & Chuẩn bị</p>
-
-            {/* Mục cha: Hồ sơ của tôi */}
-            <button
-              type="button"
-              className={`admin-nav-parent ${isDossierSection ? 'is-active' : ''}`}
-              onClick={() => setIsDossiersExpanded((prev) => !prev)}
-              title={sidebarCollapsed ? 'Hồ sơ của tôi' : undefined}
-              aria-expanded={isDossiersExpanded}
-            >
-              <Folder size={20} aria-hidden="true" weight={isDossierSection ? 'fill' : 'regular'} />
-              <span>Hồ sơ của tôi</span>
-              {dossierCounts.all > 0 && <small>{dossierCounts.all}</small>}
-              {!sidebarCollapsed && (
-                <CaretDown
-                  size={14}
-                  className={`text-slate-400 transition-transform duration-200 shrink-0 ${
-                    isDossiersExpanded ? '' : '-rotate-90'
-                  }`}
-                />
-              )}
-            </button>
-
-            {/* Các nhánh con của Hồ sơ của tôi */}
-            {(isDossiersExpanded || sidebarCollapsed) && (
-              <div className="admin-subnav-tree">
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_all' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_all')}
-                  title={sidebarCollapsed ? 'Tất cả hồ sơ' : undefined}
-                >
-                  <List size={16} aria-hidden="true" />
-                  <span>Tất cả hồ sơ</span>
-                  {dossierCounts.all > 0 && <small>{dossierCounts.all}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_draft' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_draft')}
-                  title={sidebarCollapsed ? 'Hồ sơ bản nháp' : undefined}
-                >
-                  <span>Bản nháp</span>
-                  {dossierCounts.draft > 0 && <small>{dossierCounts.draft}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_pending' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_pending')}
-                  title={sidebarCollapsed ? 'Chờ tiền kiểm' : undefined}
-                >
-                  <span>Chờ tiền kiểm</span>
-                  {dossierCounts.pending > 0 && <small>{dossierCounts.pending}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_need_revision' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_need_revision')}
-                  title={sidebarCollapsed ? 'Cần chỉnh sửa' : undefined}
-                >
-                  <span>Cần chỉnh sửa</span>
-                  {dossierCounts.need_revision > 0 && <small className="is-warning">{dossierCounts.need_revision}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_resubmitted' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_resubmitted')}
-                  title={sidebarCollapsed ? 'Đã gửi lại' : undefined}
-                >
-                  <span>Đã gửi lại</span>
-                  {dossierCounts.resubmitted > 0 && <small>{dossierCounts.resubmitted}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_approved' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_approved')}
-                  title={sidebarCollapsed ? 'Đã duyệt tiền kiểm' : undefined}
-                >
-                  <span>Đã duyệt tiền kiểm</span>
-                  {dossierCounts.approved > 0 && <small className="is-success">{dossierCounts.approved}</small>}
-                </button>
-
-                <button
-                  type="button"
-                  className={`admin-subnav-btn ${activeSection === 'dossiers_completed' ? 'is-active' : ''}`}
-                  onClick={() => selectSection('dossiers_completed')}
-                  title={sidebarCollapsed ? 'Đã hoàn thành' : undefined}
-                >
-                  <span>Đã hoàn thành</span>
-                  {dossierCounts.completed > 0 && <small className="is-success">{dossierCounts.completed}</small>}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Nhóm 3: Tiện ích & Hỗ trợ */}
-          <div className="admin-nav-section">
-            <p>Tiện ích & Hỗ trợ</p>
-            <button
-              type="button"
-              className={activeSection === 'notifications' ? 'is-active' : ''}
-              aria-current={activeSection === 'notifications' ? 'page' : undefined}
-              onClick={() => selectSection('notifications')}
-              title={sidebarCollapsed ? 'Thông báo' : undefined}
-            >
-              <Bell size={20} aria-hidden="true" />
-              <span>Thông báo</span>
-              {unreadNotificationsCount > 0 && <small className="is-danger">{unreadNotificationsCount}</small>}
-            </button>
-
-            <button
-              type="button"
-              className={activeSection === 'qr_code' ? 'is-active' : ''}
-              aria-current={activeSection === 'qr_code' ? 'page' : undefined}
-              onClick={() => selectSection('qr_code')}
-              title={sidebarCollapsed ? 'Mã QR hồ sơ' : undefined}
-            >
-              <QrCode size={20} aria-hidden="true" />
-              <span>Mã QR hồ sơ</span>
-            </button>
-
-            <button
-              type="button"
-              className={activeSection === 'feedback' ? 'is-active' : ''}
-              aria-current={activeSection === 'feedback' ? 'page' : undefined}
-              onClick={() => selectSection('feedback')}
-              title={sidebarCollapsed ? 'Đánh giá dịch vụ' : undefined}
-            >
-              <Star size={20} aria-hidden="true" />
-              <span>Đánh giá dịch vụ</span>
-            </button>
-
-            <button
-              type="button"
-              className={activeSection === 'profile' ? 'is-active' : ''}
-              aria-current={activeSection === 'profile' ? 'page' : undefined}
-              onClick={() => selectSection('profile')}
-              title={sidebarCollapsed ? 'Hồ sơ cá nhân' : undefined}
-            >
-              <User size={20} aria-hidden="true" />
-              <span>Hồ sơ cá nhân</span>
-            </button>
-          </div>
-        </nav>
-      </aside>
 
       {/* KHÔNG GIAN LÀM VIỆC CHÍNH (WORKSPACE) */}
-      <div className={`admin-workspace ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
+      <div className={embedded ? '' : `admin-workspace ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
         {/* TOPBAR */}
-        <header className="admin-topbar">
+        {!embedded && <header className="admin-topbar">
           <button
             type="button"
             className="admin-menu-toggle"
@@ -431,10 +239,10 @@ export function CitizenPage() {
 
             <UserDropdown />
           </div>
-        </header>
+        </header>}
 
         {/* NỘI DUNG CHÍNH (MAIN) */}
-        <main id="citizen-main" className="admin-main" tabIndex={-1}>
+        <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {/* Header Trang */}
           <div className="admin-page-heading">
             <div>

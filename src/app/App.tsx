@@ -25,7 +25,7 @@ const ManagerPage = lazy(() => import('@/pages/manager/ManagerPage').then((m) =>
 
 function HomeRoute() {
   const user = useAuthStore((state) => state.user);
-  const mgmtHome = getManagementHome(user?.roles);
+  const mgmtHome = getManagementHome(user?.roles, user?.permissions);
 
   if (mgmtHome) {
     return <Navigate to={mgmtHome} replace />;
@@ -51,7 +51,7 @@ export function App() {
           <BrowserRouter>
             <Suspense fallback={<WorkspaceLoadingFallback />}>
               <Routes>
-                <Route element={<ProtectedRoute roles={['REGISTERED_CITIZEN']} />}>
+                <Route element={<ProtectedRoute roles={['REGISTERED_CITIZEN']} permissions={['document.submissions.']} />}>
                   <Route path="citizen/*" element={<CitizenPage />} />
                   <Route path="cong-dan/*" element={<CitizenPage />} />
                 </Route>
@@ -63,11 +63,11 @@ export function App() {
                   <Route path="manager/*" element={<ManagerPage />} />
                   <Route path="quan-ly/*" element={<ManagerPage />} />
                 </Route>
-                <Route element={<ProtectedRoute roles={['PROCEDURE_MANAGER', 'IT_ADMIN']} />}>
+                <Route element={<ProtectedRoute roles={['PROCEDURE_MANAGER', 'IT_ADMIN']} permissions={['procedure.', 'document.templates.']} />}>
                   <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />
                   <Route path="quan-ly-thu-tuc/*" element={<ProcedureManagerPage />} />
                 </Route>
-                <Route element={<ProtectedRoute roles={['IT_ADMIN']} />}>
+                <Route element={<ProtectedRoute roles={['IT_ADMIN']} permissions={['iam.accounts.', 'iam.wards.', 'iam.rbac.', 'iam.audit.', 'iam.manage']} />}>
                   <Route path="admin" element={<AdminPage />} />
                 </Route>
                 <Route element={<MainLayout />}>

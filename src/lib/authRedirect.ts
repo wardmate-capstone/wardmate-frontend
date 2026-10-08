@@ -1,3 +1,5 @@
+import { canAccessWorkspace, type WorkspaceId } from '@/lib/navigationAccess';
+
 const authPaths = new Set(['/dang-nhap', '/dang-ky', '/quen-mat-khau', '/dat-lai-mat-khau']);
 const roleHomes: Record<string, string> = {
   IT_ADMIN: '/admin',
@@ -7,11 +9,14 @@ const roleHomes: Record<string, string> = {
   REGISTERED_CITIZEN: '/',
 };
 
-export function loginDestination(roles: string[], returnTo?: string | null): string {
+export function loginDestination(roles: string[], returnTo?: string | null, permissions: string[] = []): string {
   const destination = safeReturnTo(returnTo);
   if (destination !== '/') return destination;
   // Multiple roles keep the home page's workspace menu rather than guessing a primary role.
-  return roles.length === 1 ? roleHomes[roles[0]] ?? '/' : '/';
+  if (roles.length === 1 && roleHomes[roles[0]]) return roleHomes[roles[0]];
+  const permissionHomes: Array<[WorkspaceId, string]> = [['admin', '/admin'], ['procedure-manager', '/procedure-manager'], ['citizen', '/citizen']];
+  const available = permissionHomes.filter(([workspace]) => canAccessWorkspace(workspace, [], permissions));
+  return available.length === 1 ? available[0][1] : '/';
 }
 
 /**
@@ -19,11 +24,12 @@ export function loginDestination(roles: string[], returnTo?: string | null): str
  * Chỉ áp dụng cho IT_ADMIN, MANAGER, FRONT_DESK_OFFICER.
  * PROCEDURE_MANAGER và REGISTERED_CITIZEN không bị ép buộc rời khỏi cổng công khai.
  */
-export function getManagementHome(roles?: string[] | null): string | null {
-  if (!roles || roles.length === 0) return null;
+export function getManagementHome(roles: string[] = [], permissions: string[] = []): string | null {
   if (roles.includes('IT_ADMIN')) return '/admin';
   if (roles.includes('MANAGER')) return '/manager';
   if (roles.includes('FRONT_DESK_OFFICER')) return '/officer';
+  if (canAccessWorkspace('admin', [], permissions)) return '/admin';
+  if (canAccessWorkspace('procedure-manager', [], permissions)) return '/procedure-manager';
   return null;
 }
 
