@@ -29,12 +29,12 @@ export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, 
   const role = ['FRONT_DESK_OFFICER'];
   const groups: WorkspaceNavGroup<OfficerSection>[] = [
     { title: 'Tổng quan', items: [{ id: 'dashboard', label: 'Tổng quan', icon: House, fallbackRoles: role }] },
-    { title: 'Quản lý hồ sơ', items: [
+    { title: 'Quản lý hồ sơ', items: [{ id: 'apps-all', label: 'Hồ sơ nghiệp vụ', icon: Files, badge: badgeCounts.pending + badgeCounts.reviewing + badgeCounts.needRevision + badgeCounts.resubmitted + badgeCounts.approved + badgeCounts.readySubmit, children: [
       { id: 'apps-all', label: 'Tất cả hồ sơ', icon: Files, fallbackRoles: role }, { id: 'apps-pending', label: 'Chờ tiền kiểm', icon: Hourglass, badge: badgeCounts.pending, fallbackRoles: role },
       { id: 'apps-reviewing', label: 'Đang kiểm tra', icon: ClockCounterClockwise, badge: badgeCounts.reviewing, fallbackRoles: role }, { id: 'apps-need-revision', label: 'Cần bổ sung', icon: WarningCircle, badge: badgeCounts.needRevision, fallbackRoles: role },
       { id: 'apps-resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, badge: badgeCounts.resubmitted, fallbackRoles: role }, { id: 'apps-approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, badge: badgeCounts.approved, fallbackRoles: role },
       { id: 'apps-ready-submit', label: 'Chờ tiếp nhận chính thức', icon: FileText, badge: badgeCounts.readySubmit, fallbackRoles: role },
-    ] },
+    ] }] },
     { title: 'Tiếp nhận hồ sơ', items: [{ id: 'receipt-waiting', label: 'Chờ tiếp nhận', icon: ClipboardText, badge: badgeCounts.readySubmit, fallbackRoles: role }, { id: 'receipt-received', label: 'Đã tiếp nhận', icon: Tray, badge: badgeCounts.receivedToday, fallbackRoles: role }] },
     { title: 'Hệ thống & Ca trực', items: [{ id: 'audit-log', label: 'Lịch sử xử lý', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'notifications', label: 'Thông báo', icon: Bell, badge: badgeCounts.unreadNotifs, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];

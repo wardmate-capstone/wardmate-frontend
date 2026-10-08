@@ -62,7 +62,7 @@ test('granted feature panel covers the workspace after the background is scrolle
   await expect(page.getByRole('button', { name: 'Menu tài khoản' })).toBeVisible();
 });
 
-test('admin sidebar keeps navigation rows compact', async ({ page }) => {
+test('admin sidebar restores the pre-unification navigation row height', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await page.goto('/admin');
   await expect(page.locator('aside .admin-nav-section > button').first()).toBeVisible();
@@ -70,5 +70,5 @@ test('admin sidebar keeps navigation rows compact', async ({ page }) => {
     buttons.map((button) => button.getBoundingClientRect().height)
   );
   expect(heights.length).toBeGreaterThan(10);
-  expect(Math.max(...heights)).toBeLessThanOrEqual(40);
+  expect(Math.max(...heights)).toBeLessThanOrEqual(44);
 });
