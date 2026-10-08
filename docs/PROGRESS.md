@@ -18,6 +18,11 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Trong `src/components/layout/WorkspaceSidebar.tsx`:
     - Bỏ phần render mục `Chức năng được cấp` khỏi sidebar. Giữ nguyên toàn bộ code và các file liên quan (`PermissionFeatures.tsx`, handler tính năng) đúng theo yêu cầu "không cần xóa hết mấy cái liên quan".
     - Xóa khối thẻ tài khoản ở đáy sidebar (`.admin-sidebar-user` chứa avatar, tên tài khoản và vai trò) theo yêu cầu người dùng, giúp sidebar gọn gàng và đồng bộ với UserDropdown ở topbar.
+- **Xóa tag số (badge) ở các mục trên Sidebar**:
+  - Tại `src/components/layout/WorkspaceSidebar.tsx`: Gỡ bỏ hoàn toàn thẻ tag `<small>` hiển thị số badge trên các nút điều hướng sidebar (cả mục cha, nhánh cây con và nút thông thường).
+  - Tại `src/components/layout/RoleWorkspaceSidebars.tsx`: Loại bỏ thuộc tính `badge` khỏi tất cả các mục điều hướng quản lý của Cán bộ Một cửa (`Officer`), Lãnh đạo UBND (`Manager`), và Quản lý thủ tục (`Procedure Manager`).
+  - Tại `src/pages/citizen/CitizenPage.tsx`: Loại bỏ thuộc tính `badge` khỏi các mục hồ sơ và thông báo trên sidebar công dân; dọn dẹp hàm `dossierCounts` và `useMemo`.
+  - Tại `src/pages/officer/OfficerPage.tsx`: Bỏ số đếm `20` hardcode trong `receivedToday`.
 - **Xóa mục "Tra cứu thủ tục" khỏi Sidebar Công dân**:
   - Tại `src/pages/citizen/CitizenPage.tsx`: Bỏ mục điều hướng `{ id: 'procedures', label: 'Tra cứu thủ tục' }` trong nhóm `Tổng quan` của sidebar công dân theo yêu cầu người dùng; tra cứu thủ tục là chức năng công khai tại trang chủ/cổng thông tin, không cần thiết lặp lại trên thanh điều hướng workspace cá nhân của công dân.
 - **Đồng bộ bộ Icon của Citizen theo Officer**:

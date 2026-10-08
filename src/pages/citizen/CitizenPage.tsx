@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UserDropdown } from '@/components/layout/UserDropdown';
@@ -107,19 +107,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
-  // Counts for Dossier Badges
-  const dossierCounts = useMemo(() => {
-    return {
-      all: dossiers.length,
-      draft: dossiers.filter((d) => d.status === 'Bản nháp').length,
-      pending: dossiers.filter((d) => d.status === 'Chờ tiền kiểm').length,
-      need_revision: dossiers.filter((d) => d.status === 'Cần chỉnh sửa').length,
-      resubmitted: dossiers.filter((d) => d.status === 'Đã gửi lại').length,
-      approved: dossiers.filter((d) => d.status === 'Đã duyệt').length,
-      completed: dossiers.filter((d) => d.status === 'Đã hoàn thành').length,
-    };
-  }, [dossiers]);
-
   const meta = sectionTitles[activeSection] || { title: 'Cổng dịch vụ công dân' };
 
   function selectSection(id: CitizenSectionId) {
@@ -154,18 +141,18 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
-      { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, badge: dossierCounts.all, children: [
-        { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: Files, badge: dossierCounts.all, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
-        { id: 'dossiers_draft', label: 'Bản nháp', icon: FileText, badge: dossierCounts.draft, permissions: ['document.submissions.write'] },
-        { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Hourglass, badge: dossierCounts.pending, permissions: ['document.submissions.read'] },
-        { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, badge: dossierCounts.need_revision, permissions: ['document.submissions.write'] },
-        { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, badge: dossierCounts.resubmitted, permissions: ['document.submissions.read'] },
-        { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, badge: dossierCounts.approved, permissions: ['document.submissions.read'] },
-        { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: FileText, badge: dossierCounts.completed, permissions: ['document.submissions.read'] },
+      { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, children: [
+        { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: Files, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
+        { id: 'dossiers_draft', label: 'Bản nháp', icon: FileText, permissions: ['document.submissions.write'] },
+        { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Hourglass, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, permissions: ['document.submissions.write'] },
+        { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: FileText, permissions: ['document.submissions.read'] },
       ] },
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
-      { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotificationsCount, fallbackRoles: citizenRole },
+      { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: citizenRole },
       { id: 'qr_code', label: 'Mã QR hồ sơ', icon: QrCode, fallbackRoles: citizenRole },
       { id: 'feedback', label: 'Đánh giá dịch vụ', icon: Star, fallbackRoles: citizenRole },
       { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },

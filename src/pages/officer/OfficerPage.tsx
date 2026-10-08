@@ -54,7 +54,7 @@ export const OfficerPage: React.FC = () => {
       resubmitted: applications.filter((a) => a.status === 'RESUBMITTED').length,
       approved: applications.filter((a) => a.status === 'APPROVED').length,
       readySubmit: applications.filter((a) => a.status === 'READY_TO_SUBMIT' || a.status === 'APPROVED').length,
-      receivedToday: 20 + applications.filter((a) => a.status === 'OFFICIALLY_RECEIVED').length,
+      receivedToday: applications.filter((a) => a.status === 'OFFICIALLY_RECEIVED').length,
       unreadNotifs: notifications.filter((n) => !n.isRead).length,
     };
   }, [applications, notifications]);
