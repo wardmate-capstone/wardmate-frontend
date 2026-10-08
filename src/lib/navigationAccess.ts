@@ -4,7 +4,7 @@ const workspaceRules: Record<WorkspaceId, { roles: string[]; permissions: string
   citizen: { roles: ['REGISTERED_CITIZEN'], permissions: ['document.submissions.'] },
   officer: { roles: ['FRONT_DESK_OFFICER'], permissions: [] },
   manager: { roles: ['MANAGER'], permissions: [] },
-  'procedure-manager': { roles: ['PROCEDURE_MANAGER'], permissions: ['procedure.', 'document.templates.'] },
+  'procedure-manager': { roles: ['PROCEDURE_MANAGER'], permissions: ['procedure.manage', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status', 'document.templates.'] },
   admin: { roles: ['IT_ADMIN'], permissions: ['iam.accounts.', 'iam.wards.', 'iam.rbac.', 'iam.audit.', 'iam.manage'] },
 };
 

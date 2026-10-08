@@ -12,9 +12,10 @@ const roleHomes: Record<string, string> = {
 export function loginDestination(roles: string[], returnTo?: string | null, permissions: string[] = []): string {
   const destination = safeReturnTo(returnTo);
   if (destination !== '/') return destination;
+  if (roles.includes('REGISTERED_CITIZEN')) return '/';
   // Multiple roles keep the home page's workspace menu rather than guessing a primary role.
   if (roles.length === 1 && roleHomes[roles[0]]) return roleHomes[roles[0]];
-  const permissionHomes: Array<[WorkspaceId, string]> = [['admin', '/admin'], ['procedure-manager', '/procedure-manager'], ['citizen', '/citizen']];
+  const permissionHomes: Array<[WorkspaceId, string]> = [['admin', '/admin'], ['citizen', '/citizen']];
   const available = permissionHomes.filter(([workspace]) => canAccessWorkspace(workspace, [], permissions));
   return available.length === 1 ? available[0][1] : '/';
 }
@@ -25,11 +26,11 @@ export function loginDestination(roles: string[], returnTo?: string | null, perm
  * PROCEDURE_MANAGER và REGISTERED_CITIZEN không bị ép buộc rời khỏi cổng công khai.
  */
 export function getManagementHome(roles: string[] = [], permissions: string[] = []): string | null {
+  if (roles.includes('REGISTERED_CITIZEN')) return null;
   if (roles.includes('IT_ADMIN')) return '/admin';
   if (roles.includes('MANAGER')) return '/manager';
   if (roles.includes('FRONT_DESK_OFFICER')) return '/officer';
   if (canAccessWorkspace('admin', [], permissions)) return '/admin';
-  if (canAccessWorkspace('procedure-manager', [], permissions)) return '/procedure-manager';
   return null;
 }
 
