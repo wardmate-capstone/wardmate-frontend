@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FileText, Files, FolderOpen, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, PresentationChart, Scales, ShieldCheck, ThumbsUp, Tray, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FileText, Files, FolderOpen, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, Tray, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -20,7 +20,7 @@ export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenM
       { id: 'perf-supplement-rate', label: 'Tỷ lệ cần bổ sung', icon: WarningCircle, fallbackRoles: role }, { id: 'perf-officers', label: 'Hiệu suất cán bộ', icon: UsersThree, fallbackRoles: role },
     ] },
     { title: 'Phản hồi người dân', items: [{ id: 'feedback-reports', label: 'Báo cáo phản hồi', icon: Bell, fallbackRoles: role }, { id: 'satisfaction-level', label: 'Mức độ hài lòng', icon: ThumbsUp, fallbackRoles: role }] },
-    { title: 'Báo cáo & Thiết lập', items: [{ id: 'reports', label: 'Báo cáo tổng hợp', icon: PresentationChart, fallbackRoles: role }, { id: 'permissions', label: 'Cài đặt quyền', icon: ShieldCheck, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
+    { title: 'Tài khoản', items: [{ id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];
   return <WorkspaceSidebar workspace="manager" subtitle="Quản lý điều hành" activeSection={currentSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpenMobile} onClose={onCloseMobile} isCompact={isCollapsedDesktop} />;
 }

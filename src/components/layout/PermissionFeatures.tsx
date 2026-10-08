@@ -5,8 +5,6 @@ import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileV
 
 const EmbeddedAdmin = lazy(() => import('@/pages/admin/AdminPage').then(module => ({ default: module.AdminPage })));
 const EmbeddedProcedureManager = lazy(() => import('@/pages/procedure-manager/ProcedureManagerPage').then(module => ({ default: module.ProcedureManagerPage })));
-const EmbeddedCitizen = lazy(() => import('@/pages/citizen/CitizenPage').then(module => ({ default: module.CitizenPage })));
-
 type FeatureIcon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>;
 
 export type PermissionFeature = {
@@ -30,17 +28,31 @@ export const permissionFeatures: PermissionFeature[] = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
 ];
 
+const unavailableMessages: Record<string, string> = {
+  'procedure-history': 'Backend chưa có API lịch sử phiên bản tổng hợp. Bạn có thể mở Danh sách thủ tục và chọn “Lịch sử” tại từng thủ tục.',
+  'document-templates': 'Chưa có màn quản lý kho biểu mẫu độc lập kết nối API DocumentForm.',
+  'document-submissions': 'Chưa có API danh sách đơn điện tử dành cho màn quản trị.',
+};
+
+function UnavailableFeature({ message }: { message: string }) {
+  return (
+    <section className="admin-card p-6">
+      <h2 className="text-lg font-bold text-slate-950">Chức năng chưa sẵn sàng</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
+    </section>
+  );
+}
+
 export function PermissionFeatureContent({ feature }: { feature: PermissionFeature }) {
   if (feature.id === 'iam-audit') return <AdminRbacAuditView />;
   if (feature.id === 'iam-rbac') return <AdminRolesView />;
   if (feature.id === 'profile') return <UnifiedSelfProfileView />;
+  if (unavailableMessages[feature.id]) return <UnavailableFeature message={unavailableMessages[feature.id]} />;
   const content = feature.id === 'iam-accounts' ? <EmbeddedAdmin embedded initialSection="users" />
     : feature.id === 'iam-wards' ? <EmbeddedAdmin embedded initialSection="wards" />
-      : ['procedure-catalog', 'procedure-history'].includes(feature.id) ? <EmbeddedProcedureManager embedded initialSection="procedures" />
+      : feature.id === 'procedure-catalog' ? <EmbeddedProcedureManager embedded initialSection="procedures" />
         : feature.id === 'procedure-categories' ? <EmbeddedProcedureManager embedded initialSection="categories" />
           : feature.id === 'procedure-drafts' ? <EmbeddedProcedureManager embedded initialSection="drafts" />
-            : feature.id === 'document-templates' ? <EmbeddedProcedureManager embedded initialSection="forms" />
-              : feature.id === 'document-submissions' ? <EmbeddedCitizen embedded initialSection="dossiers_all" />
-                : null;
+            : null;
   return <Suspense fallback={<p role="status" className="p-8 text-center text-sm">Đang tải chức năng...</p>}>{content}</Suspense>;
 }
