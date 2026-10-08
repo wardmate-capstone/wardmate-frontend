@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MagnifyingGlass, Funnel, ClockCounterClockwise, ArrowSquareOut } from '@phosphor-icons/react';
-import { Button } from '@/components/ui';
+import { Button, TableSkeleton } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, type Category, type ProcedureSummary } from '@/lib/api/procedures';
@@ -203,7 +203,8 @@ export function ProcedureApiList({
         )}
       </div>
 
-      <ProcedureFeedback loading={result.loading} error={result.error} retry={result.refresh} />
+      <ProcedureFeedback error={result.error} retry={result.refresh} />
+      {result.loading && <TableSkeleton columns={6} />}
 
       {/* Procedure Table */}
       {result.data && (

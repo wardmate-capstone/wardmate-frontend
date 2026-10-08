@@ -10,7 +10,7 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { Button, Input, Modal } from "@/components/ui";
+import { Button, Input, ListSkeleton, Modal, TableSkeleton } from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
 import {
   rbacApi,
@@ -26,7 +26,7 @@ import {
   type ManagedUserDto,
 } from "@/lib/api";
 
-const roleLabels: Record<string, string> = {
+export const roleLabels: Record<string, string> = {
   IT_ADMIN: "Quản trị hệ thống",
   PROCEDURE_MANAGER: "Quản lý thủ tục",
   MANAGER: "Lãnh đạo UBND",
@@ -181,9 +181,7 @@ export function AdminRolesView() {
     <div className="space-y-5">
       <ErrorBox error={error} retry={() => void load()} />
       {loading ? (
-        <p className="admin-card p-8 text-center text-sm">
-          Đang tải phân quyền...
-        </p>
+        <TableSkeleton columns={5} />
       ) : (
         <section className="admin-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
@@ -655,7 +653,7 @@ export function UserRolesModal({
       <div className="space-y-3">
         <ErrorBox error={error} />
         {loading ? (
-          <p>Đang tải vai trò...</p>
+          <ListSkeleton rows={4} />
         ) : (
           available.map((role) => (
             <label
@@ -1094,6 +1092,7 @@ export function AdminRbacAuditView() {
         </div>
       </div>
       <ErrorBox error={error} retry={() => void load()} />
+      {loading && <TableSkeleton columns={6} />}
       {!loading && !error && (
         <div className="admin-table-wrap">
           <table>

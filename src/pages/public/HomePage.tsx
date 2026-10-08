@@ -9,6 +9,7 @@ import {
   MagnifyingGlass as Search,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
+import { CardGridSkeleton, ListSkeleton } from '@/components/ui';
 import { JourneySteps } from '@/components/home/JourneySteps';
 import { preparationSteps } from '@/data/landing';
 
@@ -84,7 +85,9 @@ export function HomePage() {
             <div><p className="section-label">Thông tin và dịch vụ</p><h2>Lĩnh vực thủ tục hành chính</h2><p>Chọn lĩnh vực gần nhất với nhu cầu của bạn để xem hướng dẫn phù hợp.</p></div>
             <Button variant="outline" className="hidden sm:inline-flex" onClick={() => navigate('/thu-tuc')}>Xem tất cả lĩnh vực <ArrowRight size={17} aria-hidden="true" /></Button>
           </m.div>
-          <ProcedureFeedback loading={categories.isPending} error={categories.isError ? procedureError(categories.error) : ''} retry={() => { void categories.refetch(); }} /><div className="service-grid relative z-10">
+          <ProcedureFeedback error={categories.isError ? procedureError(categories.error) : ''} retry={() => { void categories.refetch(); }} />
+          {categories.isPending && <CardGridSkeleton />}
+          <div className="service-grid relative z-10">
             {(categories.data ?? []).map((group, index) => (
               <m.button {...reveal} transition={{ duration: 0.35, delay: index * 0.04 }} key={group.id} type="button" onClick={() => navigate('/thu-tuc?category=' + group.id)} className="service-group group">
                 <span className="service-icon"><FileSearch size={25} strokeWidth={1.7} aria-hidden="true" /></span>
@@ -100,7 +103,9 @@ export function HomePage() {
             <div><p className="section-label">Danh mục công khai</p><h2 className="mt-2 text-3xl font-bold text-slate-950">Thủ tục hành chính</h2></div>
             {submittedQuery && <button type="button" onClick={() => { setQuery(''); setSubmittedQuery(''); }} className="min-h-11 self-start text-sm font-bold text-red-800 underline decoration-red-200 underline-offset-4 sm:self-auto">Xóa từ khóa “{submittedQuery}”</button>}
           </div>
-          <ProcedureFeedback loading={procedures.isPending} error={procedures.isError ? procedureError(procedures.error) : ''} retry={() => { void procedures.refetch(); }} />{searchResults.length > 0 ? (
+          <ProcedureFeedback error={procedures.isError ? procedureError(procedures.error) : ''} retry={() => { void procedures.refetch(); }} />
+          {procedures.isPending && <div className="mt-7"><ListSkeleton /></div>}
+          {searchResults.length > 0 ? (
             <div className="procedure-list relative z-10">
               {searchResults.map((procedure, index) => (
                 <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>

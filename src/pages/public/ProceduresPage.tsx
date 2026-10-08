@@ -1,7 +1,7 @@
-import { type FormEvent, useRef } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CaretLeft, CaretRight, House, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, ListSkeleton } from '@/components/ui';
 import { procedureError } from '@/lib/api/procedures';
 import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
@@ -12,6 +12,7 @@ export function ProceduresPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const query = searchParams.get('q') ?? '';
+  const [keyword, setKeyword] = useState(query);
   const categoryQuery = useProcedureCategories();
   const categories = [{ id: 0, categoryName: 'Tất cả' }, ...(categoryQuery.data ?? [])];
   const selectedCategory = searchParams.get('category') ?? '0';
@@ -26,6 +27,22 @@ export function ProceduresPage() {
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const visibleProcedures = result.data?.items ?? [];
   const hasFilters = Boolean(query || selectedCategory !== '0');
+
+  useEffect(() => {
+    if (keyword === query) return;
+    const timer = window.setTimeout(() => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        if (keyword) next.set('q', keyword);
+        else next.delete('q');
+        next.delete('page');
+        return next;
+      }, { replace: true });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [keyword, query, setSearchParams]);
+
+  useEffect(() => setKeyword(query), [query]);
 
   function updateFilter(key: 'q' | 'category', value: string) {
     const next = new URLSearchParams(searchParams);
@@ -81,8 +98,8 @@ export function ProceduresPage() {
             <label htmlFor="procedures-search-input">Tên thủ tục hoặc nhu cầu của bạn</label>
             <div>
               <MagnifyingGlass size={22} aria-hidden="true" />
-              <Input id="procedures-search-input" type="search" value={query} onChange={(event) => updateFilter('q', event.target.value)} placeholder="Ví dụ: đăng ký khai sinh" className="min-h-14 pl-12 pr-12" />
-              {query && <button type="button" onClick={() => updateFilter('q', '')} aria-label="Xóa nội dung tìm kiếm"><X size={19} aria-hidden="true" /></button>}
+              <Input id="procedures-search-input" type="search" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Ví dụ: đăng ký khai sinh" className="min-h-14 pl-12 pr-12" />
+              {keyword && <button type="button" onClick={() => setKeyword('')} aria-label="Xóa nội dung tìm kiếm"><X size={19} aria-hidden="true" /></button>}
             </div>
             <Button type="submit">Tìm kiếm <ArrowRight size={18} aria-hidden="true" /></Button>
           </form>
@@ -105,7 +122,8 @@ export function ProceduresPage() {
         </aside>
 
         <div className="procedures-results">
-          <ProcedureFeedback loading={result.isPending || categoryQuery.isPending} error={(result.isError && procedureError(result.error)) || (categoryQuery.isError && procedureError(categoryQuery.error)) || ''} retry={() => { void result.refetch(); void categoryQuery.refetch(); }} />
+          <ProcedureFeedback error={(result.isError && procedureError(result.error)) || (categoryQuery.isError && procedureError(categoryQuery.error)) || ''} retry={() => { void result.refetch(); void categoryQuery.refetch(); }} />
+          {(result.isPending || categoryQuery.isPending) && <ListSkeleton />}
           <div className="procedures-results-heading">
             <div><p>Kết quả tra cứu</p><h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">{totalCount} thủ tục phù hợp</h2></div>
             {hasFilters && <button type="button" onClick={clearFilters}>Xóa bộ lọc</button>}

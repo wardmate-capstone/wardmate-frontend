@@ -5,6 +5,7 @@ import {
   ArrowsClockwise,
   Trash,
 } from '@phosphor-icons/react';
+import { TableSkeletonRows } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { createFrontDeskAccount, authErrorMessage } from '@/lib/api';
@@ -260,14 +261,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           </thead>
           <tbody>
             {isLoading && profiles.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-xs text-slate-500">
-                  <div className="inline-flex items-center gap-2">
-                    <ArrowsClockwise size={18} className="animate-spin text-red-800" />
-                    <span>Đang tải danh sách cán bộ Một cửa từ máy chủ...</span>
-                  </div>
-                </td>
-              </tr>
+              <TableSkeletonRows columns={5} />
             ) : filtered.map((item) => (
               <tr key={item.userId || item.identityNumber}>
                 <td>

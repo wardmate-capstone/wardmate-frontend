@@ -43,6 +43,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import {
   getManagedUsers,
+  getAccount,
   getAdminProfile,
   updateAccountStatus,
   getWards,
@@ -57,8 +58,9 @@ import {
 import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import type { ManagerProfileItem } from '@/pages/manager/types';
-import { actionLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
+import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
+import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
 
 type SectionId =
   | "overview"
@@ -83,14 +85,15 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
     items: [
       {
         id: "procedures",
-        label: "Thủ tục hành chính",
+        label: "Danh sách thủ tục",
         icon: ClipboardText,
+        permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'],
         fallbackRoles: ['IT_ADMIN'],
       },
-      { id: "forms", label: "Biểu mẫu & E-form", icon: FileCode, fallbackRoles: ['IT_ADMIN'] },
+      { id: "forms", label: "Danh sách biểu mẫu", icon: FileCode, fallbackRoles: ['IT_ADMIN'] },
       {
         id: "knowledge",
-        label: "Pháp lý & tri thức AI",
+        label: "Dữ liệu kiến thức AI",
         icon: Books,
         fallbackRoles: ['IT_ADMIN'],
       },
@@ -114,39 +117,6 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
     ],
   },
 ];
-
-const procedures = [
-  {
-    code: "1.001193",
-    name: "Đăng ký khai sinh",
-    field: "Hộ tịch",
-    updated: "16/09/2026",
-    status: "Đang áp dụng",
-  },
-  {
-    code: "2.000815",
-    name: "Chứng thực bản sao từ bản chính",
-    field: "Chứng thực",
-    updated: "14/09/2026",
-    status: "Đang áp dụng",
-  },
-  {
-    code: "1.000894",
-    name: "Đăng ký kết hôn",
-    field: "Hộ tịch",
-    updated: "10/09/2026",
-    status: "Đang áp dụng",
-  },
-  {
-    code: "2.001123",
-    name: "Xác nhận tình trạng hôn nhân",
-    field: "Hộ tịch",
-    updated: "08/09/2026",
-    status: "Bản nháp",
-  },
-];
-
-
 
 const services = [
   {
@@ -218,9 +188,9 @@ const chartData: Record<
 
 const sectionMeta: Record<SectionId, { title: string }> = {
   overview: { title: "Tổng quan" },
-  procedures: { title: "Quản lý thủ tục hành chính" },
-  forms: { title: "Biểu mẫu & E-form" },
-  knowledge: { title: "Pháp lý & tri thức AI" },
+  procedures: { title: "Danh sách thủ tục" },
+  forms: { title: "Danh sách biểu mẫu" },
+  knowledge: { title: "Dữ liệu kiến thức AI" },
   users: { title: "Người dùng hệ thống" },
   wards: { title: "Quản lý đơn vị Phường / Xã" },
   roles: { title: "Vai trò & quyền hạn" },
@@ -339,17 +309,6 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   }
 
 
-  const filteredProcedures = useMemo(
-    () =>
-      procedures.filter((item) =>
-        `${item.code} ${item.name} ${item.field}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [query],
-  );
-
-
   const [selectedUser, setSelectedUser] = useState<ManagedUserDto | null>(null);
   const [roleUser, setRoleUser] = useState<ManagedUserDto>();
   const [detailProfile, setDetailProfile] = useState<UserProfileDto | null>(null);
@@ -432,7 +391,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
         </header>}
 
         <main id={embedded ? undefined : "admin-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
-          {!(activeSection === "users" && selectedUser) && activeSection !== "profile" && (
+          {!(activeSection === "users" && selectedUser) && activeSection !== "profile" && activeSection !== "procedures" && (
             <div className="admin-page-heading mb-6">
               <div>
                 <h1>{meta.title}</h1>
@@ -449,12 +408,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <Overview onSelect={selectSection} />
           )}
           {activeSection === "procedures" && (
-            <ProcedureView
-              query={query}
-              setQuery={setQuery}
-              rows={filteredProcedures}
-              onAction={demoAction}
-            />
+            <ProcedureManagerPage embedded initialSection="procedures" />
           )}
           {activeSection === "forms" && <FormsView onAction={demoAction} />}
           {activeSection === "knowledge" && (
@@ -546,13 +500,32 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState("");
+  const [auditUsers, setAuditUsers] = useState<Record<string, string>>({});
+  const [auditRoles, setAuditRoles] = useState<Record<number, string>>({});
+  const [auditPermissions, setAuditPermissions] = useState<Record<number, string>>({});
   const [userCount, setUserCount] = useState<number>();
 
   const loadAuditLogs = useCallback(async () => {
     setAuditLoading(true);
     setAuditError("");
     try {
-      setAuditLogs((await rbacApi.audit(1, 5)).items);
+      const [audit, roles, permissions] = await Promise.all([
+        rbacApi.audit(1, 5),
+        rbacApi.roles(1, 100).catch(() => null),
+        rbacApi.permissions().catch(() => null),
+      ]);
+      setAuditLogs(audit.items);
+      setAuditRoles(Object.fromEntries(roles?.items.map((role) => [role.id, roleLabels[role.roleName] ?? role.roleName]) ?? []));
+      setAuditPermissions(Object.fromEntries(permissions?.map((permission) => [permission.id, permission.permissionName]) ?? []));
+      const userIds = [...new Set(audit.items.flatMap((log) => [log.actorUserId, log.targetUserId].filter((id): id is string => Boolean(id))))];
+      const users = await Promise.all(userIds.map(async (id) => {
+        try {
+          return [id, (await getAccount(id)).username] as const;
+        } catch {
+          return [id, ""] as const;
+        }
+      }));
+      setAuditUsers(Object.fromEntries(users));
     } catch (error) {
       setAuditError(rbacError(error));
     } finally {
@@ -583,9 +556,9 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
   ];
   const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> =
     [
-      { id: "procedures", title: "Thủ tục hành chính", icon: ClipboardText },
-      { id: "forms", title: "Biểu mẫu & E-form", icon: FileCode },
-      { id: "knowledge", title: "Tri thức AI", icon: Books },
+      { id: "procedures", title: "Danh sách thủ tục", icon: ClipboardText },
+      { id: "forms", title: "Danh sách biểu mẫu", icon: FileCode },
+      { id: "knowledge", title: "Dữ liệu kiến thức AI", icon: Books },
       { id: "users", title: "Người dùng", icon: Users },
       { id: "roles", title: "Phân quyền", icon: Key },
       { id: "integrations", title: "Tích hợp", icon: Stack },
@@ -652,15 +625,25 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
               </div>
             )}
             {!auditLoading && !auditError && auditLogs.map((log) => (
-              <div key={log.id} className="flex min-h-14 items-center gap-3 py-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-800">
+              <div key={log.id} className="flex min-h-[72px] items-center gap-3 py-3">
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${/revoked|deleted|disabled/.test(log.action) ? "bg-amber-50 text-amber-700" : /granted|assigned|created|enabled/.test(log.action) ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
                   <ClockCounterClockwise size={16} aria-hidden="true" />
                 </span>
-                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
-                  {actionLabels[log.action] ?? log.action}
-                </p>
-                <time className="shrink-0 text-xs text-slate-500" dateTime={log.createdAt}>
-                  {new Date(log.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-900">
+                    {actionLabels[log.action] ?? log.action}
+                    {log.permissionId && auditPermissions[log.permissionId] ? `: ${auditPermissions[log.permissionId]}` : ""}
+                    {!log.permissionId && log.targetUserId && auditUsers[log.targetUserId] ? `: @${auditUsers[log.targetUserId]}` : ""}
+                    {!log.permissionId && !log.targetUserId && log.roleId && auditRoles[log.roleId] ? `: ${auditRoles[log.roleId]}` : ""}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-slate-500">
+                    {auditUsers[log.actorUserId] ? `Thực hiện bởi @${auditUsers[log.actorUserId]}` : "Thao tác quản trị"}
+                    {log.roleId && auditRoles[log.roleId] ? ` · Vai trò ${auditRoles[log.roleId]}` : ""}
+                  </p>
+                </div>
+                <time className="shrink-0 text-right text-xs leading-5 text-slate-500" dateTime={log.createdAt}>
+                  <span className="block font-semibold text-slate-700">{new Date(log.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span>{new Date(log.createdAt).toLocaleDateString("vi-VN")}</span>
                 </time>
               </div>
             ))}
@@ -849,77 +832,6 @@ function SearchBar({
         placeholder={placeholder}
       />
     </label>
-  );
-}
-
-function ProcedureView({
-  query,
-  setQuery,
-  rows,
-  onAction,
-}: {
-  query: string;
-  setQuery: (value: string) => void;
-  rows: typeof procedures;
-  onAction: (message: string) => void;
-}) {
-  return (
-    <section className="admin-card admin-table-card admin-content-card">
-      <div className="admin-toolbar">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tìm theo mã, tên hoặc lĩnh vực..."
-        />
-        <button type="button">
-          <Gear size={17} /> Bộ lọc
-        </button>
-      </div>
-      <div className="admin-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Mã thủ tục</th>
-              <th>Tên thủ tục</th>
-              <th>Lĩnh vực</th>
-              <th>Cập nhật</th>
-              <th>Trạng thái</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((item) => (
-              <tr key={item.code}>
-                <td>
-                  <strong>{item.code}</strong>
-                </td>
-                <td>{item.name}</td>
-                <td>{item.field}</td>
-                <td>{item.updated}</td>
-                <td>
-                  <span
-                    className={`admin-status-badge ${item.status === "Đang áp dụng" ? "is-success" : "is-warning"}`}
-                  >
-                    {item.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => onAction(`Đang mở ${item.name}`)}
-                  >
-                    Chỉnh sửa
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length === 0 && (
-        <p className="admin-empty">Không tìm thấy thủ tục phù hợp.</p>
-      )}
-    </section>
   );
 }
 

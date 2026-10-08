@@ -3,6 +3,7 @@ import { Files, FileDashed, Prohibit, WarningCircle, ArrowRight } from '@phospho
 import { procedureApi, type ProcedureSummary } from '@/lib/api/procedures';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
+import { ListSkeleton } from '@/components/ui';
 import type { ProcedureNavSection } from '@/components/layout/RoleWorkspaceSidebars';
 
 interface ProcedureDashboardViewProps {
@@ -35,7 +36,8 @@ export function ProcedureDashboardView({ stats, onNavigateSection, onOpenDrafts,
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="admin-card min-w-0 p-6">
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4"><h2 className="text-base font-bold">Thủ tục cập nhật gần đây</h2><button type="button" onClick={() => onNavigateSection('procedures')} className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-red-800 hover:underline">Xem tất cả<ArrowRight size={14} /></button></div>
-        <ProcedureFeedback loading={recent.loading} error={recent.error} retry={recent.refresh} />
+        <ProcedureFeedback error={recent.error} retry={recent.refresh} />
+        {recent.loading && <div className="mt-4"><ListSkeleton rows={4} /></div>}
         <div className="mt-4 divide-y divide-slate-100">{recent.data?.items.map(proc => <button type="button" key={proc.id} onClick={() => onSelectProcedure(proc)} className="block w-full py-3.5 text-left hover:bg-slate-50">
           <div className="flex flex-wrap gap-2 text-xs"><strong>{proc.procedureCode}</strong><span>{proc.isActive ? 'Đang công khai' : 'Ngừng công khai'}</span></div>
           <h3 className="mt-1 break-words text-sm font-bold">{proc.title}</h3><p className="mt-1 text-xs text-slate-500">{proc.categoryName} · {new Date(proc.updatedAt).toLocaleDateString('vi-VN')}</p>
