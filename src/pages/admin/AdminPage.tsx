@@ -11,17 +11,14 @@ import {
   Buildings,
   CaretDown,
   ClipboardText,
-  CloudArrowUp,
   Database,
   FileCode,
   FileText,
-  Gear,
   House,
   Key,
   List,
   MagnifyingGlass,
   Plus,
-  Pulse as Activity,
   ClockCounterClockwise,
   Robot,
   ShieldCheck,
@@ -31,15 +28,7 @@ import {
   Users,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+// Recharts đã được gỡ bỏ do mock chart đã xóa
 import { Modal } from "@/components/ui/Modal";
 import {
   getManagedUsers,
@@ -118,71 +107,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   },
 ];
 
-const services = [
-  {
-    name: "AI Assistant / RAG",
-    status: "Hoạt động",
-    meta: "Phản hồi 1,2 giây",
-  },
-  {
-    name: "OCR nhận dạng giấy tờ",
-    status: "Hoạt động",
-    meta: "Độ chính xác 97,8%",
-  },
-  {
-    name: "Kết xuất PDF & QR",
-    status: "Hoạt động",
-    meta: "1.248 lượt tháng này",
-  },
-  { name: "SMS Gateway", status: "Cảnh báo", meta: "12 tin đang chờ" },
-];
-
-type ChartRange = "day" | "week" | "month" | "year";
-
-const chartData: Record<
-  ChartRange,
-  Array<{ label: string; searches: number; applications: number }>
-> = {
-  day: [
-    { label: "00:00", searches: 18, applications: 4 },
-    { label: "04:00", searches: 12, applications: 2 },
-    { label: "08:00", searches: 88, applications: 24 },
-    { label: "12:00", searches: 112, applications: 38 },
-    { label: "16:00", searches: 96, applications: 31 },
-    { label: "20:00", searches: 54, applications: 17 },
-    { label: "23:59", searches: 25, applications: 7 },
-  ],
-  week: [
-    { label: "T2", searches: 214, applications: 52 },
-    { label: "T3", searches: 286, applications: 76 },
-    { label: "T4", searches: 248, applications: 64 },
-    { label: "T5", searches: 318, applications: 88 },
-    { label: "T6", searches: 292, applications: 72 },
-    { label: "T7", searches: 168, applications: 40 },
-    { label: "CN", searches: 124, applications: 28 },
-  ],
-  month: [
-    { label: "Tuần 1", searches: 920, applications: 214 },
-    { label: "Tuần 2", searches: 1080, applications: 268 },
-    { label: "Tuần 3", searches: 1260, applications: 306 },
-    { label: "Tuần 4", searches: 1140, applications: 284 },
-    { label: "Tuần 5", searches: 680, applications: 172 },
-  ],
-  year: [
-    { label: "T1", searches: 3180, applications: 742 },
-    { label: "T2", searches: 3460, applications: 816 },
-    { label: "T3", searches: 3920, applications: 948 },
-    { label: "T4", searches: 4210, applications: 1034 },
-    { label: "T5", searches: 4080, applications: 998 },
-    { label: "T6", searches: 4560, applications: 1128 },
-    { label: "T7", searches: 4380, applications: 1062 },
-    { label: "T8", searches: 4720, applications: 1184 },
-    { label: "T9", searches: 3620, applications: 884 },
-    { label: "T10", searches: 0, applications: 0 },
-    { label: "T11", searches: 0, applications: 0 },
-    { label: "T12", searches: 0, applications: 0 },
-  ],
-};
+// services và chartData mock đã được xóa — dữ liệu giám sát dịch vụ & lưu lượng sẽ lấy từ API sau.
 
 
 
@@ -541,15 +466,15 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
   const stats = [
     {
       label: "Thủ tục đang áp dụng",
-      value: "126",
+      value: "—",
       icon: ClipboardText,
       tone: "info",
     },
     { label: "Tài khoản nội bộ", value: userCount?.toLocaleString("vi-VN") ?? "—", icon: Users, tone: "success" },
-    { label: "Nguồn tri thức AI", value: "284", icon: Robot, tone: "warning" },
+    { label: "Nguồn tri thức AI", value: "—", icon: Robot, tone: "warning" },
     {
       label: "Cảnh báo hệ thống",
-      value: "02",
+      value: "—",
       icon: ShieldCheck,
       tone: "danger",
     },
@@ -658,18 +583,8 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
               <h2>Tình trạng dịch vụ</h2>
             </div>
           </div>
-          <div className="admin-health-list">
-            {services.map((service) => (
-              <div key={service.name}>
-                <span
-                  className={
-                    service.status === "Hoạt động" ? "is-online" : "is-warning"
-                  }
-                />
-                <p>{service.name}</p>
-                <strong>{service.status}</strong>
-              </div>
-            ))}
+          <div className="flex items-center justify-center p-8 text-xs text-slate-400 italic">
+            ⚠️ API giám sát trạng thái dịch vụ hệ thống sẽ được tích hợp sau.
           </div>
         </article>
       </section>
@@ -678,136 +593,18 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
 }
 
 function UsageChart() {
-  const [range, setRange] = useState<ChartRange>("week");
-  const data = chartData[range];
-  const totalSearches = data.reduce((total, item) => total + item.searches, 0);
-  const totalApplications = data.reduce(
-    (total, item) => total + item.applications,
-    0,
-  );
-  const rangeLabels: Array<{ id: ChartRange; label: string }> = [
-    { id: "day", label: "Ngày" },
-    { id: "week", label: "Tuần" },
-    { id: "month", label: "Tháng" },
-    { id: "year", label: "Năm" },
-  ];
-
   return (
     <section
-      className="admin-card admin-chart-card"
+      className="admin-card admin-chart-card p-6"
       aria-labelledby="usage-chart-title"
     >
-      <div className="admin-chart-heading">
+      <div className="admin-chart-heading mb-4">
         <div>
           <h2 id="usage-chart-title">Xu hướng sử dụng hệ thống</h2>
         </div>
-        <div className="admin-chart-filters" aria-label="Khoảng thời gian">
-          {rangeLabels.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={range === item.id ? "is-active" : ""}
-              aria-pressed={range === item.id}
-              onClick={() => setRange(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
       </div>
-      <div className="admin-chart-summary">
-        <div>
-          <span className="is-search" />
-          <p>
-            <small>Lượt tra cứu</small>
-            <strong>{totalSearches.toLocaleString("vi-VN")}</strong>
-          </p>
-        </div>
-        <div>
-          <span className="is-application" />
-          <p>
-            <small>Hồ sơ được tạo</small>
-            <strong>{totalApplications.toLocaleString("vi-VN")}</strong>
-          </p>
-        </div>
-      </div>
-      <div
-        className="admin-chart-canvas"
-        role="img"
-        aria-label={`Biểu đồ ${totalSearches.toLocaleString("vi-VN")} lượt tra cứu và ${totalApplications.toLocaleString("vi-VN")} hồ sơ được tạo theo ${rangeLabels.find((item) => item.id === range)?.label.toLowerCase()}`}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 12, right: 8, left: -16, bottom: 0 }}
-            accessibilityLayer
-          >
-            <CartesianGrid
-              vertical={false}
-              stroke="#e2e8f0"
-              strokeDasharray="4 4"
-            />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#64748b", fontSize: 11 }}
-              dy={10}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 10 }}
-              width={52}
-            />
-            <Tooltip
-              cursor={{ stroke: "#cbd5e1", strokeDasharray: "4 4" }}
-              contentStyle={{
-                border: "1px solid #e2e8f0",
-                borderRadius: 12,
-                boxShadow: "0 12px 30px rgba(15,23,42,.10)",
-                fontSize: 12,
-              }}
-              labelStyle={{
-                color: "#0f172a",
-                fontWeight: 700,
-                marginBottom: 6,
-              }}
-              formatter={(value, name) => [
-                Number(value).toLocaleString("vi-VN"),
-                name === "searches" ? "Lượt tra cứu" : "Hồ sơ được tạo",
-              ]}
-            />
-            <Area
-              type="monotone"
-              dataKey="searches"
-              stroke="#991d18"
-              strokeWidth={2.5}
-              fill="#991d18"
-              fillOpacity={0.08}
-              activeDot={{
-                r: 5,
-                strokeWidth: 3,
-                stroke: "#fff",
-                fill: "#991d18",
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="applications"
-              stroke="#c89000"
-              strokeWidth={2.5}
-              fill="#ffcd00"
-              fillOpacity={0.07}
-              activeDot={{
-                r: 5,
-                strokeWidth: 3,
-                stroke: "#fff",
-                fill: "#c89000",
-              }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="flex items-center justify-center py-12 text-sm text-slate-400 italic">
+        ⚠️ API thống kê lưu lượng sử dụng hệ thống sẽ được tích hợp sau.
       </div>
     </section>
   );
@@ -836,139 +633,32 @@ function SearchBar({
 }
 
 function FormsView({ onAction }: { onAction: (message: string) => void }) {
-  const forms = [
-    {
-      name: "Tờ khai đăng ký khai sinh",
-      version: "v3.2",
-      fields: 18,
-      linked: "4 thủ tục",
-    },
-    {
-      name: "Tờ khai đăng ký kết hôn",
-      version: "v2.1",
-      fields: 24,
-      linked: "2 thủ tục",
-    },
-    {
-      name: "Giấy đề nghị chứng thực",
-      version: "v1.8",
-      fields: 12,
-      linked: "6 thủ tục",
-    },
-  ];
+  void onAction;
   return (
-    <section className="admin-card admin-content-card">
-      <div className="admin-card-heading">
-        <div>
-          <h2>Kho biểu mẫu</h2>
-        </div>
-        <button
-          type="button"
-          onClick={() => onAction("Đã mở trình thiết kế E-form.")}
-        >
-          <FileCode size={17} /> Trình thiết kế
-        </button>
-      </div>
-      <div className="admin-resource-grid">
-        {forms.map((form) => (
-          <article key={form.name}>
-            <span>
-              <FileText size={24} />
-            </span>
-            <div>
-              <strong>{form.name}</strong>
-              <small>
-                {form.version} · {form.fields} trường dữ liệu · {form.linked}
-              </small>
-            </div>
-            <button
-              type="button"
-              onClick={() => onAction(`Đang mở ${form.name}`)}
-            >
-              Cấu hình
-            </button>
-          </article>
-        ))}
+    <section className="admin-card admin-content-card p-8">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FileText size={40} className="text-slate-300 mb-2" />
+        <h2 className="text-base font-bold text-slate-800">Kho biểu mẫu điện tử</h2>
+        <p className="mt-2 text-xs text-slate-400 italic">
+          ⚠️ API quản lý danh sách biểu mẫu và tờ khai trực tuyến sẽ được tích hợp sau.
+        </p>
       </div>
     </section>
   );
 }
 
 function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
-  const docs = [
-    {
-      name: "Nghị định 104/2022/NĐ-CP",
-      type: "Nghị định",
-      sync: "Đã đồng bộ",
-      date: "15/09/2026",
-    },
-    {
-      name: "Thông tư 01/2022/TT-BTP",
-      type: "Thông tư",
-      sync: "Đã đồng bộ",
-      date: "12/09/2026",
-    },
-    {
-      name: "Quy trình hộ tịch cấp xã",
-      type: "Hướng dẫn",
-      sync: "Chờ đồng bộ",
-      date: "17/09/2026",
-    },
-  ];
+  void onAction;
   return (
-    <div className="admin-split-view">
-      <section className="admin-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Văn bản và nguồn tham chiếu</h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => onAction("Đã mở vùng tải tài liệu.")}
-          >
-            <CloudArrowUp size={17} /> Tải lên
-          </button>
-        </div>
-        <div className="admin-resource-grid is-list">
-          {docs.map((doc) => (
-            <article key={doc.name}>
-              <span>
-                <FileText size={23} />
-              </span>
-              <div>
-                <strong>{doc.name}</strong>
-                <small>
-                  {doc.type} · Cập nhật {doc.date}
-                </small>
-              </div>
-              <em
-                className={
-                  doc.sync === "Đã đồng bộ" ? "is-success" : "is-warning"
-                }
-              >
-                {doc.sync}
-              </em>
-            </article>
-          ))}
-        </div>
-      </section>
-      <aside className="admin-card admin-sync-panel">
-        <span>
-          <Robot size={30} weight="duotone" />
-        </span>
-        <h2>Đồng bộ RAG</h2>
-        <strong>281 / 284 tài liệu</strong>
-        <div>
-          <i style={{ width: "89%" }} />
-        </div>
-        <button
-          type="button"
-          onClick={() => onAction("Đã bắt đầu đồng bộ tri thức AI.")}
-        >
-          Đồng bộ ngay
-        </button>
-      </aside>
-    </div>
+    <section className="admin-card admin-content-card p-8">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Books size={40} className="text-slate-300 mb-2" />
+        <h2 className="text-base font-bold text-slate-800">Dữ liệu kiến thức AI & RAG</h2>
+        <p className="mt-2 text-xs text-slate-400 italic">
+          ⚠️ API quản lý nguồn tri thức và đồng bộ RAG sẽ được tích hợp sau.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -1526,96 +1216,32 @@ function IntegrationsView({
 }: {
   onAction: (message: string) => void;
 }) {
+  void onAction;
   return (
-    <div className="admin-service-grid">
-      {services.map((service) => (
-        <article className="admin-card" key={service.name}>
-          <header>
-            <span
-              className={
-                service.status === "Hoạt động" ? "is-online" : "is-warning"
-              }
-            />
-            {service.status}
-          </header>
-          <div>
-            <Gear size={28} weight="duotone" />
-            <h2>{service.name}</h2>
-          </div>
-          <footer>
-            <span>{service.meta}</span>
-            <button
-              type="button"
-              onClick={() => onAction(`Đang mở cấu hình ${service.name}`)}
-            >
-              Cấu hình
-            </button>
-          </footer>
-        </article>
-      ))}
-    </div>
+    <section className="admin-card admin-content-card p-8">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Stack size={40} className="text-slate-300 mb-2" />
+        <h2 className="text-base font-bold text-slate-800">Dịch vụ tích hợp hệ thống</h2>
+        <p className="mt-2 text-xs text-slate-400 italic">
+          ⚠️ API cấu hình và giám sát dịch vụ tích hợp sẽ được tích hợp sau.
+        </p>
+      </div>
+    </section>
   );
 }
 
 function BackupView({ onAction }: { onAction: (message: string) => void }) {
+  void onAction;
   return (
-    <div className="admin-split-view">
-      <section className="admin-card admin-security-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Bảo vệ dữ liệu cá nhân</h2>
-          </div>
-          <span className="admin-status-badge is-success">Đạt yêu cầu</span>
-        </div>
-        <div className="admin-security-list">
-          <div>
-            <ShieldCheck size={22} />
-            <p>
-              <strong>Mã hóa dữ liệu lưu trữ</strong>
-              <small>AES-256 · Hoạt động</small>
-            </p>
-          </div>
-          <div>
-            <Key size={22} />
-            <p>
-              <strong>Mã hóa dữ liệu truyền tải</strong>
-              <small>TLS 1.3 · Hoạt động</small>
-            </p>
-          </div>
-          <div>
-            <Activity size={22} />
-            <p>
-              <strong>Kiểm tra truy cập bất thường</strong>
-              <small>Không phát hiện rủi ro</small>
-            </p>
-          </div>
-        </div>
-      </section>
-      <section className="admin-card admin-backup-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Sao lưu gần nhất</h2>
-          </div>
-        </div>
-        <div>
-          <span>
-            <Database size={30} weight="duotone" />
-          </span>
-          <strong>wardmate-prod-2026-09-16</strong>
-          <p>Hoàn tất lúc 23:18 · 18,4 GB · Đã mã hóa</p>
-          <div>
-            <i />
-          </div>
-          <small>Lưu giữ 30 ngày · Bản sao tiếp theo sau 13 giờ</small>
-          <button
-            type="button"
-            onClick={() => onAction("Đã bắt đầu tạo bản sao lưu thủ công.")}
-          >
-            Sao lưu ngay
-          </button>
-        </div>
-      </section>
-    </div>
+    <section className="admin-card admin-content-card p-8">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Database size={40} className="text-slate-300 mb-2" />
+        <h2 className="text-base font-bold text-slate-800">Bảo mật & Sao lưu dữ liệu</h2>
+        <p className="mt-2 text-xs text-slate-400 italic">
+          ⚠️ API quản lý sao lưu và bảo mật hệ thống sẽ được tích hợp sau.
+        </p>
+      </div>
+    </section>
   );
 }
 

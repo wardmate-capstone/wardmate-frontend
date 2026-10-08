@@ -1,10 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from '@/components/ui/Toast';
-import {
-  INITIAL_OFFICER_APPLICATIONS,
-  INITIAL_OFFICER_AUDIT_LOGS,
-  INITIAL_OFFICER_NOTIFICATIONS,
-} from '@/data/mockOfficerData';
+// INITIAL_OFFICER_APPLICATIONS, INITIAL_OFFICER_AUDIT_LOGS, INITIAL_OFFICER_NOTIFICATIONS đã được xóa — dữ liệu hồ sơ, audit, thông báo sẽ lấy từ API sau.
 import type {
   OfficerApplication,
   OfficerSection,
@@ -32,10 +28,12 @@ export const OfficerPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
-  // Core Data States
-  const [applications, setApplications] = useState<OfficerApplication[]>(INITIAL_OFFICER_APPLICATIONS);
-  const [auditLogs, setAuditLogs] = useState<OfficerAuditLog[]>(INITIAL_OFFICER_AUDIT_LOGS);
-  const [notifications, setNotifications] = useState<OfficerNotification[]>(INITIAL_OFFICER_NOTIFICATIONS);
+  // Hồ sơ cán bộ — API sẽ được tích hợp sau
+  const [applications, setApplications] = useState<OfficerApplication[]>([]);
+  // Nhật ký hoạt động — API sẽ được tích hợp sau
+  const [auditLogs, setAuditLogs] = useState<OfficerAuditLog[]>([]);
+  // Thông báo — API sẽ được tích hợp sau
+  const [notifications, setNotifications] = useState<OfficerNotification[]>([]);
 
   // Navigation States
   const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');

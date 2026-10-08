@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
@@ -12,15 +12,6 @@ import {
   Lightning,
   Check,
 } from '@phosphor-icons/react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
 
 interface OfficerDashboardViewProps {
@@ -30,25 +21,12 @@ interface OfficerDashboardViewProps {
   onQuickPreview: (app: OfficerApplication) => void;
 }
 
-// Dữ liệu biểu đồ luồng xử lý hồ sơ trong ca trực theo khung giờ
-const mockHourlyWorkload = [
-  { time: '08:00', received: 4, reviewed: 3 },
-  { time: '09:00', received: 7, reviewed: 6 },
-  { time: '10:00', received: 9, reviewed: 8 },
-  { time: '11:00', received: 5, reviewed: 5 },
-  { time: '13:30', received: 6, reviewed: 4 },
-  { time: '14:30', received: 8, reviewed: 7 },
-  { time: '15:30', received: 6, reviewed: 5 },
-  { time: '16:30', received: 3, reviewed: 3 },
-];
-
 export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   applications,
   onSelectSection,
   onOpenApplicationReview,
   onQuickPreview,
 }) => {
-  const [chartView, setChartView] = useState<'hourly' | 'summary'>('hourly');
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
   const officerName = profile?.fullName?.trim() || user?.username || 'Lê Thu Hà';
@@ -69,12 +47,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
         </h1>
       </div>
 
-
       {/* Main Grid: Biểu đồ luồng xử lý & Tổng quan chức năng chính */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cột 1 & 2 (2/3 width): Biểu đồ xử lý hồ sơ & Hàng đợi ưu tiên */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Card Biểu đồ Recharts */}
+          {/* Card Biểu đồ — API sẽ được tích hợp sau */}
           <section
             aria-labelledby="chart-heading"
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs"
@@ -93,119 +70,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                   </p>
                 </div>
               </div>
-
-              {/* Bộ chuyển đổi chế độ xem */}
-              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setChartView('hourly')}
-                  className={`px-3 py-1 rounded-md transition-all ${
-                    chartView === 'hourly'
-                      ? 'bg-white shadow text-red-900 font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Theo giờ ca trực
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartView('summary')}
-                  className={`px-3 py-1 rounded-md transition-all ${
-                    chartView === 'summary'
-                      ? 'bg-white shadow text-red-900 font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Tóm tắt tỷ lệ
-                </button>
-              </div>
             </div>
 
-            {chartView === 'hourly' ? (
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={mockHourlyWorkload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b0000" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#8b0000" stopOpacity={0.0} />
-                      </linearGradient>
-                      <linearGradient id="colorReviewed" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#059669" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      formatter={(val: unknown, name: unknown) => [
-                        `${Number(val ?? 0)} hồ sơ`,
-                        String(name) === 'received' ? 'Hồ sơ vào quầy' : 'Đã duyệt / xử lý',
-                      ]}
-                      labelFormatter={(label) => `Khung giờ: ${label}`}
-                      contentStyle={{
-                        borderRadius: '0.75rem',
-                        border: '1px solid #e2e8f0',
-                        fontSize: '12px',
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="received"
-                      name="received"
-                      stroke="#8b0000"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorReceived)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="reviewed"
-                      name="reviewed"
-                      stroke="#059669"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorReviewed)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">Tổng hồ sơ nộp vào</span>
-                  <strong className="block text-2xl font-bold text-slate-900 mt-1 font-mono">48 hồ sơ</strong>
-                  <span className="text-[11px] text-emerald-700 font-semibold mt-1 inline-block">
-                    ↑ 12% so với ca sáng hôm qua
-                  </span>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">Đã xử lý & tiền kiểm</span>
-                  <strong className="block text-2xl font-bold text-emerald-700 mt-1 font-mono">41 hồ sơ</strong>
-                  <span className="text-[11px] text-slate-500 mt-1 inline-block">Đạt 85.4% tổng nộp</span>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">Hồ sơ tồn chờ giải quyết</span>
-                  <strong className="block text-2xl font-bold text-amber-700 mt-1 font-mono">7 hồ sơ</strong>
-                  <span className="text-[11px] text-amber-700 mt-1 inline-block">Đang trong hạn xử lý</span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-slate-100 text-xs">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-red-800" />
-                  <span className="text-slate-600">Hồ sơ vào quầy</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-emerald-600" />
-                  <span className="text-slate-600">Đã duyệt / xử lý</span>
-                </div>
-              </div>
-              <span className="text-[11px] text-slate-400">Cập nhật lúc {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+            {/* API thống kê luồng xử lý hồ sơ theo khung giờ sẽ được tích hợp sau */}
+            <div className="flex items-center justify-center h-64 text-sm text-slate-400 italic">
+              ⚠️ API thống kê tiến độ xử lý hồ sơ ca trực sẽ được tích hợp sau.
             </div>
           </section>
 
@@ -320,7 +189,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             </button>
           </section>
 
-          {/* Card Hiệu suất ca làm việc */}
+          {/* Card Hiệu suất ca làm việc — API sẽ được tích hợp sau */}
           <section
             aria-labelledby="performance-heading"
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4"
@@ -332,31 +201,9 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                   Chỉ số hiệu suất ca trực
                 </h3>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                Đạt chuẩn
-              </span>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                <span className="block text-2xl font-bold text-slate-900 font-mono">14.2</span>
-                <span className="block text-[11px] text-slate-500 font-medium">Phút / hồ sơ TB</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                <span className="block text-2xl font-bold text-emerald-700 font-mono">94%</span>
-                <span className="block text-[11px] text-slate-500 font-medium">Tỷ lệ đúng hẹn</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Số hồ sơ đã giải quyết hôm nay</span>
-                <strong className="text-slate-900 font-bold">20 hồ sơ</strong>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-red-800 h-full w-[78%] rounded-full" />
-              </div>
-              <p className="text-[11px] text-slate-400 text-right">Đạt 78% chỉ tiêu ca trực (mục tiêu: 25)</p>
+            <div className="flex items-center justify-center py-6 text-sm text-slate-400 italic">
+              ⚠️ API chỉ số hiệu suất cán bộ sẽ được tích hợp sau.
             </div>
           </section>
 
@@ -378,11 +225,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Vị trí:</dt>
-                <dd className="font-semibold text-slate-800">Quầy Một cửa 02</dd>
+                <dd className="font-semibold text-slate-800 italic text-slate-400">⚠️ API sẽ tích hợp sau</dd>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Lĩnh vực:</dt>
-                <dd className="font-medium text-slate-800">Hộ tịch & Chứng thực</dd>
+                <dd className="font-medium text-slate-400 italic">⚠️ API sẽ tích hợp sau</dd>
               </div>
               <div className="flex justify-between py-1">
                 <dt className="text-slate-500">Trạng thái quầy:</dt>

@@ -111,7 +111,16 @@ export const initialDossiers: CitizenDossier[] = [
   },
 ];
 
-export const citizenNotifications = [
+export type CitizenNotification = {
+  id: string;
+  title: string;
+  content: string;
+  time: string;
+  read: boolean;
+  type: 'success' | 'warning' | 'info';
+};
+
+export const citizenNotifications: CitizenNotification[] = [
   { id: 'notif-1', title: 'Hồ sơ đã được phê duyệt tiền kiểm', content: 'Hồ sơ HS-2026-00170 đã đạt yêu cầu. Bạn có thể đến bộ phận Một cửa để đối chiếu giấy tờ gốc.', time: '10 phút trước', read: false, type: 'success' },
   { id: 'notif-2', title: 'Yêu cầu chỉnh sửa ảnh giấy chứng sinh', content: 'Hồ sơ HS-2026-00128 cần chụp lại giấy chứng sinh do bị mờ góc dưới bên phải.', time: '2 giờ trước', read: false, type: 'warning' },
   { id: 'notif-3', title: 'Cán bộ đang tiền kiểm hồ sơ', content: 'Cán bộ Trần Quốc Bảo đã tiếp nhận tiền kiểm hồ sơ HS-2026-00155.', time: 'Hôm qua · 14:20', read: true, type: 'info' },

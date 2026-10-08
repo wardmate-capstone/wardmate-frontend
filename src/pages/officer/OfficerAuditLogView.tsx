@@ -95,7 +95,8 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
-                    Không có bản ghi lịch sử nào phù hợp.
+                    <p className="font-semibold text-slate-700">Chưa có bản ghi lịch sử hoạt động.</p>
+                    <p className="text-xs text-slate-400 mt-1 italic">⚠️ API nhật ký thao tác nghiệp vụ sẽ được tích hợp sau.</p>
                   </td>
                 </tr>
               ) : (

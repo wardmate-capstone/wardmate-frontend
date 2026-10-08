@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Clock,
   WarningCircle,
@@ -11,17 +10,8 @@ import {
   CaretDown,
   ShieldCheck,
 } from '@phosphor-icons/react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import type { CitizenDossier, CitizenSectionId, ChartRange } from '../types';
-import { citizenChartData, getStatusBadgeClass } from '../types';
+import type { CitizenDossier, CitizenSectionId } from '../types';
+import { getStatusBadgeClass } from '../types';
 
 interface CitizenDashboardViewProps {
   dossiers: CitizenDossier[];
@@ -194,109 +184,15 @@ export function CitizenDashboardView({
 }
 
 function CitizenUsageChart() {
-  const [range, setRange] = useState<ChartRange>('week');
-  const data = citizenChartData[range];
-  const totalViews = data.reduce((total, item) => total + item.views, 0);
-  const totalDossiers = data.reduce((total, item) => total + item.dossiers, 0);
-  const rangeLabels: Array<{ id: ChartRange; label: string }> = [
-    { id: 'day', label: 'Ngày' },
-    { id: 'week', label: 'Tuần' },
-    { id: 'month', label: 'Tháng' },
-    { id: 'year', label: 'Năm' },
-  ];
-
   return (
     <section className="admin-card admin-chart-card" aria-labelledby="citizen-chart-title">
       <div className="admin-chart-heading">
         <div>
-          <h2 id="citizen-chart-title">Nhật ký tra cứu & Tiến độ chuẩn bị hồ sơ</h2>
-        </div>
-        <div className="admin-chart-filters" aria-label="Khoảng thời gian">
-          {rangeLabels.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={range === item.id ? 'is-active' : ''}
-              aria-pressed={range === item.id}
-              onClick={() => setRange(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+          <h2 id="citizen-chart-title">Nhật ký tra cứu &amp; Tiến độ chuẩn bị hồ sơ</h2>
         </div>
       </div>
-
-      <div className="admin-chart-summary">
-        <div>
-          <span className="is-search" />
-          <p>
-            <small>Lượt tra cứu & xem hướng dẫn</small>
-            <strong>{totalViews.toLocaleString('vi-VN')}</strong>
-          </p>
-        </div>
-        <div>
-          <span className="is-application" />
-          <p>
-            <small>Hồ sơ đã chuẩn bị & gửi</small>
-            <strong>{totalDossiers.toLocaleString('vi-VN')}</strong>
-          </p>
-        </div>
-      </div>
-
-      <div
-        className="admin-chart-canvas"
-        role="img"
-        aria-label={`Biểu đồ ${totalViews} lượt tra cứu và ${totalDossiers} hồ sơ theo ${rangeLabels.find((r) => r.id === range)?.label.toLowerCase()}`}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 12, right: 8, left: -16, bottom: 0 }} accessibilityLayer>
-            <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="4 4" />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-5} />
-            <Tooltip
-              content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                return (
-                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-lg text-xs">
-                    <p className="font-bold text-slate-900 border-b border-slate-100 pb-1.5 mb-1.5">
-                      Thời điểm: {label}
-                    </p>
-                    <p className="text-red-800 font-semibold flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-red-700" />
-                      Lượt xem: {payload[0]?.value}
-                    </p>
-                    <p className="text-amber-800 font-semibold flex items-center gap-1.5 mt-0.5">
-                      <span className="size-2 rounded-full bg-amber-500" />
-                      Hồ sơ: {payload[1]?.value}
-                    </p>
-                  </div>
-                );
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="views"
-              stroke="#da251d"
-              strokeWidth={2.5}
-              fillOpacity={1}
-              fill="url(#colorViews)"
-            />
-            <Area
-              type="monotone"
-              dataKey="dossiers"
-              stroke="#f59e0b"
-              strokeWidth={2}
-              fillOpacity={0.2}
-              fill="#f59e0b"
-            />
-            <defs>
-              <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#da251d" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#da251d" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="flex items-center justify-center py-12 text-sm text-slate-400 italic">
+        ⚠️ API thống kê hoạt động công dân sẽ được tích hợp sau.
       </div>
     </section>
   );

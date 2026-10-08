@@ -43,8 +43,14 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
       </header>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-        <ul className="divide-y divide-slate-100">
-          {notifications.map((n) => (
+        {notifications.length === 0 ? (
+          <div className="p-10 text-center text-slate-500">
+            <p className="font-semibold text-slate-700">Chưa có thông báo mới.</p>
+            <p className="text-xs text-slate-400 mt-1 italic">⚠️ API thông báo cán bộ Một cửa sẽ được tích hợp sau.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {notifications.map((n) => (
             <li
               key={n.id}
               className={`p-5 flex items-start gap-4 transition-colors ${
@@ -94,7 +100,8 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
               )}
             </li>
           ))}
-        </ul>
+          </ul>
+        )}
       </div>
     </section>
   );

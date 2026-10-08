@@ -13,22 +13,27 @@ import { FormPreviewModal } from './components/FormPreviewModal';
 
 // Icons
 import {
+  ArrowCounterClockwise,
   Bell,
   CaretRight,
-  Folder,
+  CheckCircle,
+  FileText,
+  Files,
   House,
+  Hourglass,
   List,
   MagnifyingGlass,
   Plus,
   QrCode,
   SidebarSimple,
   Star,
-  User,
+  UserCircle,
+  WarningCircle,
 } from '@phosphor-icons/react';
 
 // Types & Views
-import type { CitizenDossier, CitizenSectionId } from './types';
-import { initialDossiers, citizenNotifications } from './types';
+import type { CitizenDossier, CitizenSectionId, CitizenNotification } from './types';
+// initialDossiers và citizenNotifications đã được xóa — dữ liệu hồ sơ & thông báo sẽ lấy từ API sau.
 import { CitizenDashboardView } from './views/CitizenDashboardView';
 import { CitizenDossiersView } from './views/CitizenDossiersView';
 import { CitizenDossierDetailView } from './views/CitizenDossierDetailView';
@@ -39,7 +44,7 @@ import { CitizenProfileView } from './views/CitizenProfileView';
 
 // Re-export types for backward compatibility
 export type { CitizenSectionId, CitizenDossier } from './types';
-export { initialDossiers } from './types';
+// export { initialDossiers } đã xóa — không còn dùng mock data
 
 const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string }> = {
   dashboard: { title: 'Tổng quan công dân', subtitle: 'Theo dõi tiến độ hồ sơ & chuẩn bị dịch vụ công trực tuyến' },
@@ -68,21 +73,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Khởi tạo dossiers kết hợp localStorage
-  const [dossiers, setDossiers] = useState<CitizenDossier[]>(() => {
-    try {
-      const stored = localStorage.getItem('wardmate_citizen_drafts');
-      if (stored) {
-        const parsedDrafts: CitizenDossier[] = JSON.parse(stored);
-        const existingCodes = new Set(parsedDrafts.map((d) => d.code));
-        const filteredInitial = initialDossiers.filter((d) => !existingCodes.has(d.code));
-        return [...parsedDrafts, ...filteredInitial];
-      }
-    } catch {
-      // bỏ qua lỗi đọc storage
-    }
-    return initialDossiers;
-  });
+  // Hồ sơ công dân — API sẽ được tích hợp sau
+  const [dossiers, setDossiers] = useState<CitizenDossier[]>([]);
 
   // State Modal Chi tiết hồ sơ nháp & Checklist
   const [selectedDossierDetail, setSelectedDossierDetail] = useState<CitizenDossier | null>(null);
@@ -91,7 +83,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [previewFormItem, setPreviewFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
   const [editFormItem, setEditFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
 
-  const [notifications, setNotifications] = useState(citizenNotifications);
+  // Thông báo — API sẽ được tích hợp sau
+  const [notifications, setNotifications] = useState<CitizenNotification[]>([]);
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string }>({
@@ -143,15 +136,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   // Cập nhật dossiers khi cần (ví dụ nộp tiền kiểm)
   function handleUpdateDossierStatus(code: string, newStatus: CitizenDossier['status']) {
-    setDossiers((prev) => {
-      const next = prev.map((d) => (d.code === code ? { ...d, status: newStatus } : d));
-      try {
-        localStorage.setItem('wardmate_citizen_drafts', JSON.stringify(next.filter((d) => d.status === 'Bản nháp')));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setDossiers((prev) => prev.map((d) => (d.code === code ? { ...d, status: newStatus } : d)));
   }
 
   function handleOpenFeedback(procedure: string, code?: string) {
@@ -171,19 +156,21 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       { id: 'procedures', label: 'Tra cứu thủ tục', icon: MagnifyingGlass, fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
-      { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: List, badge: dossierCounts.all, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
-      { id: 'dossiers_draft', label: 'Hồ sơ bản nháp', icon: Folder, badge: dossierCounts.draft, permissions: ['document.submissions.write'] },
-      { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Folder, badge: dossierCounts.pending, permissions: ['document.submissions.read'] },
-      { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: Folder, badge: dossierCounts.need_revision, permissions: ['document.submissions.write'] },
-      { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: Folder, badge: dossierCounts.resubmitted, permissions: ['document.submissions.read'] },
-      { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: Folder, badge: dossierCounts.approved, permissions: ['document.submissions.read'] },
-      { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: Folder, badge: dossierCounts.completed, permissions: ['document.submissions.read'] },
+      { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, badge: dossierCounts.all, children: [
+        { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: Files, badge: dossierCounts.all, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
+        { id: 'dossiers_draft', label: 'Bản nháp', icon: FileText, badge: dossierCounts.draft, permissions: ['document.submissions.write'] },
+        { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Hourglass, badge: dossierCounts.pending, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, badge: dossierCounts.need_revision, permissions: ['document.submissions.write'] },
+        { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, badge: dossierCounts.resubmitted, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, badge: dossierCounts.approved, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: FileText, badge: dossierCounts.completed, permissions: ['document.submissions.read'] },
+      ] },
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
       { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotificationsCount, fallbackRoles: citizenRole },
       { id: 'qr_code', label: 'Mã QR hồ sơ', icon: QrCode, fallbackRoles: citizenRole },
       { id: 'feedback', label: 'Đánh giá dịch vụ', icon: Star, fallbackRoles: citizenRole },
-      { id: 'profile', label: 'Hồ sơ cá nhân', icon: User, permissions: ['iam.profile.read', 'iam.profile.write'] },
+      { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ] },
   ];
 
