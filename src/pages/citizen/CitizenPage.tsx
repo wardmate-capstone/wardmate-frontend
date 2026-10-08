@@ -22,7 +22,6 @@ import {
   House,
   Hourglass,
   List,
-  MagnifyingGlass,
   Plus,
   QrCode,
   SidebarSimple,
@@ -153,7 +152,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const citizenNavigation: WorkspaceNavGroup<CitizenSectionId>[] = [
     { title: 'Tổng quan', items: [
       { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
-      { id: 'procedures', label: 'Tra cứu thủ tục', icon: MagnifyingGlass, fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
       { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, badge: dossierCounts.all, children: [
