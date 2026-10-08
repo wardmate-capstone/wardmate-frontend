@@ -85,9 +85,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByRole('heading', { name: 'Đánh giá Mức độ Hài lòng', exact: true })).toBeVisible();
     await expect(page.getByText('Khảo sát Chi tiết theo 4 Tiêu chí Chuẩn')).toBeVisible();
 
-    // Cài đặt quyền
-    await page.locator('aside').getByRole('button', { name: 'Cài đặt quyền' }).click();
-    await expect(page.getByRole('heading', { name: 'Cài đặt Phân quyền', exact: true })).toBeVisible();
-    await expect(page.getByText('Lãnh đạo UBND (Chủ tịch / Phó Chủ tịch)')).toBeVisible();
+    await expect(page.locator('aside').getByRole('button', { name: 'Báo cáo tổng hợp' })).toHaveCount(0);
+    await expect(page.locator('aside').getByRole('button', { name: 'Cài đặt quyền' })).toHaveCount(0);
   });
 });

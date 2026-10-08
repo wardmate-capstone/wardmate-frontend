@@ -9,7 +9,8 @@ test('admin overview shows recent audit activity', async ({ page }) => {
   );
   await page.goto('/admin');
   await auditRequest;
-  await expect(page.getByText('Gán vai trò').first()).toBeVisible();
+  await expect(page.getByText('Gán vai trò: @nguyenvanan')).toBeVisible();
+  await expect(page.getByText('Thực hiện bởi @admin.audit · Vai trò Quản lý thủ tục')).toBeVisible();
   await expect(page.getByText('Tài khoản nội bộ').locator('..').locator('..')).toContainText('1');
 });
 

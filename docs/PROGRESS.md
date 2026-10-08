@@ -6,10 +6,35 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 ## Dashboard Admin — hoạt động quản trị gần đây — 08/10/2026
 
-- Thẻ `Hoạt động quản trị gần đây` trên Tổng quan Admin nay gọi API audit thật với `pageSize=5` và hiển thị tối đa 5 hành động mới nhất kèm thời gian; dùng chung nhãn tiếng Việt với màn Nhật ký hoạt động. Chỉ số `Tài khoản nội bộ` cũng lấy tổng số tài khoản từ API người dùng thay cho số `40` hardcode.
+- Thẻ `Hoạt động quản trị gần đây` trên Tổng quan Admin nay gọi API audit thật với `pageSize=5` và hiển thị tối đa 5 sự kiện mới nhất. Mỗi sự kiện nêu rõ hành động, người/ quyền bị tác động, người thực hiện, vai trò liên quan và thời gian; màu icon phân biệt thao tác cấp/tạo, thu hồi/xóa/khóa và cập nhật. Dữ liệu tên tài khoản, vai trò và quyền đều được resolve từ API, không hardcode. Chỉ số `Tài khoản nội bộ` cũng lấy tổng số tài khoản từ API người dùng thay cho số `40` hardcode.
 - Có skeleton tải, trạng thái lỗi kèm thử lại và trạng thái rỗng; nút `Xem nhật ký` vẫn mở danh sách đầy đủ. Không hiển thị GUID hoặc dữ liệu audit giả trên dashboard.
 - File liên quan: `src/pages/admin/AdminPage.tsx`, `src/pages/admin/AdminRbacViews.tsx`, `tests/admin-rbac.spec.ts`.
 - Kiểm tra: `npm run typecheck` đạt, `npm run lint` đạt, Playwright `tests/admin-rbac.spec.ts` đạt 4/4, `git diff --check` đạt (chỉ có cảnh báo chuyển LF sang CRLF của Git trên Windows).
+
+## Sidebar Admin và chức năng được cấp — 08/10/2026
+
+- Loại bỏ mục `Thủ tục hành chính` bị chèn trùng trong nhóm `Chức năng được cấp` bằng cách khai báo đúng permission trên mục Admin đã có.
+- Sửa danh sách thủ tục nhúng bị hiện hai thông báo tải giống nhau; nút `Thêm thủ tục` chỉ còn xuất hiện đúng ở trang danh sách.
+- `Lịch sử phiên bản`, `Biểu mẫu điện tử` và `Đơn điện tử của tôi` không còn mở nhầm màn hình hoặc dữ liệu mock; hiển thị thông báo trạng thái tích hợp/API ngắn gọn. `Danh mục thủ tục` và `PDF & bản nháp` tiếp tục dùng API thật hiện có.
+
+## Skeleton cho danh sách dữ liệu — 08/10/2026
+
+- Thêm bộ skeleton UI dùng chung tại `src/components/ui/Skeleton.tsx`: primitive `Skeleton`, dòng bảng, bảng, danh sách và lưới thẻ; giữ Tailwind/shadcn convention hiện có, không thêm dependency.
+- Thay thông báo tải dạng chữ tại các danh sách API chính: vai trò/quyền, audit, cán bộ Một cửa, thủ tục quản trị, PDF/bản nháp, danh mục, lịch sử phiên bản, thủ tục cập nhật gần đây và các danh sách thủ tục công khai/trang chủ.
+- Không thay loading của form submit, trang chi tiết, lazy route hoặc dữ liệu tĩnh/mock vì các trạng thái đó không phải danh sách dữ liệu.
+- Sửa ô tìm kiếm thủ tục công khai cập nhật URL ở từng ký tự khiến mất chữ khi gõ nhanh; nay giữ state nhập cục bộ và debounce 300 ms, test debounce đạt.
+- Kiểm tra: `npm run typecheck` và `npm run lint` đạt; 5 test từng lỗi do badge sidebar/tên nhãn cũ đã chạy lại đạt 4/5, test debounce còn lại đạt sau khi sửa. Lượt chạy tổng 42 test trước sửa cuối đạt 37/42; các lỗi liên quan đã được chạy lại riêng và đạt, chưa chạy lại toàn bộ 42 test thêm một lần.
+
+## Đồng nhất thủ tục trên sidebar Admin — 08/10/2026
+
+- Đổi nhãn Admin thành `Danh sách thủ tục`, `Danh sách biểu mẫu`, `Dữ liệu kiến thức AI` để thống nhất với sidebar Quản lý thủ tục.
+- Mục `Danh sách thủ tục` của Admin không còn dùng bốn dòng mock hardcode; nhúng trực tiếp màn quản lý thủ tục đã nối `GET /api/v1/procedure-manager/procedures` và các API danh mục/thống kê liên quan.
+- Panel `Chức năng được cấp` nay phủ trọn workspace từ đỉnh đến đáy viewport và có lớp hiển thị cao hơn topbar, không còn bị topbar che tiêu đề/nút đóng khi mở sau khi cuộn. Nội dung panel chỉ cuộn dọc trong vùng riêng; khóa overflow của cả `html` và `body` để loại bỏ thanh cuộn nền/ngang ở đáy.
+- Theo yêu cầu người dùng, đã bỏ hoàn toàn thanh header riêng của panel (tên chức năng, dòng quyền IAM và nút X). Nội dung chức năng mở trực tiếp trong vùng làm việc; chuyển mục hoặc thoát bằng sidebar.
+- Vùng chức năng bắt đầu dưới topbar chuẩn 72px thay vì phủ từ đỉnh viewport, nên vẫn giữ nút thu gọn sidebar, chuông thông báo và UserDropdown; không khôi phục header phụ/nút X.
+- Sidebar Lãnh đạo UBND đã bỏ hai mục `Báo cáo tổng hợp` và `Cài đặt quyền` theo yêu cầu; nhóm cuối chỉ còn `Hồ sơ cá nhân` và đổi tên thành `Tài khoản`.
+- Đã xóa toàn bộ code mồ côi của hai mục trên: `ManagerReportsView`, `ManagerPermissionsView`, hai section/type/header mapping và các bộ `mockReportTemplates`, `mockPermissionRoles`; test Manager chuyển sang xác nhận hai mục không còn tồn tại.
+- Thu gọn mật độ sidebar dùng chung: hàng menu từ tối thiểu 44px xuống 40px, giảm khoảng cách giữa hàng/nhóm và padding dọc; vẫn giữ touch target 40px, các nhãn dài được phép xuống dòng khi cần.
 
 ## Tích hợp IAM RBAC động — 08/10/2026
 
