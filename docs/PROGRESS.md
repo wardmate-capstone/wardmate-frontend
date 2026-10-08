@@ -4,6 +4,69 @@ Cập nhật: 08/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Sửa lỗi Citizen Login Redirect & Bỏ mục Chức năng được cấp trên Sidebar — 08/10/2026
+
+- **Nguyên nhân Citizen login bị đá sang `/procedure-manager`**:
+  1. Trong `src/lib/navigationAccess.ts`, quy tắc kiểm tra quyền workspace `procedure-manager` sử dụng prefix `procedure.` lỏng lẻo, khiến tài khoản có quyền đọc thủ tục công khai (`procedure.read`) bị nhận diện nhầm là có quyền quản trị phân hệ Quản lý thủ tục.
+  2. Trong `src/lib/authRedirect.ts`, hàm `getManagementHome` kiểm tra `canAccessWorkspace('procedure-manager', ...)` và trả về `/procedure-manager`, đi ngược lại nguyên tắc "công dân và quản lý thủ tục không bị ép buộc rời khỏi cổng công khai". Khi công dân login về trang chủ `/`, component `HomeRoute` trong `App.tsx` gọi `getManagementHome` và redirect công dân thẳng vào `/procedure-manager`.
+- **Giải pháp xử lý**:
+  - `src/lib/navigationAccess.ts`: Chuẩn hóa danh sách permissions của `procedure-manager` thành các quyền quản trị cụ thể (`procedure.manage`, `procedure.create`, `procedure.update`, `procedure.publish`, `procedure.status`, `document.templates.`), loại trừ quyền đọc công khai.
+  - `src/lib/authRedirect.ts`:
+    - `getManagementHome`: Trả về `null` ngay lập tức nếu người dùng có role `REGISTERED_CITIZEN`; loại bỏ dòng redirect sang `/procedure-manager`.
+    - `loginDestination`: Bổ sung kiểm tra `if (roles.includes('REGISTERED_CITIZEN')) return '/';` để bảo đảm công dân luôn về trang chủ hoặc `returnTo` cụ thể.
+- **Bỏ mục "Chức năng được cấp" & Xóa thẻ tài khoản ở cuối Sidebar**:
+  - Trong `src/components/layout/WorkspaceSidebar.tsx`:
+    - Bỏ phần render mục `Chức năng được cấp` khỏi sidebar. Giữ nguyên toàn bộ code và các file liên quan (`PermissionFeatures.tsx`, handler tính năng) đúng theo yêu cầu "không cần xóa hết mấy cái liên quan".
+    - Xóa khối thẻ tài khoản ở đáy sidebar (`.admin-sidebar-user` chứa avatar, tên tài khoản và vai trò) theo yêu cầu người dùng, giúp sidebar gọn gàng và đồng bộ với UserDropdown ở topbar.
+- **Đồng bộ bộ Icon của Citizen theo Officer**:
+  - Tại `src/pages/citizen/CitizenPage.tsx`:
+    - Thay thế các icon `Folder` đơn điệu trong cây menu `Hồ sơ của tôi` bằng các icon trực quan giống Officer:
+      - Mục cha `Hồ sơ của tôi`: `Files` (giống `Hồ sơ nghiệp vụ` của Officer).
+      - `Tất cả hồ sơ`: `Files`.
+      - `Bản nháp`: `FileText`.
+      - `Chờ tiền kiểm`: `Hourglass` (đồng hồ cát).
+      - `Cần chỉnh sửa`: `WarningCircle` (cảnh báo).
+      - `Đã gửi lại`: `ArrowCounterClockwise` (mũi tên hoàn tác).
+      - `Đã duyệt tiền kiểm`: `CheckCircle` (dấu tích thành công).
+      - `Đã hoàn thành`: `FileText`.
+    - Mục `Hồ sơ cá nhân`: Đổi từ `User` sang `UserCircle` để thống nhất với Officer/Manager/Admin.
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt (0 lỗi).
+  - Không chạy test tự động theo yêu cầu người dùng.
+
+## Khôi phục UI dashboard trước khi hợp nhất theo Admin — 08/10/2026
+
+- Người dùng chốt mốc giao diện ngay trước commit `a98db02`. Khôi phục các đặc điểm UI của sidebar riêng cho Admin, Công dân, Cán bộ Một cửa, Lãnh đạo UBND và Quản lý thủ tục trên khung permission hiện tại: khoảng cách nhóm/hàng 44px, thẻ tài khoản cuối sidebar và nhãn điều hướng theo từng workspace.
+- Khôi phục menu cây `Hồ sơ của tôi` cho Công dân và `Hồ sơ nghiệp vụ` cho Cán bộ Một cửa, gồm trạng thái mở/đóng, badge tổng và các nhánh con như trước khi menu bị làm phẳng. Mobile/compact và accessibility (`aria-expanded`, `aria-current`, nhãn sidebar theo role) được giữ.
+- Không khôi phục nội dung/mock cũ. Các view hiện tại, dòng thông báo chờ API, API thật, auth, Protected Routes, RBAC động và panel `Chức năng được cấp` được giữ nguyên.
+- Đã bỏ hoàn toàn phương án thêm `ManagerDashboardView` ở lượt hiểu nhầm trước; Manager tiếp tục mở `Thống kê hồ sơ` như trạng thái trước task.
+- File UI liên quan: `src/components/layout/WorkspaceSidebar.tsx`, `src/components/layout/RoleWorkspaceSidebars.tsx`, `src/pages/citizen/CitizenPage.tsx`, `src/styles/globals.css`. Test Officer/Manager/sidebar được cập nhật để phản ánh UI cũ và dữ liệu rỗng hiện tại.
+- Kiểm tra: `npm run typecheck` đạt; `npm run lint` đạt; production build đạt (còn cảnh báo chunk lớn và annotation Zod như trước). Lượt Playwright tổng đầu đạt 33/38, 5 lỗi đều là kỳ vọng UI compact hoặc dữ liệu mock đã bị xóa; sau khi cập nhật đúng trạng thái hiện tại, chạy lại toàn bộ nhóm liên quan đạt 14/14. Chưa kiểm tra trực quan thủ công trên trình duyệt.
+
+## Dọn dẹp mock data các mục sidebar — Chờ tích hợp API — 08/10/2026
+
+- Theo yêu cầu người dùng, đã xóa toàn bộ mock data từ các mục ở sidebar chưa có backend, thay bằng thông báo rõ ràng "⚠️ API ... sẽ được tích hợp sau". Tuyệt đối không chỉnh sửa các mục đã call API thật.
+- **Citizen Workspace**:
+  - `CitizenPage.tsx`, `types.ts`: Khởi tạo danh sách hồ sơ `dossiers` và thông báo `notifications` thành mảng rỗng; xóa import dữ liệu mock.
+  - `CitizenDashboardView.tsx`: Xóa biểu đồ AreaChart mock, thay bằng placeholder thông báo API thống kê hoạt động công dân sẽ được tích hợp sau.
+  - `CitizenFeedbackView.tsx`: Xóa danh sách đánh giá mẫu, hiển thị placeholder thông báo API lịch sử đánh giá dịch vụ sẽ được tích hợp sau.
+- **Officer Workspace**:
+  - `OfficerPage.tsx`: Khởi tạo `applications`, `auditLogs`, `notifications` thành mảng rỗng.
+  - `OfficerDashboardView.tsx`: Xóa biểu đồ và các thẻ số liệu ca trực mock, thay bằng placeholder API thống kê tiến độ và hiệu suất ca trực.
+  - `OfficerApplicationListView.tsx`, `OfficerAuditLogView.tsx`, `OfficerNotificationView.tsx`: Cập nhật empty state thông báo rõ API sẽ được tích hợp sau.
+- **Manager Workspace**:
+  - `ManagerFeedbackView.tsx`: Xóa danh sách phản hồi mock và khảo sát hài lòng, thay bằng placeholder API tiếp nhận ý kiến và khảo sát SIPAS.
+  - `ManagerPerformanceView.tsx`: Xóa các bảng/chỉ số hiệu suất cán bộ và tỷ lệ bổ sung mock, thay bằng placeholder API hiệu suất.
+  - `ManagerSystemStatsView.tsx`: Xóa biểu đồ xu hướng, phân bổ hồ sơ, top thủ tục và tra cứu mock; thay bằng placeholder API thống kê hệ thống.
+  - `mockData.ts`: Dọn dẹp dữ liệu mock, giữ lại mảng rỗng cho hồ sơ. Các mục danh sách cán bộ Một cửa (`ManagerProfilesView`, `ManagerProfileDetailView`) tiếp tục gọi API thật `getUserProfiles`, `getAdminProfile`, `updateAdminProfile`, `updateAccountStatus`.
+- **Admin Workspace**:
+  - `AdminPage.tsx`: Xóa biểu đồ `UsageChart`, `services`, `FormsView`, `KnowledgeView`, `IntegrationsView`, `BackupView` mock; thay bằng placeholder thông báo API sẽ được tích hợp sau. Các chỉ số chưa có API hiển thị `—`.
+  - Giữ nguyên toàn bộ các phân hệ đã kết nối API thật: Người dùng (`getManagedUsers`, `updateAccountStatus`), Phường/Xã (`getWards`, `createWard`, `assignUserWard`), Vai trò & quyền hạn (`AdminRolesView`), Nhật ký hoạt động (`AdminRbacAuditView`), Danh sách thủ tục (`ProcedureManagerPage`).
+- **Kiểm tra**:
+  - `npm run typecheck`: Đạt (0 lỗi).
+  - `npm run lint`: Đạt (0 cảnh báo, 0 lỗi).
+  - `npm run build`: Đạt (biên dịch production thành công).
+
 ## Dashboard Admin — hoạt động quản trị gần đây — 08/10/2026
 
 - Thẻ `Hoạt động quản trị gần đây` trên Tổng quan Admin nay gọi API audit thật với `pageSize=5` và hiển thị tối đa 5 sự kiện mới nhất. Mỗi sự kiện nêu rõ hành động, người/ quyền bị tác động, người thực hiện, vai trò liên quan và thời gian; màu icon phân biệt thao tác cấp/tạo, thu hồi/xóa/khóa và cập nhật. Dữ liệu tên tài khoản, vai trò và quyền đều được resolve từ API, không hardcode. Chỉ số `Tài khoản nội bộ` cũng lấy tổng số tài khoản từ API người dùng thay cho số `40` hardcode.
