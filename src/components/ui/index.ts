@@ -4,3 +4,4 @@ export { Badge, type BadgeProps } from './Badge';
 export { Modal, type ModalProps } from './Modal';
 export { ConfirmDeleteModal, type ConfirmDeleteModalProps } from './ConfirmDeleteModal';
 export { Toaster, toast } from './Toast';
+export { Skeleton, TableSkeleton, TableSkeletonRows, ListSkeleton, CardGridSkeleton } from './Skeleton';

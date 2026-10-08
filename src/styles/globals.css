@@ -526,7 +526,7 @@
   .admin-brand strong { @apply block text-base font-extrabold tracking-normal text-slate-950; }
   .admin-brand small { @apply mt-0.5 block text-[11px] font-medium text-slate-500; }
   .admin-brand > button { @apply grid size-11 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden; }
-  .admin-nav { @apply flex-1 overflow-y-auto px-3 py-5; }
+  .admin-nav { @apply flex-1 overflow-y-auto px-3 py-4; }
   .admin-nav > p { @apply mb-2 overflow-hidden px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400; max-height: 24px; opacity: 1; filter: blur(0); transform: translateX(0); transition: max-height 480ms var(--admin-sidebar-ease), margin 480ms var(--admin-sidebar-ease), padding 480ms var(--admin-sidebar-ease), opacity 420ms ease 20ms, transform 460ms var(--admin-sidebar-ease) 20ms, filter 420ms ease 20ms; }
   .admin-nav > p.admin-nav-group { @apply mb-2 mt-6; }
   .admin-nav > button { @apply mb-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950; transition-property: padding, gap, color, background-color, box-shadow; transition-duration: 480ms; transition-timing-function: var(--admin-sidebar-ease); }
@@ -616,9 +616,9 @@
   .admin-status-badge.is-info { @apply bg-sky-50 text-sky-700; }
   .admin-status-badge.is-success { @apply bg-emerald-50 text-emerald-700; }
 
-  .admin-nav-section { @apply mb-5 last:mb-0; }
-  .admin-nav-section > p { @apply mb-2 overflow-hidden px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400; max-height: 24px; opacity: 1; transition: max-height 420ms var(--admin-sidebar-ease), opacity 300ms ease, margin 420ms var(--admin-sidebar-ease); }
-  .admin-nav-section > button { @apply mb-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-950; transition: padding 420ms var(--admin-sidebar-ease), gap 420ms var(--admin-sidebar-ease), background-color 180ms ease, color 180ms ease; }
+  .admin-nav-section { @apply mb-3 last:mb-0; }
+  .admin-nav-section > p { @apply mb-1 overflow-hidden px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400; max-height: 24px; opacity: 1; transition: max-height 420ms var(--admin-sidebar-ease), opacity 300ms ease, margin 420ms var(--admin-sidebar-ease); }
+  .admin-nav-section > button { @apply mb-0.5 flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold leading-tight text-slate-600 hover:bg-slate-100 hover:text-slate-950; transition: padding 420ms var(--admin-sidebar-ease), gap 420ms var(--admin-sidebar-ease), background-color 180ms ease, color 180ms ease; }
   .admin-nav-section > button.is-active { @apply bg-red-50 text-red-800; box-shadow: inset 3px 0 0 #991d18; }
   .admin-nav-section > button > span { @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap; max-width: 170px; opacity: 1; transition: max-width 420ms var(--admin-sidebar-ease), opacity 280ms ease; }
   .admin-nav-section > button > small { @apply grid min-w-6 place-items-center overflow-hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500; max-width: 38px; opacity: 1; transition: max-width 380ms var(--admin-sidebar-ease), opacity 260ms ease; }
