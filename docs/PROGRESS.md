@@ -18,6 +18,8 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Trong `src/components/layout/WorkspaceSidebar.tsx`:
     - Bỏ phần render mục `Chức năng được cấp` khỏi sidebar. Giữ nguyên toàn bộ code và các file liên quan (`PermissionFeatures.tsx`, handler tính năng) đúng theo yêu cầu "không cần xóa hết mấy cái liên quan".
     - Xóa khối thẻ tài khoản ở đáy sidebar (`.admin-sidebar-user` chứa avatar, tên tài khoản và vai trò) theo yêu cầu người dùng, giúp sidebar gọn gàng và đồng bộ với UserDropdown ở topbar.
+- **Xóa nhóm "Tiếp nhận hồ sơ" khỏi Sidebar Cán bộ Một cửa**:
+  - Tại `src/components/layout/RoleWorkspaceSidebars.tsx`: Đã xóa toàn bộ nhóm `Tiếp nhận hồ sơ` (`Chờ tiếp nhận` và `Đã tiếp nhận`) khỏi `UnifiedOfficerSidebar`. Đúng theo ranh giới nghiệp vụ chuẩn của WardMate: hệ thống chỉ phục vụ tiền kiểm và chuẩn bị hồ sơ trực tuyến, việc tiếp nhận chính thức thuộc về Bộ phận một cửa ngoài đời thực. Quy trình tiền kiểm đã nằm trọn vẹn trong cây menu `Quản lý hồ sơ` (`Hồ sơ nghiệp vụ`).
 - **Xóa tag số (badge) ở các mục trên Sidebar**:
   - Tại `src/components/layout/WorkspaceSidebar.tsx`: Gỡ bỏ hoàn toàn thẻ tag `<small>` hiển thị số badge trên các nút điều hướng sidebar (cả mục cha, nhánh cây con và nút thông thường).
   - Tại `src/components/layout/RoleWorkspaceSidebars.tsx`: Loại bỏ thuộc tính `badge` khỏi tất cả các mục điều hướng quản lý của Cán bộ Một cửa (`Officer`), Lãnh đạo UBND (`Manager`), và Quản lý thủ tục (`Procedure Manager`).

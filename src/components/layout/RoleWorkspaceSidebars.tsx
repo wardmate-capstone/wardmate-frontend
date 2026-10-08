@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FileText, Files, FolderOpen, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, Tray, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FileText, Files, FolderOpen, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -35,7 +35,6 @@ export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, 
       { id: 'apps-resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, fallbackRoles: role }, { id: 'apps-approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, fallbackRoles: role },
       { id: 'apps-ready-submit', label: 'Chờ tiếp nhận chính thức', icon: FileText, fallbackRoles: role },
     ] }] },
-    { title: 'Tiếp nhận hồ sơ', items: [{ id: 'receipt-waiting', label: 'Chờ tiếp nhận', icon: ClipboardText, fallbackRoles: role }, { id: 'receipt-received', label: 'Đã tiếp nhận', icon: Tray, fallbackRoles: role }] },
     { title: 'Hệ thống & Ca trực', items: [{ id: 'audit-log', label: 'Lịch sử xử lý', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];
   return <WorkspaceSidebar workspace="officer" subtitle="Cán bộ Một cửa" activeSection={activeSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpen} onClose={onClose} isCompact={isCompact} />;
