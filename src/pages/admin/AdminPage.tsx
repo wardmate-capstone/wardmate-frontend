@@ -57,7 +57,8 @@ import {
 import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import type { ManagerProfileItem } from '@/pages/manager/types';
-import { AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
+import { actionLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
+import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 
 type SectionId =
   | "overview"
@@ -542,6 +543,28 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
 }
 
 function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [auditError, setAuditError] = useState("");
+  const [userCount, setUserCount] = useState<number>();
+
+  const loadAuditLogs = useCallback(async () => {
+    setAuditLoading(true);
+    setAuditError("");
+    try {
+      setAuditLogs((await rbacApi.audit(1, 5)).items);
+    } catch (error) {
+      setAuditError(rbacError(error));
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAuditLogs();
+    void getManagedUsers(1, 1).then(({ total }) => setUserCount(total)).catch(() => setUserCount(undefined));
+  }, [loadAuditLogs]);
+
   const stats = [
     {
       label: "Thủ tục đang áp dụng",
@@ -549,7 +572,7 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
       icon: ClipboardText,
       tone: "info",
     },
-    { label: "Tài khoản nội bộ", value: "40", icon: Users, tone: "success" },
+    { label: "Tài khoản nội bộ", value: userCount?.toLocaleString("vi-VN") ?? "—", icon: Users, tone: "success" },
     { label: "Nguồn tri thức AI", value: "284", icon: Robot, tone: "warning" },
     {
       label: "Cảnh báo hệ thống",
@@ -613,7 +636,38 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
               Xem nhật ký
             </button>
           </div>
-          <p className="p-5 text-sm text-slate-600">Xem toàn bộ lịch sử thay đổi vai trò, phân quyền và điều động tài khoản trên hệ thống.</p>
+          <div className="divide-y divide-slate-100 px-5">
+            {auditLoading && Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex min-h-14 items-center gap-3 py-3" aria-hidden="true">
+                <span className="size-8 shrink-0 animate-pulse rounded-full bg-slate-100" />
+                <span className="h-4 flex-1 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))}
+            {!auditLoading && auditError && (
+              <div className="flex min-h-20 items-center justify-between gap-3 py-4 text-sm text-red-700" role="alert">
+                <span>Không thể tải hoạt động gần đây.</span>
+                <button type="button" className="font-bold hover:underline" onClick={() => void loadAuditLogs()}>
+                  Thử lại
+                </button>
+              </div>
+            )}
+            {!auditLoading && !auditError && auditLogs.map((log) => (
+              <div key={log.id} className="flex min-h-14 items-center gap-3 py-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-800">
+                  <ClockCounterClockwise size={16} aria-hidden="true" />
+                </span>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
+                  {actionLabels[log.action] ?? log.action}
+                </p>
+                <time className="shrink-0 text-xs text-slate-500" dateTime={log.createdAt}>
+                  {new Date(log.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+                </time>
+              </div>
+            ))}
+            {!auditLoading && !auditError && auditLogs.length === 0 && (
+              <p className="py-5 text-sm text-slate-500">Chưa có hoạt động quản trị nào.</p>
+            )}
+          </div>
         </article>
         <article className="admin-card">
           <div className="admin-card-heading">

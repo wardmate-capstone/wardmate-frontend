@@ -4,6 +4,13 @@ Cập nhật: 08/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Dashboard Admin — hoạt động quản trị gần đây — 08/10/2026
+
+- Thẻ `Hoạt động quản trị gần đây` trên Tổng quan Admin nay gọi API audit thật với `pageSize=5` và hiển thị tối đa 5 hành động mới nhất kèm thời gian; dùng chung nhãn tiếng Việt với màn Nhật ký hoạt động. Chỉ số `Tài khoản nội bộ` cũng lấy tổng số tài khoản từ API người dùng thay cho số `40` hardcode.
+- Có skeleton tải, trạng thái lỗi kèm thử lại và trạng thái rỗng; nút `Xem nhật ký` vẫn mở danh sách đầy đủ. Không hiển thị GUID hoặc dữ liệu audit giả trên dashboard.
+- File liên quan: `src/pages/admin/AdminPage.tsx`, `src/pages/admin/AdminRbacViews.tsx`, `tests/admin-rbac.spec.ts`.
+- Kiểm tra: `npm run typecheck` đạt, `npm run lint` đạt, Playwright `tests/admin-rbac.spec.ts` đạt 4/4, `git diff --check` đạt (chỉ có cảnh báo chuyển LF sang CRLF của Git trên Windows).
+
 ## Tích hợp IAM RBAC động — 08/10/2026
 
 - Hợp nhất runtime sidebar của Admin, Công dân, Cán bộ Một cửa, Lãnh đạo UBND và Quản lý thủ tục về `src/components/layout/WorkspaceSidebar.tsx`; ba component sidebar cũ chỉ còn re-export để không duy trì implementation trùng lặp. Cấu hình theo workspace dùng chung tại `RoleWorkspaceSidebars.tsx`; Admin/Citizen cũng render cùng component này.

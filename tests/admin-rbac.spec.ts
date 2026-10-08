@@ -1,6 +1,18 @@
 import { expect, test } from '@playwright/test';
 import { mockWorkspaceAuth } from './fixtures/auth';
 
+test('admin overview shows recent audit activity', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN']);
+  const auditRequest = page.waitForRequest(request =>
+    new URL(request.url()).pathname === '/api/v1/rbac/audit-logs'
+      && new URL(request.url()).searchParams.get('pageSize') === '5'
+  );
+  await page.goto('/admin');
+  await auditRequest;
+  await expect(page.getByText('Gán vai trò').first()).toBeVisible();
+  await expect(page.getByText('Tài khoản nội bộ').locator('..').locator('..')).toContainText('1');
+});
+
 test('admin loads dynamic permission modules and changes one permission', async ({ page }) => {
   const state = await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await page.goto('/admin');

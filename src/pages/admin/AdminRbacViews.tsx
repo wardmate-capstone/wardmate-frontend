@@ -38,7 +38,7 @@ const moduleLabels: Record<string, string> = {
   ProcedureCatalog: "Quản lý thủ tục",
   DocumentForm: "Biểu mẫu điện tử",
 };
-const actionLabels: Record<string, string> = {
+export const actionLabels: Record<string, string> = {
   "role.created": "Tạo vai trò",
   "role.updated": "Cập nhật vai trò",
   "role.deleted": "Xóa vai trò",
