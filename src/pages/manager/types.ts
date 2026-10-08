@@ -12,9 +12,6 @@ export type ManagerSectionId =
   // Phản hồi người dân
   | 'feedback-reports'
   | 'satisfaction-level'
-  // Chức năng khác
-  | 'reports'
-  | 'permissions'
   | 'profile';
 
 export interface ManagerProfileItem {

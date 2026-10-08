@@ -21,8 +21,6 @@ export const managerSectionTitles: Record<ManagerSectionId, { title: string; sub
   'perf-officers': { title: 'Đánh giá Hiệu suất Cán bộ', subtitle: 'Năng suất tiếp nhận, giải quyết hồ sơ và điểm hài lòng của cán bộ Một cửa' },
   'feedback-reports': { title: 'Báo cáo Phản hồi Người dân', subtitle: 'Tiếp nhận và xử lý góp ý, phản ánh kiến nghị từ công dân' },
   'satisfaction-level': { title: 'Đánh giá Mức độ Hài lòng', subtitle: 'Kết quả khảo sát chất lượng dịch vụ hành chính công của phường' },
-  reports: { title: 'Báo cáo Tổng hợp', subtitle: 'Kết xuất báo cáo định kỳ theo mẫu chuẩn của UBND cấp trên' },
-  permissions: { title: 'Cài đặt Phân quyền', subtitle: 'Quản lý vai trò và quyền truy cập các chức năng trong hệ thống' },
   profile: { title: 'Hồ sơ Cá nhân', subtitle: 'Thông tin tài khoản quản trị và thiết lập bảo mật cá nhân' },
 };
 

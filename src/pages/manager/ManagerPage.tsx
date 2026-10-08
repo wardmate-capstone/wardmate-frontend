@@ -6,8 +6,6 @@ import { ManagerProfileDetailView } from './views/ManagerProfileDetailView';
 import { ManagerSystemStatsView } from './views/ManagerSystemStatsView';
 import { ManagerPerformanceView } from './views/ManagerPerformanceView';
 import { ManagerFeedbackView } from './views/ManagerFeedbackView';
-import { ManagerReportsView } from './views/ManagerReportsView';
-import { ManagerPermissionsView } from './views/ManagerPermissionsView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
@@ -278,10 +276,6 @@ export const ManagerPage: React.FC = () => {
             currentSection === 'satisfaction-level') && (
             <ManagerFeedbackView section={currentSection} />
           )}
-
-          {currentSection === 'reports' && <ManagerReportsView />}
-
-          {currentSection === 'permissions' && <ManagerPermissionsView />}
 
           {currentSection === 'profile' && <UnifiedSelfProfileView />}
         </main>
