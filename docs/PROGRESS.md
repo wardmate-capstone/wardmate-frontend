@@ -18,6 +18,19 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Trong `src/components/layout/WorkspaceSidebar.tsx`:
     - Bỏ phần render mục `Chức năng được cấp` khỏi sidebar. Giữ nguyên toàn bộ code và các file liên quan (`PermissionFeatures.tsx`, handler tính năng) đúng theo yêu cầu "không cần xóa hết mấy cái liên quan".
     - Xóa khối thẻ tài khoản ở đáy sidebar (`.admin-sidebar-user` chứa avatar, tên tài khoản và vai trò) theo yêu cầu người dùng, giúp sidebar gọn gàng và đồng bộ với UserDropdown ở topbar.
+- **Sửa lỗi crash `CitizenQrCodeView` khi chưa có hồ sơ (`Cannot read properties of undefined`)**:
+  - Tại `src/pages/citizen/views/CitizenQrCodeView.tsx`: Thêm điều kiện xử lý an toàn khi danh sách hồ sơ `dossiers` rỗng hoặc chưa chọn hồ sơ (`!activeDossier`); hiển thị giao diện placeholder thông báo *"Chưa có mã QR hồ sơ - API mã QR hồ sơ điện tử sẽ được tích hợp sau"* thay vì cố đọc `activeDossier.procedureName`.
+- **Xóa toàn bộ subtext (phụ đề dưới tiêu đề/thẻ) trên Phân hệ Cán bộ Một cửa (Officer)**:
+  - Tại `src/pages/officer/OfficerHeader.tsx`: Bỏ toàn bộ phụ đề `subtitle` trong cấu hình `SECTION_TITLES` của tất cả các section.
+  - Tại `src/pages/officer/OfficerDashboardView.tsx`: Xóa các dòng subtext phụ đề mô tả bên dưới tiêu đề biểu đồ ca trực, hàng đợi ưu tiên xử lý ngay và thẻ tiếp nhận tại quầy.
+  - Tại `src/pages/officer/OfficerAuditLogView.tsx`: Xóa dòng phụ đề bên dưới tiêu đề "Lịch sử xử lý trong ca trực".
+  - Tại `src/pages/officer/OfficerNotificationView.tsx`: Xóa dòng phụ đề bên dưới tiêu đề "Thông báo ca làm việc".
+  - Tại `src/pages/officer/OfficerReviewWorkspaceView.tsx`: Xóa toàn bộ các dòng subtext giải thích dưới tiêu đề `h3` ở tất cả 9 tab thẩm tra hồ sơ (thông tin người dân, điều kiện thủ tục, checklist giấy tờ, tệp đính kèm, E-Form, kết xuất PDF, nhận xét/góp ý, lịch sử phiên bản, tiến trình timeline).
+- **Xóa toàn bộ subtext (phụ đề dưới tiêu đề/thẻ) trên Cổng Công dân**:
+  - Tại `src/pages/citizen/CitizenPage.tsx`: Bỏ tất cả phụ đề `subtitle` trong cấu hình tiêu đề các màn hình (`sectionTitles`), loại bỏ dòng render `<p>{meta.subtitle}</p>` dưới tiêu đề chính `h1`.
+  - Tại `src/pages/citizen/views/CitizenDashboardView.tsx`: Xóa dòng subtext mô tả phụ `{sub}` dưới 4 thẻ chỉ số thống kê hồ sơ; xóa dòng mô tả `{desc}` dưới các phím tắt tiện ích hồ sơ.
+  - Tại `src/pages/citizen/views/CitizenNotificationsView.tsx`: Xóa dòng subtext phụ đề dưới tiêu đề "Hộp thư thông báo tiến độ".
+  - Tại `src/pages/citizen/views/CitizenFeedbackView.tsx`: Xóa dòng subtext phụ đề dưới tiêu đề "Góp ý chất lượng phục vụ công dân".
 - **Xóa nhóm "Tiếp nhận hồ sơ" khỏi Sidebar Cán bộ Một cửa**:
   - Tại `src/components/layout/RoleWorkspaceSidebars.tsx`: Đã xóa toàn bộ nhóm `Tiếp nhận hồ sơ` (`Chờ tiếp nhận` và `Đã tiếp nhận`) khỏi `UnifiedOfficerSidebar`. Đúng theo ranh giới nghiệp vụ chuẩn của WardMate: hệ thống chỉ phục vụ tiền kiểm và chuẩn bị hồ sơ trực tuyến, việc tiếp nhận chính thức thuộc về Bộ phận một cửa ngoài đời thực. Quy trình tiền kiểm đã nằm trọn vẹn trong cây menu `Quản lý hồ sơ` (`Hồ sơ nghiệp vụ`).
 - **Xóa tag số (badge) ở các mục trên Sidebar**:
