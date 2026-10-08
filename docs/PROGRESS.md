@@ -1,8 +1,43 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 07/10/2026.
+Cập nhật: 08/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Tích hợp IAM RBAC động — 08/10/2026
+
+- Hợp nhất runtime sidebar của Admin, Công dân, Cán bộ Một cửa, Lãnh đạo UBND và Quản lý thủ tục về `src/components/layout/WorkspaceSidebar.tsx`; ba component sidebar cũ chỉ còn re-export để không duy trì implementation trùng lặp. Cấu hình theo workspace dùng chung tại `RoleWorkspaceSidebars.tsx`; Admin/Citizen cũng render cùng component này.
+- Thêm `navigationAccess.ts` làm nguồn quyết định hiển thị menu từ `roles` và `permissions` của `/users/me`. Đã bỏ hoàn toàn nhóm `Không gian làm việc`: quyền ngoài role hiện tại được chèn trực tiếp vào sidebar dưới nhóm `Chức năng được cấp`, bấm vào thay vùng nội dung nhưng giữ nguyên sidebar/layout của role đang đăng nhập.
+- Map đủ 30 permission thành 11 mục chức năng dễ dùng: hồ sơ cá nhân; người dùng; Phường/Xã; vai trò & quyền; audit; thủ tục; lịch sử phiên bản; danh mục; PDF/bản nháp; biểu mẫu; đơn điện tử. Các permission thao tác cùng màn được gom vào một mục, không tạo 30 dòng menu. Thu hồi quyền làm mục biến mất sau khi IAM phát hành phiên/token mới.
+- `PermissionFeatures.tsx` tái sử dụng trực tiếp `AdminRbacAuditView`, `AdminRolesView`, `UnifiedSelfProfileView` và chế độ nhúng của Admin/Procedure Manager/Citizen để không nhân bản API/UI. Các chức năng UI mẫu chưa nối API vẫn được giữ nguyên theo role cũ.
+- Đã kiểm tra trực quan bằng Edge với tài khoản Manager mock có `iam.audit.read`. Sửa panel permission bị phủ lên topbar, thiếu tiêu đề/nút đóng và cuộn chung với trang nền: panel nay nằm dưới topbar, giữ sidebar hiện tại, có header/nút đóng, khóa cuộn nền và cuộn nội dung riêng; bảng audit mobile cuộn ngang trong card.
+- `ProtectedRoute` và điều hướng đăng nhập/trang chủ vẫn nhận permission để hỗ trợ tài khoản custom truy cập trực tiếp khi cần; sidebar không còn liên kết chuyển workspace. Lượt chỉnh cuối theo yêu cầu người dùng không chạy Playwright/build; `npm run typecheck` và `npm run lint` đạt.
+- Đổi màn `Vai trò & quyền hạn` thành bảng cuộn dọc, có badge loại vai trò và thanh tiến độ số quyền. Khi chọn một vai trò, bảng quyền mở trong drawer từ mép phải, rộng gần nửa màn hình và làm mờ danh sách phía sau; mobile dùng toàn chiều rộng. Drawer hỗ trợ đóng bằng nền phủ, nút đóng hoặc phím Escape.
+- Bảng quyền trong drawer dùng header cố định, badge module và màu trạng thái để dễ quét dữ liệu hơn.
+- Bỏ số phần trăm khỏi cột quyền và áp dụng lại wrapper bảng chuẩn để căn hàng/cột, khoảng đệm đồng đều; thanh tiến độ chỉ còn hỗ trợ nhận biết nhanh tỷ lệ quyền.
+- Bảng quyền giữ tìm kiếm, lọc module, lọc đã cấp/chưa cấp và công tắc gọi API cấp/thu hồi hiện có. Giữ nguyên modal tạo/sửa/xóa, quy tắc vai trò hệ thống và phân trang.
+- Sau lần chỉnh UI drawer cuối cùng chưa chạy lại kiểm thử theo yêu cầu người dùng. Kết quả Playwright 3/3 và ESLint đạt ở lượt kiểm tra trước chỉ áp dụng cho bố cục master-detail trước đó.
+- Đã dọn dẹp các badge đếm số lượng tĩnh trong sidebar của Admin, Manager, Officer và Procedure Manager; giải quyết triệt để các cảnh báo biến không dùng.
+- Tinh chỉnh giao diện Nhật ký hoạt động (`AdminRbacViews.tsx`):
+  - Thêm modal xem chi tiết nhật ký (`AuditDetailModal`) với so sánh trước/sau (`before`/`after`), giải mã tên tài khoản, sao chép ID, và khối dữ liệu có thể mở rộng.
+  - Thêm nút xem "Chi tiết" ở cột Thao tác trên bảng Nhật ký hoạt động, giữ nguyên kết cấu các cột nghiệp vụ của bảng.
+  - Sửa hiệu ứng spinner trùng lặp trên nút "Làm mới".
+  - Loại bỏ các thuật ngữ kỹ thuật nội bộ (như chữ "IAM" tại thẻ tổng quan `AdminPage.tsx` và modal phân vai trò `AdminRbacViews.tsx`).
+  - Chuẩn hóa tên quyền hạn và hành động sang tiếng Việt thân thiện.
+  - Tăng khoảng cách đệm `mb-6` cho tiêu đề trang Admin (`.admin-page-heading`) giúp bố cục thoáng đãng.
+  - Loại bỏ việc lặp mã vai trò tiếng Anh (`REGISTERED_CITIZEN`) và mô tả thừa trong drawer chi tiết vai trò.
+- Thay màn `Vai trò & quyền hạn` và `Nhật ký hoạt động` mock trong Admin bằng API IAM thật; loại bỏ nhật ký tên người/IP giả khỏi cả Dashboard và trang audit.
+- Thêm client Zod `src/lib/api/rbac.ts` cho danh sách/CRUD vai trò, danh mục quyền, cấp/thu hồi quyền, vai trò người dùng và audit. Danh sách quyền lấy động từ DB/API, nhóm theo `module`; không hardcode 30 permission ID hoặc giới hạn ba module hiện tại.
+- Vai trò hệ thống khóa tên và không có thao tác xóa; vai trò tùy chỉnh hỗ trợ tạo/sửa/xóa. Ràng buộc `system_role`, `role_in_use`, `last_admin`, quyền quản trị và conflict vẫn do BE quyết định, FE giữ trạng thái và hiển thị ProblemDetails.
+- Màn Người dùng hệ thống có modal `Phân vai trò`, gọi API gán/thu hồi từng vai trò và làm mới danh sách sau thành công. Không tự sửa access token; quyền có hiệu lực theo phiên/token IAM phát hành.
+- Audit dùng actor/target GUID, role/permission ID, action, details và thời gian từ BE; không phát sinh địa chỉ IP hoặc dữ liệu audit giả.
+- Bổ sung tìm kiếm audit theo hành động/tài khoản/GUID/details, lọc theo hành động và ngày, nút xóa lọc. UI ghi chú lọc trên 20 bản ghi của trang hiện tại.
+- Actor/target GUID được resolve sang `username` bằng `GET /api/v1/accounts/{id}` cho các ID duy nhất trên trang và cache trong RAM; vẫn hiện GUID dưới username để truy vết, fallback GUID nếu tài khoản đã xóa hoặc lookup lỗi.
+- Test mới `tests/admin-rbac.spec.ts` đạt 3/3; `tests/workspace-sidebar.spec.ts` đạt.
+- Kiểm tra chất lượng:
+  - `npm run typecheck`: Đạt 0 lỗi.
+  - `npm run lint`: Đạt 0 lỗi.
+
 
 ## Đồng nhất Icon Hệ thống trên Toàn bộ Sidebar (Chuẩn `@phosphor-icons/react`) — 07/10/2026
 
