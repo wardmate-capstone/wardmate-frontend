@@ -22,7 +22,7 @@ import { toast } from '@/components/ui/Toast';
 export interface ManagerProfileDetailViewProps {
   profile: ManagerProfileItem;
   onBack: () => void;
-  onEdit?: (profile: ManagerProfileItem) => void;
+  onSave?: (profile: ManagerProfileItem) => Promise<void>;
   isFrontDesk?: boolean;
   backLabel?: string;
   accountInfo?: {
@@ -39,12 +39,38 @@ type TabType = 'identity-residence' | 'dossier-history' | 'electronic-documents'
 export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> = ({
   profile,
   onBack,
-  onEdit,
+  onSave,
   isFrontDesk = false,
   backLabel,
   accountInfo,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('identity-residence');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<ManagerProfileItem>({ ...profile });
+
+  function handleStartEdit() {
+    setFormData({ ...profile });
+    setIsEditing(true);
+  }
+
+  function handleCancelEdit() {
+    setFormData({ ...profile });
+    setIsEditing(false);
+  }
+
+  async function handleSubmitEdit() {
+    if (!onSave) return;
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      setIsEditing(false);
+    } catch {
+      // lỗi đã xử lý ở parent bằng toast
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   function formatDate(d?: string | null) {
     if (!d || !d.includes('-')) return 'Chưa được cập nhật';
@@ -99,21 +125,43 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
         </button>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-            onClick={() => toast.success(`Đã xuất phiếu trích lục thông tin ${profile.fullName} (PDF).`)}
-          >
-            <Printer size={16} /> In phiếu thông tin
-          </button>
-          {onEdit && (
+          {!isEditing && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              onClick={() => toast.success(`Đã xuất phiếu trích lục thông tin ${profile.fullName} (PDF).`)}
+            >
+              <Printer size={16} /> In phiếu thông tin
+            </button>
+          )}
+          {onSave && !isEditing && (
             <button
               type="button"
               className="admin-primary-action text-xs"
-              onClick={() => onEdit(profile)}
+              onClick={handleStartEdit}
             >
               <PencilSimple size={16} /> Chỉnh sửa hồ sơ
             </button>
+          )}
+          {isEditing && (
+            <>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="admin-primary-action text-xs disabled:opacity-50"
+                onClick={handleSubmitEdit}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -218,39 +266,104 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
       {/* TAB CONTENT 1: Thông tin Định danh & Nhân thân và Địa chỉ & Nơi cư trú */}
       {activeTab === 'identity-residence' && (
         <div className="space-y-6">
+          {isEditing && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200">
+                    <PencilSimple size={20} weight="duotone" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      Chế độ chỉnh sửa thông tin
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
+                        Đang mở
+                      </span>
+                    </h4>
+                    <p className="text-xs text-red-100/90 mt-0.5">
+                      Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20 disabled:opacity-50"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitEdit}
+                    disabled={isSaving}
+                    className="px-4 py-1.5 text-xs font-bold text-red-950 bg-amber-300 hover:bg-amber-200 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  >
+                    {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-6 md:grid-cols-2">
             {/* Khối 1: Định danh & Nhân thân */}
-            <section className="admin-card p-5 space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <IdentificationCard size={18} className="text-red-800" />
-                Thông tin Định danh & Nhân thân
-              </h2>
+            <section
+              className={`admin-card p-6 space-y-5 transition-all duration-200 ${
+                isEditing ? 'ring-2 ring-red-800/20 border-red-200 shadow-sm' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <IdentificationCard size={20} className="text-red-800" weight="duotone" />
+                  Thông tin Định danh & Nhân thân
+                </h2>
+                {isEditing && (
+                  <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+                    Được phép sửa
+                  </span>
+                )}
+              </div>
 
-              {/* Thẻ CCCD nổi bật dạng thẻ căn cước */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-red-50/90 to-amber-50/50 border border-red-200/90 shadow-2xs space-y-2">
+              {/* Thẻ CCCD */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-red-50/90 via-amber-50/40 to-white border border-red-200/90 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider">
+                  <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-red-700" weight="fill" />
                     Thẻ Căn cước công dân gắn chip / VNeID
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-500 block">Số định danh cá nhân (CCCD):</span>
-                    {profile.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <span className="text-[11px] text-slate-500 block mb-1">Số định danh cá nhân (CCCD):</span>
+                    {isEditing ? (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          maxLength={12}
+                          value={formData.identityNumber}
+                          onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
+                          placeholder="Nhập 12 chữ số CCCD"
+                          className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">
+                          {formData.identityNumber?.length || 0}/12
+                        </span>
+                      </div>
+                    ) : profile.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
                       <span className="font-mono text-xl font-black text-red-950 tracking-wider">
                         {profile.identityNumber}
                       </span>
                     ) : (
-                      <span className="text-sm font-semibold text-slate-400 italic">
-                        Chưa được cập nhật
-                      </span>
+                      <span className="text-sm font-semibold text-slate-400 italic">Chưa được cập nhật</span>
                     )}
                   </div>
-                  {profile.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' && (
+                  {!isEditing && profile.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' && (
                     <button
                       type="button"
                       onClick={handleCopyCCCD}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-red-200 text-xs font-bold text-red-900 hover:bg-red-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-xs font-bold text-red-900 hover:bg-red-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
                     >
                       <Copy size={14} weight="bold" />
                       <span>Sao chép</span>
@@ -259,68 +372,170 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs pt-1">
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Họ và tên khai sinh</span>
-                  <strong className="text-slate-900 text-sm">
-                    {profile.fullName && profile.fullName !== 'Chưa cập nhật' && profile.fullName !== 'Chưa được cập nhật' ? profile.fullName : 'Chưa được cập nhật'}
-                  </strong>
+              <div className="space-y-4 pt-1">
+                {/* Họ tên */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    Họ và tên khai sinh
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      placeholder="Ví dụ: NGUYỄN VĂN A"
+                      className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                    />
+                  ) : (
+                    <div className="text-sm font-bold text-slate-900 py-1 border-b border-slate-100">
+                      {profile.fullName && profile.fullName !== 'Chưa cập nhật' && profile.fullName !== 'Chưa được cập nhật' ? profile.fullName : 'Chưa được cập nhật'}
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Ngày tháng năm sinh</span>
-                  <span className="font-semibold text-slate-800">{formatDate(profile.dateOfBirth)}</span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Ngày sinh */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Ngày sinh
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                      />
+                    ) : (
+                      <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
+                        {formatDate(profile.dateOfBirth)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Giới tính */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Giới tính
+                    </label>
+                    {isEditing ? (
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'Nam' | 'Nữ' | 'Khác' })}
+                        className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                      >
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    ) : (
+                      <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
+                        {profile.gender || 'Chưa được cập nhật'}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Giới tính</span>
-                  <span className="font-semibold text-slate-800">
-                    {profile.gender || 'Chưa được cập nhật'}
-                  </span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Dân tộc
+                    </span>
+                    <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100 bg-slate-50/50 px-2 rounded">
+                      {profile.ethnicity || 'Kinh'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Quốc tịch
+                    </span>
+                    <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100 bg-slate-50/50 px-2 rounded">
+                      Việt Nam
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Dân tộc</span>
-                  <span className="font-semibold text-slate-800">{profile.ethnicity || 'Kinh'}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Quốc tịch</span>
-                  <span className="font-semibold text-slate-800">Việt Nam</span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-slate-500">Số điện thoại liên hệ</span>
-                  <span className="font-bold text-slate-900">
-                    {profile.phoneNumber && profile.phoneNumber !== 'Chưa cập nhật' && profile.phoneNumber !== 'Chưa được cập nhật' ? profile.phoneNumber : 'Chưa được cập nhật'}
-                  </span>
+
+                {/* SĐT */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    Số điện thoại liên hệ
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="tel"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      placeholder="Ví dụ: 0912345678"
+                      className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100">
+                      {profile.phoneNumber && profile.phoneNumber !== 'Chưa cập nhật' && profile.phoneNumber !== 'Chưa được cập nhật' ? profile.phoneNumber : 'Chưa được cập nhật'}
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
 
             {/* Khối 2: Địa chỉ & Nơi cư trú */}
-            <section className="admin-card p-5 space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <MapPin size={18} className="text-red-800" />
-                Địa chỉ & Nơi cư trú
-              </h2>
-
-              <div className="space-y-4 text-xs">
-                <div>
-                  <span className="text-slate-400 block mb-1 font-semibold uppercase text-[10px] tracking-wider">
-                    Nơi thường trú (Hộ khẩu chính thức)
+            <section
+              className={`admin-card p-6 space-y-5 transition-all duration-200 ${
+                isEditing ? 'ring-2 ring-red-800/20 border-red-200 shadow-sm' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <MapPin size={20} className="text-red-800" weight="duotone" />
+                  Địa chỉ & Nơi cư trú
+                </h2>
+                {isEditing && (
+                  <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+                    Được phép sửa
                   </span>
-                  <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs">
-                    {profile.permanentAddress && profile.permanentAddress !== 'Chưa cập nhật' && profile.permanentAddress !== 'Chưa được cập nhật'
-                      ? profile.permanentAddress
-                      : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
-                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                    Nơi thường trú (Hộ khẩu chính thức)
+                  </label>
+                  {isEditing ? (
+                    <textarea
+                      rows={3}
+                      value={formData.permanentAddress}
+                      onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
+                      placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
+                      className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                    />
+                  ) : (
+                    <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
+                      {profile.permanentAddress && profile.permanentAddress !== 'Chưa cập nhật' && profile.permanentAddress !== 'Chưa được cập nhật'
+                        ? profile.permanentAddress
+                        : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <span className="text-slate-400 block mb-1 font-semibold uppercase text-[10px] tracking-wider">
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
                     Nơi tạm trú / Nơi ở hiện tại
-                  </span>
-                  <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs">
-                    {profile.temporaryAddress && profile.temporaryAddress !== 'Chưa cập nhật' && profile.temporaryAddress !== 'Chưa được cập nhật'
-                      ? profile.temporaryAddress
-                      : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
-                  </p>
+                  </label>
+                  {isEditing ? (
+                    <textarea
+                      rows={3}
+                      value={formData.temporaryAddress}
+                      onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
+                      placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
+                      className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                    />
+                  ) : (
+                    <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
+                      {profile.temporaryAddress && profile.temporaryAddress !== 'Chưa cập nhật' && profile.temporaryAddress !== 'Chưa được cập nhật'
+                        ? profile.temporaryAddress
+                        : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

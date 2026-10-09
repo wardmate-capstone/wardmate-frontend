@@ -235,10 +235,7 @@ export const ManagerPage: React.FC = () => {
                 isFrontDesk={true}
                 backLabel="Quay lại danh sách cán bộ Một cửa"
                 onBack={() => setSelectedProfile(null)}
-                onEdit={(p) => {
-                  setSelectedProfile(null);
-                  toast.info(`Mở biểu mẫu chỉnh sửa thông tin của ${p.fullName}`);
-                }}
+                onSave={async (p) => { await handleSaveProfile(p); }}
               />
             ) : (
               <ManagerProfilesView
