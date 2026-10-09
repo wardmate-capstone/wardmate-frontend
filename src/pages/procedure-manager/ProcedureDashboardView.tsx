@@ -1,4 +1,4 @@
-﻿import { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Files, FileDashed, Prohibit, WarningCircle, ArrowRight } from '@phosphor-icons/react';
 import { procedureApi, type ProcedureSummary } from '@/lib/api/procedures';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
@@ -8,12 +8,13 @@ import type { ProcedureNavSection } from '@/components/layout/RoleWorkspaceSideb
 
 interface ProcedureDashboardViewProps {
   stats?: { active: number; inactive: number };
+  statsLoading?: boolean;
   onNavigateSection: (section: ProcedureNavSection) => void;
   onOpenDrafts: () => void;
   onSelectProcedure: (procedure: ProcedureSummary) => void;
 }
 
-export function ProcedureDashboardView({ stats, onNavigateSection, onOpenDrafts, onSelectProcedure }: ProcedureDashboardViewProps) {
+export function ProcedureDashboardView({ stats, statsLoading = false, onNavigateSection, onOpenDrafts, onSelectProcedure }: ProcedureDashboardViewProps) {
   const recent = useProcedureQuery(useCallback((signal: AbortSignal) => procedureApi.list({ pageSize: 4, sortBy: 'UpdatedAt', isAscending: false }, true, signal), []));
   const cards = [
     { label: 'Đang công khai', value: stats?.active, icon: Files, color: 'bg-emerald-100 text-emerald-800', open: () => onNavigateSection('procedures') },
@@ -24,7 +25,11 @@ export function ProcedureDashboardView({ stats, onNavigateSection, onOpenDrafts,
     <section aria-label="Các chỉ số tổng quan" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {cards.map(({ label, value, icon: Icon, color, open }) => <button key={label} type="button" onClick={open} className="admin-stat-card cursor-pointer text-left hover:border-red-200">
         <div className="flex items-center justify-between"><small className="text-xs font-bold text-slate-500">{label}</small><div className={`grid size-9 place-items-center rounded-xl ${color}`}><Icon size={18} weight="duotone" /></div></div>
-        <p className={`mt-3 font-bold ${value === undefined ? 'text-sm text-slate-500' : 'text-3xl text-slate-950'}`}>{value ?? 'Chưa có dữ liệu'}</p>
+        {statsLoading && value === undefined ? (
+          <div className="mt-3 h-9 w-24 animate-pulse rounded-lg bg-slate-200/70" />
+        ) : (
+          <p className={`mt-3 font-bold ${value === undefined ? 'text-sm text-slate-500' : 'text-3xl text-slate-950'}`}>{value ?? 'Chưa có dữ liệu'}</p>
+        )}
       </button>)}
     </section>
     <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-5">

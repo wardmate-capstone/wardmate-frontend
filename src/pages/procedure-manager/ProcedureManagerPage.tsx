@@ -163,14 +163,16 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
           ) : section === "dashboard" ? (
             <>
-              <ProcedureFeedback
-                loading={stats.loading}
-                error={stats.error}
-                retry={stats.refresh}
-              />
+              {stats.error && (
+                <ProcedureFeedback
+                  error={stats.error}
+                  retry={stats.refresh}
+                />
+              )}
               <ProcedureDashboardView
                 key={revision}
                 stats={stats.data}
+                statsLoading={stats.loading}
                 onNavigateSection={navigate}
                 onSelectProcedure={setSelected}
                 onOpenDrafts={() => setParams({ section: "drafts" })}
