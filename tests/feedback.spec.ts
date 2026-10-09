@@ -1,22 +1,21 @@
 import { test, expect } from '@playwright/test';
+import { mockWorkspaceAuth } from './fixtures/auth';
 
 test.describe('Citizen Satisfaction Feedback Modal (FE-TASK-31)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/tai-khoan');
+    await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
+    await page.goto('/citizen?section=feedback');
   });
 
-  test('displays application list and feedback trigger button on account page', async ({ page }) => {
+  test('displays feedback history notice and trigger button', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    const section = page.getByRole('region', { name: 'Hồ sơ tiền kiểm gần đây' });
-    await expect(section).toBeVisible();
-
-    const feedbackBtn = section.getByRole('button', { name: 'Đánh giá dịch vụ' });
-    await expect(feedbackBtn).toBeVisible();
+    await expect(page.getByText('API lịch sử đánh giá dịch vụ sẽ được tích hợp sau.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gửi đánh giá mới' })).toBeVisible();
   });
 
   test('opens feedback modal with star rating, criteria and comment fields', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    const feedbackBtn = page.getByRole('button', { name: 'Đánh giá dịch vụ' });
+    const feedbackBtn = page.getByRole('button', { name: 'Gửi đánh giá mới' });
     await feedbackBtn.click();
 
     const dialog = page.getByRole('dialog');
@@ -48,12 +47,12 @@ test.describe('Citizen Satisfaction Feedback Modal (FE-TASK-31)', () => {
 
     // Verify modal closes and single toast notification appears
     await expect(dialog).not.toBeVisible();
-    await expect(page.getByText(/Cảm ơn bạn đã đánh giá 5 sao/)).toBeVisible();
+    await expect(page.getByText(/Cảm ơn bạn đã đánh giá dịch vụ 5 sao/)).toBeVisible();
   });
 
   test('can close modal via "Để sau" button and keyboard Escape', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    const feedbackBtn = page.getByRole('button', { name: 'Đánh giá dịch vụ' });
+    const feedbackBtn = page.getByRole('button', { name: 'Gửi đánh giá mới' });
     await feedbackBtn.click();
 
     const dialog = page.getByRole('dialog');
@@ -74,7 +73,7 @@ test.describe('Citizen Satisfaction Feedback Modal (FE-TASK-31)', () => {
   test('fits mobile viewport without overflow', async ({ page }) => {
     for (const width of [390, 360]) {
       await page.setViewportSize({ width, height: 800 });
-      const feedbackBtn = page.getByRole('button', { name: 'Đánh giá dịch vụ' });
+      const feedbackBtn = page.getByRole('button', { name: 'Gửi đánh giá mới' });
       await feedbackBtn.click();
 
       const dialog = page.getByRole('dialog');

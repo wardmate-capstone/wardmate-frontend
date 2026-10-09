@@ -2,11 +2,11 @@
 import { mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog, sampleProcedure } from './fixtures/procedures';
 
-test('hồ sơ cũ thiếu checklist không tự ghép dữ liệu giả hoặc báo đủ điều kiện', async ({ page }) => {
+test('không tự tạo hồ sơ mẫu khi dịch vụ hồ sơ chưa tích hợp', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
   await page.goto('/citizen?section=dossiers_draft');
-  await page.getByRole('button', { name: /Chi tiết/i }).first().click();
-  await expect(page.getByText('Chưa có danh mục giấy tờ được xác minh', { exact: false })).toBeVisible();
+  await expect(page.getByText('Không có hồ sơ nào ở trạng thái "Bản nháp".')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Chi tiết/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Nộp tiền kiểm ngay' })).toHaveCount(0);
   await expect(page.getByText('Đủ điều kiện nộp', { exact: false })).toHaveCount(0);
 });

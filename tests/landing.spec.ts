@@ -145,7 +145,7 @@ test('trang quản trị hiển thị tổng quan và menu mobile không tràn n
   await expect(page.getByRole('heading', { name: 'Tổng quan' })).toBeVisible();
   await expect(page.getByText('Thủ tục đang áp dụng', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Mở menu quản trị' }).click();
-  await expect(page.getByRole('complementary', { name: 'Điều hướng chức năng' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Thanh điều hướng Quản trị hệ thống' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 

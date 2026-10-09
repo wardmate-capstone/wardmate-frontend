@@ -156,6 +156,7 @@ test('revoke retries expired access once, sends no body and clears the cookie/se
   await mock(context, async (route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
+    if (!path.startsWith('/api/v1/auth/')) return reply(route, 404, {});
     events.push(path);
     if (path.endsWith('/login')) return reply(route, 200, tokenResponse(), cookie);
     expect(req.postData()).toBeNull();
@@ -180,17 +181,28 @@ test('revoke retries expired access once, sends no body and clears the cookie/se
 test('failed revoke keeps the page and permits retry without claiming logout success', async ({ page, context }) => {
   let revokes = 0;
   await mock(context, async (route) => {
-    if (route.request().url().endsWith('/login')) return reply(route, 200, tokenResponse(), cookie);
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/login')) return reply(route, 200, tokenResponse(), cookie);
+    if (!path.endsWith('/revoke-token')) return reply(route, 404, {});
     revokes++;
     return reply(route, revokes === 1 ? 503 : 204);
   });
   await page.goto('/dang-nhap?returnTo=%2Fofficer');
   await fillLogin(page);
   await expect(page).toHaveURL(/\/officer$/);
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  const accountMenu = page.getByRole('button', { name: 'Menu tài khoản', exact: true });
+  await expect(accountMenu).toContainText('Người Dùng Mẫu');
+  await accountMenu.click();
+  await page.getByRole('menuitem', { name: 'Đăng xuất', exact: true }).press('Enter');
   await expect(page.getByText(/Chưa xác nhận được việc thu hồi phiên/)).toBeVisible();
   await expect(page).toHaveURL(/\/officer$/);
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => {
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('button')];
+    const logoutButton = buttons.find(button => button.getAttribute('role') === 'menuitem' && button.textContent?.trim() === 'Đăng xuất');
+    if (logoutButton && !logoutButton.disabled) { logoutButton.click(); return true; }
+    buttons.find(button => button.getAttribute('aria-label') === 'Menu tài khoản')?.click();
+    return false;
+  })).toBe(true);
   await expect(page).toHaveURL('http://localhost:4317/');
   expect(revokes).toBe(2);
 });

@@ -2,12 +2,11 @@ import { expect, test } from '@playwright/test';
 import { mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog } from './fixtures/procedures';
 
-test('manager receives IAM audit directly in the current sidebar', async ({ page }) => {
+test('manager sidebar does not restore the removed permission feature menu', async ({ page }) => {
   await mockWorkspaceAuth(page, ['MANAGER'], ['iam.profile.read', 'iam.audit.read']);
   await page.goto('/manager');
-  await page.getByRole('button', { name: 'Nhật ký hoạt động' }).click();
-  await expect(page.getByText('Theo dõi chi tiết các thao tác phân quyền')).toBeVisible();
-  await expect(page.getByText('Không gian làm việc')).toHaveCount(0);
+  await expect(page.locator('aside').getByRole('button', { name: 'Nhật ký hoạt động' })).toHaveCount(0);
+  await expect(page.locator('aside').getByText('Chức năng được cấp')).toHaveCount(0);
 });
 
 test('role keeps placeholder menu items that do not have API permissions yet', async ({ page }) => {
@@ -17,7 +16,7 @@ test('role keeps placeholder menu items that do not have API permissions yet', a
   await expect(page.getByRole('button', { name: 'Dữ liệu kiến thức AI' })).toBeVisible();
 });
 
-test('admin does not show a duplicate procedure item and unsupported features explain their status', async ({ page }) => {
+test('admin does not show duplicate or removed permission feature items', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   const catalog = await mockCatalog(page);
   await page.goto('/admin');
@@ -25,38 +24,22 @@ test('admin does not show a duplicate procedure item and unsupported features ex
   await page.locator('aside').getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await expect(page.getByText('Đăng ký khai sinh từ API')).toBeVisible();
   expect(catalog.requests.some(request => request.path === '/api/v1/procedure-manager/procedures')).toBe(true);
-  await page.locator('aside').getByRole('button', { name: 'Lịch sử phiên bản' }).click();
-  await expect(page.getByText('Backend chưa có API lịch sử phiên bản tổng hợp.')).toBeVisible();
+  await expect(page.locator('aside').getByRole('button', { name: 'Lịch sử phiên bản' })).toHaveCount(0);
 });
 
-test('granted features without an integrated admin API show a clear notice', async ({ page }) => {
+test('granted features without a role navigation entry stay hidden', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN'], ['document.templates.read', 'document.submissions.read']);
   await page.goto('/admin');
-  await page.locator('aside').getByRole('button', { name: 'Biểu mẫu điện tử' }).click();
-  await expect(page.getByText('Chưa có màn quản lý kho biểu mẫu độc lập kết nối API DocumentForm.')).toBeVisible();
-  await page.locator('aside').getByRole('button', { name: 'Đơn điện tử của tôi' }).click();
-  await expect(page.getByText('Chưa có API danh sách đơn điện tử dành cho màn quản trị.')).toBeVisible();
+  await expect(page.locator('aside').getByRole('button', { name: 'Biểu mẫu điện tử' })).toHaveCount(0);
+  await expect(page.locator('aside').getByRole('button', { name: 'Đơn điện tử của tôi' })).toHaveCount(0);
 });
 
-test('granted feature panel covers the workspace after the background is scrolled', async ({ page }) => {
+test('removed permission feature panel does not open from the sidebar', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await mockCatalog(page);
   await page.goto('/admin');
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await page.locator('aside').getByRole('button', { name: 'PDF & bản nháp' }).click();
-  const panel = page.locator('[data-permission-feature-panel]');
-  await expect(panel).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Đóng chức năng' })).toHaveCount(0);
-  expect(await panel.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return { belowTopbar: Math.abs(rect.top - 72) < 1, coversBottom: Math.abs(rect.bottom - window.innerHeight) < 1 };
-  })).toEqual({ belowTopbar: true, coversBottom: true });
-  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
-  await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('hidden');
-  expect(await page.evaluate(() => {
-    const panel = document.querySelector('[data-permission-feature-panel]');
-    return panel?.contains(document.elementFromPoint(window.innerWidth - 20, 80));
-  })).toBe(true);
+  await expect(page.locator('aside').getByRole('button', { name: 'PDF & bản nháp' })).toHaveCount(0);
+  await expect(page.locator('[data-permission-feature-panel]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thu gọn thanh điều hướng' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thông báo' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Menu tài khoản' })).toBeVisible();

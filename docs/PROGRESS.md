@@ -1,8 +1,19 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 08/10/2026.
+Cập nhật: 09/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Dọn file source và dependency không còn sử dụng — 09/10/2026
+
+- Rà soát toàn bộ `src` bằng đồ thị import từ `src/main.tsx`, sau đó xác minh từng ứng viên bằng `rg`, lazy import, barrel export, test và production build. Không xóa `src/vite-env.d.ts` vì đây là ambient type bắt buộc của Vite.
+- Xóa 3 file re-export sidebar không còn caller: `src/pages/manager/ManagerSidebar.tsx`, `src/pages/officer/OfficerSidebar.tsx`, `src/pages/procedure-manager/ProcedureManagerSidebar.tsx`.
+- Xóa 2 nguồn mock không còn được import sau khi chuyển sang API/empty state: `src/data/mockOfficerData.ts`, `src/pages/manager/mockData.ts`.
+- Xóa ảnh `src/assets/logo.png` (903 KB) không có tham chiếu; logo hiện tại tiếp tục dùng asset công khai qua `BrandMark`.
+- Đã xác định 6 dependency trực tiếp hiện không còn import (`@fontsource/poppins`, `@heroicons/react`, `embla-carousel-react`, `lucide-react`, `react-is`, `recharts`) nhưng giữ nguyên theo yêu cầu người dùng; `package.json`, `package-lock.json`, chunk `charts`/`lucide-react` và selector Recharts đã được phục hồi.
+- Không xóa `mockNotifications` vì `NotificationBell` vẫn sử dụng; không đụng `tmp` và `.npm-cache` vì chưa đủ bằng chứng là dữ liệu có thể bỏ.
+- Cập nhật các test Playwright đã lệch UI hiện tại: route đánh giá công dân, trạng thái hồ sơ rỗng, nhãn sidebar theo role, đăng xuất qua `UserDropdown` và việc không còn render nhóm `Chức năng được cấp`. Mock auth chỉ xử lý endpoint auth để không bắt nhầm request dữ liệu nền; test retry đăng xuất chờ trạng thái nút thực sự sẵn sàng để tránh race khi React thay DOM.
+- Kiểm tra: `npm run typecheck` đạt; `npm run lint` đạt; `npm run build` đạt. Toàn bộ Playwright đạt **118/118** với Microsoft Edge và 2 worker; riêng test retry đăng xuất đạt 5/5 lần lặp song song trước lượt chạy toàn bộ cuối. Build còn cảnh báo annotation Zod và chunk chính trên 500 KB như trước. `npm audit` báo 2 lỗ hổng mức cao; chưa chạy `npm audit fix` và không thay dependency theo yêu cầu người dùng.
 
 ## Sửa lỗi Citizen Login Redirect & Bỏ mục Chức năng được cấp trên Sidebar — 08/10/2026
 

@@ -128,7 +128,10 @@ test('server validation is attached to the matching form field', async ({ page }
 test('IT_ADMIN menu exposes both approved workspaces, not officer access', async ({ page }) => {
   await iam(page, ['IT_ADMIN']);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  const accountMenu = page.getByRole('button', { name: 'Menu tài khoản', exact: true });
+  await expect(accountMenu).toContainText('Tài khoản kiểm thử');
+  await accountMenu.click();
+  await expect(page.getByRole('menu', { name: 'Tùy chọn người dùng' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: /Quản trị hệ thống/ })).toHaveAttribute('href', '/admin');
   await expect(page.getByRole('menuitem', { name: /Quản lý thủ tục/ })).toHaveAttribute('href', '/procedure-manager');
   await expect(page.getByRole('menuitem', { name: /Cổng cán bộ/ })).toHaveCount(0);
@@ -159,12 +162,18 @@ test('citizen menu switches between landing and its workspace, including the Vie
   await expect(page.getByRole('menuitem', { name: /Về trang chủ/ })).toHaveCount(0);
   await page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ }).click();
   await expect(page).toHaveURL(/\/citizen$/);
-  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tổng quan công dân' })).toBeVisible();
+  const citizenAccountMenu = page.getByRole('button', { name: 'Menu tài khoản', exact: true });
+  await expect(citizenAccountMenu).toContainText('Tài khoản kiểm thử');
+  await citizenAccountMenu.click();
+  await expect(page.getByRole('menu', { name: 'Tùy chọn người dùng' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ })).toHaveCount(0);
   await page.getByRole('menuitem', { name: /Về trang chủ/ }).click();
   await expect(page).toHaveURL('http://localhost:4317/');
   await page.goto('/cong-dan');
-  await page.getByRole('button', { name: 'Menu tài khoản', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Tổng quan công dân' })).toBeVisible();
+  await expect(citizenAccountMenu).toContainText('Tài khoản kiểm thử');
+  await citizenAccountMenu.click();
   await expect(page.getByRole('menuitem', { name: /Về trang chủ/ })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: /Cổng dịch vụ công dân/ })).toHaveCount(0);
 });
