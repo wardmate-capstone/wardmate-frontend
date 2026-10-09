@@ -13,7 +13,6 @@ import {
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, getWards, authErrorMessage, type WardDto } from '@/lib/api';
-import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 
 function formatDate(value?: string | null): string {
@@ -77,8 +76,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
     });
   }, [user?.roles]);
 
-  // Modal edit state
-  const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
+  // Inline edit state
+  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -90,7 +89,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
     temporaryAddress: '',
   });
 
-  const handleOpenEdit = () => {
+  const handleStartEdit = () => {
     setFormData({
       fullName: profile?.fullName || user?.username || '',
       phoneNumber: profile?.phoneNumber || '',
@@ -100,7 +99,11 @@ export const UnifiedSelfProfileView: React.FC = () => {
       permanentAddress: profile?.permanentAddress || '',
       temporaryAddress: profile?.temporaryAddress || '',
     });
-    setIsEditingModalOpen(true);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
   };
 
   const handleCopyCCCD = () => {
@@ -112,8 +115,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
     toast.success(`Đã sao chép số CCCD: ${profile.identityNumber}`);
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveProfile = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!formData.fullName.trim()) {
       toast.error('Họ và tên không được để trống.');
       return;
@@ -131,7 +134,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
         temporaryAddress: formData.temporaryAddress.trim() || null,
       });
       await refetch();
-      setIsEditingModalOpen(false);
+      setIsEditing(false);
       toast.success('Đã cập nhật hồ sơ cá nhân thành công.');
     } catch (err) {
       toast.error(`Cập nhật thất bại: ${authErrorMessage(err)}`);
@@ -154,20 +157,43 @@ export const UnifiedSelfProfileView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-            onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
-          >
-            <Printer size={16} /> In phiếu thông tin
-          </button>
-          <button
-            type="button"
-            className="admin-primary-action text-xs"
-            onClick={handleOpenEdit}
-          >
-            <PencilSimple size={16} /> Chỉnh sửa hồ sơ
-          </button>
+          {!isEditing ? (
+            <>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
+              >
+                <Printer size={16} /> In phiếu thông tin
+              </button>
+              <button
+                type="button"
+                className="admin-primary-action text-xs"
+                onClick={handleStartEdit}
+              >
+                <PencilSimple size={16} /> Chỉnh sửa hồ sơ
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={handleCancelEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => void handleSaveProfile()}
+                className="admin-primary-action text-xs disabled:opacity-50"
+              >
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -212,26 +238,94 @@ export const UnifiedSelfProfileView: React.FC = () => {
         </div>
       </div>
 
+      {/* Banner thông báo trạng thái chỉnh sửa */}
+      {isEditing && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200">
+                <PencilSimple size={20} weight="duotone" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  Chế độ chỉnh sửa thông tin cá nhân
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
+                    Đang mở
+                  </span>
+                </h4>
+                <p className="text-xs text-red-100/90 mt-0.5">
+                  Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20 disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveProfile()}
+                disabled={isSaving}
+                className="px-4 py-1.5 text-xs font-bold text-red-950 bg-amber-300 hover:bg-amber-200 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Khối 1: Định danh & Nhân thân */}
-        <section className="admin-card p-5 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <IdentificationCard size={18} className="text-red-800" />
-            Thông tin Định danh & Nhân thân
-          </h2>
+        <section
+          className={`admin-card p-6 space-y-5 transition-all duration-200 ${
+            isEditing ? 'ring-2 ring-red-800/20 border-red-200 shadow-sm' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <IdentificationCard size={20} className="text-red-800" weight="duotone" />
+              Thông tin Định danh & Nhân thân
+            </h2>
+            {isEditing && (
+              <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+                Được phép sửa
+              </span>
+            )}
+          </div>
 
           {/* Thẻ CCCD gắn chip */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-red-50/90 to-amber-50/50 border border-red-200/90 shadow-2xs space-y-2">
+          <div className="p-4 rounded-xl bg-gradient-to-br from-red-50/90 via-amber-50/40 to-white border border-red-200/90 shadow-2xs space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-red-700" weight="fill" />
                 Thẻ Căn cước công dân gắn chip / VNeID
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-500 block">Số định danh cá nhân (CCCD):</span>
-                {profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <span className="text-[11px] text-slate-500 block mb-1">Số định danh cá nhân (CCCD):</span>
+                {isEditing ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={12}
+                      value={formData.identityNumber}
+                      onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
+                      placeholder="Nhập 12 chữ số CCCD"
+                      className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">
+                      {formData.identityNumber?.length || 0}/12
+                    </span>
+                  </div>
+                ) : profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
                   <span className="font-mono text-xl font-black text-red-950 tracking-wider">
                     {profile.identityNumber}
                   </span>
@@ -241,11 +335,11 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   </span>
                 )}
               </div>
-              {profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' && (
+              {!isEditing && profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' && (
                 <button
                   type="button"
                   onClick={handleCopyCCCD}
-                  className="px-2.5 py-1.5 rounded-lg bg-white border border-red-200 text-xs font-bold text-red-900 hover:bg-red-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-xs font-bold text-red-900 hover:bg-red-50 transition-colors shadow-2xs inline-flex items-center gap-1.5"
                 >
                   <Copy size={14} weight="bold" />
                   <span>Sao chép</span>
@@ -254,68 +348,157 @@ export const UnifiedSelfProfileView: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-3 text-xs pt-1">
-            <div className="flex justify-between py-1.5 border-b border-slate-50">
-              <span className="text-slate-500">Họ và tên khai sinh</span>
-              <strong className="text-slate-900 text-sm">
-                {profile?.fullName && profile.fullName !== 'Chưa cập nhật' && profile.fullName !== 'Chưa được cập nhật'
-                  ? profile.fullName
-                  : 'Chưa được cập nhật'}
-              </strong>
+          <div className="space-y-4 pt-1">
+            {/* Họ tên */}
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                Họ và tên khai sinh
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  placeholder="Ví dụ: NGUYỄN VĂN A"
+                  className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                />
+              ) : (
+                <div className="text-sm font-bold text-slate-900 py-1 border-b border-slate-100">
+                  {profile?.fullName && profile.fullName !== 'Chưa cập nhật' && profile.fullName !== 'Chưa được cập nhật'
+                    ? profile.fullName
+                    : 'Chưa được cập nhật'}
+                </div>
+              )}
             </div>
-            <div className="flex justify-between py-1.5 border-b border-slate-50">
-              <span className="text-slate-500">Ngày tháng năm sinh</span>
-              <span className="font-mono text-slate-900 font-semibold">
-                {formatDate(profile?.dateOfBirth)}
-              </span>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Ngày sinh */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                  Ngày sinh
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                  />
+                ) : (
+                  <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
+                    {formatDate(profile?.dateOfBirth)}
+                  </div>
+                )}
+              </div>
+
+              {/* Giới tính */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                  Giới tính
+                </label>
+                {isEditing ? (
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                  >
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                ) : (
+                  <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
+                    {profile?.gender && profile.gender !== 'Chưa cập nhật' && profile.gender !== 'Chưa được cập nhật'
+                      ? profile.gender
+                      : 'Chưa được cập nhật'}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-slate-50">
-              <span className="text-slate-500">Giới tính</span>
-              <span className="text-slate-900 font-semibold">
-                {profile?.gender && profile.gender !== 'Chưa cập nhật' && profile.gender !== 'Chưa được cập nhật'
-                  ? profile.gender
-                  : 'Chưa được cập nhật'}
-              </span>
-            </div>
-            <div className="flex justify-between py-1.5 border-b border-slate-50">
-              <span className="text-slate-500">Số điện thoại liên hệ</span>
-              <span className="font-mono text-slate-900 font-semibold">
-                {profile?.phoneNumber && profile.phoneNumber !== 'Chưa cập nhật' && profile.phoneNumber !== 'Chưa được cập nhật'
-                  ? profile.phoneNumber
-                  : 'Chưa được cập nhật'}
-              </span>
+
+            {/* SĐT */}
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                Số điện thoại liên hệ
+              </label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  placeholder="Ví dụ: 0912345678"
+                  className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                />
+              ) : (
+                <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100">
+                  {profile?.phoneNumber && profile.phoneNumber !== 'Chưa cập nhật' && profile.phoneNumber !== 'Chưa được cập nhật'
+                    ? profile.phoneNumber
+                    : 'Chưa được cập nhật'}
+                </div>
+              )}
             </div>
           </div>
         </section>
 
         {/* Khối 2: Địa chỉ & Cư trú */}
-        <section className="admin-card p-5 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <MapPin size={18} className="text-red-800" />
-            Địa chỉ & Nơi cư trú
-          </h2>
-
-          <div className="space-y-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-              <span className="text-[11px] font-bold text-slate-600 block">
-                Nơi đăng ký thường trú
+        <section
+          className={`admin-card p-6 space-y-5 transition-all duration-200 ${
+            isEditing ? 'ring-2 ring-red-800/20 border-red-200 shadow-sm' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <MapPin size={20} className="text-red-800" weight="duotone" />
+              Địa chỉ & Nơi cư trú
+            </h2>
+            {isEditing && (
+              <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+                Được phép sửa
               </span>
-              <p className="text-slate-900 font-medium leading-relaxed">
-                {profile?.permanentAddress && profile.permanentAddress !== 'Chưa cập nhật' && profile.permanentAddress !== 'Chưa được cập nhật'
-                  ? profile.permanentAddress
-                  : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
-              </p>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                Nơi thường trú (Hộ khẩu chính thức)
+              </label>
+              {isEditing ? (
+                <textarea
+                  rows={3}
+                  value={formData.permanentAddress}
+                  onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
+                  placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
+                  className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                />
+              ) : (
+                <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
+                  {profile?.permanentAddress && profile.permanentAddress !== 'Chưa cập nhật' && profile.permanentAddress !== 'Chưa được cập nhật'
+                    ? profile.permanentAddress
+                    : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
+                </p>
+              )}
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-              <span className="text-[11px] font-bold text-slate-600 block">
-                Nơi ở hiện tại / Tạm trú
-              </span>
-              <p className="text-slate-900 font-medium leading-relaxed">
-                {profile?.temporaryAddress && profile.temporaryAddress !== 'Chưa cập nhật' && profile.temporaryAddress !== 'Chưa được cập nhật'
-                  ? profile.temporaryAddress
-                  : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
-              </p>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                Nơi tạm trú / Nơi ở hiện tại
+              </label>
+              {isEditing ? (
+                <textarea
+                  rows={3}
+                  value={formData.temporaryAddress}
+                  onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
+                  placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
+                  className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                />
+              ) : (
+                <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
+                  {profile?.temporaryAddress && profile.temporaryAddress !== 'Chưa cập nhật' && profile.temporaryAddress !== 'Chưa được cập nhật'
+                    ? profile.temporaryAddress
+                    : <span className="text-slate-400 italic">Chưa được cập nhật</span>}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -383,141 +566,6 @@ export const UnifiedSelfProfileView: React.FC = () => {
           </div>
         </section>
       </div>
-
-      {/* Modal Chỉnh sửa hồ sơ cá nhân */}
-      <Modal
-        open={isEditingModalOpen}
-        onOpenChange={setIsEditingModalOpen}
-        title="Chỉnh sửa thông tin hồ sơ cá nhân"
-        description="Cập nhật thông tin định danh và liên hệ vào hệ thống WardMate."
-        footer={
-          <>
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => setIsEditingModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={(e) => handleSaveProfile(e as unknown as React.FormEvent)}
-              className="admin-primary-action text-xs"
-            >
-              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSaveProfile} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Họ và tên *
-              </label>
-              <input
-                type="text"
-                required
-                disabled={isSaving}
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-                placeholder="Nguyễn Văn A"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Số CCCD / Định danh cá nhân
-              </label>
-              <input
-                type="text"
-                disabled={isSaving}
-                maxLength={12}
-                value={formData.identityNumber}
-                onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
-                placeholder="12 chữ số"
-                className="w-full h-10 px-3 text-xs font-mono bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Số điện thoại liên hệ
-              </label>
-              <input
-                type="tel"
-                disabled={isSaving}
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                placeholder="0912345678"
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Giới tính
-              </label>
-              <select
-                disabled={isSaving}
-                value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              >
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
-                <option value="Khác">Khác</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Ngày sinh
-              </label>
-              <input
-                type="date"
-                disabled={isSaving}
-                value={formData.dateOfBirth}
-                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-2">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Địa chỉ thường trú
-              </label>
-              <textarea
-                rows={2}
-                disabled={isSaving}
-                value={formData.permanentAddress}
-                onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
-                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Địa chỉ tạm trú
-              </label>
-              <textarea
-                rows={2}
-                disabled={isSaving}
-                value={formData.temporaryAddress}
-                onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
-                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-              />
-            </div>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };
