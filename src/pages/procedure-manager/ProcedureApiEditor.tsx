@@ -266,12 +266,12 @@ export function ProcedureApiEditor({
   const setContent = (key: string, next: unknown) =>
     set("contentPayload", { ...content, [key]: next });
   const tabItems = [
-    { label: "Thông tin chung", count: null },
-    { label: "Thành phần hồ sơ", count: rows(value.checklistSchema).length },
-    { label: "Quy trình", count: rows(content.cases).length },
-    { label: "Thời hạn & lệ phí", count: rows(content.submissionMethods).length },
-    { label: "Biểu mẫu", count: rows(value.formDefinitions).length },
-    { label: "Căn cứ pháp lý", count: rows(content.legalReferences).length },
+    "Thông tin chung",
+    "Thành phần hồ sơ",
+    "Quy trình",
+    "Thời hạn & lệ phí",
+    "Biểu mẫu",
+    "Căn cứ pháp lý",
   ];
   return (
     <div className="min-w-0 space-y-5">
@@ -279,10 +279,10 @@ export function ProcedureApiEditor({
         className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1.5 text-xs font-semibold"
         aria-label="Các phần nội dung thủ tục"
       >
-        {tabItems.map((tab, index) => (
+        {tabItems.map((label, index) => (
           <button
             type="button"
-            key={tab.label}
+            key={label}
             onClick={() => setStep(index)}
             aria-pressed={step === index}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 transition-all ${
@@ -291,18 +291,7 @@ export function ProcedureApiEditor({
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
-            <span>{tab.label}</span>
-            {tab.count != null && tab.count > 0 && (
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  step === index
-                    ? "bg-red-100 text-red-800"
-                    : "bg-slate-200 text-slate-700"
-                }`}
-              >
-                {tab.count}
-              </span>
-            )}
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -537,10 +526,10 @@ export function ProcedureApiEditor({
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
-          ← Phần trước ({tabItems[step - 1]?.label ?? ''})
+          ← Phần trước ({tabItems[step - 1] ?? ''})
         </Button>
         <span className="text-xs font-semibold text-slate-500">
-          Phần {step + 1} / {tabItems.length}: {tabItems[step].label}
+          Phần {step + 1} / {tabItems.length}: {tabItems[step]}
         </span>
         <Button
           type="button"
@@ -549,7 +538,7 @@ export function ProcedureApiEditor({
           disabled={step === tabItems.length - 1}
           onClick={() => setStep((s) => Math.min(tabItems.length - 1, s + 1))}
         >
-          Phần tiếp theo ({tabItems[step + 1]?.label ?? ''}) →
+          Phần tiếp theo ({tabItems[step + 1] ?? ''}) →
         </Button>
       </div>
       <p className="text-sm text-slate-500">
