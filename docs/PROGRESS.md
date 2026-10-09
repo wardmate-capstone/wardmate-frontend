@@ -4,6 +4,35 @@ Cập nhật: 09/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Sửa lỗi Layout Shift / Dòng text "Đang tải dữ liệu thủ tục..." bị nhảy ra ngoài — 09/10/2026
+
+- **Nguyên nhân**:
+  - Tại [ProcedureManagerPage.tsx](file:///d:/frontend/src/pages/procedure-manager/ProcedureManagerPage.tsx), khi load số liệu thống kê cho Dashboard (`stats = useProcedureQuery(...)`), component gọi `<ProcedureFeedback loading={stats.loading} ... />` đặt ngay phía trên `<ProcedureDashboardView />`.
+  - Component `ProcedureFeedback` khi `loading = true` render một thẻ `<p className="rounded-xl bg-slate-50 p-5">Đang tải dữ liệu thủ tục…</p>`.
+  - Do thẻ này nằm độc lập bên ngoài và trên cùng của toàn bộ các card thống kê, mỗi khi trang fetch dữ liệu, dòng thông báo này xuất hiện chèn vào giữa tiêu đề trang và các card, đẩy toàn bộ nội dung dashboard xuống dưới, gây giật giao diện (layout shift) và cảm giác "bị nhảy ra bên ngoài". Đồng thời các thẻ thống kê hiển thị tạm dòng chữ `Chưa có dữ liệu`.
+- **Giải pháp xử lý**:
+  - Tại [ProcedureManagerPage.tsx](file:///d:/frontend/src/pages/procedure-manager/ProcedureManagerPage.tsx): Bỏ `loading={stats.loading}` khỏi `ProcedureFeedback` ở ngoài; chỉ render `ProcedureFeedback` khi có lỗi (`stats.error`). Truyền cờ `statsLoading={stats.loading}` vào `ProcedureDashboardView`.
+  - Tại [ProcedureDashboardView.tsx](file:///d:/frontend/src/pages/procedure-manager/ProcedureDashboardView.tsx): Khi `statsLoading === true`, các card hiển thị skeleton nhấp nháy êm ái (`animate-pulse rounded-lg bg-slate-200/70`) đúng tại vị trí con số thống kê thay vì chèn dòng text thô ra ngoài và không bị nhảy giật layout.
+- **Kiểm tra**: `npx tsc --noEmit` đạt 0 lỗi.
+
+## Thống nhất thiết kế Chỉnh sửa Hồ sơ cá nhân (Inline Editing, Không dùng Modal) cho toàn bộ 5 Roles — 09/10/2026
+
+- **Loại bỏ 100% Modal pop-up khi Chỉnh sửa Hồ sơ cá nhân & Thống nhất chung 1 chuẩn thiết kế**:
+  1. **Manager (Lãnh đạo UBND)**:
+     - Màn hình Hồ sơ cá nhân: [UnifiedSelfProfileView.tsx](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx) — inline editing, không modal.
+     - Màn hình Chi tiết cán bộ Một cửa: [ManagerProfileDetailView.tsx](file:///d:/frontend/src/pages/manager/views/ManagerProfileDetailView.tsx) — inline editing, không modal.
+  2. **Officer (Cán bộ Một cửa)**: Dùng [UnifiedSelfProfileView.tsx](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx) — inline editing, không modal.
+  3. **Admin (Quản trị viên)**: Dùng [UnifiedSelfProfileView.tsx](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx) — inline editing, không modal.
+  4. **Procedure Manager (Quản lý thủ tục)**: Dùng [UnifiedSelfProfileView.tsx](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx) — inline editing, không modal.
+  5. **Citizen (Công dân)**:
+     - Nâng cấp [CitizenProfileView.tsx](file:///d:/frontend/src/pages/citizen/views/CitizenProfileView.tsx) sang đúng chuẩn thiết kế cao cấp của `UnifiedSelfProfileView`:
+       - Thanh action bar trên cùng với nút `Chỉnh sửa hồ sơ` / `In phiếu thông tin` và đổi sang cụm `Hủy` / `Lưu thay đổi`.
+       - Banner gradient thông báo trạng thái chỉnh sửa (`from-red-900 via-red-800 to-amber-700`) với nút Hủy và Lưu nổi bật.
+       - Thẻ CCCD gắn chip VNeID chuyên nghiệp kèm sao chép nhanh, input CCCD phong cách mono 12 ký tự có đếm số ký tự `XX/12`.
+       - Hiệu ứng viền đỏ `ring-2 ring-red-800/20` và huy hiệu `Được phép sửa`.
+       - Đầy đủ validation schema Zod và hiển thị thông báo lỗi inline dưới từng trường.
+- **Kiểm tra**: `npx tsc --noEmit` đạt 0 lỗi trên toàn bộ dự án.
+
 ## Dọn file source và dependency không còn sử dụng — 09/10/2026
 
 - Rà soát toàn bộ `src` bằng đồ thị import từ `src/main.tsx`, sau đó xác minh từng ứng viên bằng `rg`, lazy import, barrel export, test và production build. Không xóa `src/vite-env.d.ts` vì đây là ambient type bắt buộc của Vite.
