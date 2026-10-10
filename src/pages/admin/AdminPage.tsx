@@ -31,7 +31,7 @@ import { toast } from "@/components/ui/Toast";
 // Recharts đã được gỡ bỏ do mock chart đã xóa
 import { Modal } from "@/components/ui/Modal";
 import {
-  getManagedUsers,
+  getAdminUsers,
   getAccount,
   getAdminProfile,
   updateAccountStatus,
@@ -147,19 +147,47 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
     setUserLoading(true);
     setUserError(null);
     try {
-      const data = await getManagedUsers(page, 20);
-      setUserData(data);
+      const data = await getAdminUsers({
+        page,
+        pageSize: 20,
+        search: query.trim() || undefined,
+      });
+      setUserData({
+        ...data,
+        items: data.items.map((item) => ({
+          id: item.id,
+          username: item.username,
+          email: item.email,
+          isActive: item.isActive,
+          wardCode: item.wardCode,
+          wardId: null,
+          wardName: item.wardCode ?? null,
+          profile: item.fullName ? {
+            fullName: item.fullName,
+            identityNumber: item.identityNumber ?? null,
+          } : null,
+          roles: item.roles.map((roleName, index) => ({ id: index + 1, roleName })),
+        })),
+      });
     } catch (err) {
       setUserError(authErrorMessage(err));
     } finally {
       setUserLoading(false);
     }
-  }, []);
+  }, [query]);
 
   const fetchWards = useCallback(async () => {
     try {
       const data = await getWards();
       setWards(data);
+      setUserData((current) => current && ({
+        ...current,
+        items: current.items.map((item) => ({
+          ...item,
+          wardId: data.find((ward) => ward.code === item.wardCode)?.id ?? null,
+          wardName: data.find((ward) => ward.code === item.wardCode)?.name ?? item.wardCode ?? null,
+        })),
+      }));
     } catch {
       // Ignored or handled softly
     }
@@ -167,8 +195,9 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
 
   useEffect(() => {
     if (activeSection === 'users' || activeSection === 'wards') {
-      void fetchUsers(userPage);
+      const timer = window.setTimeout(() => void fetchUsers(userPage), 300);
       void fetchWards();
+      return () => window.clearTimeout(timer);
     }
   }, [activeSection, userPage, fetchUsers, fetchWards]);
 
@@ -176,14 +205,8 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
 
   const filteredUsers = useMemo(() => {
     if (!userData) return [];
-    const q = query.toLowerCase();
-    return userData.items.filter((item) =>
-      item.id !== currentUserId &&
-      `${item.username} ${item.email} ${item.profile?.fullName ?? ''} ${item.wardName ?? ''}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [userData, query, currentUserId]);
+    return userData.items.filter((item) => item.id !== currentUserId);
+  }, [userData, currentUserId]);
 
   async function handleToggleAccountStatus(account: ManagedUserDto) {
     if (togglingId) return;
@@ -460,7 +483,7 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
 
   useEffect(() => {
     void loadAuditLogs();
-    void getManagedUsers(1, 1).then(({ total }) => setUserCount(total)).catch(() => setUserCount(undefined));
+    void getAdminUsers({ page: 1, pageSize: 1 }).then(({ total }) => setUserCount(total)).catch(() => setUserCount(undefined));
   }, [loadAuditLogs]);
 
   const stats = [

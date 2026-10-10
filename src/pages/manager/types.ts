@@ -19,6 +19,9 @@ export interface ManagerProfileItem {
   username?: string;
   email?: string;
   isActive?: boolean;
+  wardCode?: string;
+  roles?: string[];
+  assignedCategories?: number[];
   fullName: string;
   identityNumber: string;
   phoneNumber: string;

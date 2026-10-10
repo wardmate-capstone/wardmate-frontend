@@ -12,7 +12,7 @@ import {
 } from '@phosphor-icons/react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
-import { updateMyProfile, getWards, authErrorMessage, type WardDto } from '@/lib/api';
+import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 
 function formatDate(value?: string | null): string {
@@ -48,19 +48,6 @@ export const UnifiedSelfProfileView: React.FC = () => {
   const { profile, loading, initials, refetch } = useUserProfile();
   const user = useAuthStore((state) => state.user);
 
-  const [wards, setWards] = useState<WardDto[]>([]);
-  useEffect(() => {
-    getWards()
-      .then(setWards)
-      .catch(() => {});
-  }, []);
-
-  const wardName = useMemo(() => {
-    if (!user?.wardId) return null;
-    const found = wards.find((w) => w.id === user.wardId);
-    return found ? found.name : null;
-  }, [user?.wardId, wards]);
-
   const isStaffRole = useMemo(() => {
     if (!user?.roles) return false;
     return user.roles.some((r) => {
@@ -75,6 +62,20 @@ export const UnifiedSelfProfileView: React.FC = () => {
       );
     });
   }, [user?.roles]);
+
+  const [wards, setWards] = useState<WardDto[]>([]);
+  useEffect(() => {
+    if (!isStaffRole || !user?.wardId) return;
+    getPublicWards()
+      .then(setWards)
+      .catch(() => {});
+  }, [isStaffRole, user?.wardId]);
+
+  const wardName = useMemo(() => {
+    if (!user?.wardId) return null;
+    const found = wards.find((w) => w.id === user.wardId);
+    return found ? found.name : null;
+  }, [user?.wardId, wards]);
 
   // Inline edit state
   const [isEditing, setIsEditing] = useState(false);

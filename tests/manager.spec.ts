@@ -14,7 +14,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test('Hồ sơ công dân: Hiển thị danh sách và chuyển sang Trang Chi tiết Hồ sơ công dân', async ({ page }) => {
+  test('Danh bạ cán bộ: hiển thị theo phường, mở chi tiết và lưu lĩnh vực phụ trách', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/manager');
 
@@ -24,6 +24,11 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
     await expect(page.getByText('Nguyễn Văn An')).toBeVisible();
     await expect(page.getByText('Trần Thị Mai Hương')).toBeVisible();
+    await expect(page.getByText('WARD_A').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Phân công lĩnh vực' }).first().click();
+    await page.getByRole('checkbox', { name: 'Chứng thực' }).check();
+    await page.getByRole('button', { name: 'Lưu phân công' }).click();
 
     // Mở TRANG CHI TIẾT hồ sơ cán bộ
     await page.getByRole('button', { name: 'Xem chi tiết' }).first().click();

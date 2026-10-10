@@ -10,12 +10,14 @@ import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileV
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
 import {
-  getUserProfiles,
+  getManagerOfficers,
   getAdminProfile,
   updateAdminProfile,
   updateAccountStatus,
+  assignOfficerCategories,
   authErrorMessage,
 } from '@/lib/api';
+import { procedureApi, type Category } from '@/lib/api/procedures';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
@@ -37,23 +39,36 @@ export const ManagerPage: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<ManagerProfileItem | null>(null);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
+  const [officerSearch, setOfficerSearch] = useState('');
+  const [assignedCategory, setAssignedCategory] = useState<number>();
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const fetchProfiles = useCallback(async (page: number) => {
     setIsLoadingProfiles(true);
     setProfilesError(null);
     try {
-      const data = await getUserProfiles(page, 20);
+      const data = await getManagerOfficers({
+        page,
+        pageSize: 20,
+        search: officerSearch.trim() || undefined,
+        assignedCategory,
+      });
       setProfilesTotal(data.total);
       const items: ManagerProfileItem[] = data.items.map((p) => ({
-        userId: p.userId,
-        fullName: p.fullName,
+        userId: p.id,
+        username: p.username,
+        email: p.email,
+        fullName: p.fullName || p.username,
         identityNumber: p.identityNumber || '',
-        phoneNumber: p.phoneNumber || '',
-        dateOfBirth: p.dateOfBirth || '',
-        gender: (p.gender === 'Nữ' || p.gender === 'Khác' ? p.gender : 'Nam'),
-        permanentAddress: p.permanentAddress || '',
-        temporaryAddress: p.temporaryAddress || '',
-        updatedAt: p.updatedAt,
+        phoneNumber: '',
+        dateOfBirth: '',
+        gender: 'Nam',
+        permanentAddress: '',
+        temporaryAddress: '',
+        isActive: p.isActive,
+        wardCode: p.wardCode || undefined,
+        roles: p.roles,
+        assignedCategories: p.assignedCategories,
       }));
       setProfiles(items);
     } catch (err: unknown) {
@@ -63,13 +78,31 @@ export const ManagerPage: React.FC = () => {
     } finally {
       setIsLoadingProfiles(false);
     }
-  }, []);
+  }, [assignedCategory, officerSearch]);
 
   useEffect(() => {
     if (currentSection === 'profiles') {
       void fetchProfiles(profilesPage);
     }
   }, [currentSection, profilesPage, fetchProfiles]);
+  useEffect(() => {
+    if (currentSection === 'profiles') {
+      void procedureApi.categories().then(setCategories).catch(() => setCategories([]));
+    }
+  }, [currentSection]);
+
+  const handleAssignCategories = async (item: ManagerProfileItem, values: number[]) => {
+    try {
+      await assignOfficerCategories(item.userId, values);
+      setProfiles((current) => current.map((profile) =>
+        profile.userId === item.userId ? { ...profile, assignedCategories: values } : profile
+      ));
+      toast.success(`Đã cập nhật lĩnh vực phụ trách của ${item.fullName}.`);
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      throw err;
+    }
+  };
 
   const handleSaveProfile = async (profile: ManagerProfileItem) => {
     if (profile.userId) {
@@ -247,6 +280,18 @@ export const ManagerPage: React.FC = () => {
                 error={profilesError}
                 onRefresh={() => void fetchProfiles(profilesPage)}
                 onPageChange={(p) => setProfilesPage(p)}
+                search={officerSearch}
+                onSearchChange={(value) => {
+                  setProfilesPage(1);
+                  setOfficerSearch(value);
+                }}
+                assignedCategory={assignedCategory}
+                onAssignedCategoryChange={(value) => {
+                  setProfilesPage(1);
+                  setAssignedCategory(value);
+                }}
+                categories={categories}
+                onAssignCategories={handleAssignCategories}
                 onSaveProfile={handleSaveProfile}
                 onToggleStatus={handleToggleAccountStatus}
                 onSelectProfile={handleSelectProfile}

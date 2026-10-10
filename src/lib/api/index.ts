@@ -273,6 +273,7 @@ export interface ManagedUserDto {
   isActive: boolean;
   wardId?: string | null;
   wardName?: string | null;
+  wardCode?: string | null;
   profile?: UserProfileDto | null;
   roles: ManagedRoleDto[];
 }
@@ -290,6 +291,34 @@ export interface WardDto {
   name: string;
 }
 
+export interface DirectoryUserDto {
+  id: string;
+  username: string;
+  email: string;
+  fullName?: string | null;
+  identityNumber?: string | null;
+  isActive: boolean;
+  wardCode?: string | null;
+  roles: string[];
+  assignedCategories: number[];
+}
+
+export interface DirectoryPage {
+  items: DirectoryUserDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface DirectoryFilter {
+  search?: string;
+  role?: string;
+  wardCode?: string;
+  assignedCategory?: number;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface CreateFrontDeskInput {
   username: string;
   email: string;
@@ -303,14 +332,6 @@ export interface CreateWardInput {
   name: string;
 }
 
-export async function getManagedUsers(page = 1, pageSize = 20): Promise<ManagedUserPage> {
-  const response = await api.get<ManagedUserPage>('/api/v1/users', {
-    ...cookieConfig,
-    params: { page, pageSize },
-  });
-  return response.data;
-}
-
 export async function createFrontDeskAccount(payload: CreateFrontDeskInput): Promise<ManagedUserDto> {
   const response = await api.post<ManagedUserDto>('/api/v1/accounts/front-desk', payload, cookieConfig);
   return response.data;
@@ -319,6 +340,31 @@ export async function createFrontDeskAccount(payload: CreateFrontDeskInput): Pro
 export async function getWards(): Promise<WardDto[]> {
   const response = await api.get<WardDto[]>('/api/v1/accounts/wards', cookieConfig);
   return response.data;
+}
+
+export async function getPublicWards(): Promise<WardDto[]> {
+  const response = await api.get<WardDto[]>('/api/v1/wards', { ...cookieConfig, skipAuth: true });
+  return response.data;
+}
+
+export async function getManagerOfficers(filter: DirectoryFilter = {}): Promise<DirectoryPage> {
+  const response = await api.get<DirectoryPage>('/api/v1/manager/officers', {
+    ...cookieConfig,
+    params: filter,
+  });
+  return response.data;
+}
+
+export async function getAdminUsers(filter: DirectoryFilter = {}): Promise<DirectoryPage> {
+  const response = await api.get<DirectoryPage>('/api/v1/admin/users', {
+    ...cookieConfig,
+    params: filter,
+  });
+  return response.data;
+}
+
+export async function assignOfficerCategories(userId: string, categories: number[]): Promise<void> {
+  await api.put(`/api/v1/manager/officers/${userId}/categories`, { categories }, cookieConfig);
 }
 
 export async function createWard(payload: CreateWardInput): Promise<WardDto> {

@@ -15,6 +15,7 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
   const defaultPermissions = [
     'iam.profile.read', 'iam.profile.write',
     ...(roles.includes('IT_ADMIN') ? ['iam.manage', 'iam.accounts.read', 'iam.accounts.manage', 'iam.wards.read', 'iam.wards.manage', 'iam.rbac.manage', 'iam.audit.read'] : []),
+    ...(roles.includes('MANAGER') ? ['iam.accounts.read', 'iam.accounts.manage', 'iam.wards.read'] : []),
     ...(roles.includes('PROCEDURE_MANAGER') || roles.includes('IT_ADMIN') ? ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status', 'procedure.versions.read', 'procedure.rollback', 'procedure.source.read', 'procedure.categories.manage', 'procedure.drafts.read', 'procedure.drafts.upload', 'procedure.drafts.update', 'procedure.drafts.extract', 'procedure.drafts.publish', 'procedure.drafts.delete', 'document.templates.read', 'document.templates.manage'] : []),
     ...(roles.includes('REGISTERED_CITIZEN') ? ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit', 'document.submissions.download'] : []),
   ];
@@ -82,6 +83,30 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
         },
       });
     }
+    if (path === '/api/v1/manager/officers') {
+      return authReply(route, { json: { items: [
+        {
+          id: '11111111-1111-1111-1111-111111111111', username: 'nguyenvanan', email: 'an@example.com',
+          fullName: 'Nguyễn Văn An', identityNumber: '001092008128', isActive: true, wardCode: 'WARD_A',
+          roles: ['FRONT_DESK_OFFICER'], assignedCategories: [1],
+        },
+        {
+          id: '22222222-2222-2222-2222-222222222222', username: 'tranthimaihuong', email: 'huong@example.com',
+          fullName: 'Trần Thị Mai Hương', identityNumber: '001088002341', isActive: true, wardCode: 'WARD_A',
+          roles: ['FRONT_DESK_OFFICER'], assignedCategories: [],
+        },
+      ], page: 1, pageSize: 20, total: 2 } });
+    }
+    if (path === '/api/v1/admin/users') {
+      return authReply(route, { json: { items: [{
+        id: '11111111-1111-1111-1111-111111111111', username: 'nguyenvanan', email: 'an@example.com',
+        fullName: 'Nguyễn Văn An', identityNumber: '001092008128', isActive: true, wardCode: 'WARD_A',
+        roles: ['FRONT_DESK_OFFICER'], assignedCategories: [1],
+      }], page: 1, pageSize: 20, total: 1 } });
+    }
+    if (/^\/api\/v1\/manager\/officers\/[0-9a-f-]+\/categories$/.test(path) && method === 'PUT') {
+      return authReply(route, { status: 204 });
+    }
     const permissions = [
       { id: 8, permissionCode: 'iam.rbac.manage', permissionName: 'Quản trị vai trò và quyền toàn hệ thống', module: 'IAM' },
       { id: 16, permissionCode: 'procedure.rollback', permissionName: 'Khôi phục phiên bản thủ tục', module: 'ProcedureCatalog' },
@@ -103,6 +128,11 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
     if (path.includes('/api/v1/rbac/users/') && /\/roles\/\d+$/.test(path) && ['PUT', 'DELETE'].includes(method)) return authReply(route, { status: 204 });
     if (path === '/api/v1/users') return authReply(route, { json: { items: [{ id: '11111111-1111-1111-1111-111111111111', username: 'nguyenvanan', email: 'an@example.com', isActive: true, wardId: null, wardName: null, profile: { fullName: 'Nguyễn Văn An' }, roles: [{ id: 4, roleName: 'PROCEDURE_MANAGER' }] }], page: 1, pageSize: 20, total: 1 } });
     if (path === '/api/v1/accounts/wards') return authReply(route, { json: [] });
+    if (path === '/api/v1/wards') return authReply(route, { json: [{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', code: 'WARD_A', name: 'Phường A' }] });
+    if (path === '/api/v1/procedures/categories') return authReply(route, { json: [
+      { id: 1, categoryName: 'Hộ tịch' },
+      { id: 2, categoryName: 'Chứng thực' },
+    ] });
     if (path.includes('/api/v1/users/') && path.endsWith('/profile')) {
       const parts = path.split('/');
       const userId = parts[parts.indexOf('users') + 1];

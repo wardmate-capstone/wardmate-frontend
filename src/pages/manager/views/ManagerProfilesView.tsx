@@ -9,6 +9,7 @@ import { TableSkeletonRows } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { createFrontDeskAccount, authErrorMessage } from '@/lib/api';
+import type { Category } from '@/lib/api/procedures';
 import { ManagerProfileItem } from '../types';
 
 interface ManagerProfilesViewProps {
@@ -20,6 +21,12 @@ interface ManagerProfilesViewProps {
   error?: string | null;
   onRefresh?: () => void;
   onPageChange: (newPage: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  assignedCategory?: number;
+  onAssignedCategoryChange: (value?: number) => void;
+  categories: Category[];
+  onAssignCategories: (profile: ManagerProfileItem, categories: number[]) => Promise<void>;
   onSaveProfile: (profile: ManagerProfileItem) => Promise<boolean | void> | void;
   onDeleteProfile?: (userId: string) => Promise<boolean | void> | void;
   onToggleStatus?: (profile: ManagerProfileItem) => Promise<boolean | void> | void;
@@ -36,28 +43,22 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   error = null,
   onRefresh,
   onPageChange,
+  search,
+  onSearchChange,
+  assignedCategory,
+  onAssignedCategoryChange,
+  categories,
+  onAssignCategories,
   onDeleteProfile,
   onToggleStatus,
   onSelectProfile,
   onFrontDeskCreated,
 }) => {
-  const [query, setQuery] = useState('');
-  const [genderFilter, setGenderFilter] = useState<'All' | 'Nam' | 'Nữ' | 'Khác'>('All');
+  const [query, setQuery] = useState(search);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const filtered = profiles.filter((p) => {
-    const matchQuery = `${p.fullName} ${p.identityNumber} ${p.phoneNumber} ${p.permanentAddress} ${p.temporaryAddress}`
-      .toLowerCase()
-      .includes(query.toLowerCase());
-    const matchGender = genderFilter === 'All' || p.gender === genderFilter;
-    return matchQuery && matchGender;
-  });
-
-  function formatDate(d: string) {
-    if (!d || !d.includes('-')) return d;
-    const [y, m, day] = d.split('-');
-    return `${day}/${m}/${y}`;
-  }
+  const [categoryProfile, setCategoryProfile] = useState<ManagerProfileItem>();
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
 
   // Modal tạo cán bộ Một cửa (API 55)
   const [fdModalOpen, setFdModalOpen] = useState(false);
@@ -117,30 +118,38 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
     <section className="admin-card admin-table-card admin-content-card">
       {/* Toolbar */}
       <div className="admin-toolbar flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
-        <div className="relative flex-1 min-w-[280px]">
+        <form
+          className="relative flex-1 min-w-[280px]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSearchChange(query.trim());
+          }}
+        >
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm tên, số CCCD, điện thoại hoặc địa chỉ..."
+            placeholder="Tìm họ tên, email hoặc số CCCD..."
             className="w-full h-11 pl-10 pr-4 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-800"
           />
           <MagnifyingGlass
             size={18}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
-        </div>
+          <button type="submit" className="sr-only">Tìm kiếm</button>
+        </form>
 
         <div className="flex items-center gap-2">
           <select
-            value={genderFilter}
-            onChange={(e) => setGenderFilter(e.target.value as 'All' | 'Nam' | 'Nữ' | 'Khác')}
+            value={assignedCategory ?? ''}
+            onChange={(e) => onAssignedCategoryChange(e.target.value ? Number(e.target.value) : undefined)}
             className="h-11 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
+            aria-label="Lọc theo lĩnh vực phụ trách"
           >
-            <option value="All">Tất cả giới tính</option>
-            <option value="Nam">Nam</option>
-            <option value="Nữ">Nữ</option>
-            <option value="Khác">Khác</option>
+            <option value="">Tất cả lĩnh vực</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>{category.categoryName}</option>
+            ))}
           </select>
 
           {onRefresh && (
@@ -199,9 +208,8 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
         <table className="min-w-[720px]">
           <thead>
             <tr>
-              <th className="min-w-[170px] whitespace-nowrap">Họ và tên</th>
-              <th className="min-w-[110px] whitespace-nowrap">Ngày sinh</th>
-              <th className="min-w-[90px] whitespace-nowrap">Giới tính</th>
+              <th className="min-w-[210px] whitespace-nowrap">Cán bộ</th>
+              <th className="min-w-[220px] whitespace-nowrap">Đơn vị & lĩnh vực</th>
               <th className="min-w-[100px] whitespace-nowrap">Trạng thái</th>
               <th className="min-w-[240px] whitespace-nowrap text-right">Thao tác</th>
             </tr>
@@ -209,7 +217,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           <tbody>
             {isLoading && profiles.length === 0 ? (
               <TableSkeletonRows columns={5} />
-            ) : filtered.map((item) => (
+            ) : profiles.map((item) => (
               <tr key={item.userId || item.identityNumber}>
                 <td>
                   <div className="admin-person flex items-center gap-3">
@@ -222,20 +230,17 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     </span>
                     <p>
                       <strong className="block text-xs font-bold text-slate-900">{item.fullName}</strong>
-                      <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] text-red-900 bg-red-50/80 px-1.5 py-0.5 rounded border border-red-100/80 mt-0.5">
-                        CCCD: {item.identityNumber}
-                      </span>
+                      <span className="block text-[11px] text-slate-500">{item.email || `@${item.username}`}</span>
+                      {item.identityNumber && <span className="block font-mono text-[11px] text-slate-500">CCCD: {item.identityNumber}</span>}
                     </p>
                   </div>
                 </td>
-                <td className="text-xs text-slate-700">{formatDate(item.dateOfBirth)}</td>
                 <td>
-                  <span
-                    className={`admin-status-badge ${
-                      item.gender === 'Nam' ? 'is-info' : 'is-warning'
-                    }`}
-                  >
-                    {item.gender}
+                  <strong className="block text-xs text-slate-800">{item.wardCode || 'Chưa gán phường'}</strong>
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    {item.assignedCategories?.length
+                      ? item.assignedCategories.map((id) => categories.find((category) => category.id === id)?.categoryName || `#${id}`).join(', ')
+                      : 'Chưa phân công lĩnh vực'}
                   </span>
                 </td>
                 <td>
@@ -249,6 +254,16 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 </td>
                 <td className="text-right">
                   <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-red-900 transition-colors"
+                      onClick={() => {
+                        setCategoryProfile(item);
+                        setSelectedCategories(item.assignedCategories ?? []);
+                      }}
+                    >
+                      Phân công lĩnh vực
+                    </button>
                     <button
                       type="button"
                       className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-red-900 transition-colors"
@@ -294,11 +309,56 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
         </table>
       </div>
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && profiles.length === 0 && (
         <p className="admin-empty p-8 text-center text-xs text-slate-500">
           Không tìm thấy cán bộ nào phù hợp với bộ lọc tìm kiếm.
         </p>
       )}
+
+      <Modal
+        open={!!categoryProfile}
+        onOpenChange={(open) => {
+          if (!open && !categorySubmitting) setCategoryProfile(undefined);
+        }}
+        title="Phân công lĩnh vực phụ trách"
+        description={`Chọn lĩnh vực hỗ trợ cho ${categoryProfile?.fullName ?? 'cán bộ'}. Danh sách này phục vụ tra cứu và phân công, không tự giới hạn hàng đợi hồ sơ.`}
+        footer={
+          <button
+            type="button"
+            disabled={categorySubmitting}
+            className="admin-primary-action disabled:opacity-50"
+            onClick={async () => {
+              if (!categoryProfile) return;
+              setCategorySubmitting(true);
+              try {
+                await onAssignCategories(categoryProfile, selectedCategories);
+                setCategoryProfile(undefined);
+              } finally {
+                setCategorySubmitting(false);
+              }
+            }}
+          >
+            {categorySubmitting ? 'Đang lưu...' : 'Lưu phân công'}
+          </button>
+        }
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          {categories.map((category) => (
+            <label key={category.id} className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(category.id)}
+                disabled={categorySubmitting}
+                onChange={(event) => setSelectedCategories((current) =>
+                  event.target.checked ? [...current, category.id] : current.filter((id) => id !== category.id)
+                )}
+              />
+              <span>{category.categoryName}</span>
+            </label>
+          ))}
+          {!categories.length && <p className="text-sm text-slate-500">Chưa có danh mục thủ tục để phân công.</p>}
+        </div>
+      </Modal>
 
       {/* Pagination */}
       {!isLoading && Math.ceil(total / pageSize) > 1 && (
