@@ -1,8 +1,51 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 09/10/2026.
+Cập nhật: 10/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Sửa proxy local cho IAM CSRF — 10/10/2026
+
+- Commit: `dc58224` — cấu hình proxy local IAM/Procedure và Origin cho CSRF.
+- Cấu hình local theo hai service Swagger backend đang cung cấp, không đi qua Gateway đang trả `502`: `/api/v1/procedures` và `/api/v1/procedure-manager` đi thẳng Procedure Catalog; `/api` còn lại đi thẳng IAM. Cách này bao phủ toàn bộ auth/users/wards/admin/manager của IAM mà không cần vá từng endpoint.
+- Mỗi proxy ghi đè `Origin` thành origin của đúng service để vượt kiểm tra CSRF same-origin của backend; bật kiểm tra TLS với `secure: true`.
+- Đã rà soát auth client: login/refresh/logout dùng đường dẫn tương đối, `withCredentials: true` và header `X-CSRF-Protection: 1`; không cần sửa code gọi API.
+- Cấu hình chỉ có hiệu lực sau khi khởi động lại Vite. Cần xóa cookie/storage cũ rồi xác minh đăng nhập và refresh bằng tài khoản thật; chưa ghi nhận kiểm thử môi trường thật trong mục này.
+
+## Làm rõ danh mục phường và validation xuất bản PDF — 10/10/2026
+
+- Hồ sơ Admin không còn gọi thừa `GET /api/v1/wards`; danh mục phường chỉ tải khi tài khoản thuộc nhóm cán bộ địa phương và thực sự có `wardId` cần ánh xạ tên.
+- Giữ chặn xuất bản khi dữ liệu OCR thiếu trường bắt buộc, không tự sinh dữ liệu hành chính. Thông báo validation nay dùng nhãn tiếng Việt và hướng người dùng về mục `Thông tin chung`, thay cho đường dẫn field và lỗi Zod kỹ thuật.
+- Backend xác định bản nháp OCR ở trạng thái `NeedsReview` cần người quản lý đối soát/bổ sung trước khi xuất bản; dữ liệu rỗng từ kết quả extract không phải do frontend xóa payload.
+
+## Hoàn thiện workspace PDF và rà soát API IAM/Procedure — 10/10/2026
+
+- Commit: `4f4af50` — luồng PDF, xuất bản, phân quyền và tinh gọn UX Procedure.
+- Đối chiếu controller backend với API client frontend: đã bao phủ auth/profile/accounts/RBAC/directory/phường của IAM và public/manager/categories/drafts/versions/rollback/Document Form của Procedure Catalog. `GET /api/v1/users/access-context` tiếp tục không nối UI vì là contract ngữ cảnh dành cho service backend gọi.
+- Thiết kế lại khu tải PDF: vùng chọn tệp rõ ràng, hiển thị tên/dung lượng, phân biệt hành động lưu bản nháp với đọc thử không lưu, cảnh báo về PDF nguồn, kết quả preview gọn và dữ liệu bóc tách chi tiết được thu gọn.
+- Reset tệp, kết quả preview và AbortController khi mở hoặc rời bản nháp; sửa lỗi quay về danh sách vẫn thấy kết quả đọc thử cũ và lỗi nút dừng preview có thể xuất hiện nhầm trong lúc upload.
+- Sửa phân quyền bảng draft: quyền đọc điều khiển nút mở, quyền xóa mới hiển thị nút xóa; bổ sung trạng thái màu, empty state và header danh sách dễ quét.
+- Thu gọn khu chọn PDF thành một hàng hiển thị trực tiếp tên/dung lượng tệp; giảm padding, chiều cao CTA và nội dung hướng dẫn. Đổi nhãn hành động thành `Hủy đọc PDF`, `Kiểm tra trạng thái xử lý`, `Làm mới danh sách` và `Đọc lại PDF` để mô tả đúng tác dụng.
+- Đổi `Đọc thử PDF` thành `Phân tích thử PDF (không lưu)` cho đúng hành vi API OCR. Kết quả có hai tab `PDF gốc` và `Văn bản nhận diện`; PDF gốc được xem trực tiếp từ file cục bộ bằng object URL, không upload thêm và được thu hồi khi đổi/rời file.
+- Bỏ nút `Kiểm tra trạng thái xử lý`: draft `Queued`/`Processing` vốn đã polling mỗi 4 giây nên chỉ hiển thị trạng thái tự động cập nhật; `NeedsReview`, `Failed` và `Published` giữ đúng hành động nghiệp vụ, tránh một nút làm mới dư thừa có nguy cơ ghi đè dữ liệu đang đối soát.
+- Theo quyết định người dùng sau audit Procedure: giữ nguyên các điều hướng/chỉ số chưa có API, lựa chọn cách lưu ở modal thêm thủ tục và nút PDF nguồn; chỉ bỏ nút `Làm mới` dư thừa ở phân trang danh sách thủ tục vì tìm kiếm, lọc, phân trang và mutation đã tự tải lại dữ liệu.
+- Tách UX hai API ghi Procedure: modal `Thêm thủ tục` chỉ gọi API create và không còn dropdown trộn với publish; luồng phân tích PDF không lưu cho phép đối soát payload rồi gọi `POST /api/v1/procedure-manager/procedures/publish` với cảnh báo cập nhật theo mã và xác nhận riêng.
+- Workspace PDF chuyển từ hai CTA cạnh tranh sang chọn mục đích trước: `Tạo bản nháp có PDF gốc` (khuyến nghị) hoặc `Xem và nhận diện nội dung`, sau đó chỉ hiện một CTA chính. Sidebar rút nhãn thành `PDF và bản nháp` với icon PDF rõ nghĩa hơn.
+- Ngày 10/10, đã làm gọn câu chữ toàn phân hệ Procedure: bỏ các từ kỹ thuật hướng người dùng như backend/API/OCR/snapshot/payload, đổi luồng xem nhanh thành `Xem và nhận diện PDF`, nút cuối thành `Công khai thủ tục`, rút cảnh báo còn việc cần kiểm tra và tác động khi trùng mã. Các mô tả bản nháp, lịch sử, trạng thái trống và tiêu đề cũng chuyển sang tiếng Việt dễ hiểu; không đổi hợp đồng hay cách gọi API.
+- Tiếp tục giảm mật độ chữ: bỏ hướng dẫn lặp ở đầu khối PDF, hộp thông tin lặp dưới nút, mô tả dưới danh sách bản nháp và các subtitle không được sử dụng; rút gọn empty state, ghi chú biểu mẫu và lịch sử phiên bản. Giữ lại mô tả phân biệt hai cách xử lý PDF cùng các cảnh báo ảnh hưởng đến dữ liệu.
+- Kiểm tra sau thay đổi câu chữ: `npm run typecheck` và `npm run lint` đạt; toàn bộ `tests/procedure-manager.spec.ts` đạt **22/22**. Chưa kiểm tra trực tiếp với API Azure hoặc tài khoản thật trong lượt này.
+
+## Tích hợp IAM directory theo phường và quyền chi tiết Procedure — 10/10/2026
+
+- Commit: `9e27e2e` — danh bạ IAM theo phạm vi, phường và phân công lĩnh vực.
+- Đối chiếu source backend mới và chuyển danh sách cán bộ của Manager sang `GET /api/v1/manager/officers`: tìm kiếm/phân trang phía server, hiển thị mã phường, trạng thái và lĩnh vực phụ trách theo đúng `DirectoryPage`.
+- Bổ sung UI chọn nhiều lĩnh vực thủ tục và lưu toàn bộ danh sách qua `PUT /api/v1/manager/officers/{userId}/categories`; danh mục chọn lấy từ API Procedure Catalog, không cho nhập ID tự do.
+- Chuyển danh sách người dùng Admin sang `GET /api/v1/admin/users`; giữ các API chi tiết, khóa/mở, gán phường và RBAC hiện có cho thao tác quản trị.
+- Bổ sung API client cho directory Manager/Admin, phân công lĩnh vực và danh sách phường công khai. `UnifiedSelfProfileView` dùng `GET /api/v1/wards` thay cho route quản trị `/accounts/wards`, tránh request 403 bị bỏ qua ở các role không có `iam.wards.read`.
+- Không nối `GET /api/v1/users/access-context` vào frontend vì đây là contract để Workflow xác minh ngữ cảnh hiện hành của chính người gọi.
+- Luồng PDF giữ nguyên contract đã khớp backend. Các hành động tạo/sửa/trạng thái/lịch sử/rollback, quản lý danh mục và upload/đọc/lưu/xuất bản/xóa draft nay chỉ hiển thị khi có permission tương ứng; truy cập trực tiếp workspace draft thiếu `procedure.drafts.read` hiển thị trạng thái không có quyền và không gọi API draft.
+- Kiểm tra: `npm run typecheck` đạt; `npm run lint` đạt; production build đạt. Nhóm Playwright liên quan Manager, Admin RBAC và Procedure đạt **29/29**; test mới xác nhận phân công lĩnh vực và tài khoản chỉ có `procedure.read` không thấy thao tác ghi/không gọi draft API.
+- Giới hạn: kết quả trên dùng mock HTTP theo contract backend; chưa xác minh API thật, migration IAM, tài khoản/phường thật, AIOCR hoặc Azure Blob trong môi trường chạy. Build còn cảnh báo annotation Zod và chunk chính trên 500 KB như trước.
 
 ## Sửa lỗi Layout Shift / Dòng text "Đang tải dữ liệu thủ tục..." bị nhảy ra ngoài — 09/10/2026
 
