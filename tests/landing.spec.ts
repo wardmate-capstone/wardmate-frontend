@@ -116,9 +116,9 @@ test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', asy
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
   await page.goto('/citizen');
   await page.getByRole('button', { name: 'Hồ sơ cá nhân', exact: true }).click();
-  await page.getByRole('button', { name: 'Chỉnh sửa thông tin' }).click();
-  await page.locator('form input[type="text"]').first().fill('Nguyễn Minh Anh Mẫu');
-  await page.locator('form button[type="submit"]').click();
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ' }).click();
+  await page.getByLabel('Họ và tên khai sinh').fill('Nguyễn Minh Anh Mẫu');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).first().click();
   await expect(page.getByText('Nguyễn Minh Anh Mẫu').first()).toBeVisible();
   await expect(page.getByText('Đã cập nhật thông tin hồ sơ thành công.')).toBeVisible();
 });

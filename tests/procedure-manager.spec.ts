@@ -26,6 +26,17 @@ test('public uses API query and pagination, preserves URL and never sends JWT', 
   expect(state.requests.filter(r => r.path.startsWith('/api/v1/procedures')).every(r => !r.authorization)).toBe(true);
 });
 
+test('public loading does not announce zero results before data arrives', async ({ page }) => {
+  const state = await mockCatalog(page);
+  state.categoryDelay = 700;
+  state.procedureListDelay = 700;
+  await page.goto('/thu-tuc');
+  await expect(page.getByRole('status', { name: 'Đang tải danh sách' })).toBeVisible();
+  await expect(page.getByText('0 thủ tục phù hợp')).toHaveCount(0);
+  await expect(page.getByText('-1 nhóm')).toHaveCount(0);
+  await expect(page.getByText('6 thủ tục phù hợp')).toBeVisible();
+});
+
 test('public detail supports case switching, no fake download, source and mobile', async ({ page }) => {
   await mockCatalog(page);
   await page.route('https://example.test/source.pdf', route => route.fulfill({ body: '%PDF-1.4', contentType: 'application/pdf' }));
@@ -96,6 +107,13 @@ test('manager administers categories through catalog API', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
   await page.getByRole('button', { name: 'Danh mục thủ tục', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: 'Tìm danh mục' });
+  await search.fill('chung thuc');
+  await expect(page.getByText('Chứng thực', { exact: true })).toBeVisible();
+  await expect(page.getByText('Hộ tịch', { exact: true })).toHaveCount(0);
+  await search.fill('không tồn tại');
+  await expect(page.getByText('Không tìm thấy danh mục phù hợp.')).toBeVisible();
+  await search.fill('');
   await page.getByRole('button', { name: 'Thêm danh mục', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Tên danh mục').fill('Danh mục mới');
@@ -105,9 +123,27 @@ test('manager administers categories through catalog API', async ({ page }) => {
   expect(state.requests.find(r => r.path === '/api/v1/procedure-manager/categories' && r.method === 'POST')?.body).toEqual({ categoryName: 'Danh mục mới', description: 'Mô tả kiểm thử' });
 });
 
+test('loading states never render empty category or draft content underneath skeletons', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
+  const state = await mockCatalog(page);
+  state.categoryDelay = 800;
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Danh mục thủ tục', exact: true }).click();
+  await expect(page.getByRole('status', { name: 'Đang tải danh sách' })).toHaveCount(1);
+  await expect(page.getByText('Chưa có danh mục thủ tục.')).toHaveCount(0);
+  await expect(page.getByRole('searchbox', { name: 'Tìm danh mục' })).toBeVisible();
+
+  state.draftListDelay = 800;
+  await page.getByRole('button', { name: 'PDF và bản nháp', exact: true }).click();
+  await expect(page.getByRole('status', { name: 'Đang tải danh sách' })).toHaveCount(1);
+  await expect(page.getByText('Bản nháp gần đây')).toHaveCount(0);
+  await expect(page.getByText('Bản nháp gần đây')).toBeVisible();
+});
+
 test('manager deletes an unused draft through administration API', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager?section=drafts');
+  await expect(page.getByRole('button', { name: 'Làm mới danh sách' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Xóa', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);

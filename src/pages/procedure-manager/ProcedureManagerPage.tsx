@@ -6,7 +6,7 @@ import {
   sectionTitles,
 } from "./ProcedureManagerHeader";
 import { UnifiedSelfProfileView } from "@/components/profile/UnifiedSelfProfileView";
-import { Button, Modal, TableSkeleton } from "@/components/ui";
+import { Button, CardGridSkeleton, Modal } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import {
@@ -136,7 +136,6 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             error={categories.error}
             retry={categories.refresh}
           />
-          {section === "categories" && categories.loading && <TableSkeleton columns={3} />}
           {drafts && !can("procedure.drafts.read") ? (
             <section className="admin-card space-y-3 p-6" role="alert">
               <h1 className="text-xl font-bold">Bạn chưa có quyền xem PDF và bản nháp</h1>
@@ -164,7 +163,9 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
           ) : section === "profile" ? (
             <UnifiedSelfProfileView />
           ) : section === "categories" ? (
-            <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
+            categories.loading
+              ? <CardGridSkeleton />
+              : <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
           ) : section === "dashboard" ? (
             <>
               {stats.error && (

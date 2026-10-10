@@ -27,6 +27,7 @@ export async function mockCatalog(page: Page) {
   const state = {
     detail: structuredClone(sampleProcedure), listError: false, conflict: false, failPublishResponse: false,
     draftStatus: 'NeedsReview', revision: initialRevision, draftReads: 0, queued: false,
+    categoryDelay: 0, draftListDelay: 0, procedureListDelay: 0,
     requests: [] as { method: string; path: string; query: URLSearchParams; body: Record<string, unknown> | null; authorization?: string }[],
   };
   await page.route('**/api/v1/procedure*/**', handler);
@@ -40,7 +41,10 @@ export async function mockCatalog(page: Page) {
     const reply = (json: unknown, status = 200) => catalogReply(route, { status, json });
     const draft = () => ({ id: draftId, status: state.draftStatus, pdfFileName: 'khai-sinh.pdf', payload: state.detail, warnings: ['Cần đối soát PDF gốc.'], extractedText: 'Văn bản PDF kiểm thử', revision: state.revision, createdAt: state.detail.createdAt, updatedAt: state.detail.updatedAt, ...(state.draftStatus === 'Published' ? { publishedProcedureId: procedureId } : {}) });
     if (path.endsWith('/source')) return reply({ url: 'https://example.test/source.pdf', expiresInSeconds: 600 });
-    if (path === '/api/v1/procedures/categories') return reply([{ id: 1, categoryName: 'Hộ tịch' }, { id: 2, categoryName: 'Chứng thực' }]);
+    if (path === '/api/v1/procedures/categories') {
+      if (state.categoryDelay) await new Promise(resolve => setTimeout(resolve, state.categoryDelay));
+      return reply([{ id: 1, categoryName: 'Hộ tịch' }, { id: 2, categoryName: 'Chứng thực' }]);
+    }
     if (path === '/api/v1/procedure-manager/categories' && method === 'POST') return reply({ id: 3, ...body }, 201);
     if (path.startsWith('/api/v1/procedure-manager/categories/') && method === 'PUT') return reply({ id: Number(path.split('/').at(-1)), ...body });
     if (path.startsWith('/api/v1/procedure-manager/categories/') && method === 'DELETE') return catalogReply(route, { status: 204 });
@@ -48,6 +52,7 @@ export async function mockCatalog(page: Page) {
     if (path.endsWith('/extract-preview')) return reply({ payload: state.detail, warnings: ['Chỉ đọc thử, chưa lưu.'], extractedText: 'Nội dung đọc thử từ PDF' });
     if (path.endsWith('/drafts')) {
       if (method === 'POST') { state.draftStatus = state.queued ? 'Queued' : 'NeedsReview'; return reply(draft(), 202); }
+      if (state.draftListDelay) await new Promise(resolve => setTimeout(resolve, state.draftListDelay));
       return reply(url.searchParams.get('page') === '2' ? [] : [draft()]);
     }
     if (path.includes('/drafts/')) {
@@ -72,6 +77,7 @@ export async function mockCatalog(page: Page) {
     if (path.endsWith('/status')) { state.detail.isActive = body?.isActive === true; return reply({ id: procedureId, isActive: state.detail.isActive, reason: body?.reason, updatedAt: state.detail.updatedAt }); }
     if (method === 'POST' || method === 'PUT') { state.detail = { ...state.detail, ...body } as ProcedureDetail; return reply(state.detail, method === 'POST' && !path.endsWith('/publish') ? 201 : 200); }
     if (path.endsWith('/procedures')) {
+      if (state.procedureListDelay) await new Promise(resolve => setTimeout(resolve, state.procedureListDelay));
       if (state.listError) return reply({ title: 'Dịch vụ tạm thời không khả dụng.' }, 503);
       const active = url.searchParams.get('isActive'); const keyword = (url.searchParams.get('keyword') ?? '').toLowerCase();
       const category = url.searchParams.get('categoryId'); const pageNumber = Number(url.searchParams.get('pageNumber') ?? '1');

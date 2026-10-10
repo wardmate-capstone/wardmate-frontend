@@ -38,7 +38,7 @@ test('API detail shows 404 and invalid responses without mock fallback', async (
   await expect(page.locator('.procedures-list > li')).toHaveCount(5);
   await page.route(`**/api/v1/procedures/${procedureId}`, route => catalogReply(route, { json: { id: procedureId, contentPayload: false } }));
   await page.goto(`/thu-tuc/${procedureId}`);
-  await expect(page.getByRole('alert')).toContainText('chưa đúng định dạng');
+  await expect(page.getByRole('alert')).toContainText('Một số thông tin chưa hợp lệ');
 });
 
 test('common checklist is visible even without cases and direct reload preserves filters', async ({ page }) => {

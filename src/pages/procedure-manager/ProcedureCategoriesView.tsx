@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { FolderSimple, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { useMemo, useRef, useState } from 'react';
+import { FolderSimple, MagnifyingGlass, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { Button, Input, Modal, ConfirmDeleteModal } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { toast } from '@/components/ui/Toast';
@@ -21,7 +21,19 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [error, setError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [search, setSearch] = useState('');
   const lock = useRef(false);
+  const visibleCategories = useMemo(() => {
+    const keyword = search.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (!keyword) return categories;
+    return categories.filter((category) =>
+      `${category.categoryName} ${category.description ?? ''}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [categories, search]);
 
   const open = (category: Category | null) => {
     setEditing(category);
@@ -65,15 +77,26 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
 
   return (
     <div className="space-y-5">
-      {canManage && <div className="flex justify-end">
-        <Button onClick={() => open(null)}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="relative block w-full sm:max-w-md">
+          <span className="sr-only">Tìm danh mục</span>
+          <MagnifyingGlass size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Tìm danh mục..."
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+          />
+        </label>
+        {canManage && <Button className="shrink-0" onClick={() => open(null)}>
           <Plus size={18} /> Thêm danh mục
-        </Button>
-      </div>}
+        </Button>}
+      </div>
 
       {/* Categories Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((cat) => (
+        {visibleCategories.map((cat) => (
           <div
             key={cat.id}
             className="admin-card p-5 space-y-3 transition-all hover:border-red-200 hover:shadow-sm"
@@ -115,6 +138,11 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
         {!categories.length && (
           <div className="col-span-full py-12 text-center text-sm text-slate-500 admin-card">
             Chưa có danh mục thủ tục.
+          </div>
+        )}
+        {!!categories.length && !visibleCategories.length && (
+          <div className="col-span-full py-12 text-center text-sm text-slate-500 admin-card">
+            Không tìm thấy danh mục phù hợp.
           </div>
         )}
       </div>

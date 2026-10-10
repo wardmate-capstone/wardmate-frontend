@@ -108,7 +108,7 @@ export function ProceduresPage() {
 
       <section id="danh-sach-thu-tuc" className="procedures-directory" aria-labelledby="procedures-results-title">
         <aside className="procedures-filter" aria-label="Lọc theo lĩnh vực">
-          <div className="procedures-filter-heading"><h2>Lĩnh vực</h2><span>{categories.length - 1} nhóm</span></div>
+          <div className="procedures-filter-heading"><h2>Lĩnh vực</h2><span>{Math.max(0, categories.length - 1)} nhóm</span></div>
           <div className="procedures-filter-list">
             {categories.map((category) => {
 
@@ -124,11 +124,11 @@ export function ProceduresPage() {
         <div className="procedures-results">
           <ProcedureFeedback error={(result.isError && procedureError(result.error)) || (categoryQuery.isError && procedureError(categoryQuery.error)) || ''} retry={() => { void result.refetch(); void categoryQuery.refetch(); }} />
           {(result.isPending || categoryQuery.isPending) && <ListSkeleton />}
-          <div className="procedures-results-heading">
+          {!result.isPending && !categoryQuery.isPending && <div className="procedures-results-heading">
             <div><p>Kết quả tra cứu</p><h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">{totalCount} thủ tục phù hợp</h2></div>
             {hasFilters && <button type="button" onClick={clearFilters}>Xóa bộ lọc</button>}
-          </div>
-          {hasFilters && <div className="mt-3 flex flex-wrap gap-2" aria-label="Bộ lọc đang áp dụng">
+          </div>}
+          {!result.isPending && !categoryQuery.isPending && hasFilters && <div className="mt-3 flex flex-wrap gap-2" aria-label="Bộ lọc đang áp dụng">
             {query && <Button variant="outline" className="h-auto min-h-11 max-w-full px-3 text-left" onClick={() => updateFilter('q', '')} aria-label="Bỏ bộ lọc từ khóa"><span className="break-all">Từ khóa: {query}</span><X className="shrink-0" aria-hidden="true" /></Button>}
             {selectedCategory !== '0' && <Button variant="outline" className="min-h-11 px-3" onClick={() => updateFilter('category', '')} aria-label="Bỏ bộ lọc lĩnh vực">{categories.find(c => String(c.id) === selectedCategory)?.categoryName ?? 'Danh mục'}<X aria-hidden="true" /></Button>}
           </div>}

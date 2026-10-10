@@ -390,11 +390,9 @@ export function ProcedureDraftWorkspace({
             error={list.error}
             retry={list.refresh}
           />
-          {list.loading && <TableSkeleton columns={3} />}
-          <div className="admin-card overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          {list.loading ? <TableSkeleton columns={3} /> : <div className="admin-card overflow-hidden">
+            <div className="border-b border-slate-200 px-5 py-4">
               <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
-              <Button variant="ghost" onClick={list.refresh}><ArrowClockwise size={16} /> Làm mới danh sách</Button>
             </div>
             <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -446,8 +444,8 @@ export function ProcedureDraftWorkspace({
               <div className="px-5 py-12 text-center"><FilePdf size={32} className="mx-auto text-slate-300" /><p className="mt-3 font-semibold text-slate-700">Chưa có bản nháp</p></div>
             )}
             </div>
-          </div>
-          <div className="flex items-center gap-3">
+          </div>}
+          {!list.loading && <div className="flex items-center gap-3">
             <Button
               variant="outline"
               disabled={page === 1 || list.loading}
@@ -463,7 +461,7 @@ export function ProcedureDraftWorkspace({
             >
               Sau
             </Button>
-          </div>
+          </div>}
         </>
       ) : (
         <>
