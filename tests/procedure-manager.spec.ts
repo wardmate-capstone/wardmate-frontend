@@ -142,19 +142,18 @@ test('procedure editor selects a real DocumentForm option instead of a manual id
   expect(state.requests.some(r => r.path.endsWith('/document-forms'))).toBe(true);
 });
 
-for (const mode of ['create', 'publish'] as const) test(`manager ${mode} sends full reviewed form without invented defaults`, async ({ page }) => {
+test('manager create sends full reviewed form without invented defaults', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager'); await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Mã thủ tục', { exact: true })).toHaveValue('');
   for (const [label, value] of [['Mã thủ tục', 'TEST-NEW'], ['Tên thủ tục', 'Thủ tục mới từ API'], ['Cấp thực hiện', 'Cấp Xã'], ['Đối tượng thực hiện', 'Công dân'], ['Tóm tắt lệ phí', 'Theo quy định'], ['Tóm tắt thời hạn', 'Theo quy định']]) await dialog.getByLabel(label, { exact: true }).fill(value);
   await dialog.getByLabel('Danh mục', { exact: true }).selectOption('1');
-  await dialog.getByLabel('Cách lưu', { exact: true }).selectOption(mode);
   await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Xác nhận lưu' }).click();
+  await dialog.getByRole('button', { name: 'Tạo thủ tục' }).click();
   await expect(dialog).toHaveCount(0);
   const request = state.requests.find(r => r.method === 'POST');
-  expect(request?.path).toBe('/api/v1/procedure-manager/procedures' + (mode === 'publish' ? '/publish' : ''));
+  expect(request?.path).toBe('/api/v1/procedure-manager/procedures');
   expect(request?.body?.categoryId).toBe(1);
   expect(request?.body?.checklistSchema).toEqual([]);
 });
@@ -163,10 +162,10 @@ test('PDF upload polls and publishes using saved revision; reload keeps server s
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page); state.queued = true;
   await page.goto('/procedure-manager?section=drafts');
   await page.getByLabel('PDF mô tả thủ tục (tối đa 20 MB)').setInputFiles({ name: 'khai-sinh.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') });
-  await page.getByRole('button', { name: 'Tải lên và tạo bản nháp' }).click();
+  await page.getByRole('button', { name: 'Tạo bản nháp và lưu PDF' }).click();
   await expect(page).toHaveURL(new RegExp(`draft=${draftId}`));
   await expect(page.getByRole('button', { name: 'Lưu bản nháp', exact: true })).toBeVisible({ timeout: 12000 });
-  await page.getByRole('checkbox', { name: /Tôi đã đối soát/ }).check();
+  await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
   await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
   await expect(page.getByRole('heading', { name: /khai-sinh.pdf · Đã xuất bản/ })).toBeVisible();
   const calls = state.requests.filter(r => r.path.includes('/drafts/') && ['PUT', 'POST'].includes(r.method));
@@ -177,11 +176,22 @@ test('PDF upload polls and publishes using saved revision; reload keeps server s
   await expect(page.getByRole('button', { name: 'Xác nhận xuất bản' })).toHaveCount(0);
 });
 
+test('draft publish explains missing required fields in Vietnamese and does not save', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto(`/procedure-manager?draft=${draftId}`);
+  await page.getByLabel('Mã thủ tục', { exact: true }).fill('');
+  await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
+  await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
+  await expect(page.getByRole('alert')).toContainText('Mã thủ tục');
+  await expect(page.getByRole('alert')).not.toContainText('procedureCode');
+  expect(state.requests.some(r => r.method === 'PUT' && r.path.includes('/drafts/'))).toBe(false);
+});
+
 test('draft conflict preserves unsaved input and never publishes', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page); state.conflict = true;
   await page.goto(`/procedure-manager?draft=${draftId}`);
   await page.getByLabel('Tên thủ tục', { exact: true }).fill('Nội dung chưa lưu cần giữ');
-  await page.getByRole('checkbox', { name: /Tôi đã đối soát/ }).check();
+  await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
   await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
   await expect(page.getByRole('alert')).toContainText('Bản nháp đã thay đổi');
   await expect(page.getByLabel('Tên thủ tục', { exact: true })).toHaveValue('Nội dung chưa lưu cần giữ');
@@ -191,22 +201,42 @@ test('draft conflict preserves unsaved input and never publishes', async ({ page
 test('publish response lost is reconciled with GET draft, not repeated', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page); state.failPublishResponse = true;
   await page.goto(`/procedure-manager?draft=${draftId}`);
-  await page.getByRole('checkbox', { name: /Tôi đã đối soát/ }).check();
+  await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
   await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
   await expect(page.getByRole('heading', { name: /Đã xuất bản/ })).toBeVisible();
   expect(state.requests.filter(r => r.path.endsWith('/publish'))).toHaveLength(1);
 });
 
-test('preview does not upload a draft and failed extraction offers retry', async ({ page }) => {
+test('preview does not upload until requested, clears on return, and failed extraction offers retry', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager?section=drafts');
+  await page.getByRole('radio', { name: /Xem và nhận diện nội dung/ }).click();
   await page.getByLabel('PDF mô tả thủ tục (tối đa 20 MB)').setInputFiles({ name: 'khai-sinh.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') });
-  await page.getByRole('button', { name: 'Đọc thử PDF (không lưu)' }).click();
+  await page.getByRole('button', { name: 'Xem và nhận diện PDF' }).click();
+  await expect(page.getByTitle('Tệp PDF đang xem')).toBeVisible();
+  await page.getByRole('tab', { name: 'Văn bản nhận diện' }).click();
   await expect(page.getByText('Nội dung đọc thử từ PDF')).toBeVisible();
   expect(state.requests.filter(r => r.method === 'POST').map(r => r.path)).toEqual(['/api/v1/procedure-manager/drafts/extract-preview']);
+  await page.getByRole('radio', { name: /Tạo bản nháp có PDF gốc/ }).click();
+  await page.getByRole('button', { name: 'Tạo bản nháp và lưu PDF' }).click();
+  await page.getByRole('button', { name: 'Về danh sách bản nháp' }).click();
+  await expect(page.getByText('Nội dung đọc thử từ PDF')).toHaveCount(0);
   state.draftStatus = 'Failed'; await page.goto(`/procedure-manager?draft=${draftId}`);
-  await page.getByRole('button', { name: 'Thử đọc lại PDF' }).click();
+  await page.getByRole('button', { name: 'Đọc lại PDF' }).click();
   await expect.poll(() => state.requests.some(r => r.path.endsWith('/retry'))).toBe(true);
+});
+
+test('preview publishes reviewed payload without uploading the source PDF', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager?section=drafts');
+  await page.getByRole('radio', { name: /Xem và nhận diện nội dung/ }).click();
+  await page.getByLabel('PDF mô tả thủ tục (tối đa 20 MB)').setInputFiles({ name: 'khai-sinh.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') });
+  await page.getByRole('button', { name: 'Xem và nhận diện PDF' }).click();
+  await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
+  await page.getByRole('button', { name: 'Công khai thủ tục' }).click();
+  await expect(page.getByText('Kết quả nhận diện')).toHaveCount(0);
+  const calls = state.requests.filter(r => r.method === 'POST');
+  expect(calls.map(r => r.path)).toEqual(['/api/v1/procedure-manager/drafts/extract-preview', '/api/v1/procedure-manager/procedures/publish']);
 });
 
 test('403 is shown without fake data or redirect; unsupported features contain no mock', async ({ page }) => {
@@ -218,6 +248,15 @@ test('403 is shown without fake data or redirect; unsupported features contain n
   await page.getByRole('button', { name: 'Dữ liệu kiến thức AI', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Chưa có kết nối cho chức năng này' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Đồng bộ lại' })).toHaveCount(0);
+});
+
+test('read-only procedure permission hides mutating actions and blocks draft workspace', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER'], ['iam.profile.read', 'procedure.read']);
+  const state = await mockCatalog(page);
+  await page.goto('/procedure-manager?section=drafts');
+  await expect(page.getByRole('heading', { name: 'Bạn chưa có quyền xem PDF và bản nháp' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Thêm thủ tục', exact: true })).toHaveCount(0);
+  expect(state.requests.some((request) => request.path === '/api/v1/procedure-manager/drafts')).toBe(false);
 });
 
 test('manager and editor fit mobile and focus stays in modal', async ({ page }) => {

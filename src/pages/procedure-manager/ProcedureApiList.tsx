@@ -315,9 +315,6 @@ export function ProcedureApiList({
               >
                 Sau
               </Button>
-              <Button variant="ghost" size="small" onClick={result.refresh}>
-                Làm mới
-              </Button>
             </div>
           </div>
         </div>

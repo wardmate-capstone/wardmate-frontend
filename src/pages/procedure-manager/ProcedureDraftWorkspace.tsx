@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Trash } from "@phosphor-icons/react";
-import { Button, Input, ConfirmDeleteModal, TableSkeleton } from "@/components/ui";
+import { ArrowClockwise, ArrowLeft, CheckCircle, FilePdf, StopCircle, Trash, UploadSimple } from "@phosphor-icons/react";
+import { Button, ConfirmDeleteModal, TableSkeleton } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import {
   procedureApi,
@@ -13,6 +13,7 @@ import {
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
 import { toast } from "@/components/ui/Toast";
+import { useAuthStore } from "@/stores/authStore";
 
 const labels: Record<string, string> = {
   Queued: "Chờ đọc PDF",
@@ -21,6 +22,17 @@ const labels: Record<string, string> = {
   Failed: "Đọc PDF thất bại",
   Published: "Đã xuất bản",
 };
+const statusStyles: Record<string, string> = {
+  Queued: "bg-blue-50 text-blue-700 ring-blue-200",
+  Processing: "bg-amber-50 text-amber-800 ring-amber-200",
+  NeedsReview: "bg-orange-50 text-orange-800 ring-orange-200",
+  Failed: "bg-red-50 text-red-700 ring-red-200",
+  Published: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+const fileSize = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.ceil(bytes / 1024)} KB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 export function PdfSource({
   id,
   draft = false,
@@ -102,6 +114,8 @@ export function ProcedureDraftWorkspace({
   onPublished: () => void;
   onPendingChange: (pending: boolean) => void;
 }) {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const can = (permission: string) => permissions.includes(permission);
   const [params, setParams] = useSearchParams();
   const id = params.get("draft");
   const [page, setPage] = useState(1);
@@ -115,7 +129,12 @@ export function ProcedureDraftWorkspace({
   const [payload, setPayload] = useState<Record<string, unknown>>({});
   const [preview, setPreview] = useState<Extraction>();
   const [file, setFile] = useState<File>();
+  const [uploadMode, setUploadMode] = useState<"draft" | "preview">("draft");
+  const [previewConfirmed, setPreviewConfirmed] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [previewMode, setPreviewMode] = useState<"pdf" | "text">("pdf");
   const [busy, setBusy] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -125,12 +144,22 @@ export function ProcedureDraftWorkspace({
   const [reload, setReload] = useState(0);
   const [deleting, setDeleting] = useState<{ id: string; name: string }>();
   const previewController = useRef<AbortController | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
   const lock = useRef(false);
   useEffect(() => {
     onPendingChange(dirty || busy || deleteBusy);
     return () => onPendingChange(false);
   }, [dirty, busy, deleteBusy, onPendingChange]);
   useEffect(() => () => previewController.current?.abort(), []);
+  useEffect(() => {
+    if (!file) {
+      setPdfUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
   useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -173,7 +202,18 @@ export function ProcedureDraftWorkspace({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const resetUpload = () => {
+    previewController.current?.abort();
+    previewController.current = null;
+    setPreviewing(false);
+    setPreview(undefined);
+    setPreviewMode("pdf");
+    setPreviewConfirmed(false);
+    setFile(undefined);
+    if (fileInput.current) fileInput.current.value = "";
+  };
   const select = (next?: string) => {
+    resetUpload();
     const query = new URLSearchParams(params);
     if (next) query.set("draft", next);
     else query.delete("draft");
@@ -212,28 +252,61 @@ export function ProcedureDraftWorkspace({
       setDeleteBusy(false);
     }
   };
-  const editable = draft && ["NeedsReview", "Failed"].includes(draft.status);
+  const editable = draft && can("procedure.drafts.update") && ["NeedsReview", "Failed"].includes(draft.status);
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold">PDF và bản nháp thủ tục</h1>
       <ProcedureFeedback error={error} />
       {!id ? (
         <>
-          <section className="admin-card space-y-4 p-5">
-            <Input
-              label="PDF mô tả thủ tục (tối đa 20 MB)"
-              type="file"
-              accept=".pdf,application/pdf"
-              disabled={busy}
-              onChange={(e) => {
-                setFile(e.target.files?.[0]);
-                setPreview(undefined);
-              }}
-            />
-            <div className="flex flex-wrap gap-3">
-              <Button
+          <section className="admin-card overflow-hidden">
+            <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
+              <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-800 ring-1 ring-red-100">
+                  <FilePdf size={20} weight="duotone" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-950">Tạo bản nháp từ PDF</h2>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Cách xử lý PDF">
+                <button type="button" role="radio" aria-checked={uploadMode === "draft"} onClick={() => { setUploadMode("draft"); setPreview(undefined); setPreviewConfirmed(false); }} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 ${uploadMode === "draft" ? "border-red-300 bg-red-50 ring-1 ring-red-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                  <span className="flex items-center justify-between gap-2"><strong className="text-sm text-slate-950">Tạo bản nháp có PDF gốc</strong><span className="rounded-full bg-red-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Khuyến nghị</span></span>
+                  <span className="mt-1.5 block text-xs leading-5 text-slate-600">Lưu tệp để kiểm tra, chỉnh sửa và công khai sau.</span>
+                </button>
+                <button type="button" role="radio" aria-checked={uploadMode === "preview"} onClick={() => setUploadMode("preview")} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 ${uploadMode === "preview" ? "border-amber-300 bg-amber-50 ring-1 ring-amber-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                  <strong className="text-sm text-slate-950">Xem và nhận diện nội dung</strong>
+                  <span className="mt-1.5 block text-xs leading-5 text-slate-600">{can("procedure.publish") ? "Kiểm tra nội dung và công khai ngay. Tệp PDF sẽ không được lưu." : "Xem tài liệu và nội dung nhận diện. Bạn chưa có quyền công khai thủ tục."}</span>
+                </button>
+              </div>
+              <label className={`group flex min-h-20 cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition focus-within:border-red-700 focus-within:ring-4 focus-within:ring-red-100 ${file ? "border-red-300 bg-red-50/40" : "border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/30"}`}>
+                <input
+                  ref={fileInput}
+                  className="sr-only"
+                  aria-label="PDF mô tả thủ tục (tối đa 20 MB)"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  disabled={busy || (!can("procedure.drafts.upload") && !can("procedure.drafts.extract"))}
+                  onChange={(event) => {
+                    setFile(event.target.files?.[0]);
+                    setPreview(undefined);
+                    setPreviewMode("pdf");
+                    setPreviewConfirmed(false);
+                  }}
+                />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-red-800 shadow-sm ring-1 ring-slate-200"><UploadSimple size={21} weight="duotone" /></span>
+                <span className="min-w-0 text-left">
+                  <span className="block truncate text-sm font-bold text-slate-900">{file ? file.name : "Chọn tệp PDF từ máy"}</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">{file ? `${fileSize(file.size)} · Bấm để chọn tệp khác` : "PDF tối đa 20 MB"}</span>
+                </span>
+              </label>
+            <div>
+              {uploadMode === "draft" && can("procedure.drafts.upload") && <Button
                 disabled={!file}
                 loading={busy}
+                className="min-h-11 w-full justify-center"
                 onClick={() =>
                   void run(async () => {
                     const result = await procedureApi.upload(file!);
@@ -243,62 +316,87 @@ export function ProcedureDraftWorkspace({
                   })
                 }
               >
-                Tải lên và tạo bản nháp
-              </Button>
-              <Button
-                variant="outline"
+                Tạo bản nháp và lưu PDF
+              </Button>}
+              {uploadMode === "preview" && can("procedure.drafts.extract") && <Button
                 disabled={!file || busy}
+                className="min-h-11 w-full justify-center"
                 onClick={() =>
                   void run(async () => {
-                    previewController.current = new AbortController();
-                    setPreview(
-                      await procedureApi.preview(
-                        file!,
-                        previewController.current.signal,
-                      ),
-                    );
+                    const controller = new AbortController();
+                    previewController.current = controller;
+                    setPreviewing(true);
+                    try {
+                      setPreview(await procedureApi.preview(file!, controller.signal));
+                    } finally {
+                      if (previewController.current === controller) previewController.current = null;
+                      setPreviewing(false);
+                    }
                   })
                 }
               >
-                Đọc thử PDF (không lưu)
-              </Button>
-              {busy && previewController.current && (
+                Xem và nhận diện PDF
+              </Button>}
+              {previewing && (
                 <Button
                   variant="ghost"
                   onClick={() => previewController.current?.abort()}
                 >
-                  Dừng đọc thử
+                  <StopCircle size={17} /> Dừng
                 </Button>
               )}
             </div>
             {preview && (
-              <section className="space-y-3">
-                <h2 className="font-bold">
-                  Kết quả đọc thử — chưa lưu bản nháp
-                </h2>
+              <section className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/30">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex items-center gap-2"><CheckCircle size={20} className="text-amber-800" weight="fill" /><h2 className="font-bold text-slate-950">Kết quả nhận diện</h2></div>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">Chưa lưu bản nháp</span>
+                </div>
+                <div className="space-y-4 p-4">
                 {preview.warnings.map((text, i) => (
-                  <p key={i} className="text-sm text-amber-900">
+                  <p key={i} className="rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm leading-6 text-amber-900">
                     {text}
                   </p>
                 ))}
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm">
-                  {preview.extractedText}
-                </pre>
-                <ProcedureApiEditor
-                  value={preview.payload}
-                  onChange={() => {}}
-                  categories={categories}
-                  disabled
-                />
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold" role="tablist" aria-label="Nội dung xem trước PDF">
+                  <button type="button" role="tab" aria-selected={previewMode === "pdf"} onClick={() => setPreviewMode("pdf")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "pdf" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>PDF gốc</button>
+                  <button type="button" role="tab" aria-selected={previewMode === "text"} onClick={() => setPreviewMode("text")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "text" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>Văn bản nhận diện</button>
+                </div>
+                {previewMode === "pdf" && pdfUrl ? (
+                  <div className="space-y-2">
+                    <iframe title="Tệp PDF đang xem" src={pdfUrl} className="h-[60vh] min-h-96 w-full rounded-xl border border-slate-200 bg-white" />
+                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-red-800 underline">Mở PDF trong tab mới</a>
+                  </div>
+                ) : (
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100">{preview.extractedText}</pre>
+                )}
+                <details open className="rounded-xl border border-slate-200 bg-white">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-700">Kiểm tra thông tin đã nhận diện</summary>
+                  <div className="border-t border-slate-200 p-4"><ProcedureApiEditor value={preview.payload} onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }} categories={categories} disabled={!can("procedure.publish") || busy} /></div>
+                </details>
+                {can("procedure.publish") && (
+                  <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
+                    <p className="text-sm leading-6 text-red-950"><strong>Kiểm tra kỹ trước khi công khai.</strong> Nếu trùng mã thủ tục, nội dung hiện tại sẽ được thay bằng nội dung này.</p>
+                    <label className="flex items-start gap-3 text-sm font-medium text-slate-800"><input type="checkbox" className="mt-1" checked={previewConfirmed} disabled={busy} onChange={(event) => setPreviewConfirmed(event.target.checked)} /><span>Tôi đã kiểm tra nội dung và đồng ý công khai.</span></label>
+                    <Button disabled={!previewConfirmed || busy} loading={busy} onClick={() => void run(async () => { const data = validateProcedure(preview.payload); await procedureApi.publish(data); toast.success("Đã công khai thủ tục."); resetUpload(); onPublished(); })}>Công khai thủ tục</Button>
+                  </div>
+                )}
+                </div>
               </section>
             )}
+            </div>
           </section>
           <ProcedureFeedback
             error={list.error}
             retry={list.refresh}
           />
           {list.loading && <TableSkeleton columns={3} />}
-          <div className="admin-card overflow-x-auto">
+          <div className="admin-card overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
+              <Button variant="ghost" onClick={list.refresh}><ArrowClockwise size={16} /> Làm mới danh sách</Button>
+            </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr>
@@ -314,20 +412,20 @@ export function ProcedureDraftWorkspace({
                       {row.pdfFileName}
                     </td>
                     <td>
-                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[row.status] ?? "bg-slate-100 text-slate-700 ring-slate-200"}`}>
                         {labels[row.status] ?? row.status}
                       </span>
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
-                        <Button
+                        {can("procedure.drafts.read") && <Button
                           size="small"
                           variant="outline"
                           onClick={() => select(row.id)}
                         >
                           Mở bản nháp
-                        </Button>
-                        <Button
+                        </Button>}
+                        {can("procedure.drafts.delete") && <Button
                           size="small"
                           variant="ghost"
                           className="text-slate-600 hover:bg-red-50 hover:text-red-700"
@@ -337,7 +435,7 @@ export function ProcedureDraftWorkspace({
                           }}
                         >
                           <Trash size={15} /> Xóa
-                        </Button>
+                        </Button>}
                       </div>
                     </td>
                   </tr>
@@ -345,8 +443,9 @@ export function ProcedureDraftWorkspace({
               </tbody>
             </table>
             {list.data?.length === 0 && (
-              <p className="p-5">Chưa có bản nháp trên trang này.</p>
+              <div className="px-5 py-12 text-center"><FilePdf size={32} className="mx-auto text-slate-300" /><p className="mt-3 font-semibold text-slate-700">Chưa có bản nháp</p></div>
             )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -364,9 +463,6 @@ export function ProcedureDraftWorkspace({
             >
               Sau
             </Button>
-            <Button variant="ghost" onClick={list.refresh}>
-              Tải lại danh sách
-            </Button>
           </div>
         </>
       ) : (
@@ -376,7 +472,7 @@ export function ProcedureDraftWorkspace({
             disabled={busy || dirty}
             onClick={() => select()}
           >
-            Về danh sách bản nháp
+            <ArrowLeft size={16} /> Về danh sách bản nháp
           </Button>
           {dirty && (
             <p className="text-sm text-amber-900">
@@ -386,7 +482,7 @@ export function ProcedureDraftWorkspace({
           <ProcedureFeedback loading={loading} />
           {!draft && !loading && (
             <Button variant="outline" onClick={() => setReload((v) => v + 1)}>
-              Tải lại bản nháp
+              <ArrowClockwise size={16} /> Thử tải lại bản nháp
             </Button>
           )}
           {draft && (
@@ -396,7 +492,7 @@ export function ProcedureDraftWorkspace({
                   <h2 className="font-bold">
                     {draft.pdfFileName} · {labels[draft.status]}
                   </h2>
-                  <Button
+                  {can("procedure.drafts.delete") && <Button
                     size="small"
                     variant="ghost"
                     className="text-slate-600 hover:bg-red-50 hover:text-red-700"
@@ -407,7 +503,7 @@ export function ProcedureDraftWorkspace({
                     }}
                   >
                     <Trash size={15} /> Xóa bản nháp
-                  </Button>
+                  </Button>}
                 </div>
                 {draft.warnings.map((text, i) => (
                   <p key={i} className="text-sm text-amber-900">
@@ -420,10 +516,15 @@ export function ProcedureDraftWorkspace({
                   </p>
                 )}
                 <p className="text-sm text-slate-600">
-                  Đối soát mọi nội dung trước khi xuất bản. Các lưu ý chung chưa
-                  có trường lưu riêng; giữ PDF gốc và báo bổ sung hợp đồng khi
-                  nội dung chưa biểu diễn đầy đủ.
+                  Hãy kiểm tra với tệp PDF gốc và bổ sung những thông tin còn
+                  thiếu trước khi công khai.
                 </p>
+                {['Queued', 'Processing'].includes(draft.status) && (
+                  <p className="flex items-center gap-2 text-xs font-medium text-blue-700" role="status">
+                    <span className="size-2 animate-pulse rounded-full bg-blue-600" aria-hidden="true" />
+                    Đang xử lý, kết quả sẽ tự động cập nhật.
+                  </p>
+                )}
               </div>
               <div className="grid items-start gap-5 xl:grid-cols-2">
                 <PdfSource key={draft.id} id={draft.id} draft />
@@ -447,11 +548,11 @@ export function ProcedureDraftWorkspace({
                           disabled={busy}
                           onChange={(e) => setConfirmed(e.target.checked)}
                         />
-                        Tôi đã đối soát nội dung với PDF gốc và xác nhận đủ
-                        thông tin để xuất bản.
+                        Tôi đã kiểm tra nội dung và xác nhận đủ thông tin để
+                        công khai.
                       </label>
                       <div className="flex flex-wrap gap-3">
-                        <Button
+                        {can("procedure.drafts.update") && <Button
                           variant="outline"
                           loading={busy}
                           onClick={() =>
@@ -469,8 +570,8 @@ export function ProcedureDraftWorkspace({
                           }
                         >
                           Lưu bản nháp
-                        </Button>
-                        <Button
+                        </Button>}
+                        {can("procedure.drafts.update") && can("procedure.drafts.publish") && <Button
                           disabled={!confirmed || busy}
                           onClick={() =>
                             void run(async () => {
@@ -501,8 +602,8 @@ export function ProcedureDraftWorkspace({
                           }
                         >
                           Xác nhận xuất bản
-                        </Button>
-                        {draft.status === "Failed" && (
+                        </Button>}
+                        {draft.status === "Failed" && can("procedure.drafts.extract") && (
                           <Button
                             disabled={busy || dirty}
                             variant="outline"
@@ -516,7 +617,7 @@ export function ProcedureDraftWorkspace({
                               })
                             }
                           >
-                            Thử đọc lại PDF
+                            <ArrowClockwise size={16} /> Đọc lại PDF
                           </Button>
                         )}
                       </div>
@@ -524,17 +625,10 @@ export function ProcedureDraftWorkspace({
                   )}
                   {error && (
                     <p className="text-sm">
-                      Nếu dữ liệu đã thay đổi, giữ nội dung đang nhập để đối
-                      chiếu. Tải lại sẽ bỏ phần chưa lưu.
+                      Nội dung đang sửa vẫn được giữ. Đừng tải lại trang nếu
+                      bạn chưa lưu.
                     </p>
                   )}
-                  <Button
-                    variant="ghost"
-                    disabled={busy || dirty}
-                    onClick={() => setReload((v) => v + 1)}
-                  >
-                    Tải trạng thái mới nhất
-                  </Button>
                   {dirty && (
                     <Button
                       variant="ghost"
@@ -552,10 +646,10 @@ export function ProcedureDraftWorkspace({
               </div>
               <details className="admin-card p-5">
                 <summary className="cursor-pointer font-semibold">
-                  Văn bản trích xuất
+                  Nội dung nhận diện từ PDF
                 </summary>
                 <pre className="mt-4 whitespace-pre-wrap break-words text-sm">
-                  {draft.extractedText || "Chưa có văn bản trích xuất."}
+                  {draft.extractedText || "Chưa nhận diện được nội dung."}
                 </pre>
               </details>
             </>

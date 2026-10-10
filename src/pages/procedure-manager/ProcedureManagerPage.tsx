@@ -40,7 +40,6 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
   const [revision, setRevision] = useState(0);
   const [creating, setCreating] = useState(false);
   const [input, setInput] = useState<Record<string, unknown>>(emptyProcedure);
-  const [mode, setMode] = useState<"create" | "publish">("create");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -48,6 +47,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
   const lock = useRef(false);
   const { profile } = useUserProfile();
   const user = useAuthStore((s) => s.user);
+  const can = (permission: string) => user?.permissions.includes(permission) ?? false;
   const procedureManagerName =
     profile?.fullName?.trim() || user?.username || "Chuyên viên";
   const categories = useProcedureQuery(
@@ -84,7 +84,6 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
   };
   const openCreate = () => {
     setInput(emptyProcedure());
-    setMode("create");
     setConfirmed(false);
     setError("");
     setCreating(true);
@@ -128,7 +127,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                   </p>
                 )}
               </div>
-              {["dashboard", "procedures"].includes(section) && <div className="flex flex-wrap gap-3">
+              {["dashboard", "procedures"].includes(section) && can("procedure.create") && <div className="flex flex-wrap gap-3">
                 <Button onClick={openCreate}>Thêm thủ tục</Button>
               </div>}
             </div>
@@ -138,7 +137,12 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             retry={categories.refresh}
           />
           {section === "categories" && categories.loading && <TableSkeleton columns={3} />}
-          {drafts ? (
+          {drafts && !can("procedure.drafts.read") ? (
+            <section className="admin-card space-y-3 p-6" role="alert">
+              <h1 className="text-xl font-bold">Bạn chưa có quyền xem PDF và bản nháp</h1>
+              <p>Liên hệ quản trị viên để được cấp quyền xem bản nháp thủ tục.</p>
+            </section>
+          ) : drafts ? (
             <ProcedureDraftWorkspace
               onPendingChange={setDraftPending}
               categories={categories.data ?? []}
@@ -196,16 +200,16 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                   : section === "steps"
                     ? "Quy trình và các bước thực hiện được cấu hình theo từng trường hợp nghiệp vụ của mỗi thủ tục. Vui lòng mở Danh sách thủ tục để cấu hình trực tiếp trong thủ tục cần thiết lập."
                     : section === "attach-forms"
-                      ? "Việc gắn biểu mẫu điện tử / phôi DOCX được thực hiện bên trong cấu hình của từng thủ tục (Tab Biểu mẫu). Backend chưa hỗ trợ API gắn biểu mẫu hàng loạt từ bên ngoài."
+                      ? "Biểu mẫu được gắn trong từng thủ tục. Hiện chưa hỗ trợ gắn nhiều biểu mẫu cùng lúc."
                       : section === "procedure-legal-links"
-                        ? "Căn cứ pháp lý được lưu trữ và đính kèm theo từng thủ tục cụ thể. Backend hiện chưa có API kho văn bản độc lập để quản lý liên kết ngoài."
+                        ? "Căn cứ pháp lý được quản lý trong từng thủ tục. Hiện chưa có kho văn bản riêng."
                         : ["forms", "upload-form", "form-versions"].includes(section)
-                          ? "Kho biểu mẫu và file DOCX thuộc dịch vụ DocumentForm, không phải API Procedure Catalog."
+                          ? "Chức năng quản lý kho biểu mẫu đang được hoàn thiện."
                           : section === "audit-logs"
-                            ? "Catalog cung cấp lịch sử phiên bản theo từng thủ tục (có thể bấm 'Lịch sử' ở danh sách thủ tục để xem), chưa có API nhật ký tổng hợp."
+                            ? "Bạn có thể xem lịch sử của từng thủ tục tại Danh sách thủ tục. Hiện chưa có lịch sử tổng hợp."
                             : section === "legal-docs"
-                              ? "Căn cứ pháp lý được lưu trong từng thủ tục; chưa có API kho văn bản pháp lý độc lập."
-                              : "Chưa có API quản lý kho tri thức hoặc đồng bộ AI."}
+                              ? "Căn cứ pháp lý được quản lý trong từng thủ tục. Hiện chưa có kho văn bản riêng."
+                              : "Chức năng quản lý nguồn kiến thức đang được hoàn thiện."}
               </p>
               <Button variant="outline" onClick={() => navigate("procedures")}>
                 Mở danh sách thủ tục
@@ -231,14 +235,11 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                   setError("");
                   try {
                     const data = validateProcedure(input);
-                    const created =
-                      mode === "create"
-                        ? await procedureApi.create(data)
-                        : await procedureApi.publish(data);
+                    const created = await procedureApi.create(data);
                     setCreating(false);
                     setRevision((v) => v + 1);
                     setSelected(created);
-                    toast.success("Đã lưu thủ tục trên máy chủ.");
+                    toast.success("Đã tạo thủ tục.");
                   } catch (e) {
                     setError(procedureError(e));
                   } finally {
@@ -247,7 +248,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                   }
                 }}
               >
-                Xác nhận lưu
+                Tạo thủ tục
               </Button>
             }
           >
@@ -261,31 +262,6 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
               categories={categories.data ?? []}
               disabled={busy}
             />
-            <label className="my-4 grid gap-2 text-sm font-semibold">
-              Cách lưu
-              <select
-                aria-label="Cách lưu"
-                className="min-h-11 rounded-lg border p-3"
-                disabled={busy}
-                value={mode}
-                onChange={(e) => {
-                  setMode(e.target.value as "create" | "publish");
-                  setConfirmed(false);
-                }}
-              >
-                <option value="create">Tạo mới — từ chối mã đã tồn tại</option>
-                <option value="publish">
-                  Xuất bản nội dung đã đối soát — cập nhật nếu mã tồn tại
-                </option>
-              </select>
-            </label>
-            {mode === "publish" && (
-              <p className="my-3 text-sm text-amber-900">
-                Nếu mã đã tồn tại, toàn bộ nội dung sẽ được thay thế và lưu
-                phiên bản cũ. Nếu mất kết nối, kiểm tra thủ tục và lịch sử trước
-                khi gửi lại.
-              </p>
-            )}
             <label className="flex gap-3 text-sm">
               <input
                 type="checkbox"
@@ -293,7 +269,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
               />
-              Tôi đã đối soát thông tin và xác nhận lưu nội dung này.
+              Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.
             </label>
           </Modal>
           <ProcedureVersionsModal

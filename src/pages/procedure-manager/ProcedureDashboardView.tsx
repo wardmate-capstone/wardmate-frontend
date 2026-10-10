@@ -35,7 +35,7 @@ export function ProcedureDashboardView({ stats, statsLoading = false, onNavigate
     <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-5">
       <h2 className="flex items-center gap-2.5 text-base font-bold text-slate-950"><WarningCircle size={24} className="text-amber-700" />Hạng mục cần chú ý hoàn thiện</h2>
       <div className="mt-5 grid gap-4 md:grid-cols-3">
-        {['Thủ tục chưa có biểu mẫu', 'Biểu mẫu cần cập nhật', 'Chưa đủ Checklist'].map(label => <div key={label} className="rounded-xl border border-amber-200/80 bg-white p-4 shadow-sm"><h3 className="text-xs font-bold text-slate-800">{label}</h3><p className="mt-3 text-sm text-slate-500">Chưa có dữ liệu thống kê.</p></div>)}
+        {['Thủ tục chưa có biểu mẫu', 'Biểu mẫu cần cập nhật', 'Chưa đủ giấy tờ'].map(label => <div key={label} className="rounded-xl border border-amber-200/80 bg-white p-4 shadow-sm"><h3 className="text-xs font-bold text-slate-800">{label}</h3><p className="mt-3 text-sm text-slate-500">Chưa có dữ liệu thống kê.</p></div>)}
       </div>
     </section>
     <div className="grid gap-6 lg:grid-cols-2">

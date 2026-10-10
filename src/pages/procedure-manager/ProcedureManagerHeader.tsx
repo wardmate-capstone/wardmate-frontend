@@ -17,66 +17,51 @@ interface ProcedureManagerHeaderProps {
   onSearchChange?: (q: string) => void;
 }
 
-export const sectionTitles: Record<ProcedureNavSection, { title: string; subtitle: string }> = {
+export const sectionTitles: Record<ProcedureNavSection, { title: string }> = {
   dashboard: {
-    title: 'Tổng quan Quản lý Thủ tục',
-    subtitle: 'Theo dõi thủ tục và dữ liệu từ máy chủ'
+    title: 'Tổng quan Quản lý Thủ tục'
   },
   procedures: {
-    title: 'Danh sách Thủ tục Hành chính',
-    subtitle: 'Quản lý vòng đời, xuất bản, biểu mẫu và cấu hình E-form cho từng thủ tục'
+    title: 'Danh sách Thủ tục Hành chính'
   },
   drafts: {
-    title: 'PDF & Bản nháp Thủ tục',
-    subtitle: 'Tải lên PDF quyết định công bố, xử lý trích xuất và đối soát dữ liệu bản nháp'
+    title: 'PDF & Bản nháp Thủ tục'
   },
   categories: {
-    title: 'Danh mục Thủ tục',
-    subtitle: 'Phân loại các lĩnh vực hành chính cấp xã/phường (Hộ tịch, Đất đai, Chứng thực...)'
+    title: 'Danh mục Thủ tục'
   },
   checklists: {
-    title: 'Thành phần Hồ sơ (Checklist Templates)',
-    subtitle: 'Quản lý các mẫu danh mục thành phần hồ sơ giấy tờ chuẩn hóa dùng chung'
+    title: 'Thành phần Hồ sơ'
   },
   steps: {
-    title: 'Quy trình Thực hiện Mẫu',
-    subtitle: 'Thiết kế các bước xử lý từ nộp hồ sơ, tiền kiểm đến tiếp nhận chính thức'
+    title: 'Quy trình Thực hiện Mẫu'
   },
   forms: {
-    title: 'Kho Biểu mẫu Hành chính',
-    subtitle: 'Quản lý các tệp PDF trống, file Word và mẫu điền minh họa kèm theo thủ tục'
+    title: 'Kho Biểu mẫu Hành chính'
   },
   'upload-form': {
-    title: 'Tải lên biểu mẫu',
-    subtitle: 'Tải lên biểu mẫu Word (.doc/.docx) hoặc PDF và thiết lập thời hạn hiệu lực'
+    title: 'Tải lên biểu mẫu'
   },
   'form-versions': {
-    title: 'Lịch sử Phiên bản Biểu mẫu',
-    subtitle: 'Theo dõi vòng đời V1, V2, V3 và quản lý thay đổi quy chuẩn biểu mẫu'
+    title: 'Lịch sử Phiên bản Biểu mẫu'
   },
   'attach-forms': {
-    title: 'Gắn Biểu mẫu vào Thủ tục Hành chính',
-    subtitle: 'Thiết lập danh mục biểu mẫu bắt buộc áp dụng khi công dân nộp hồ sơ'
+    title: 'Gắn Biểu mẫu vào Thủ tục Hành chính'
   },
   'legal-docs': {
-    title: 'Văn bản Quy phạm Pháp luật',
-    subtitle: 'Kho văn bản Luật, Nghị định, Thông tư làm cơ sở pháp lý cho các thủ tục'
+    title: 'Văn bản Quy phạm Pháp luật'
   },
   'procedure-legal-links': {
-    title: 'Liên kết Thủ tục - Căn cứ Pháp lý',
-    subtitle: 'Rà soát và thiết lập mối quan hệ điều chỉnh giữa văn bản pháp lý và thủ tục'
+    title: 'Liên kết Thủ tục - Căn cứ Pháp lý'
   },
   'ai-knowledge': {
-    title: 'Dữ liệu Tri thức AI (RAG Knowledge)',
-    subtitle: 'Giám sát và đồng bộ hóa dữ liệu văn bản, FAQ vào hệ thống trả lời tự động'
+    title: 'Nguồn kiến thức'
   },
   'audit-logs': {
-    title: 'Lịch sử Cập nhật & Kiểm toán',
-    subtitle: 'Nhật ký theo dõi mọi thay đổi về thủ tục, biểu mẫu, lệ phí và phiên bản'
+    title: 'Lịch sử cập nhật'
   },
   profile: {
-    title: 'Hồ sơ Chuyên viên Quản lý',
-    subtitle: 'Thông tin phân quyền, chữ ký số nội bộ và tài khoản quản trị nghiệp vụ'
+    title: 'Hồ sơ Chuyên viên Quản lý'
   }
 };
 

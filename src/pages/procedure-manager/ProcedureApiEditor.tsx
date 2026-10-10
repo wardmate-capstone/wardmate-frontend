@@ -213,14 +213,27 @@ export const emptyProcedure = (): Row => ({
   formDefinitions: [],
 });
 
+const requiredFieldLabels: Record<string, string> = {
+  procedureCode: "Mã thủ tục",
+  categoryId: "Danh mục",
+  title: "Tên thủ tục (tối thiểu 10 ký tự)",
+  levelOfImplementation: "Cấp thực hiện",
+  targetAudience: "Đối tượng thực hiện",
+  feeSummary: "Tóm tắt lệ phí",
+  processingTimeSummary: "Tóm tắt thời hạn",
+  "contentPayload.decisionNumber": "Số quyết định",
+  "contentPayload.receivingAddress": "Địa chỉ tiếp nhận",
+};
+
 export function validateProcedure(value: Row): ProcedureInput {
   const parsed = procedureInputSchema.safeParse(value);
   if (!parsed.success)
     throw new Error(
-      "Vui lòng kiểm tra các trường bắt buộc và định dạng:\n" +
-        parsed.error.issues
-          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-          .join("\n"),
+      "Chưa thể xuất bản. Vui lòng nhập đủ các trường bắt buộc trong mục Thông tin chung:\n• " +
+        [...new Set(parsed.error.issues.map((issue) => {
+          const path = issue.path.join(".");
+          return requiredFieldLabels[path] ?? path;
+        }))].join("\n• "),
     );
   const content = parsed.data.contentPayload;
   if (
@@ -390,10 +403,7 @@ export function ProcedureApiEditor({
         )}
         {step === 2 && (
           <section className="space-y-5">
-            <p className="text-sm text-slate-600">
-              Chỉ tạo trường hợp nghiệp vụ đã đối soát. Nhóm “phải nộp / xuất
-              trình / lưu ý” trong PDF không phải các lựa chọn loại trừ nhau.
-            </p>
+            <p className="text-sm text-slate-600">Chỉ thêm trường hợp đã kiểm tra với tài liệu gốc.</p>
             {rows(content.cases).map((item, index, cases) => (
               <div key={index} className="space-y-4 rounded-xl border p-4">
                 {[
@@ -477,11 +487,7 @@ export function ProcedureApiEditor({
           />
         )}
         {step === 4 && (
-          <>
-            <p className="text-sm text-slate-600">
-              Chọn biểu mẫu đang hoạt động từ dịch vụ Biểu mẫu. Không nhập ID thủ công.
-            </p>
-            <FormDefinitionsEditor
+          <FormDefinitionsEditor
               value={value.formDefinitions}
               disabled={disabled}
               change={(next) =>
@@ -494,7 +500,6 @@ export function ProcedureApiEditor({
                 )
               }
             />
-          </>
         )}
         {step === 5 && (
           <RowEditor
@@ -541,10 +546,7 @@ export function ProcedureApiEditor({
           Phần tiếp theo ({tabItems[step + 1] ?? ''}) →
         </Button>
       </div>
-      <p className="text-sm text-slate-500">
-        Thông tin chưa rõ cần được đối chiếu với nguồn. Không tự điền lệ phí,
-        thời hạn hoặc giấy tờ mặc định.
-      </p>
+      <p className="text-sm text-slate-500">Chỉ nhập thông tin đã kiểm tra.</p>
     </div>
   );
 }

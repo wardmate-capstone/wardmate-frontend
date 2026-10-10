@@ -4,6 +4,7 @@ import { Button, Input, Modal, ConfirmDeleteModal } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { toast } from '@/components/ui/Toast';
 import { procedureApi, procedureError, type Category } from '@/lib/api/procedures';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ProcedureCategoriesViewProps {
   categories: Category[];
@@ -11,6 +12,7 @@ interface ProcedureCategoriesViewProps {
 }
 
 export function ProcedureCategoriesView({ categories, onChange }: ProcedureCategoriesViewProps) {
+  const canManage = useAuthStore((state) => state.user?.permissions.includes('procedure.categories.manage') ?? false);
   const [editing, setEditing] = useState<Category | null | undefined>();
   const [deleting, setDeleting] = useState<Category>();
   const [name, setName] = useState('');
@@ -63,11 +65,11 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-end">
+      {canManage && <div className="flex justify-end">
         <Button onClick={() => open(null)}>
           <Plus size={18} /> Thêm danh mục
         </Button>
-      </div>
+      </div>}
 
       {/* Categories Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -91,7 +93,7 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
                 {cat.description || 'Chưa có mô tả chi tiết cho lĩnh vực này.'}
               </p>
             </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+            {canManage && <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
               <Button size="small" variant="outline" className="flex-1" onClick={() => open(cat)}>
                 <PencilSimple size={15} /> Chỉnh sửa
               </Button>
@@ -106,13 +108,13 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
               >
                 <Trash size={15} /> Xóa
               </Button>
-            </div>
+            </div>}
           </div>
         ))}
 
         {!categories.length && (
           <div className="col-span-full py-12 text-center text-sm text-slate-500 admin-card">
-            Chưa có danh mục nào được ghi nhận trên máy chủ.
+            Chưa có danh mục thủ tục.
           </div>
         )}
       </div>

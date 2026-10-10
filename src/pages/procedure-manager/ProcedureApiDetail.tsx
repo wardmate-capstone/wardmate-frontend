@@ -12,6 +12,7 @@ import {
 import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
 import { PdfSource } from "./ProcedureDraftWorkspace";
 import { toast } from "@/components/ui/Toast";
+import { useAuthStore } from "@/stores/authStore";
 
 export function ProcedureApiDetail({
   row,
@@ -24,6 +25,8 @@ export function ProcedureApiDetail({
   onBack: () => void;
   onChange: (active: boolean) => void;
 }) {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const can = (permission: string) => permissions.includes(permission);
   const detail = useProcedureQuery(
     useCallback(
       (signal: AbortSignal) => procedureApi.managerDetail(row.id, signal),
@@ -32,8 +35,8 @@ export function ProcedureApiDetail({
   );
   const versions = useProcedureQuery(
     useCallback(
-      (signal: AbortSignal) => procedureApi.versions(row.id, signal),
-      [row.id],
+      (signal: AbortSignal) => can("procedure.versions.read") ? procedureApi.versions(row.id, signal) : Promise.resolve([]),
+      [row.id, permissions],
     ),
   );
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
@@ -75,7 +78,7 @@ export function ProcedureApiDetail({
           {row.isActive ? "Đang công khai" : "Ngừng công khai"}
         </p>
         <div className="flex flex-wrap gap-3">
-          <Button
+          {can("procedure.update") && <Button
             disabled={!detail.data}
             onClick={() => {
               setEditing(structuredClone(detail.data!));
@@ -84,8 +87,8 @@ export function ProcedureApiDetail({
             }}
           >
             Chỉnh sửa
-          </Button>
-          <Button
+          </Button>}
+          {can("procedure.status") && <Button
             variant="outline"
             onClick={() => {
               setStatusOpen(true);
@@ -93,7 +96,7 @@ export function ProcedureApiDetail({
             }}
           >
             {row.isActive ? "Ngừng công khai" : "Mở công khai"}
-          </Button>
+          </Button>}
         </div>
       </div>
       <ProcedureFeedback
@@ -112,7 +115,7 @@ export function ProcedureApiDetail({
           <PdfSource id={row.id} />
         </div>
       )}
-      <section className="admin-card space-y-4 p-5">
+      {can("procedure.versions.read") && <section className="admin-card space-y-4 p-5">
         <h2 className="text-xl font-bold">Lịch sử phiên bản</h2>
         <ProcedureFeedback
           loading={versions.loading}
@@ -129,7 +132,7 @@ export function ProcedureApiDetail({
             </summary>
             <p className="my-3 text-sm text-slate-600">
               Ngày lưu: {new Date(version.createdAt).toLocaleString("vi-VN")}.
-              Nội dung là snapshot, không phải bản chỉnh sửa hiện tại.
+              Đây là nội dung đã lưu ở phiên bản này.
             </p>
             <ProcedureApiEditor
               value={version.snapshotData}
@@ -141,7 +144,7 @@ export function ProcedureApiDetail({
               <div className="mt-3"><p className="mb-2 text-sm">PDF lịch sử: {version.pdfFileName}</p><PdfSource id={row.id} versionId={version.id} /></div>
             )}
             <div className="mt-3 pt-3 border-t border-slate-100">
-              <Button
+              {can("procedure.rollback") && <Button
                 size="small"
                 variant="outline"
                 onClick={() => {
@@ -153,18 +156,18 @@ export function ProcedureApiDetail({
                 }}
               >
                 Khôi phục phiên bản này
-              </Button>
+              </Button>}
             </div>
           </details>
         ))}
-      </section>
+      </section>}
       <Modal
         open={!!rollback}
         onOpenChange={(open) => {
           if (!open && !busy) setRollback(undefined);
         }}
         title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ''}`}
-        description="Backend sẽ tạo một phiên bản mới từ bản lưu này; lịch sử cũ vẫn được giữ nguyên."
+        description="Nội dung của phiên bản này sẽ được khôi phục thành bản mới. Các phiên bản cũ vẫn được giữ lại."
         footer={
           <>
             <Button

@@ -80,7 +80,7 @@ function pdfForm(file: File) {
   const form = new FormData(); form.append('file', file); return form;
 }
 export function procedureError(error: unknown): string {
-  if (error instanceof z.ZodError) return 'Dữ liệu thủ tục chưa đúng định dạng. Vui lòng kiểm tra các trường và phản hồi máy chủ.';
+  if (error instanceof z.ZodError) return 'Một số thông tin chưa hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
     const details = data?.errors && typeof data.errors === 'object' ? Object.entries(data.errors).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`).join('\n') : '';

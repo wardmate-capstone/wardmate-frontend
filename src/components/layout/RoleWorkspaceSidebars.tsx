@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FileText, Files, FolderOpen, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -46,7 +46,7 @@ export function UnifiedProcedureSidebar({ currentSection, onSelectSection, isOpe
     { title: 'Tổng quan', items: [{ id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['procedure.', 'document.templates.'], fallbackRoles: role }] },
     { title: 'Thủ tục hành chính', items: [
       { id: 'procedures', label: 'Danh sách thủ tục', icon: ClipboardText, permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'] },
-      { id: 'drafts', label: 'Nhập PDF & bản nháp', icon: FolderOpen, permissions: ['procedure.drafts.'] }, { id: 'categories', label: 'Danh mục thủ tục', icon: ListChecks, permissions: ['procedure.categories.manage'] },
+      { id: 'drafts', label: 'PDF và bản nháp', icon: FilePdf, permissions: ['procedure.drafts.'] }, { id: 'categories', label: 'Danh mục thủ tục', icon: FolderSimple, permissions: ['procedure.categories.manage'] },
       { id: 'checklists', label: 'Thành phần hồ sơ', icon: ListChecks, fallbackRoles: role }, { id: 'steps', label: 'Quy trình thực hiện', icon: Path, fallbackRoles: role },
     ] },
     { title: 'Biểu mẫu', items: [
