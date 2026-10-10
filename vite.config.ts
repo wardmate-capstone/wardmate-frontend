@@ -13,17 +13,26 @@ export default defineConfig({
       '/api/v1/procedures': {
         target: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
       },
       '/api/v1/procedure-manager': {
         target: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
       },
       '/api': {
         target: 'https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
       },
     },
   },
