@@ -1,8 +1,23 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 10/10/2026.
+Cập nhật: 11/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Chuẩn hóa định dạng ngày và xử lý lỗi ProblemDetails cho IAM & Procedure — 11/10/2026
+
+- **Phạm vi & Trạng thái**: Đã rà soát toàn bộ hợp đồng API Backend IAM và Procedure Catalog, hoàn thiện và đối soát client Frontend.
+- **Việc đã làm**:
+  - Tại `src/lib/api/procedures.ts`:
+    - Thêm hàm `toDateOnlyString()` chuẩn hóa định dạng ngày `YYYY-MM-DD` cho `EffectiveDate` trước khi gửi lên API cập nhật và rollback thủ tục, tránh lỗi .NET 400 Bad Request không parse được kiểu `System.DateOnly`.
+    - Cải tiến hàm `procedureError()`: ưu tiên đọc thông điệp cụ thể từ `data.detail`, đồng thời giải nén dictionary `data.errors` để hiển thị lỗi chi tiết đến từng trường.
+  - Tại `src/lib/api/index.ts`:
+    - Tiền xử lý mảng `categories` trong `assignOfficerCategories()` (khử trùng lặp, lọc số nguyên dương > 0, cắt tối đa 100 mục) theo đúng quy tắc validator backend.
+    - Cải tiến `authErrorMessage()`: hỗ trợ giải nén cả `data.detail` và `data.errors` của RFC 7807 ProblemDetails.
+- **Kiểm tra**:
+  - `npm run typecheck`: 0 lỗi.
+  - `npm run build`: hoàn tất thành công (27.28s).
+- **Giới hạn**: Đã đối soát trực tiếp với source C# .NET và DTOs backend; chưa thực hiện integration test trực tiếp trên môi trường chạy thật.
 
 ## Sửa proxy local cho IAM CSRF — 10/10/2026
 

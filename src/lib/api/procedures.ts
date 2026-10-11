@@ -41,17 +41,30 @@ export type DocumentFormOption = z.infer<typeof documentFormSchema>;
 export type ProcedureQuery = { keyword?: string; categoryId?: number; pageNumber?: number; pageSize?: number; isActive?: boolean; levelOfImplementation?: string; sortBy?: string; isAscending?: boolean };
 const manager = '/api/v1/procedure-manager/procedures';
 const drafts = '/api/v1/procedure-manager/drafts';
+function toDateOnlyString(value: string): string {
+  const trimmed = value.trim();
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
+  if (match) return match[1];
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return trimmed;
+}
+
 export const procedureApi = {
   categories: async (signal?: AbortSignal) => z.array(categorySchema).parse((await api.get('/api/v1/procedures/categories', { skipAuth: true, signal })).data),
   list: async (query: ProcedureQuery, managed = false, signal?: AbortSignal) => pagedSchema.parse((await api.get(managed ? manager : '/api/v1/procedures', { params: query, skipAuth: !managed, signal })).data),
   detail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`/api/v1/procedures/${encodeURIComponent(id)}`, { skipAuth: true, signal })).data),
   managerDetail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`${manager}/${encodeURIComponent(id)}`, { signal })).data),
   create: async (input: ProcedureInput) => detailSchema.parse((await api.post(manager, input)).data),
-  update: async (id: string, input: ProcedureInput, decisionNumber: string, effectiveDate: string) => detailSchema.parse((await api.put(`${manager}/${id}`, { ...input, decisionNumber, effectiveDate })).data),
+  update: async (id: string, input: ProcedureInput, decisionNumber: string, effectiveDate: string) =>
+    detailSchema.parse((await api.put(`${manager}/${id}`, { ...input, decisionNumber, effectiveDate: toDateOnlyString(effectiveDate) })).data),
   publish: async (input: ProcedureInput) => detailSchema.parse((await api.post(`${manager}/publish`, input)).data),
   status: async (id: string, isActive: boolean, reason: string) => { await api.patch(`${manager}/${id}/status`, { isActive, reason }); },
   versions: async (id: string, signal?: AbortSignal) => z.array(versionSchema).parse((await api.get(`${manager}/${id}/versions`, { signal })).data),
-  rollback: async (id: string, versionNumber: number, input: { reason: string; decisionNumber: string; effectiveDate: string }) => detailSchema.parse((await api.post(`${manager}/${id}/versions/${versionNumber}/rollback`, input)).data),
+  rollback: async (id: string, versionNumber: number, input: { reason: string; decisionNumber: string; effectiveDate: string }) =>
+    detailSchema.parse((await api.post(`${manager}/${id}/versions/${versionNumber}/rollback`, { ...input, effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
   versionSource: async (id: string, versionId: string) => sourceLink((await api.get(`${manager}/${id}/versions/${versionId}/source`)).data),
   createCategory: async (input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.post('/api/v1/procedure-manager/categories', input)).data),
   updateCategory: async (id: number, input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.put(`/api/v1/procedure-manager/categories/${id}`, input)).data),
@@ -83,8 +96,17 @@ export function procedureError(error: unknown): string {
   if (error instanceof z.ZodError) return 'Một số thông tin chưa hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
-    const details = data?.errors && typeof data.errors === 'object' ? Object.entries(data.errors).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`).join('\n') : '';
-    return [typeof data?.title === 'string' ? data.title : error.response?.status === 404 ? 'Không tìm thấy thủ tục đang hoạt động.' : 'Không thể kết nối dịch vụ thủ tục. Vui lòng thử lại.', details].filter(Boolean).join('\n');
+    const details = data?.errors && typeof data.errors === 'object'
+      ? Object.entries(data.errors).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`).join('\n')
+      : '';
+    const mainMessage = typeof data?.detail === 'string' && data.detail.trim()
+      ? data.detail
+      : typeof data?.title === 'string' && data.title.trim()
+        ? data.title
+        : error.response?.status === 404
+          ? 'Không tìm thấy thủ tục đang hoạt động.'
+          : 'Không thể kết nối dịch vụ thủ tục. Vui lòng thử lại.';
+    return [mainMessage, details].filter(Boolean).join('\n');
   }
   return error instanceof Error ? error.message : 'Không thể thực hiện thao tác.';
 }

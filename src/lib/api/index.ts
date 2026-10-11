@@ -364,7 +364,10 @@ export async function getAdminUsers(filter: DirectoryFilter = {}): Promise<Direc
 }
 
 export async function assignOfficerCategories(userId: string, categories: number[]): Promise<void> {
-  await api.put(`/api/v1/manager/officers/${userId}/categories`, { categories }, cookieConfig);
+  const sanitized = Array.from(new Set(categories))
+    .filter(id => Number.isInteger(id) && id > 0)
+    .slice(0, 100);
+  await api.put(`/api/v1/manager/officers/${userId}/categories`, { categories: sanitized }, cookieConfig);
 }
 
 export async function createWard(payload: CreateWardInput): Promise<WardDto> {
@@ -387,10 +390,16 @@ export function authErrorMessage(error: unknown): string {
     if (status === 404) return 'Không tìm thấy thông tin hồ sơ.';
     if (status === 429) return 'Bạn thao tác quá nhiều lần. Vui lòng chờ rồi thử lại.';
     if (status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
-    const detail: unknown = error.response?.data?.detail;
-    if (typeof detail === 'string' && detail.trim()) return detail.slice(0, 500);
+    const data = error.response?.data;
+    const errors = data?.errors && typeof data.errors === 'object'
+      ? Object.entries(data.errors).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : String(value)}`).join('\n')
+      : '';
+    const detail: unknown = data?.detail ?? data?.title;
+    if (typeof detail === 'string' && detail.trim()) {
+      return [detail.slice(0, 500), errors].filter(Boolean).join('\n');
+    }
     if (status === 409) return 'Tên đăng nhập hoặc email đã được sử dụng.';
-    return 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
+    return errors || 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất xác thực. Vui lòng thử lại.';
 }
