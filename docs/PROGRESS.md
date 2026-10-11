@@ -4,6 +4,31 @@ Cập nhật: 11/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Nâng cấp trải nghiệm UI/UX phân hệ IAM, bộ lọc trạng thái và chuẩn hóa quản lý hồ sơ — 11/10/2026
+
+- **Phạm vi & Trạng thái**: Đã triển khai và đẩy lên remote 4 commits theo đúng nhóm tính năng: Auth, Citizen Profile, Admin Directory và Manager Officers.
+- **Việc đã làm**:
+  1. `feat(auth): add password strength meter and terms modal on register` (commit `34b5415`):
+     - Password Strength Meter thời gian thực (5 nấc, 4 tiêu chí: 8+ ký tự, chữ in hoa, số, ký tự đặc biệt).
+     - Modal "Điều khoản sử dụng dịch vụ WardMate" giải thích rõ ranh giới pháp lý tiền kiểm hành chính.
+  2. `style(citizen): standardize profile layout and format identity numbers` (commit `95077ac`):
+     - Chuẩn hóa layout tiêu đề trang với khoảng cách `mb-6`, khắc phục lặp tiêu đề.
+     - Tích hợp cụm nút thao tác trực tiếp vào thẻ Overview, bỏ các nút trùng lặp trong banner trạng thái chỉnh sửa.
+     - Format hiển thị CCCD (`079 090 123 456`) và SĐT, disable nút Lưu khi form chưa thay đổi (`isPristine`).
+  3. `feat(admin): add account status filter and modal confirmations` (commit `9c32ce4`):
+     - Mặc định chọn bộ lọc trạng thái "Đang hoạt động" (`ACTIVE`) khi vào danh mục người dùng.
+     - Modal xác nhận khi Tạm khóa / Kích hoạt tài khoản người dùng; kiểm soát sanitize mã phường.
+     - Đồng bộ banner chế độ chỉnh sửa của `UnifiedSelfProfileView`.
+  4. `feat(manager): enhance officer directory filters and clarify profile deletion` (commit `0ef7ed2`):
+     - Mặc định chọn bộ lọc trạng thái "Đang hoạt động" (`ACTIVE`) cho danh sách cán bộ Một cửa.
+     - Phân định rõ giữa xóa hồ sơ cá nhân (`DELETE /api/v1/users/{userId}/profile`) với tài khoản người dùng; Modal xác nhận thông báo rõ chỉ xóa dữ liệu định danh (CCCD, tên khai sinh, địa chỉ) chứ không xóa tài khoản đăng nhập.
+     - Tự động disable nút xóa hồ sơ khi cán bộ chưa có dữ liệu hồ sơ cá nhân để loại bỏ hoàn toàn lỗi 404 khi bấm xóa lại.
+     - Format hiển thị cụm số CCCD cán bộ.
+- **Kiểm tra**:
+  - `npm run typecheck`: 0 errors.
+  - `npm run build`: hoàn tất thành công (9.28s).
+  - Đã đẩy toàn bộ commit lên nhánh `origin/main`.
+
 ## Chuẩn hóa định dạng ngày và xử lý lỗi ProblemDetails cho IAM & Procedure — 11/10/2026
 
 - **Phạm vi & Trạng thái**: Đã rà soát toàn bộ hợp đồng API Backend IAM và Procedure Catalog, hoàn thiện và đối soát client Frontend.
