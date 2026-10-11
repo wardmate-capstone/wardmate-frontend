@@ -19,7 +19,20 @@ import { loginDestination, safeReturnTo } from '@/lib/authRedirect';
 import { useAuthStore } from '@/stores/authStore';
 import { authErrorMessage, login, register } from '@/lib/api';
 
+import { Modal } from '@/components/ui/Modal';
+import { Check, X as XIcon } from '@phosphor-icons/react';
+
 type AuthPageProps = { mode: 'login' | 'register' };
+
+function getPasswordStrength(val: string) {
+  const hasMin = val.length >= 8;
+  const hasUpper = /\p{Lu}/u.test(val);
+  const hasLower = /\p{Ll}/u.test(val);
+  const hasNumber = /\d/.test(val);
+  const hasSpecial = /[\p{P}\p{S}]/u.test(val);
+  const passed = [hasMin, hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+  return { hasMin, hasUpper, hasLower, hasNumber, hasSpecial, passed };
+}
 
 function PasswordField({ id, label, autoComplete, field, error }: { id: string; label: string; autoComplete: string; field: UseFormRegisterReturn; error?: string }) {
   const [visible, setVisible] = useState(false);
@@ -45,12 +58,15 @@ export function AuthPage({ mode }: AuthPageProps) {
   const expired = !isRegister && searchParams.get('reason') === 'session-expired';
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const pending = useRef(false);
   const active = useRef(true);
-  const { register: field, handleSubmit, reset, setError, formState: { errors } } = useForm<AuthFormValues>({
+  const { register: field, handleSubmit, reset, setError, watch, formState: { errors } } = useForm<AuthFormValues>({
     resolver: zodResolver(isRegister ? registerSchema : loginSchema),
     defaultValues: { identity: '', password: '', fullName: '', email: '', confirmPassword: '', terms: false },
   });
+  const passwordValue = watch('password') || '';
+  const pwdStrength = getPasswordStrength(passwordValue);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, [mode]);
 
   async function submit(values: AuthFormValues) {
@@ -197,6 +213,57 @@ export function AuthPage({ mode }: AuthPageProps) {
               label="Mật khẩu"
               autoComplete={isRegister ? 'new-password' : 'current-password'}
             />
+
+            {/* Password strength indicator for registration */}
+            {isRegister && passwordValue.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-slate-600">Độ mạnh mật khẩu:</span>
+                  <span
+                    className={
+                      pwdStrength.passed <= 2
+                        ? 'text-red-700'
+                        : pwdStrength.passed <= 4
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }
+                  >
+                    {pwdStrength.passed <= 2 ? 'Yếu' : pwdStrength.passed <= 4 ? 'Khá' : 'Mạnh'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-5 gap-1 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                  {[1, 2, 3, 4, 5].map((lvl) => (
+                    <div
+                      key={lvl}
+                      className={`h-full transition-colors ${
+                        pwdStrength.passed >= lvl
+                          ? pwdStrength.passed <= 2
+                            ? 'bg-red-600'
+                            : pwdStrength.passed <= 4
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-600'
+                          : 'bg-transparent'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500">
+                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasMin ? 'text-emerald-700 font-semibold' : ''}`}>
+                    {pwdStrength.hasMin ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Ít nhất 8 ký tự
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasUpper ? 'text-emerald-700 font-semibold' : ''}`}>
+                    {pwdStrength.hasUpper ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Có chữ in hoa
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasNumber ? 'text-emerald-700 font-semibold' : ''}`}>
+                    {pwdStrength.hasNumber ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Có chữ số
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasSpecial ? 'text-emerald-700 font-semibold' : ''}`}>
+                    {pwdStrength.hasSpecial ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Ký tự đặc biệt (@#$...)
+                  </span>
+                </div>
+              </div>
+            )}
+
             {isRegister && (
               <PasswordField
               field={field('confirmPassword')}
@@ -216,7 +283,25 @@ export function AuthPage({ mode }: AuthPageProps) {
                   aria-invalid={!!errors.terms}
                   aria-describedby={errors.terms ? 'terms-error' : undefined}
                 />
-                <span>{isRegister ? 'Tôi đồng ý với điều khoản sử dụng' : 'Ghi nhớ đăng nhập'}</span>
+                <span>
+                  {isRegister ? (
+                    <>
+                      Tôi đồng ý với{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setTermsModalOpen(true);
+                        }}
+                        className="text-red-800 underline font-semibold hover:text-red-950"
+                      >
+                        điều khoản sử dụng
+                      </button>
+                    </>
+                  ) : (
+                    'Ghi nhớ đăng nhập'
+                  )}
+                </span>
               </label>
               {!isRegister && (
                 <Link to="/quen-mat-khau" className="font-semibold text-red-800 hover:underline">
@@ -251,6 +336,42 @@ export function AuthPage({ mode }: AuthPageProps) {
           </p>
         </m.div>
       </div>
+
+      {/* Modal Điều khoản sử dụng dịch vụ */}
+      <Modal
+        open={termsModalOpen}
+        onOpenChange={setTermsModalOpen}
+        title="Điều khoản sử dụng dịch vụ WardMate"
+      >
+        <div className="space-y-3.5 text-xs sm:text-sm text-slate-700 max-h-[60vh] overflow-y-auto pr-1">
+          <p className="font-semibold text-red-900 bg-red-50 p-3 rounded-xl border border-red-200">
+            WardMate là Hệ thống Hỗ trợ Chuẩn bị và Tiền kiểm Hồ sơ Hành chính cấp Xã/Phường. Đây không phải cổng tiếp nhận hồ sơ chính thức của Nhà nước.
+          </p>
+          <div className="space-y-2">
+            <h4 className="font-bold text-slate-900">1. Mục đích sử dụng:</h4>
+            <p className="text-slate-600">
+              Hệ thống cung cấp công cụ hướng dẫn công dân chuẩn bị đúng giấy tờ, kiểm tra trước thông tin kê khai điện tử nhằm giảm thiểu sai sót và số lần đi lại trước khi tới nộp tại Bộ phận Một cửa UBND cấp Xã/Phường.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-bold text-slate-900">2. Ranh giới pháp lý & Tiền kiểm:</h4>
+            <p className="text-slate-600">
+              Việc hoàn tất chuẩn bị hồ sơ hoặc duyệt tiền kiểm trên WardMate <strong>không thay thế</strong> việc nộp hồ sơ giấy và đối chiếu gốc tại cơ quan tiếp nhận chính thức. Quyết định thụ lý chỉ được xác lập khi cán bộ tiếp nhận trực tiếp đối chiếu hồ sơ tại UBND.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-bold text-slate-900">3. Bảo vệ dữ liệu cá nhân:</h4>
+            <p className="text-slate-600">
+              Thông tin định danh và tài liệu của công dân được bảo mật theo quy định pháp luật và chỉ sử dụng cho mục đích tiền kiểm thủ tục hành chính.
+            </p>
+          </div>
+          <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <Button onClick={() => setTermsModalOpen(false)}>
+              Đã hiểu và đóng
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 }
