@@ -208,8 +208,11 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
     return userData.items.filter((item) => item.id !== currentUserId);
   }, [userData, currentUserId]);
 
-  async function handleToggleAccountStatus(account: ManagedUserDto) {
-    if (togglingId) return;
+  const [accountToToggle, setAccountToToggle] = useState<ManagedUserDto | null>(null);
+
+  async function confirmToggleAccountStatus() {
+    if (!accountToToggle || togglingId) return;
+    const account = accountToToggle;
     setTogglingId(account.id);
     const newStatus = !account.isActive;
     try {
@@ -228,6 +231,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           ? `Đã kích hoạt tài khoản ${account.username}.`
           : `Đã tạm khóa tài khoản ${account.username}.`
       );
+      setAccountToToggle(null);
     } catch (err) {
       toast.error(authErrorMessage(err));
     } finally {
@@ -416,7 +420,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                 togglingId={togglingId}
                 onPageChange={(p) => setUserPage(p)}
                 onRetry={() => void fetchUsers(userPage)}
-                onToggleStatus={handleToggleAccountStatus}
+                onToggleStatus={(u) => setAccountToToggle(u)}
                 onAssignWard={handleAssignWard}
                 onSelectUser={handleOpenUserDetail}
                 onManageRoles={setRoleUser}
@@ -440,6 +444,56 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
         </main>
       </div>
       <UserRolesModal user={roleUser} onClose={() => setRoleUser(undefined)} onChanged={() => void fetchUsers(userPage)} />
+
+      {/* Modal xác nhận Khóa / Mở khóa tài khoản người dùng */}
+      {accountToToggle && (
+        <Modal
+          open={Boolean(accountToToggle)}
+          onOpenChange={(open) => {
+            if (!open) setAccountToToggle(null);
+          }}
+          title={accountToToggle.isActive ? "Xác nhận tạm khóa tài khoản" : "Xác nhận kích hoạt tài khoản"}
+        >
+          <div className="space-y-4 py-2">
+            <p className="text-xs sm:text-sm text-slate-600">
+              {accountToToggle.isActive ? (
+                <>
+                  Bạn có chắc chắn muốn <strong>tạm khóa</strong> tài khoản của người dùng{" "}
+                  <strong className="text-slate-900">@{accountToToggle.username}</strong>
+                  {accountToToggle.profile?.fullName ? ` (${accountToToggle.profile.fullName})` : ""}? Người dùng sẽ không thể đăng nhập vào hệ thống khi tài khoản bị khóa.
+                </>
+              ) : (
+                <>
+                  Bạn có chắc chắn muốn <strong>kích hoạt lại</strong> tài khoản của người dùng{" "}
+                  <strong className="text-slate-900">@{accountToToggle.username}</strong>
+                  {accountToToggle.profile?.fullName ? ` (${accountToToggle.profile.fullName})` : ""}?
+                </>
+              )}
+            </p>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAccountToToggle(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(togglingId)}
+                onClick={confirmToggleAccountStatus}
+                className={`px-4 py-2 text-xs font-bold rounded-lg text-white transition-colors disabled:opacity-50 ${
+                  accountToToggle.isActive
+                    ? "bg-amber-700 hover:bg-amber-800"
+                    : "bg-emerald-700 hover:bg-emerald-800"
+                }`}
+              >
+                {togglingId ? "Đang xử lý..." : accountToToggle.isActive ? "Tạm khóa tài khoản" : "Kích hoạt tài khoản"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -790,18 +844,26 @@ function UsersView({
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // Bộ lọc vai trò người dùng (chuẩn hóa 5 vai trò tinh gọn)
+  // Bộ lọc vai trò và trạng thái tài khoản (Mặc định lọc 'ACTIVE' - Đang hoạt động)
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
 
   const displayUsers = useMemo(() => {
-    if (roleFilter === 'ALL') return users;
-    return users.filter((u) =>
-      u.roles.some((r) => {
-        const config = getRoleConfig(r.roleName);
-        return config?.value === roleFilter;
-      })
-    );
-  }, [users, roleFilter]);
+    return users.filter((u) => {
+      // 1. Lọc vai trò
+      if (roleFilter !== 'ALL') {
+        const hasRole = u.roles.some((r) => {
+          const config = getRoleConfig(r.roleName);
+          return config?.value === roleFilter;
+        });
+        if (!hasRole) return false;
+      }
+      // 2. Lọc trạng thái
+      if (statusFilter === 'ACTIVE' && !u.isActive) return false;
+      if (statusFilter === 'LOCKED' && u.isActive) return false;
+      return true;
+    });
+  }, [users, roleFilter, statusFilter]);
 
   return (
     <section className="admin-card admin-table-card admin-content-card">
@@ -811,7 +873,7 @@ function UsersView({
           onChange={setQuery}
           placeholder="Tìm tên đăng nhập, họ tên, email hoặc phường..."
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -823,6 +885,17 @@ function UsersView({
                 {opt.label}
               </option>
             ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
+            aria-label="Lọc theo trạng thái"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="LOCKED">Đang tạm khóa</option>
           </select>
 
           <button
@@ -1185,7 +1258,7 @@ function WardsView({
           <form onSubmit={handleCreateWard} className="space-y-4 py-2">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Mã phường * (chữ in hoa, số, gạch nối)
+                Mã phường * (viết hoa không dấu, số, gạch nối hoặc gạch dưới)
               </label>
               <input
                 type="text"
@@ -1193,7 +1266,13 @@ function WardsView({
                 maxLength={50}
                 placeholder="Ví dụ: PHUONG_BEN_NGHE"
                 value={wardInput.code}
-                onChange={(e) => setWardInput({ ...wardInput, code: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+                  const sanitized = e.target.value
+                    .toUpperCase()
+                    .replace(/\s+/g, '_')
+                    .replace(/[^A-Z0-9_-]/g, '');
+                  setWardInput({ ...wardInput, code: sanitized });
+                }}
                 className="w-full h-10 px-3 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
               />
             </div>
