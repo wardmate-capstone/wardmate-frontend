@@ -216,9 +216,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         {/* NỘI DUNG CHÍNH (MAIN) */}
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {/* Header Trang */}
-          <div className="admin-page-heading">
+          <div className="admin-page-heading mb-6">
             <div>
-              <h1>{meta.title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">{meta.title}</h1>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

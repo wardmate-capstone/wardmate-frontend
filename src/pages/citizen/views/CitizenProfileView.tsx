@@ -6,7 +6,6 @@ import {
   Printer,
   Copy,
   MapPin,
-  UserCircle,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
 import axios from 'axios';
@@ -30,6 +29,23 @@ function formatDate(value?: string | null): string {
   return value;
 }
 
+function formatCCCD(val?: string | null): string {
+  if (!val) return '';
+  const digits = val.replace(/\D/g, '').slice(0, 12);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+}
+
+function formatPhone(val?: string | null): string {
+  if (!val) return '';
+  const digits = val.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+}
+
 export function CitizenProfileView({
   initialProfile,
   loading,
@@ -48,6 +64,15 @@ export function CitizenProfileView({
   const [errors, setErrors] = useState<ProfileFieldErrors>({});
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isPristine =
+    formData.fullName === (initialProfile?.fullName || '') &&
+    formData.identityNumber === (initialProfile?.identityNumber || '') &&
+    formData.dateOfBirth === (initialProfile?.dateOfBirth || '') &&
+    formData.gender === (initialProfile?.gender || '') &&
+    formData.phoneNumber === (initialProfile?.phoneNumber || '') &&
+    formData.permanentAddress === (initialProfile?.permanentAddress || '') &&
+    formData.temporaryAddress === (initialProfile?.temporaryAddress || '');
 
   useEffect(() => {
     if (initialProfile) {
@@ -166,57 +191,7 @@ export function CitizenProfileView({
 
   return (
     <div className="space-y-6">
-      {/* Top Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200">
-        <div className="flex items-center gap-2">
-          <UserCircle size={22} className="text-red-800" weight="bold" />
-          <h2 className="text-sm font-bold text-slate-900">
-            Hồ sơ cá nhân & Thông tin định danh
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isEditing ? (
-            <>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
-              >
-                <Printer size={16} /> In phiếu thông tin
-              </button>
-              <button
-                type="button"
-                className="admin-primary-action text-xs"
-                onClick={() => setIsEditing(true)}
-              >
-                <PencilSimple size={16} /> Chỉnh sửa hồ sơ
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={handleCancel}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void handleSaveProfile()}
-                className="admin-primary-action text-xs disabled:opacity-50"
-              >
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Overview Banner */}
+      {/* Overview Banner kèm nút thao tác */}
       <div className="admin-card p-6 border-l-4 border-l-red-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -239,46 +214,68 @@ export function CitizenProfileView({
               </div>
             </div>
           </div>
+
+          {/* Action buttons đặt gọn gàng ở góc banner */}
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
+                >
+                  <Printer size={16} /> In phiếu thông tin
+                </button>
+                <button
+                  type="button"
+                  className="admin-primary-action text-xs"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <PencilSimple size={16} /> Chỉnh sửa hồ sơ
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleCancel}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || isPristine}
+                  onClick={() => void handleSaveProfile()}
+                  title={isPristine ? "Chưa có thông tin nào được thay đổi" : "Lưu các thay đổi hồ sơ"}
+                  className="admin-primary-action text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Banner thông báo trạng thái chỉnh sửa */}
       {isEditing && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200">
-                <PencilSimple size={20} weight="duotone" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  Chế độ chỉnh sửa thông tin cá nhân
-                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
-                    Đang mở
-                  </span>
-                </h4>
-                <p className="text-xs text-red-100/90 mt-0.5">
-                  Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong>.
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200 shrink-0">
+              <PencilSimple size={20} weight="duotone" />
             </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={saving}
-                className="px-3.5 py-1.5 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20 disabled:opacity-50"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSaveProfile()}
-                disabled={saving}
-                className="px-4 py-1.5 text-xs font-bold text-red-950 bg-amber-300 hover:bg-amber-200 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-              >
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                Chế độ chỉnh sửa thông tin cá nhân
+                <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
+                  Đang mở
+                </span>
+              </h4>
+              <p className="text-xs text-red-100/90 mt-0.5">
+                Cập nhật trực tiếp các trường bên dưới. Sau khi hoàn tất bấm nút <strong>Lưu thay đổi</strong> ở thẻ hồ sơ bên trên.
+              </p>
             </div>
           </div>
         </div>
@@ -333,9 +330,14 @@ export function CitizenProfileView({
                     </span>
                   </div>
                 ) : formData.identityNumber && formData.identityNumber !== 'Chưa cập nhật' && formData.identityNumber !== 'Chưa được cập nhật' ? (
-                  <span className="font-mono text-xl font-black text-red-950 tracking-wider">
-                    {formData.identityNumber}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-mono text-xl font-black text-red-950 tracking-wider">
+                      {formatCCCD(formData.identityNumber)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      (Định danh: {formData.identityNumber})
+                    </span>
+                  </div>
                 ) : (
                   <span className="text-sm font-semibold text-slate-400 italic">
                     Chưa được cập nhật
@@ -481,8 +483,8 @@ export function CitizenProfileView({
                   )}
                 </>
               ) : (
-                <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100">
-                  {formData.phoneNumber || 'Chưa được cập nhật'}
+                <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100 font-mono">
+                  {formatPhone(formData.phoneNumber) || 'Chưa được cập nhật'}
                 </div>
               )}
             </div>
