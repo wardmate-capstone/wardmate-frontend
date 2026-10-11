@@ -268,40 +268,20 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
         <div className="space-y-6">
           {isEditing && (
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200">
-                    <PencilSimple size={20} weight="duotone" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      Chế độ chỉnh sửa thông tin
-                      <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
-                        Đang mở
-                      </span>
-                    </h4>
-                    <p className="text-xs text-red-100/90 mt-0.5">
-                      Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong>.
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200 shrink-0">
+                  <PencilSimple size={20} weight="duotone" />
                 </div>
-                <div className="flex items-center gap-2 ml-auto">
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="px-3.5 py-1.5 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/20 disabled:opacity-50"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmitEdit}
-                    disabled={isSaving}
-                    className="px-4 py-1.5 text-xs font-bold text-red-950 bg-amber-300 hover:bg-amber-200 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  >
-                    {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    Chế độ chỉnh sửa thông tin
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
+                      Đang mở
+                    </span>
+                  </h4>
+                  <p className="text-xs text-red-100/90 mt-0.5">
+                    Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong> ở thanh thao tác phía trên.
+                  </p>
                 </div>
               </div>
             </div>

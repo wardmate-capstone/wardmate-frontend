@@ -13,6 +13,7 @@ import {
   getManagerOfficers,
   getAdminProfile,
   updateAdminProfile,
+  deleteAdminProfile,
   updateAccountStatus,
   assignOfficerCategories,
   authErrorMessage,
@@ -69,6 +70,7 @@ export const ManagerPage: React.FC = () => {
         wardCode: p.wardCode || undefined,
         roles: p.roles,
         assignedCategories: p.assignedCategories,
+        hasProfile: Boolean(p.fullName || p.identityNumber),
       }));
       setProfiles(items);
     } catch (err: unknown) {
@@ -159,6 +161,31 @@ export const ManagerPage: React.FC = () => {
       }
 
       toast.success(`Đã lưu thông tin hồ sơ công dân ${profile.fullName}.`);
+    }
+  };
+
+  const handleDeleteProfile = async (userId: string) => {
+    try {
+      await deleteAdminProfile(userId);
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.userId === userId
+            ? { ...p, hasProfile: false, identityNumber: '', fullName: p.username || '' }
+            : p
+        )
+      );
+      if (selectedProfile?.userId === userId) {
+        setSelectedProfile((prev) =>
+          prev
+            ? { ...prev, hasProfile: false, identityNumber: '', fullName: prev.username || '' }
+            : null
+        );
+      }
+      toast.success('Đã xóa dữ liệu hồ sơ cá nhân của cán bộ thành công.');
+      void fetchProfiles(profilesPage);
+    } catch (err: unknown) {
+      toast.error(authErrorMessage(err));
+      throw err;
     }
   };
 
@@ -293,6 +320,7 @@ export const ManagerPage: React.FC = () => {
                 categories={categories}
                 onAssignCategories={handleAssignCategories}
                 onSaveProfile={handleSaveProfile}
+                onDeleteProfile={handleDeleteProfile}
                 onToggleStatus={handleToggleAccountStatus}
                 onSelectProfile={handleSelectProfile}
                 onFrontDeskCreated={() => void fetchProfiles(profilesPage)}

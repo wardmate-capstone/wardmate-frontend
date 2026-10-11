@@ -22,6 +22,7 @@ export interface ManagerProfileItem {
   wardCode?: string;
   roles?: string[];
   assignedCategories?: number[];
+  hasProfile?: boolean;
   fullName: string;
   identityNumber: string;
   phoneNumber: string;

@@ -5,7 +5,7 @@ import {
   ArrowsClockwise,
   Trash,
 } from '@phosphor-icons/react';
-import { TableSkeletonRows } from '@/components/ui';
+import { TableSkeletonRows, ConfirmDeleteModal } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { createFrontDeskAccount, authErrorMessage } from '@/lib/api';
@@ -34,6 +34,15 @@ interface ManagerProfilesViewProps {
   onFrontDeskCreated?: () => void;
 }
 
+function formatCCCD(val?: string | null): string {
+  if (!val) return '';
+  const digits = val.replace(/\D/g, '').slice(0, 12);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+}
+
 export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   profiles,
   total,
@@ -55,10 +64,13 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   onFrontDeskCreated,
 }) => {
   const [query, setQuery] = useState(search);
+  const [statusFilter, setStatusFilter] = useState<string>('ACTIVE'); // Mặc định lọc cán bộ Đang hoạt động
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [categoryProfile, setCategoryProfile] = useState<ManagerProfileItem>();
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [accountToToggle, setAccountToToggle] = useState<ManagerProfileItem | null>(null);
+  const [togglingBusy, setTogglingBusy] = useState(false);
 
   // Modal tạo cán bộ Một cửa (API 55)
   const [fdModalOpen, setFdModalOpen] = useState(false);
@@ -98,14 +110,14 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   }
 
 
-  async function handleDelete(item: ManagerProfileItem) {
-    if (!item.userId || !onDeleteProfile) return;
-    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ công dân của ${item.fullName}? Hành động này sẽ xóa dữ liệu hồ sơ trên hệ thống.`);
-    if (!confirmed) return;
+  const [itemToDelete, setItemToDelete] = useState<ManagerProfileItem | null>(null);
 
+  async function handleConfirmDelete() {
+    if (!itemToDelete?.userId || !onDeleteProfile) return;
     try {
-      setDeletingId(item.userId);
-      await onDeleteProfile(item.userId);
+      setDeletingId(itemToDelete.userId);
+      await onDeleteProfile(itemToDelete.userId);
+      setItemToDelete(null);
     } catch {
       // Handled in parent
     } finally {
@@ -113,6 +125,12 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
     }
   }
 
+
+  const filteredProfiles = profiles.filter((p) => {
+    if (statusFilter === 'ACTIVE' && p.isActive === false) return false;
+    if (statusFilter === 'LOCKED' && p.isActive !== false) return false;
+    return true;
+  });
 
   return (
     <section className="admin-card admin-table-card admin-content-card">
@@ -139,7 +157,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           <button type="submit" className="sr-only">Tìm kiếm</button>
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={assignedCategory ?? ''}
             onChange={(e) => onAssignedCategoryChange(e.target.value ? Number(e.target.value) : undefined)}
@@ -150,6 +168,17 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             {categories.map((category) => (
               <option key={category.id} value={category.id}>{category.categoryName}</option>
             ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-11 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
+            aria-label="Lọc theo trạng thái tài khoản"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="LOCKED">Đang tạm khóa</option>
           </select>
 
           {onRefresh && (
@@ -215,9 +244,9 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {isLoading && profiles.length === 0 ? (
+            {isLoading && filteredProfiles.length === 0 ? (
               <TableSkeletonRows columns={5} />
-            ) : profiles.map((item) => (
+            ) : filteredProfiles.map((item) => (
               <tr key={item.userId || item.identityNumber}>
                 <td>
                   <div className="admin-person flex items-center gap-3">
@@ -231,7 +260,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     <p>
                       <strong className="block text-xs font-bold text-slate-900">{item.fullName}</strong>
                       <span className="block text-[11px] text-slate-500">{item.email || `@${item.username}`}</span>
-                      {item.identityNumber && <span className="block font-mono text-[11px] text-slate-500">CCCD: {item.identityNumber}</span>}
+                      {item.identityNumber && <span className="block font-mono text-[11px] text-slate-500">CCCD: {formatCCCD(item.identityNumber)}</span>}
                     </p>
                   </div>
                 </td>
@@ -284,7 +313,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                             : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
                         }`}
                         title={item.isActive !== false ? 'Tạm khóa tài khoản cán bộ' : 'Kích hoạt tài khoản cán bộ'}
-                        onClick={() => onToggleStatus(item)}
+                        onClick={() => setAccountToToggle(item)}
                       >
                         {item.isActive !== false ? 'Tạm khóa' : 'Kích hoạt'}
                       </button>
@@ -292,11 +321,18 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     {onDeleteProfile && item.userId && (
                       <button
                         type="button"
-                        aria-label="Xóa hồ sơ"
-                        title="Xóa hồ sơ cán bộ"
-                        disabled={deletingId === item.userId}
-                        className="rounded-lg border border-red-200 bg-white p-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-800 disabled:opacity-40 transition-colors"
-                        onClick={() => handleDelete(item)}
+                        aria-label="Xóa hồ sơ cá nhân"
+                        title={
+                          item.hasProfile === false
+                            ? 'Cán bộ chưa có dữ liệu hồ sơ cá nhân để xóa'
+                            : 'Xóa dữ liệu hồ sơ cá nhân của cán bộ'
+                        }
+                        disabled={
+                          deletingId === item.userId ||
+                          item.hasProfile === false
+                        }
+                        className="rounded-lg border border-red-200 bg-white p-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => setItemToDelete(item)}
                       >
                         <Trash size={16} />
                       </button>
@@ -309,9 +345,11 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
         </table>
       </div>
 
-      {!isLoading && profiles.length === 0 && (
+      {!isLoading && filteredProfiles.length === 0 && (
         <p className="admin-empty p-8 text-center text-xs text-slate-500">
-          Không tìm thấy cán bộ nào phù hợp với bộ lọc tìm kiếm.
+          {query || assignedCategory || statusFilter !== 'ALL'
+            ? 'Không tìm thấy cán bộ nào phù hợp với bộ lọc tìm kiếm, lĩnh vực hoặc trạng thái.'
+            : 'Chưa có cán bộ nào trong danh sách quản lý.'}
         </p>
       )}
 
@@ -470,6 +508,78 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Modal xác nhận xóa hồ sơ cá nhân */}
+      <ConfirmDeleteModal
+        open={Boolean(itemToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setItemToDelete(null);
+        }}
+        title="Xác nhận xóa dữ liệu hồ sơ cá nhân"
+        description={`Bạn có chắc chắn muốn xóa thông tin hồ sơ cá nhân (CCCD, họ tên khai sinh, ngày sinh, địa chỉ) của cán bộ ${itemToDelete?.fullName ?? ''}? Tài khoản đăng nhập của cán bộ vẫn được giữ lại trong hệ thống.`}
+        confirmLabel="Xóa dữ liệu hồ sơ"
+        loading={Boolean(deletingId)}
+        onConfirm={handleConfirmDelete}
+      />
+
+      {/* Modal xác nhận Tạm khóa / Kích hoạt tài khoản cán bộ */}
+      {accountToToggle && (
+        <Modal
+          open={Boolean(accountToToggle)}
+          onOpenChange={(open) => {
+            if (!open) setAccountToToggle(null);
+          }}
+          title={accountToToggle.isActive !== false ? "Xác nhận tạm khóa tài khoản" : "Xác nhận kích hoạt tài khoản"}
+        >
+          <div className="space-y-4 py-2">
+            <p className="text-xs sm:text-sm text-slate-600">
+              {accountToToggle.isActive !== false ? (
+                <>
+                  Bạn có chắc chắn muốn <strong>tạm khóa</strong> tài khoản của cán bộ{" "}
+                  <strong className="text-slate-900">{accountToToggle.fullName}</strong>
+                  {accountToToggle.email ? ` (${accountToToggle.email})` : ""}? Cán bộ sẽ không thể đăng nhập vào hệ thống khi tài khoản bị khóa.
+                </>
+              ) : (
+                <>
+                  Bạn có chắc chắn muốn <strong>kích hoạt lại</strong> tài khoản của cán bộ{" "}
+                  <strong className="text-slate-900">{accountToToggle.fullName}</strong>
+                  {accountToToggle.email ? ` (${accountToToggle.email})` : ""}?
+                </>
+              )}
+            </p>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAccountToToggle(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={togglingBusy}
+                onClick={async () => {
+                  if (!onToggleStatus || !accountToToggle) return;
+                  setTogglingBusy(true);
+                  try {
+                    await onToggleStatus(accountToToggle);
+                    setAccountToToggle(null);
+                  } finally {
+                    setTogglingBusy(false);
+                  }
+                }}
+                className={`px-4 py-2 text-xs font-bold rounded-lg text-white transition-colors disabled:opacity-50 ${
+                  accountToToggle.isActive !== false
+                    ? "bg-amber-700 hover:bg-amber-800"
+                    : "bg-emerald-700 hover:bg-emerald-800"
+                }`}
+              >
+                {togglingBusy ? "Đang xử lý..." : accountToToggle.isActive !== false ? "Tạm khóa tài khoản" : "Kích hoạt tài khoản"}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </section>
