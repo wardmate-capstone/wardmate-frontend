@@ -1,8 +1,27 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 11/10/2026.
+Cập nhật: 13/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Cập nhật giao diện bóc tách thủ tục AI (Gemini) và cảnh báo đối soát — 13/10/2026
+
+- **Phạm vi & Trạng thái**: Đã rà soát cập nhật Backend (kết nối Google Gemini cho AIOCR, xử lý trang ít chữ, retry lỗi tạm thời 502/503/504 và phân loại mã cảnh báo).
+- **Việc đã làm**:
+  - Tại `src/pages/procedure-manager/ProcedureDraftWorkspace.tsx`:
+    - Thêm component `ExtractionWarningBanner`: Tự động phân loại mức độ cảnh báo (Lỗi mạng/Hạn mức quota `429`, `503` v.v. hiển thị cảnh báo đỏ nổi bật; Cảnh báo trang PDF ít chữ/cần đối soát hiển thị cảnh báo vàng; Thông tin khác hiển thị xám/trung tính).
+    - Cải thiện trạng thái Loading khi gọi bóc tách xem trước (`previewing`): Hiển thị thông điệp tiến trình rõ ràng (*"Đang trích xuất văn bản PDF và phân tích cấu trúc thủ tục bằng AI..."*) cùng hiệu ứng pulse và nút hủy (*"Dừng"*).
+    - Tối ưu không gian làm việc chia đôi chuẩn **50 / 50 (Dual-Pane)** cuộn độc lập (`Independent Scroll`):
+      - Cột trái: Khung xem PDF gốc tự động tải, ghim `sticky` vừa vặn chiều cao màn hình (`h-[calc(100vh-175px)]`), có nút **Toàn màn hình** và **Mở tab mới**.
+      - Cột phải: Khung biên tập form có chiều cao cố định tương ứng và thanh cuộn bên trong độc lập. Cán bộ cuộn form tới đâu thì trang PDF bên cạnh vẫn đứng im 100%, không bị trôi hay kéo lệch màn hình.
+      - Thanh tác vụ ghim đáy (`Sticky Action Footer`): Checkbox cam kết đối soát và cụm nút *Lưu bản nháp* / *Công khai thủ tục* luôn hiển thị cố định ở chân cột form.
+  - Tại `src/pages/procedure-manager/ProcedureApiEditor.tsx`:
+    - Dãy tab phân bước (1. Thông tin chung $\rightarrow$ 6. Căn cứ pháp lý) ghim `sticky top-0` với hiệu ứng kính mờ để chuyển tab tức thì.
+    - Phân nhóm thẻ trực quan trong mục **Thông tin chung**: Tách thành 3 nhóm card riêng biệt (*Định danh thủ tục*, *Cơ quan & Pháp lý ban hành*, *Thời hạn, Lệ phí & Kết quả*) giúp cán bộ đọc và điền thông tin nhanh gọn, không bị dàn trải.
+- **Kiểm tra**:
+  - `npm run typecheck`: PASS (0 lỗi).
+  - `npm run lint`: PASS (0 lỗi).
+
 
 ## Nâng cấp trải nghiệm UI/UX phân hệ IAM, bộ lọc trạng thái và chuẩn hóa quản lý hồ sơ — 11/10/2026
 
