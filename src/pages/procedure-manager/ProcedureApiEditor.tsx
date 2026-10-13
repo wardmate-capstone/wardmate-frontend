@@ -24,16 +24,6 @@ const record = (value: unknown): Row =>
     : {};
 const rows = (value: unknown): Row[] =>
   Array.isArray(value) ? value.map(record) : [];
-const fields: Field[] = [
-  { key: "procedureCode", label: "Mã thủ tục" },
-  { key: "title", label: "Tên thủ tục" },
-  { key: "levelOfImplementation", label: "Cấp thực hiện" },
-  { key: "targetAudience", label: "Đối tượng thực hiện" },
-  { key: "issuingAuthority", label: "Cơ quan ban hành" },
-  { key: "executingAgency", label: "Cơ quan thực hiện" },
-  { key: "feeSummary", label: "Tóm tắt lệ phí" },
-  { key: "processingTimeSummary", label: "Tóm tắt thời hạn" },
-];
 function FieldInput({
   field,
   value,
@@ -289,7 +279,7 @@ export function ProcedureApiEditor({
   return (
     <div className="min-w-0 space-y-5">
       <div
-        className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1.5 text-xs font-semibold"
+        className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 text-xs font-semibold shadow-xs backdrop-blur-md"
         aria-label="Các phần nội dung thủ tục"
       >
         {tabItems.map((label, index) => (
@@ -300,73 +290,79 @@ export function ProcedureApiEditor({
             aria-pressed={step === index}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 transition-all ${
               step === index
-                ? "bg-white font-bold text-red-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-red-800 font-bold text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
+            <span className="flex size-4.5 items-center justify-center rounded-full bg-black/10 text-[10px]">
+              {index + 1}
+            </span>
             <span>{label}</span>
           </button>
         ))}
       </div>
       <fieldset disabled={disabled} className="min-w-0 space-y-5">
         {step === 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {fields.map((field) => (
-              <FieldInput
-                key={field.key}
-                field={field}
-                value={value[field.key]}
-                change={(next) => set(field.key, next)}
-              />
-            ))}
-            <label className="grid gap-2 text-sm font-semibold">
-              Danh mục
-              <select
-                aria-label="Danh mục"
-                className={box}
-                value={String(value.categoryId ?? "")}
-                onChange={(e) =>
-                  set(
-                    "categoryId",
-                    e.target.value ? Number(e.target.value) : null,
-                  )
-                }
-              >
-                <option value="">Chọn danh mục</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.categoryName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <FieldInput
-              field={{ key: "decisionNumber", label: "Số quyết định" }}
-              value={content.decisionNumber}
-              change={(next) => setContent("decisionNumber", next)}
-            />
-            <FieldInput
-              field={{ key: "receivingAddress", label: "Địa chỉ tiếp nhận" }}
-              value={content.receivingAddress}
-              change={(next) => setContent("receivingAddress", next)}
-            />
-            <label className="grid gap-2 text-sm font-semibold">
-              Kết quả (mỗi kết quả một dòng)
-              <textarea
-                className={box}
-                value={
-                  Array.isArray(content.results)
-                    ? content.results.join("\n")
-                    : ""
-                }
-                onChange={(e) =>
-                  setContent(
-                    "results",
-                    e.target.value.split("\n").filter((line) => line.trim()),
-                  )
-                }
-              />
-            </label>
+          <div className="space-y-5">
+            {/* Nhóm 1: Định danh & Phân loại */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Định danh thủ tục</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "procedureCode", label: "Mã thủ tục" }} value={value.procedureCode} change={(next) => set("procedureCode", next)} />
+                <label className="grid gap-2 text-sm font-semibold">
+                  Danh mục
+                  <select
+                    aria-label="Danh mục"
+                    className={box}
+                    value={String(value.categoryId ?? "")}
+                    onChange={(e) => set("categoryId", e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">Chọn danh mục</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.categoryName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <FieldInput field={{ key: "title", label: "Tên thủ tục" }} value={value.title} change={(next) => set("title", next)} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "levelOfImplementation", label: "Cấp thực hiện" }} value={value.levelOfImplementation} change={(next) => set("levelOfImplementation", next)} />
+                <FieldInput field={{ key: "targetAudience", label: "Đối tượng thực hiện" }} value={value.targetAudience} change={(next) => set("targetAudience", next)} />
+              </div>
+            </div>
+
+            {/* Nhóm 2: Cơ quan & Pháp lý ban hành */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Cơ quan & Pháp lý ban hành</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "issuingAuthority", label: "Cơ quan ban hành" }} value={value.issuingAuthority} change={(next) => set("issuingAuthority", next)} />
+                <FieldInput field={{ key: "executingAgency", label: "Cơ quan thực hiện" }} value={value.executingAgency} change={(next) => set("executingAgency", next)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "decisionNumber", label: "Số quyết định" }} value={content.decisionNumber} change={(next) => setContent("decisionNumber", next)} />
+                <FieldInput field={{ key: "receivingAddress", label: "Địa chỉ tiếp nhận" }} value={content.receivingAddress} change={(next) => setContent("receivingAddress", next)} />
+              </div>
+            </div>
+
+            {/* Nhóm 3: Thời hạn, Lệ phí & Kết quả */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Thời hạn, Lệ phí & Kết quả</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "feeSummary", label: "Tóm tắt lệ phí" }} value={value.feeSummary} change={(next) => set("feeSummary", next)} />
+                <FieldInput field={{ key: "processingTimeSummary", label: "Tóm tắt thời hạn" }} value={value.processingTimeSummary} change={(next) => set("processingTimeSummary", next)} />
+              </div>
+              <label className="grid gap-2 text-sm font-semibold">
+                Kết quả giải quyết (mỗi kết quả một dòng)
+                <textarea
+                  rows={2}
+                  className={box}
+                  value={Array.isArray(content.results) ? content.results.join("\n") : ""}
+                  onChange={(e) => setContent("results", e.target.value.split("\n").filter((line) => line.trim()))}
+                />
+              </label>
+            </div>
           </div>
         )}
         {step === 1 && (
