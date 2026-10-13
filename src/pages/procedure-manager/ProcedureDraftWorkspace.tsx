@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowClockwise, ArrowLeft, ArrowsIn, ArrowsOut, CheckCircle, FilePdf, Info, StopCircle, Trash, UploadSimple, Warning } from "@phosphor-icons/react";
-import { Button, ConfirmDeleteModal, TableSkeleton } from "@/components/ui";
+import {
+  ArrowClockwise,
+  ArrowLeft,
+  ArrowsIn,
+  ArrowsOut,
+  ArrowSquareOut,
+  CheckCircle,
+  FilePdf,
+  Info,
+  StopCircle,
+  Trash,
+  UploadSimple,
+  Warning,
+} from "@phosphor-icons/react";
+import { Button, ConfirmDeleteModal, Modal, TableSkeleton } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import {
   procedureApi,
@@ -118,58 +131,49 @@ export function PdfSource({
   }, [source]);
 
   return (
-    <section className={`flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${
-      isFullscreen
-        ? "fixed inset-4 z-50 overflow-hidden shadow-2xl ring-1 ring-slate-900/10"
-        : "h-[calc(100vh-175px)] min-h-[580px] lg:sticky lg:top-4"
-    }`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50/80 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <FilePdf size={20} className="text-red-700" weight="fill" />
-          <span className="text-sm font-bold text-slate-900">Văn bản PDF gốc</span>
-        </div>
-        <div className="flex items-center gap-2">
+    <section
+      className={`flex flex-col bg-white overflow-hidden transition-all ${
+        isFullscreen
+          ? "fixed inset-4 z-50 rounded-2xl shadow-2xl ring-1 ring-slate-900/10"
+          : "h-full w-full"
+      }`}
+    >
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50/90 px-3.5 py-1.5">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+          
+        </span>
+        <div className="flex items-center gap-1.5">
           {source && (
             <a
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              title="Mở PDF trong cửa sổ/tab mới"
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-950 transition-colors"
+              title="Mở tệp PDF trong tab mới của trình duyệt"
             >
-              <ArrowsOut size={13} /> Mở tab mới
+              <ArrowSquareOut size={14} className="text-slate-600" />
+              <span>Mở tab mới</span>
             </a>
           )}
           <Button
             size="small"
             variant="ghost"
-            className="h-8 px-2 text-xs"
+            className="h-7 px-1.5 text-slate-600 hover:bg-slate-200"
             onClick={() => setIsFullscreen(!isFullscreen)}
             title={isFullscreen ? "Thu nhỏ lại" : "Phóng to toàn màn hình"}
           >
-            {isFullscreen ? <ArrowsIn size={15} /> : <ArrowsOut size={15} />}
-            <span className="hidden sm:inline">{isFullscreen ? "Thu nhỏ" : "Toàn màn hình"}</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            loading={busy}
-            className="h-8 px-2 text-xs"
-            onClick={() => void fetchPdf()}
-            title="Tải lại liên kết"
-          >
-            <ArrowClockwise size={14} />
+            {isFullscreen ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
           </Button>
         </div>
       </div>
-      <div className="flex-1 min-h-0 bg-slate-100 p-2">
+      <div className="flex-1 min-h-0 bg-slate-100">
         <ProcedureFeedback error={error} retry={() => void fetchPdf()} />
         {source ? (
           <iframe
             title="PDF nguồn thủ tục"
             src={source.url}
             referrerPolicy="no-referrer"
-            className="h-full w-full rounded-xl border border-slate-200 bg-white"
+            className="h-full w-full border-0 bg-white"
           />
         ) : !busy && !error ? (
           <div className="flex h-full items-center justify-center text-sm text-slate-500">
@@ -219,6 +223,7 @@ export function ProcedureDraftWorkspace({
   const [dirty, setDirty] = useState(false);
   const [reload, setReload] = useState(0);
   const [fullscreenPreviewPdf, setFullscreenPreviewPdf] = useState(false);
+  const [showWarningsModal, setShowWarningsModal] = useState(false);
   const [deleting, setDeleting] = useState<{ id: string; name: string }>();
   const previewController = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -330,11 +335,292 @@ export function ProcedureDraftWorkspace({
     }
   };
   const editable = draft && can("procedure.drafts.update") && ["NeedsReview", "Failed"].includes(draft.status);
+
+  if (id) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-slate-100">
+        <ProcedureFeedback loading={loading} />
+        {!draft && !loading && (
+          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+            <p className="mb-4 text-slate-600">Không tìm thấy hoặc không thể tải bản nháp.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => select()}>
+                <ArrowLeft size={16} /> Quay lại danh sách
+              </Button>
+              <Button variant="outline" onClick={() => setReload((v) => v + 1)}>
+                <ArrowClockwise size={16} /> Thử tải lại
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {draft && (
+          <>
+            {/* Studio Top Navigation Bar */}
+            <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 z-20 shadow-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="small"
+                  className="h-9 px-2 text-slate-700 hover:bg-slate-100"
+                  disabled={busy}
+                  onClick={() => {
+                    if (dirty && !window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát về danh sách?")) {
+                      return;
+                    }
+                    select();
+                  }}
+                  title="Quay lại danh sách bản nháp"
+                >
+                  <ArrowLeft size={16} />
+                  <span className="hidden sm:inline font-semibold">Danh sách bản nháp</span>
+                </Button>
+
+                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+                <div className="flex items-center gap-2 min-w-0">
+                  <FilePdf size={20} className="text-red-700 shrink-0" weight="fill" />
+                  <span className="truncate text-sm font-bold text-slate-900 max-w-[200px] md:max-w-md" title={draft.pdfFileName}>
+                    {draft.pdfFileName}
+                  </span>
+                  <span className={`hidden sm:inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[draft.status] ?? "bg-slate-100 text-slate-700 ring-slate-200"}`}>
+                    {labels[draft.status] ?? draft.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Nút xem cảnh báo AI (nếu có) */}
+                {(draft.warnings.length > 0 || draft.failureCode) && (
+                  <Button
+                    size="small"
+                    variant="outline"
+                    className="h-9 gap-1.5 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    onClick={() => setShowWarningsModal(true)}
+                  >
+                    <Warning size={16} className="text-amber-600" weight="fill" />
+                    <span>{draft.warnings.length} lưu ý từ AI</span>
+                  </Button>
+                )}
+
+                {dirty && (
+                  <span className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                    <span className="size-1.5 rounded-full bg-amber-600 animate-pulse" />
+                    Chưa lưu thay đổi
+                  </span>
+                )}
+
+                {can("procedure.drafts.delete") && (
+                  <Button
+                    size="small"
+                    variant="ghost"
+                    className="h-9 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                    disabled={busy || dirty}
+                    onClick={() => {
+                      setDeleting({ id: draft.id, name: draft.pdfFileName });
+                      setDeleteError("");
+                    }}
+                    title="Xóa bản nháp và tệp PDF"
+                  >
+                    <Trash size={16} />
+                  </Button>
+                )}
+              </div>
+            </header>
+
+            {/* Split Screen Workspace - 50/50 Dual Pane */}
+            <div className="flex flex-1 min-h-0 divide-x divide-slate-200">
+              {/* Left Column: PDF Source (50%) */}
+              <div className="flex w-1/2 flex-col min-w-0 bg-slate-900 overflow-hidden">
+                <PdfSource id={draft.id} draft />
+              </div>
+
+              {/* Right Column: Procedure Form Editor (50%) */}
+              <div className="flex w-1/2 flex-col min-w-0 bg-white overflow-hidden relative">
+                {/* Scrollable Form Body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5">
+                  <div className="mx-auto max-w-4xl space-y-6">
+                    <ProcedureApiEditor
+                      value={payload}
+                      onChange={(next) => {
+                        setPayload(next);
+                        setDirty(true);
+                        setConfirmed(false);
+                      }}
+                      categories={categories}
+                      disabled={!editable || busy}
+                    />
+
+                    <div className="mt-8 border-t border-slate-100 pt-4">
+                      <details className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                        <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700">
+                          Văn bản nhận diện từ PDF (AI OCR Text)
+                        </summary>
+                        <pre className="mt-3 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-950 p-3 font-mono text-xs text-slate-100">
+                          {draft.extractedText || "Chưa nhận diện được nội dung."}
+                        </pre>
+                      </details>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sticky Action Footer */}
+                {editable && (
+                  <div className="shrink-0 border-t border-slate-200 bg-white/95 px-6 py-3.5 backdrop-blur-xs shadow-lg z-10">
+                    <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4">
+                      <label className="flex cursor-pointer items-center gap-2 select-none text-xs text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-slate-300 text-red-700 focus:ring-red-600"
+                          checked={confirmed}
+                          disabled={busy}
+                          onChange={(e) => setConfirmed(e.target.checked)}
+                        />
+                        <span>Tôi đã đối soát kỹ thông tin với bản PDF gốc và xác nhận tính chuẩn xác.</span>
+                      </label>
+                      <div className="flex items-center gap-2.5">
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          disabled={!dirty || busy}
+                          onClick={() => {
+                            if (window.confirm("Hủy mọi thay đổi chưa lưu và khôi phục nội dung ban đầu?")) {
+                              setPayload(draft.payload);
+                              setDirty(false);
+                              setConfirmed(false);
+                            }
+                          }}
+                        >
+                          Hủy thay đổi
+                        </Button>
+                        {draft.status === "Failed" && can("procedure.drafts.extract") && (
+                          <Button
+                            disabled={busy || dirty}
+                            variant="outline"
+                            size="small"
+                            onClick={() =>
+                              void run(async () => {
+                                await procedureApi.retryDraft(
+                                  draft.id,
+                                  draft.revision,
+                                );
+                                setReload((v) => v + 1);
+                              })
+                            }
+                          >
+                            <ArrowClockwise size={14} /> Thử đọc lại PDF
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="small"
+                          disabled={!dirty || busy}
+                          loading={busy}
+                          onClick={() =>
+                            void run(async () => {
+                              const next = await procedureApi.saveDraft(
+                                draft.id,
+                                draft.revision,
+                                payload,
+                              );
+                              setDraft(next);
+                              setPayload(next.payload);
+                              setDirty(false);
+                              toast.success("Đã lưu bản nháp thành công.");
+                            })
+                          }
+                        >
+                          Lưu bản nháp
+                        </Button>
+                        {can("procedure.drafts.update") && can("procedure.drafts.publish") && (
+                          <Button
+                            size="small"
+                            disabled={!confirmed || busy}
+                            loading={busy}
+                            onClick={() =>
+                              void run(async () => {
+                                validateProcedure(payload);
+                                const saved = await procedureApi.saveDraft(
+                                  draft.id,
+                                  draft.revision,
+                                  payload,
+                                );
+                                setDraft(saved);
+                                setPayload(saved.payload);
+                                setDirty(false);
+                                try {
+                                  await procedureApi.publishDraft(
+                                    saved.id,
+                                    saved.revision,
+                                  );
+                                } catch (e) {
+                                  const latest = await procedureApi
+                                    .draft(saved.id)
+                                    .catch(() => undefined);
+                                  if (latest?.status !== "Published") throw e;
+                                }
+                                toast.success("Đã xuất bản thủ tục thành công.");
+                                setReload((v) => v + 1);
+                                onPublished?.();
+                              })
+                            }
+                          >
+                            Xác nhận xuất bản
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {draft && (
+          <Modal
+            open={showWarningsModal}
+            onOpenChange={setShowWarningsModal}
+            title="Lưu ý đối soát từ AI"
+            description={`Tài liệu: ${draft.pdfFileName}`}
+          >
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {draft.failureCode && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-900 flex items-start gap-2.5">
+                  <Warning size={18} className="shrink-0 text-red-600 mt-0.5" weight="fill" />
+                  <span>Không đọc được PDF ({draft.failureCode}). Bạn có thể nhập tay hoặc thử đọc lại.</span>
+                </div>
+              )}
+              <ExtractionWarningBanner warnings={draft.warnings} />
+              <div className="mt-4 flex justify-end">
+                <Button size="small" variant="outline" onClick={() => setShowWarningsModal(false)}>
+                  Đã hiểu và tiếp tục
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        )}
+        <ConfirmDeleteModal
+          open={!!deleting}
+          onOpenChange={(open) => {
+            if (!open && !deleteBusy) setDeleting(undefined);
+          }}
+          title="Xóa bản nháp thủ tục"
+          itemName={deleting?.name}
+          description="Tệp PDF nguồn và dữ liệu bản nháp sẽ bị xóa vĩnh viễn."
+          loading={deleteBusy}
+          onConfirm={() => void handleDeleteDraft()}
+        >
+          <ProcedureFeedback error={deleteError} />
+        </ConfirmDeleteModal>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold">PDF và bản nháp thủ tục</h1>
       <ProcedureFeedback error={error} />
-      {!id ? (
         <>
           <section className="admin-card overflow-hidden">
             <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
@@ -580,206 +866,14 @@ export function ProcedureDraftWorkspace({
             </Button>
           </div>}
         </>
-      ) : (
-        <>
-          <Button
-            variant="outline"
-            disabled={busy || dirty}
-            onClick={() => select()}
-          >
-            <ArrowLeft size={16} /> Về danh sách bản nháp
-          </Button>
-          {dirty && (
-            <p className="text-sm text-amber-900">
-              Có thay đổi chưa lưu. Hãy lưu trước khi rời bản nháp.
-            </p>
-          )}
-          <ProcedureFeedback loading={loading} />
-          {!draft && !loading && (
-            <Button variant="outline" onClick={() => setReload((v) => v + 1)}>
-              <ArrowClockwise size={16} /> Thử tải lại bản nháp
-            </Button>
-          )}
-          {draft && (
-            <>
-              <div className="admin-card space-y-3 p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="font-bold">
-                    {draft.pdfFileName} · {labels[draft.status]}
-                  </h2>
-                  {can("procedure.drafts.delete") && <Button
-                    size="small"
-                    variant="ghost"
-                    className="text-slate-600 hover:bg-red-50 hover:text-red-700"
-                    disabled={busy || dirty}
-                    onClick={() => {
-                      setDeleting({ id: draft.id, name: draft.pdfFileName });
-                      setDeleteError("");
-                    }}
-                  >
-                    <Trash size={15} /> Xóa bản nháp
-                  </Button>}
-                </div>
-                <ExtractionWarningBanner warnings={draft.warnings} />
-                {draft.failureCode && (
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/90 p-3.5 text-sm text-red-900">
-                    <Warning size={20} className="mt-0.5 shrink-0 text-red-600" weight="fill" />
-                    <span>Không đọc được PDF ({draft.failureCode}). Bạn có thể nhập tay hoặc thử bấm đọc lại.</span>
-                  </div>
-                )}
-                <p className="text-sm text-slate-600">
-                  Hãy kiểm tra với tệp PDF gốc và bổ sung những thông tin còn
-                  thiếu trước khi công khai.
-                </p>
-                {['Queued', 'Processing'].includes(draft.status) && (
-                  <p className="flex items-center gap-2 text-xs font-medium text-blue-700" role="status">
-                    <span className="size-2 animate-pulse rounded-full bg-blue-600" aria-hidden="true" />
-                    Đang xử lý, kết quả sẽ tự động cập nhật.
-                  </p>
-                )}
-              </div>
-              <div className="grid items-start gap-6 lg:grid-cols-2">
-                <div className="min-w-0">
-                  <PdfSource key={draft.id} id={draft.id} draft />
-                </div>
-                <div className="flex h-[calc(100vh-175px)] min-h-[580px] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-4 py-3">
-                    <span className="text-sm font-bold text-slate-900">Biên tập thông tin thủ tục</span>
-                    {dirty && (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-                        Có thay đổi chưa lưu
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-5">
-                    <ProcedureApiEditor
-                      value={payload}
-                      onChange={(next) => {
-                        setPayload(next);
-                        setDirty(true);
-                        setConfirmed(false);
-                      }}
-                      categories={categories}
-                      disabled={!editable || busy}
-                    />
-                  </div>
-                  {editable && (
-                    <div className="border-t border-slate-200 bg-slate-50/95 p-4 backdrop-blur-sm">
-                      <label className="mb-3 flex items-start gap-3 text-sm font-medium text-slate-800">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5"
-                          checked={confirmed}
-                          disabled={busy}
-                          onChange={(e) => setConfirmed(e.target.checked)}
-                        />
-                        <span>Tôi đã đối soát kỹ với bản PDF gốc và xác nhận thông tin chính xác.</span>
-                      </label>
-                      <div className="flex flex-wrap items-center gap-3">
-                        {can("procedure.drafts.update") && <Button
-                          variant="outline"
-                          loading={busy}
-                          onClick={() =>
-                            void run(async () => {
-                              const next = await procedureApi.saveDraft(
-                                draft.id,
-                                draft.revision,
-                                payload,
-                              );
-                              setDraft(next);
-                              setPayload(next.payload);
-                              setDirty(false);
-                              toast.success("Đã lưu bản nháp.");
-                            })
-                          }
-                        >
-                          Lưu bản nháp
-                        </Button>}
-                        {can("procedure.drafts.update") && can("procedure.drafts.publish") && <Button
-                          disabled={!confirmed || busy}
-                          onClick={() =>
-                            void run(async () => {
-                              validateProcedure(payload);
-                              const saved = await procedureApi.saveDraft(
-                                draft.id,
-                                draft.revision,
-                                payload,
-                              );
-                              setDraft(saved);
-                              setPayload(saved.payload);
-                              setDirty(false);
-                              try {
-                                await procedureApi.publishDraft(
-                                  saved.id,
-                                  saved.revision,
-                                );
-                              } catch (e) {
-                                const latest = await procedureApi
-                                  .draft(saved.id)
-                                  .catch(() => undefined);
-                                if (latest?.status !== "Published") throw e;
-                              }
-                              toast.success("Đã xuất bản thủ tục.");
-                              setReload((v) => v + 1);
-                              onPublished();
-                            })
-                          }
-                        >
-                          Xác nhận xuất bản
-                        </Button>}
-                        {draft.status === "Failed" && can("procedure.drafts.extract") && (
-                          <Button
-                            disabled={busy || dirty}
-                            variant="outline"
-                            onClick={() =>
-                              void run(async () => {
-                                await procedureApi.retryDraft(
-                                  draft.id,
-                                  draft.revision,
-                                );
-                                setReload((v) => v + 1);
-                              })
-                            }
-                          >
-                            <ArrowClockwise size={16} /> Đọc lại PDF
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {error && (
-                    <p className="text-sm">
-                      Nội dung đang sửa vẫn được giữ. Đừng tải lại trang nếu
-                      bạn chưa lưu.
-                    </p>
-                  )}
-                  {dirty && (
-                    <Button
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => {
-                        setPayload(draft.payload);
-                        setDirty(false);
-                        setConfirmed(false);
-                      }}
-                    >
-                      Bỏ các thay đổi chưa lưu
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <details className="admin-card p-5">
-                <summary className="cursor-pointer font-semibold">
-                  Nội dung nhận diện từ PDF
-                </summary>
-                <pre className="mt-4 whitespace-pre-wrap break-words text-sm">
-                  {draft.extractedText || "Chưa nhận diện được nội dung."}
-                </pre>
-              </details>
-            </>
-          )}
-        </>
-      )}
+
+
+
+
+
+
+
+
       <ConfirmDeleteModal
         open={!!deleting}
         onOpenChange={(open) => {

@@ -88,6 +88,22 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
     setError("");
     setCreating(true);
   };
+  const isEditingDraft = Boolean(params.get("draft"));
+
+  if (isEditingDraft && !embedded) {
+    return (
+      <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
+        <main id="procedure-manager-main" tabIndex={-1}>
+          <ProcedureDraftWorkspace
+            onPendingChange={setDraftPending}
+            categories={categories.data ?? []}
+            onPublished={() => setRevision((v) => v + 1)}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={embedded ? "" : "admin-layout procedure-manager-layout"}>
       {!embedded && <a href="#procedure-manager-main" className="skip-link">

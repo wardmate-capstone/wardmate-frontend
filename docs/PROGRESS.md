@@ -4,20 +4,23 @@ Cập nhật: 13/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Cập nhật giao diện bóc tách thủ tục AI (Gemini) và cảnh báo đối soát — 13/10/2026
+## Tối ưu hóa UI/UX Chế độ Studio Biên tập Thủ tục & Modal Cảnh báo AI — 13/10/2026
 
-- **Phạm vi & Trạng thái**: Đã rà soát cập nhật Backend (kết nối Google Gemini cho AIOCR, xử lý trang ít chữ, retry lỗi tạm thời 502/503/504 và phân loại mã cảnh báo).
+- **Phạm vi & Trạng thái**: Tối ưu hóa toàn diện trải nghiệm người dùng (UX) khi mở bản nháp thủ tục (PDF Draft Workspace).
 - **Việc đã làm**:
-  - Tại `src/pages/procedure-manager/ProcedureDraftWorkspace.tsx`:
-    - Thêm component `ExtractionWarningBanner`: Tự động phân loại mức độ cảnh báo (Lỗi mạng/Hạn mức quota `429`, `503` v.v. hiển thị cảnh báo đỏ nổi bật; Cảnh báo trang PDF ít chữ/cần đối soát hiển thị cảnh báo vàng; Thông tin khác hiển thị xám/trung tính).
-    - Cải thiện trạng thái Loading khi gọi bóc tách xem trước (`previewing`): Hiển thị thông điệp tiến trình rõ ràng (*"Đang trích xuất văn bản PDF và phân tích cấu trúc thủ tục bằng AI..."*) cùng hiệu ứng pulse và nút hủy (*"Dừng"*).
-    - Tối ưu không gian làm việc chia đôi chuẩn **50 / 50 (Dual-Pane)** cuộn độc lập (`Independent Scroll`):
-      - Cột trái: Khung xem PDF gốc tự động tải, ghim `sticky` vừa vặn chiều cao màn hình (`h-[calc(100vh-175px)]`), có nút **Toàn màn hình** và **Mở tab mới**.
-      - Cột phải: Khung biên tập form có chiều cao cố định tương ứng và thanh cuộn bên trong độc lập. Cán bộ cuộn form tới đâu thì trang PDF bên cạnh vẫn đứng im 100%, không bị trôi hay kéo lệch màn hình.
-      - Thanh tác vụ ghim đáy (`Sticky Action Footer`): Checkbox cam kết đối soát và cụm nút *Lưu bản nháp* / *Công khai thủ tục* luôn hiển thị cố định ở chân cột form.
-  - Tại `src/pages/procedure-manager/ProcedureApiEditor.tsx`:
-    - Dãy tab phân bước (1. Thông tin chung $\rightarrow$ 6. Căn cứ pháp lý) ghim `sticky top-0` với hiệu ứng kính mờ để chuyển tab tức thì.
-    - Phân nhóm thẻ trực quan trong mục **Thông tin chung**: Tách thành 3 nhóm card riêng biệt (*Định danh thủ tục*, *Cơ quan & Pháp lý ban hành*, *Thời hạn, Lệ phí & Kết quả*) giúp cán bộ đọc và điền thông tin nhanh gọn, không bị dàn trải.
+  1. **Chế độ Làm việc Chuyên biệt (Dedicated Studio Mode)**:
+     - Ẩn hoàn toàn Sidebar và Dashboard Header khi mở bản nháp (`ProcedureManagerPage`), mở rộng 100% diện tích màn hình làm việc (`h-screen overflow-hidden`).
+     - Tách riêng nhánh render của Studio: loại bỏ hoàn toàn tiêu đề chiếm chỗ `PDF và bản nháp thủ tục` ở đỉnh trang, đưa thanh Studio Topbar lên sát mép trên cùng.
+     - Bỏ nhãn thừa `Đã đồng bộ` trên Topbar; chỉ hiển thị nhãn cảnh báo `Chưa lưu thay đổi` khi người dùng có thao tác sửa đổi chưa bấm Lưu.
+     - Thanh Topbar tích hợp nút thùng rác xóa nhanh bản nháp và tệp PDF nguồn kèm modal xác nhận.
+  2. **Giải quyết vấn đề cuộn lồng nhau & Tiện ích xem PDF (Dual Pane)**:
+     - Khung PDF bên trái tích hợp thanh công cụ mini: bổ sung nút **`Mở tab mới`** (`ArrowSquareOut`) để mở tệp PDF trực tiếp trong tab trình duyệt riêng biệt, cùng nút phóng to/thu nhỏ toàn màn hình (`ArrowsOut`).
+     - Iframe PDF hiển thị trực tiếp 100% chiều cao và chiều rộng của cột bên trái.
+     - Cột biên tập bên phải chỉ giữ đúng **1 thanh cuộn duy nhất**, gom gọn thông tin biểu mẫu và ghim thanh tab sticky giúp người dùng chuyển đổi nhanh giữa các nhóm nội dung.
+     - Thanh hành động đáy (Xác nhận đối soát, Lưu nháp, Xuất bản) được ghim cố định ở đáy cột biên tập để luôn sẵn sàng thao tác mà không cần cuộn tìm.
+  3. **Tối ưu hiển thị Cảnh báo AI (AI Warnings Modal)**:
+     - Thay vì khối cảnh báo choán diện tích phía trên form, toàn bộ các cảnh báo đối soát và lỗi phân tích từ AI được thu gọn vào một nút nổi bật trên thanh Topbar: `⚠️ [X] lưu ý từ AI`.
+     - Khi bấm nút, modal pop-up chuyên dụng mở ra hiển thị đầy đủ, phân loại trực quan (lỗi mạng/quota, cảnh báo đối soát, khuyến cáo bổ sung), giúp giải phóng ngay ~150px chiều cao cho form nhập liệu.
 - **Kiểm tra**:
   - `npm run typecheck`: PASS (0 lỗi).
   - `npm run lint`: PASS (0 lỗi).
