@@ -214,6 +214,8 @@ export function ProcedureDraftWorkspace({
   const [pdfUrl, setPdfUrl] = useState("");
   const [previewMode, setPreviewMode] = useState<"pdf" | "text">("pdf");
   const [busy, setBusy] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishingDraft, setPublishingDraft] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -309,7 +311,9 @@ export function ProcedureDraftWorkspace({
     try {
       await action();
     } catch (e) {
-      setError(procedureError(e));
+      const msg = procedureError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       lock.current = false;
       setBusy(false);
@@ -440,12 +444,14 @@ export function ProcedureDraftWorkspace({
                 {/* Scrollable Form Body */}
                 <div className="flex-1 overflow-y-auto px-6 py-5">
                   <div className="mx-auto max-w-4xl space-y-6">
+                    <ProcedureFeedback error={error} />
                     <ProcedureApiEditor
                       value={payload}
                       onChange={(next) => {
                         setPayload(next);
                         setDirty(true);
                         setConfirmed(false);
+                        if (error) setError("");
                       }}
                       categories={categories}
                       disabled={!editable || busy}
@@ -515,55 +521,70 @@ export function ProcedureDraftWorkspace({
                           variant="outline"
                           size="small"
                           disabled={!dirty || busy}
-                          loading={busy}
+                          loading={savingDraft}
                           onClick={() =>
                             void run(async () => {
-                              const next = await procedureApi.saveDraft(
-                                draft.id,
-                                draft.revision,
-                                payload,
-                              );
-                              setDraft(next);
-                              setPayload(next.payload);
-                              setDirty(false);
-                              toast.success("Đã lưu bản nháp thành công.");
+                              setSavingDraft(true);
+                              try {
+                                const next = await procedureApi.saveDraft(
+                                  draft.id,
+                                  draft.revision,
+                                  payload,
+                                );
+                                setDraft(next);
+                                setPayload(next.payload);
+                                setDirty(false);
+                                toast.success("Đã lưu bản nháp thành công.");
+                              } finally {
+                                setSavingDraft(false);
+                              }
                             })
                           }
                         >
                           Lưu bản nháp
                         </Button>
-                        {can("procedure.drafts.update") && can("procedure.drafts.publish") && (
+                        {(can("procedure.drafts.publish") || can("procedure.publish")) && (
                           <Button
                             size="small"
-                            disabled={!confirmed || busy}
-                            loading={busy}
-                            onClick={() =>
+                            disabled={busy}
+                            loading={publishingDraft}
+                            onClick={() => {
+                              if (!confirmed) {
+                                toast.warning("Vui lòng tích chọn xác nhận đã đối soát nội dung với tệp PDF gốc trước khi xuất bản.");
+                                return;
+                              }
                               void run(async () => {
-                                validateProcedure(payload);
-                                const saved = await procedureApi.saveDraft(
-                                  draft.id,
-                                  draft.revision,
-                                  payload,
-                                );
-                                setDraft(saved);
-                                setPayload(saved.payload);
-                                setDirty(false);
+                                setPublishingDraft(true);
                                 try {
-                                  await procedureApi.publishDraft(
-                                    saved.id,
-                                    saved.revision,
+                                  const validated = validateProcedure(payload);
+                                  const saved = await procedureApi.saveDraft(
+                                    draft.id,
+                                    draft.revision,
+                                    validated as unknown as Record<string, unknown>,
                                   );
-                                } catch (e) {
-                                  const latest = await procedureApi
-                                    .draft(saved.id)
-                                    .catch(() => undefined);
-                                  if (latest?.status !== "Published") throw e;
+                                  setDraft(saved);
+                                  setPayload(saved.payload);
+                                  setDirty(false);
+                                  try {
+                                    await procedureApi.publishDraft(
+                                      saved.id,
+                                      saved.revision,
+                                    );
+                                  } catch (e) {
+                                    const latest = await procedureApi
+                                      .draft(saved.id)
+                                      .catch(() => undefined);
+                                    if (latest?.status !== "Published") throw e;
+                                  }
+                                  toast.success("Đã xuất bản thủ tục thành công.");
+                                  select();
+                                  list.refresh();
+                                  onPublished?.();
+                                } finally {
+                                  setPublishingDraft(false);
                                 }
-                                toast.success("Đã xuất bản thủ tục thành công.");
-                                setReload((v) => v + 1);
-                                onPublished?.();
-                              })
-                            }
+                              });
+                            }}
                           >
                             Xác nhận xuất bản
                           </Button>

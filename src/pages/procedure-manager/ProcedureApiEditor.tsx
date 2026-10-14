@@ -177,7 +177,7 @@ function FormDefinitionsEditor({ value, change, disabled }: { value: unknown; ch
     {!disabled && <label className="grid gap-2 text-sm font-semibold">Tìm biểu mẫu theo mã<input className={box} value={search} onChange={e => setSearch(e.target.value)} /></label>}
     <ProcedureFeedback loading={loading} error={error} />
     {!disabled && <div className="flex flex-wrap gap-2">{options.map(option => <Button key={option.id} size="small" variant="outline" disabled={list.some(row => row.formTemplateId === option.id)} onClick={() => change([...list, { formTemplateId: option.id, formCode: option.formCode, formName: option.formName, formType: option.formType, caseCode: null, quantity: 1, isMandatory: true }])}>{option.formCode} · {option.formName}</Button>)}</div>}
-    {list.map((row, index) => <div key={index} className="space-y-3 rounded-xl border border-slate-200 p-4"><p className="font-semibold">{String(row.formCode)} · {String(row.formName)}</p>{!disabled && <><div className="grid gap-4 sm:grid-cols-2"><FieldInput field={{ key: 'caseCode', label: 'Mã trường hợp (nếu có)' }} value={row.caseCode} change={next => change(list.map((item, i) => i === index ? { ...item, caseCode: next || null } : item))} /><FieldInput field={{ key: 'quantity', label: 'Số lượng', kind: 'number' }} value={row.quantity} change={next => change(list.map((item, i) => i === index ? { ...item, quantity: next } : item))} /><FieldInput field={{ key: 'isMandatory', label: 'Bắt buộc', kind: 'boolean' }} value={row.isMandatory} change={next => change(list.map((item, i) => i === index ? { ...item, isMandatory: next } : item))} /></div><Button size="small" variant="ghost" onClick={() => change(list.filter((_, i) => i !== index))}>Bỏ biểu mẫu</Button></>}</div>)}
+    {list.map((row, index) => <div key={index} className="space-y-3 rounded-xl border border-slate-200 p-4"><p className="font-semibold">{String(row.formCode)} · {String(row.formName)}</p>{!disabled && <><div className="grid gap-4 sm:grid-cols-2"><FieldInput field={{ key: 'caseCode', label: 'Mã trường hợp (nếu có)' }} value={row.caseCode} change={next => change(list.map((item, i) => i === index ? { ...item, caseCode: next || null } : item))} /><label className="grid gap-2 text-sm font-semibold">Loại biểu mẫu<select aria-label="Loại biểu mẫu" className={box} value={String(row.formType ?? 'ONLINE_INTERACTIVE')} onChange={e => change(list.map((item, i) => i === index ? { ...item, formType: e.target.value } : item))}><option value="ONLINE_INTERACTIVE">Mẫu điện tử tương tác</option><option value="DOCX_TEMPLATE">Mẫu Word (DOCX)</option></select></label><FieldInput field={{ key: 'quantity', label: 'Số lượng', kind: 'number' }} value={row.quantity ?? 1} change={next => change(list.map((item, i) => i === index ? { ...item, quantity: next } : item))} /><FieldInput field={{ key: 'isMandatory', label: 'Bắt buộc', kind: 'boolean' }} value={row.isMandatory ?? true} change={next => change(list.map((item, i) => i === index ? { ...item, isMandatory: next } : item))} /></div><Button size="small" variant="ghost" onClick={() => change(list.filter((_, i) => i !== index))}>Bỏ biểu mẫu</Button></>}</div>)}
     {!loading && !error && options.length === 0 && <p className="text-sm text-slate-500">Không tìm thấy biểu mẫu phù hợp.</p>}
   </section>;
 }
@@ -203,51 +203,103 @@ export const emptyProcedure = (): Row => ({
   formDefinitions: [],
 });
 
-const requiredFieldLabels: Record<string, string> = {
-  procedureCode: "Mã thủ tục",
-  categoryId: "Danh mục",
-  title: "Tên thủ tục (tối thiểu 10 ký tự)",
-  levelOfImplementation: "Cấp thực hiện",
-  targetAudience: "Đối tượng thực hiện",
-  feeSummary: "Tóm tắt lệ phí",
-  processingTimeSummary: "Tóm tắt thời hạn",
-  "contentPayload.decisionNumber": "Số quyết định",
-  "contentPayload.receivingAddress": "Địa chỉ tiếp nhận",
-};
+function humanizeFieldPath(path: string): string {
+  if (path === "procedureCode") return "Phần 1 [Thông tin chung]: Mã thủ tục";
+  if (path === "categoryId") return "Phần 1 [Thông tin chung]: Danh mục thủ tục";
+  if (path === "title") return "Phần 1 [Thông tin chung]: Tên thủ tục (tối thiểu 10 ký tự)";
+  if (path === "levelOfImplementation") return "Phần 1 [Thông tin chung]: Cấp thực hiện";
+  if (path === "targetAudience") return "Phần 1 [Thông tin chung]: Đối tượng thực hiện";
+  if (path === "feeSummary") return "Phần 1 [Thông tin chung]: Tóm tắt lệ phí";
+  if (path === "processingTimeSummary") return "Phần 1 [Thông tin chung]: Tóm tắt thời hạn";
+  if (path === "contentPayload.decisionNumber") return "Phần 1 [Thông tin chung]: Số quyết định";
+  if (path === "contentPayload.receivingAddress") return "Phần 1 [Thông tin chung]: Địa chỉ tiếp nhận";
+  
+  const subMethodMatch = /^contentPayload\.submissionMethods\.(\d+)\.(.+)$/.exec(path);
+  if (subMethodMatch) {
+    const idx = Number(subMethodMatch[1]) + 1;
+    const subField = subMethodMatch[2];
+    const subLabel = subField === "estimatedDays" ? "Thời hạn (ngày)" : subField === "methodName" ? "Hình thức nộp" : subField === "feeAmount" ? "Lệ phí" : subField;
+    return `Phần 4 [Phương thức nộp] - dòng ${idx}: ${subLabel}`;
+  }
+
+  const formDefMatch = /^formDefinitions\.(\d+)\.(.+)$/.exec(path);
+  if (formDefMatch) {
+    const idx = Number(formDefMatch[1]) + 1;
+    const subField = formDefMatch[2];
+    const subLabel = subField === "formType" ? "Loại biểu mẫu" : subField === "formCode" ? "Mã biểu mẫu" : subField === "formName" ? "Tên biểu mẫu" : subField;
+    return `Phần 5 [Biểu mẫu] - mục ${idx}: ${subLabel}`;
+  }
+
+  const checklistMatch = /^checklistSchema\.(\d+)\.(.+)$/.exec(path);
+  if (checklistMatch) {
+    const idx = Number(checklistMatch[1]) + 1;
+    const subField = checklistMatch[2];
+    const subLabel = subField === "itemName" ? "Tên giấy tờ" : subField === "checklistId" ? "Mã giấy tờ" : subField;
+    return `Phần 2 [Giấy tờ] - dòng ${idx}: ${subLabel}`;
+  }
+
+  const caseMatch = /^contentPayload\.cases\.(\d+)\.(.+)$/.exec(path);
+  if (caseMatch) {
+    const idx = Number(caseMatch[1]) + 1;
+    return `Phần 3 [Trình tự & Trường hợp] - trường hợp ${idx}: ${caseMatch[2]}`;
+  }
+
+  return path;
+}
 
 export function validateProcedure(value: Row): ProcedureInput {
-  const parsed = procedureInputSchema.safeParse(value);
-  if (!parsed.success)
+  // Tự động chuẩn hóa dữ liệu bóc tách từ AI trước khi kiểm tra
+  const normalized: Row = JSON.parse(JSON.stringify(value));
+
+  // 1. Chuẩn hóa formDefinitions: tự động gán formType hợp lệ nếu bị thiếu/null do AI
+  if (Array.isArray(normalized.formDefinitions)) {
+    normalized.formDefinitions = normalized.formDefinitions.map((form: Row) => ({
+      ...form,
+      formType: form.formType === "DOCX_TEMPLATE" ? "DOCX_TEMPLATE" : "ONLINE_INTERACTIVE",
+      quantity: typeof form.quantity === "number" && form.quantity > 0 ? form.quantity : 1,
+      isMandatory: form.isMandatory !== false,
+      formCode: String(form.formCode ?? "").trim() || "MAU-01",
+      formName: String(form.formName ?? "").trim() || "Mẫu biểu khai",
+    }));
+  }
+
+  // 2. Chuẩn hóa submissionMethods: tự động gán estimatedDays và feeAmount nếu AI không parse ra số
+  const content = (normalized.contentPayload && typeof normalized.contentPayload === "object")
+    ? { ...(normalized.contentPayload as Row) }
+    : {};
+
+  if (Array.isArray(content.submissionMethods)) {
+    content.submissionMethods = content.submissionMethods.map((method: Row) => ({
+      ...method,
+      methodName: String(method.methodName ?? "").trim() || "Nộp trực tiếp",
+      feeAmount: typeof method.feeAmount === "number" && !isNaN(method.feeAmount) ? method.feeAmount : 0,
+      feeUnit: String(method.feeUnit ?? "VNĐ").trim() || "VNĐ",
+      estimatedDays: typeof method.estimatedDays === "number" && !isNaN(method.estimatedDays) ? method.estimatedDays : 0,
+    }));
+    normalized.contentPayload = content;
+  }
+
+  // 3. Chuẩn hóa checklistSchema: đảm bảo quantity > 0
+  if (Array.isArray(normalized.checklistSchema)) {
+    normalized.checklistSchema = normalized.checklistSchema.map((item: Row, idx: number) => ({
+      ...item,
+      checklistId: String(item.checklistId ?? "").trim() || `GT-${idx + 1}`,
+      itemName: String(item.itemName ?? "").trim() || `Giấy tờ ${idx + 1}`,
+      submissionType: item.submissionType === "XUAT_TRINH" ? "XUAT_TRINH" : "NOP",
+      documentCopyType: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY"].includes(String(item.documentCopyType)) ? item.documentCopyType : "ORIGINAL",
+      quantity: typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1,
+      isMandatory: item.isMandatory !== false,
+    }));
+  }
+
+  const parsed = procedureInputSchema.safeParse(normalized);
+  if (!parsed.success) {
+    const errorDetails = [...new Set(parsed.error.issues.map((issue) => humanizeFieldPath(issue.path.join("."))))];
     throw new Error(
-      "Chưa thể xuất bản. Vui lòng nhập đủ các trường bắt buộc trong mục Thông tin chung:\n• " +
-        [...new Set(parsed.error.issues.map((issue) => {
-          const path = issue.path.join(".");
-          return requiredFieldLabels[path] ?? path;
-        }))].join("\n• "),
+      "Chưa thể xuất bản. Vui lòng kiểm tra và bổ sung các trường sau:\n• " +
+        errorDetails.join("\n• "),
     );
-  const content = parsed.data.contentPayload;
-  if (
-    content.submissionMethods.some(
-      (method) =>
-        !method.methodName.trim() ||
-        method.feeAmount < 0 ||
-        method.estimatedDays < 0,
-    )
-  )
-    throw new Error(
-      "Phương thức nộp phải có tên, lệ phí và thời gian không âm.",
-    );
-  if (
-    content.cases.some(
-      (item) =>
-        !item.caseCode.trim() ||
-        !item.caseName.trim() ||
-        item.steps.some((step) => !step.stepName.trim() || step.stepOrder <= 0),
-    )
-  )
-    throw new Error(
-      "Trường hợp và bước thực hiện cần mã, tên và thứ tự hợp lệ.",
-    );
+  }
   return parsed.data;
 }
 
