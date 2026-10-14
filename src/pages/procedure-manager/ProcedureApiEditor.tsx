@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { getProcedureIssues, ProcedureErrorsContext, ProcedureFieldPrefix, type ProcedureValidationError } from "@/lib/procedureValidation";
+export { validateProcedure } from "@/lib/procedureValidation";
 import { ProcedureFormPicker as FormDefinitionsEditor } from './ProcedureFormPicker';
 import { Button } from "@/components/ui";
 import {
-  procedureInputSchema,
   type Category,
-  type ProcedureInput,
 } from "@/lib/api/procedures";
 
 type Row = Record<string, unknown>;
 type Field = {
   key: string;
+  path?: string;
   label: string;
   kind?: "number" | "boolean" | "date";
   options?: string[];
@@ -31,12 +32,18 @@ function FieldInput({
   value: unknown;
   change: (value: unknown) => void;
 }) {
+  const errors = useContext(ProcedureErrorsContext);
+  const prefix = useContext(ProcedureFieldPrefix);
+  const path = field.path ?? prefix + field.key;
+  const error = errors[path];
+  const errorText = error && <span id={path + '-error'} className="text-xs font-normal text-red-800">{error}</span>;
   if (field.kind === "boolean" || field.options)
     return (
-      <label className="grid gap-2 text-sm font-semibold">
+      <label data-field={path} className="grid gap-2 text-sm font-semibold">
         {field.label}
         <select
           aria-label={field.label}
+          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
           className={box}
           value={value == null ? "" : String(value)}
           onChange={(e) =>
@@ -56,17 +63,20 @@ function FieldInput({
             </option>
           ))}
         </select>
+        {errorText}
       </label>
     );
   return (
-    <label className="grid gap-2 text-sm font-semibold">
+    <label data-field={path} className="grid gap-2 text-sm font-semibold">
       {field.label}
       {field.kind ? (
         <input
           aria-label={field.label}
           className={box}
           type={field.kind}
-          step={field.kind === "number" ? "any" : undefined}
+          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
+          min={field.key === 'quantity' ? 1 : ['feeAmount', 'estimatedDays'].includes(field.key) ? 0 : undefined}
+          step={field.kind === "number" ? field.key === 'quantity' ? 1 : "any" : undefined}
           value={value == null ? "" : String(value)}
           onChange={(e) =>
             change(
@@ -83,19 +93,23 @@ function FieldInput({
           aria-label={field.label}
           className={box}
           rows={2}
+          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
           value={value == null ? "" : String(value)}
           onChange={(e) => change(e.target.value)}
         />
       )}
+      {errorText}
     </label>
   );
 }
 function RowEditor({
+  prefix,
   title,
   value,
   fields: rowFields,
   change,
 }: {
+  prefix: string;
   title: string;
   value: unknown;
   fields: Field[];
@@ -106,8 +120,7 @@ function RowEditor({
     <section className="space-y-4">
       <h3 className="font-bold">{title}</h3>
       {list.map((row, index) => (
-        <div
-          key={index}
+        <ProcedureFieldPrefix.Provider key={index} value={`${prefix}.${index}.`}><div
           className="space-y-3 rounded-xl border border-slate-200 p-4"
         >
           <div className="grid gap-4 sm:grid-cols-2">
@@ -133,7 +146,7 @@ function RowEditor({
           >
             Xóa dòng {index + 1}
           </Button>
-        </div>
+        </div></ProcedureFieldPrefix.Provider>
       ))}
       <Button
         variant="outline"
@@ -175,106 +188,6 @@ export const emptyProcedure = (): Row => ({
   formDefinitions: [],
 });
 
-function humanizeFieldPath(path: string): string {
-  if (path === "procedureCode") return "Phần 1 [Thông tin chung]: Mã thủ tục";
-  if (path === "categoryId") return "Phần 1 [Thông tin chung]: Danh mục thủ tục";
-  if (path === "title") return "Phần 1 [Thông tin chung]: Tên thủ tục (tối thiểu 10 ký tự)";
-  if (path === "levelOfImplementation") return "Phần 1 [Thông tin chung]: Cấp thực hiện";
-  if (path === "targetAudience") return "Phần 1 [Thông tin chung]: Đối tượng thực hiện";
-  if (path === "feeSummary") return "Phần 1 [Thông tin chung]: Tóm tắt lệ phí";
-  if (path === "processingTimeSummary") return "Phần 1 [Thông tin chung]: Tóm tắt thời hạn";
-  if (path === "contentPayload.decisionNumber") return "Phần 1 [Thông tin chung]: Số quyết định";
-  if (path === "contentPayload.receivingAddress") return "Phần 1 [Thông tin chung]: Địa chỉ tiếp nhận";
-  
-  const subMethodMatch = /^contentPayload\.submissionMethods\.(\d+)\.(.+)$/.exec(path);
-  if (subMethodMatch) {
-    const idx = Number(subMethodMatch[1]) + 1;
-    const subField = subMethodMatch[2];
-    const subLabel = subField === "estimatedDays" ? "Thời hạn (ngày)" : subField === "methodName" ? "Hình thức nộp" : subField === "feeAmount" ? "Lệ phí" : subField;
-    return `Phần 4 [Phương thức nộp] - dòng ${idx}: ${subLabel}`;
-  }
-
-  const formDefMatch = /^formDefinitions\.(\d+)\.(.+)$/.exec(path);
-  if (formDefMatch) {
-    const idx = Number(formDefMatch[1]) + 1;
-    const subField = formDefMatch[2];
-    const subLabel = subField === "formType" ? "Loại biểu mẫu" : subField === "formCode" ? "Mã biểu mẫu" : subField === "formName" ? "Tên biểu mẫu" : subField;
-    return `Phần 5 [Biểu mẫu] - mục ${idx}: ${subLabel}`;
-  }
-
-  const checklistMatch = /^checklistSchema\.(\d+)\.(.+)$/.exec(path);
-  if (checklistMatch) {
-    const idx = Number(checklistMatch[1]) + 1;
-    const subField = checklistMatch[2];
-    const subLabel = subField === "itemName" ? "Tên giấy tờ" : subField === "checklistId" ? "Mã giấy tờ" : subField;
-    return `Phần 2 [Giấy tờ] - dòng ${idx}: ${subLabel}`;
-  }
-
-  const caseMatch = /^contentPayload\.cases\.(\d+)\.(.+)$/.exec(path);
-  if (caseMatch) {
-    const idx = Number(caseMatch[1]) + 1;
-    return `Phần 3 [Trình tự & Trường hợp] - trường hợp ${idx}: ${caseMatch[2]}`;
-  }
-
-  return path;
-}
-
-export function validateProcedure(value: Row): ProcedureInput {
-  // Tự động chuẩn hóa dữ liệu bóc tách từ AI trước khi kiểm tra
-  const normalized: Row = JSON.parse(JSON.stringify(value));
-
-  // 1. Chuẩn hóa formDefinitions: tự động gán formType hợp lệ nếu bị thiếu/null do AI
-  if (Array.isArray(normalized.formDefinitions)) {
-    normalized.formDefinitions = normalized.formDefinitions.map((form: Row) => ({
-      ...form,
-      formType: form.formType === "DOCX_TEMPLATE" ? "DOCX_TEMPLATE" : "ONLINE_INTERACTIVE",
-      quantity: typeof form.quantity === "number" && form.quantity > 0 ? form.quantity : 1,
-      isMandatory: form.isMandatory !== false,
-      formCode: String(form.formCode ?? "").trim() || "MAU-01",
-      formName: String(form.formName ?? "").trim() || "Mẫu biểu khai",
-    }));
-  }
-
-  // 2. Chuẩn hóa submissionMethods: tự động gán estimatedDays và feeAmount nếu AI không parse ra số
-  const content = (normalized.contentPayload && typeof normalized.contentPayload === "object")
-    ? { ...(normalized.contentPayload as Row) }
-    : {};
-
-  if (Array.isArray(content.submissionMethods)) {
-    content.submissionMethods = content.submissionMethods.map((method: Row) => ({
-      ...method,
-      methodName: String(method.methodName ?? "").trim() || "Nộp trực tiếp",
-      feeAmount: typeof method.feeAmount === "number" && !isNaN(method.feeAmount) ? method.feeAmount : 0,
-      feeUnit: String(method.feeUnit ?? "VNĐ").trim() || "VNĐ",
-      estimatedDays: typeof method.estimatedDays === "number" && !isNaN(method.estimatedDays) ? method.estimatedDays : 0,
-    }));
-    normalized.contentPayload = content;
-  }
-
-  // 3. Chuẩn hóa checklistSchema: đảm bảo quantity > 0
-  if (Array.isArray(normalized.checklistSchema)) {
-    normalized.checklistSchema = normalized.checklistSchema.map((item: Row, idx: number) => ({
-      ...item,
-      checklistId: String(item.checklistId ?? "").trim() || `GT-${idx + 1}`,
-      itemName: String(item.itemName ?? "").trim() || `Giấy tờ ${idx + 1}`,
-      submissionType: item.submissionType === "XUAT_TRINH" ? "XUAT_TRINH" : "NOP",
-      documentCopyType: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY"].includes(String(item.documentCopyType)) ? item.documentCopyType : "ORIGINAL",
-      quantity: typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1,
-      isMandatory: item.isMandatory !== false,
-    }));
-  }
-
-  const parsed = procedureInputSchema.safeParse(normalized);
-  if (!parsed.success) {
-    const errorDetails = [...new Set(parsed.error.issues.map((issue) => humanizeFieldPath(issue.path.join("."))))];
-    throw new Error(
-      "Chưa thể xuất bản. Vui lòng kiểm tra và bổ sung các trường sau:\n• " +
-        errorDetails.join("\n• "),
-    );
-  }
-  return parsed.data;
-}
-
 export function ProcedureApiEditor({
   value,
   onChange,
@@ -282,6 +195,7 @@ export function ProcedureApiEditor({
   disabled = false,
   initialStep = 0,
   onEditForms,
+  validationError,
 }: {
   value: Row;
   onChange: (value: Row) => void;
@@ -289,8 +203,35 @@ export function ProcedureApiEditor({
   disabled?: boolean;
   initialStep?: number;
   onEditForms?: () => void;
+  validationError?: ProcedureValidationError | null;
 }) {
   const [step, setStep] = useState(initialStep);
+  const root = useRef<HTMLDivElement>(null);
+  const removedForms = useRef<Record<string, Row>>({});
+  const [focusRequest, setFocusRequest] = useState<{ path: string } | null>(null);
+  const issues = validationError ? getProcedureIssues(value) : [];
+  if (validationError?.issues.some(issue => issue.path === 'contentPayload.decisionNumber') && !String(record(value.contentPayload).decisionNumber ?? '').trim() && !issues.some(issue => issue.path === 'contentPayload.decisionNumber')) {
+    issues.push(validationError.issues.find(issue => issue.path === 'contentPayload.decisionNumber')!);
+  }
+  const errors = Object.fromEntries(issues.map(issue => [issue.path, issue.message]));
+  const goToIssue = (issue: typeof issues[number]) => {
+    setStep(issue.step);
+    setFocusRequest({ path: issue.path });
+  };
+  useEffect(() => {
+    if (!focusRequest) return;
+    const frame = requestAnimationFrame(() => {
+      const wrapper = root.current?.querySelector<HTMLElement>(`[data-field="${focusRequest.path}"]`);
+      const details = wrapper?.closest('details');
+      if (details) details.open = true;
+      const input = wrapper?.matches('input,select,textarea') ? wrapper : wrapper?.querySelector<HTMLElement>('input,select,textarea');
+      (input ?? wrapper)?.focus(); wrapper?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest]);
+  useEffect(() => {
+    if (validationError?.issues[0]) goToIssue(validationError.issues[0]);
+  }, [validationError]);
   const content = record(value.contentPayload);
   const set = (key: string, next: unknown) =>
     onChange({ ...value, [key]: next });
@@ -305,7 +246,7 @@ export function ProcedureApiEditor({
     "Căn cứ pháp lý",
   ];
   return (
-    <div className="min-w-0 space-y-5">
+    <ProcedureErrorsContext.Provider value={errors}><div ref={root} className="min-w-0 space-y-5">
       <div
         className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 text-xs font-semibold shadow-xs backdrop-blur-md"
         aria-label="Các phần nội dung thủ tục"
@@ -326,9 +267,11 @@ export function ProcedureApiEditor({
               {index + 1}
             </span>
             <span>{label}</span>
+            {issues.some(issue => issue.step === index) && <span className="rounded bg-red-100 px-1 text-red-800">Có lỗi</span>}
           </button>
         ))}
       </div>
+      {issues.length > 0 && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-semibold">Cần kiểm tra {issues.length} thông tin:</p><ul>{issues.map(issue => <li key={issue.path}><button type="button" className="min-h-9 text-left underline" onClick={() => goToIssue(issue)}>{issue.label}: {issue.message}</button></li>)}</ul></div>}
       {/* Biểu mẫu tự ẩn điều khiển sửa khi disabled; vẫn cho phép xem/tải phôi. */}
       <fieldset disabled={disabled && step !== 4} className="min-w-0 space-y-5">
         {step === 0 && (
@@ -338,10 +281,11 @@ export function ProcedureApiEditor({
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Định danh thủ tục</h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FieldInput field={{ key: "procedureCode", label: "Mã thủ tục" }} value={value.procedureCode} change={(next) => set("procedureCode", next)} />
-                <label className="grid gap-2 text-sm font-semibold">
+                <label data-field="categoryId" className="grid gap-2 text-sm font-semibold">
                   Danh mục
                   <select
                     aria-label="Danh mục"
+                    aria-invalid={Boolean(errors.categoryId)} aria-describedby={errors.categoryId ? 'category-error' : undefined}
                     className={box}
                     value={String(value.categoryId ?? "")}
                     onChange={(e) => set("categoryId", e.target.value ? Number(e.target.value) : null)}
@@ -353,6 +297,7 @@ export function ProcedureApiEditor({
                       </option>
                     ))}
                   </select>
+                  {errors.categoryId && <span id="category-error" className="text-xs text-red-800">{errors.categoryId}</span>}
                 </label>
               </div>
               <FieldInput field={{ key: "title", label: "Tên thủ tục" }} value={value.title} change={(next) => set("title", next)} />
@@ -370,8 +315,8 @@ export function ProcedureApiEditor({
                 <FieldInput field={{ key: "executingAgency", label: "Cơ quan thực hiện" }} value={value.executingAgency} change={(next) => set("executingAgency", next)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "decisionNumber", label: "Số quyết định" }} value={content.decisionNumber} change={(next) => setContent("decisionNumber", next)} />
-                <FieldInput field={{ key: "receivingAddress", label: "Địa chỉ tiếp nhận" }} value={content.receivingAddress} change={(next) => setContent("receivingAddress", next)} />
+                <FieldInput field={{ key: "decisionNumber", path: "contentPayload.decisionNumber", label: "Số quyết định" }} value={content.decisionNumber} change={(next) => setContent("decisionNumber", next)} />
+                <FieldInput field={{ key: "receivingAddress", path: "contentPayload.receivingAddress", label: "Địa chỉ tiếp nhận" }} value={content.receivingAddress} change={(next) => setContent("receivingAddress", next)} />
               </div>
             </div>
 
@@ -396,6 +341,7 @@ export function ProcedureApiEditor({
         )}
         {step === 1 && (
           <RowEditor
+            prefix="checklistSchema"
             title="Giấy tờ"
             value={value.checklistSchema}
             change={(next) => set("checklistSchema", next)}
@@ -404,6 +350,7 @@ export function ProcedureApiEditor({
               {
                 key: "caseCode",
                 label: "Mã trường hợp (trống = áp dụng chung)",
+                options: rows(content.cases).map(item => String(item.caseCode ?? '')).filter(Boolean),
               },
               { key: "itemName", label: "Tên giấy tờ" },
               {
@@ -450,6 +397,7 @@ export function ProcedureApiEditor({
                   />
                 ))}
                 <RowEditor
+                  prefix={`contentPayload.cases.${index}.steps`}
                   title="Bước thực hiện"
                   value={item.steps}
                   fields={[
@@ -495,6 +443,7 @@ export function ProcedureApiEditor({
         )}
         {step === 3 && (
           <RowEditor
+            prefix="contentPayload.submissionMethods"
             title="Phương thức nộp"
             value={content.submissionMethods}
             change={(next) => setContent("submissionMethods", next)}
@@ -513,7 +462,9 @@ export function ProcedureApiEditor({
         )}
         {step === 4 && (
           <FormDefinitionsEditor
+              removedForms={removedForms.current}
               onEdit={onEditForms}
+              cases={rows(content.cases).map(item => ({ code: String(item.caseCode ?? ""), name: String(item.caseName ?? "") }))}
               value={value.formDefinitions}
               disabled={disabled}
               change={(next) =>
@@ -529,6 +480,7 @@ export function ProcedureApiEditor({
         )}
         {step === 5 && (
           <RowEditor
+            prefix="contentPayload.legalReferences"
             title="Căn cứ pháp lý"
             value={content.legalReferences}
             change={(next) =>
@@ -573,6 +525,6 @@ export function ProcedureApiEditor({
         </Button>
       </div>
       <p className="text-sm text-slate-500">Chỉ nhập thông tin đã kiểm tra.</p>
-    </div>
+    </div></ProcedureErrorsContext.Provider>
   );
 }
