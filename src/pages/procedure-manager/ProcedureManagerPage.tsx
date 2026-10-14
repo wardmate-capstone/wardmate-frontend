@@ -30,6 +30,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { getGreeting } from "@/lib/utils";
 import { FormsView } from '@/pages/admin/FormsView';
+import { ProcedureValidationError } from '@/lib/procedureValidation';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 export function ProcedureManagerPage({ embedded = false, initialSection = "dashboard" }: { embedded?: boolean; initialSection?: ProcedureNavSection } = {}) {
   const [params, setParams] = useSearchParams();
@@ -46,6 +48,8 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
   const [error, setError] = useState("");
   const [draftPending, setDraftPending] = useState(false);
   const lock = useRef(false);
+  const [validationError, setValidationError] = useState<ProcedureValidationError | null>(null);
+  const guard = useUnsavedChanges(creating && JSON.stringify(input) !== JSON.stringify(emptyProcedure()), busy);
   const { profile } = useUserProfile();
   const user = useAuthStore((s) => s.user);
   const can = (permission: string) => user?.permissions.includes(permission) ?? false;
@@ -84,6 +88,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
     }
   };
   const openCreate = () => {
+    setValidationError(null);
     setInput(emptyProcedure());
     setConfirmed(false);
     setError("");
@@ -239,7 +244,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
           <Modal
             open={creating}
             onOpenChange={(open) => {
-              if (!busy) setCreating(open);
+              if (!open) guard.requestClose(() => setCreating(false));
             }}
             title="Thêm thủ tục"
             description="Thủ tục sẽ được công khai khi lưu thành công. Muốn lưu nháp, dùng luồng PDF và bản nháp."
@@ -261,6 +266,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                     setSelected(created);
                     toast.success("Đã tạo thủ tục.");
                   } catch (e) {
+                    if (e instanceof ProcedureValidationError) setValidationError(e);
                     setError(procedureError(e));
                   } finally {
                     setBusy(false);
@@ -275,6 +281,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             <ProcedureFeedback error={error} />
             <ProcedureApiEditor
               value={input}
+              validationError={validationError}
               onChange={(next) => {
                 setInput(next);
                 setConfirmed(false);
@@ -292,6 +299,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
               Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.
             </label>
           </Modal>
+          {guard.confirmation}
           <ProcedureVersionsModal
             procedure={viewingVersions}
             categories={categories.data ?? []}
