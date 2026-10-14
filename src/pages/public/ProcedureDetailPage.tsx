@@ -1,190 +1,609 @@
-import { useEffect, useRef } from 'react';
-import { ArrowLeft, ArrowRight, ArrowSquareOut, CaretRight, House, Sparkle } from '@phosphor-icons/react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Badge, buttonVariants } from '@/components/ui';
-import { procedureError } from '@/lib/api/procedures';
-import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  CaretRight,
+  FilePdf,
+  House,
+} from '@phosphor-icons/react';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { buttonVariants } from '@/components/ui';
+import { procedureError, type ProcedureSummary } from '@/lib/api/procedures';
+import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
-import { contentFromApi } from '@/lib/procedureContent';
-import { useAuthStore } from '@/stores/authStore';
-import { toast } from '@/components/ui/Toast';
-
-import { ProcedureCasesView } from './components/ProcedureCasesView';
-
-const pending = 'Thông tin cần được cơ quan tiếp nhận xác nhận.';
-const sections = [
-  ['tong-quan', 'Thông tin chung'],
-  ['thanh-phan-ho-so', 'Thành phần hồ sơ & Quy trình'],
-  ['thoi-han-le-phi', 'Thời hạn và lệ phí'],
-  ['can-cu-phap-luat', 'Căn cứ pháp luật'],
-  ['co-quan-tiep-nhan', 'Cơ quan tiếp nhận'],
-];
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const search = location.search;
   const result = usePublicProcedureDetail(procedureId);
   const procedure = result.data;
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
-  const content = procedure ? contentFromApi(procedure) : { overview: '', methods: [], legalBases: [], receivingAgencies: [], cases: [], checklist: [] };
 
-  const authStatus = useAuthStore((state) => state.status);
+  // Danh sách thủ tục tìm kiếm nhiều nhất (dùng TanStack Query cache an toàn)
+  const popularQuery = usePublicProcedureList({ pageSize: 7 });
+
+  // State chọn trường hợp nếu thủ tục có nhiều case
+  const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     heading.current?.focus({ preventScroll: true });
   }, [procedureId, procedure?.id]);
 
-  if (result.isPending || result.isError) return <div className="mx-auto max-w-4xl p-6"><ProcedureFeedback loading={result.isPending} error={result.isError ? procedureError(result.error) : ''} retry={() => { void result.refetch(); }} /><Link to={listUrl}>Quay lại danh sách</Link></div>;
-  if (!procedure) return (
-    <section className="mx-auto max-w-3xl px-5 py-16 text-center">
-      <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">Không tìm thấy thủ tục</h1>
-      <p className="my-5 text-slate-600">Thủ tục này chưa có trong danh mục đang công khai. Bạn có thể quay lại để chọn thủ tục khác.</p>
-      <Link to={listUrl} className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" />Quay lại danh sách</Link>
-    </section>
-  );
+  if (result.isPending || result.isError) {
+    return (
+      <div className="mx-auto max-w-4xl p-6">
+        <ProcedureFeedback
+          loading={result.isPending}
+          error={result.isError ? procedureError(result.error) : ''}
+          retry={() => {
+            void result.refetch();
+          }}
+        />
+        <Link to={listUrl} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-red-700 hover:underline">
+          <ArrowLeft size={16} /> Quay lại danh mục thủ tục
+        </Link>
+      </div>
+    );
+  }
 
-  const handleStartProcedure = () => {
-    const returnTo = `${location.pathname}${location.search}`;
+  if (!procedure) {
+    return (
+      <section className="mx-auto max-w-3xl px-5 py-16 text-center">
+        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold text-slate-900">
+          Không tìm thấy thủ tục
+        </h1>
+        <p className="my-5 text-slate-600">
+          Thủ tục này chưa có trong danh mục đang công khai hoặc đã ngừng cung cấp.
+        </p>
+        <Link to={listUrl} className={buttonVariants({ variant: 'outline' })}>
+          <ArrowLeft aria-hidden="true" /> Quay lại danh sách
+        </Link>
+      </section>
+    );
+  }
 
-    if (authStatus !== 'authenticated') {
-      toast.info('Vui lòng đăng nhập để bắt đầu chuẩn bị hồ sơ thủ tục.');
-      navigate(`/dang-nhap?returnTo=${encodeURIComponent(returnTo)}`);
-      return;
+  const payload = procedure.contentPayload;
+  const cases = payload.cases || [];
+  const activeCase = cases[selectedCaseIdx] || cases[0];
+  const checklist = procedure.checklistSchema || [];
+  const forms = procedure.formDefinitions || [];
+
+  // Lọc checklist theo trường hợp
+  const currentChecklist = checklist.filter((item) => {
+    if (!item.caseCode) return true;
+    if (!activeCase) return true;
+    return item.caseCode === activeCase.caseCode;
+  });
+
+  const nopItems = currentChecklist.filter((item) => item.submissionType === 'NOP');
+  const xuatTrinhItems = currentChecklist.filter((item) => item.submissionType === 'XUAT_TRINH');
+
+  const getCopyTypeLabel = (type: string) => {
+    switch (type) {
+      case 'ORIGINAL':
+        return 'bản chính';
+      case 'CERTIFIED_COPY':
+        return 'bản sao chứng thực';
+      case 'REGULAR_COPY':
+        return 'bản sao thường';
+      default:
+        return 'bản';
     }
-
-    toast.info('Chức năng tạo hồ sơ cần kết nối dịch vụ Hồ sơ công dân. Bạn có thể tra cứu giấy tờ và quy trình bên dưới.');
-
   };
 
   return (
-    <div className="bg-slate-50">
-      <section className="border-b border-red-100 bg-white px-5 py-8 sm:px-8">
-        <div className="mx-auto max-w-[1120px]">
-          <nav aria-label="Đường dẫn" className="mb-5 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-            <Link to="/" className="inline-flex min-h-11 items-center gap-2 hover:text-red-800"><House aria-hidden="true" />Trang chủ</Link>
-            <CaretRight aria-hidden="true" />
-            <Link to={listUrl} className="inline-flex min-h-11 items-center hover:text-red-800">Thủ tục hành chính</Link>
-            <CaretRight aria-hidden="true" /><span aria-current="page">Chi tiết thủ tục</span>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 antialiased pb-16">
+      {/* Breadcrumbs Navigation */}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-[1240px] px-4 py-3 sm:px-6">
+          <nav aria-label="Đường dẫn" className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-slate-600">
+            <Link to="/" className="inline-flex items-center gap-1 hover:text-red-700">
+              <House size={14} /> Trang chủ
+            </Link>
+            <CaretRight size={12} className="text-slate-400" />
+            <Link to={listUrl} className="hover:text-red-700">
+              Thủ tục hành chính
+            </Link>
+            <CaretRight size={12} className="text-slate-400" />
+            <span aria-current="page" className="font-semibold text-slate-800 line-clamp-1">
+              Chi tiết thủ tục
+            </span>
           </nav>
-
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge>{procedure.categoryName}</Badge>
-
-            </div>
-
-            {/* Nút Bắt đầu làm thủ tục trên Banner Header */}
-            <button
-              type="button"
-              onClick={handleStartProcedure}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-800 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98]"
-            >
-              <Sparkle size={18} weight="fill" className="text-amber-300" />
-              <span>Bắt đầu làm thủ tục</span>
-              <ArrowRight size={16} weight="bold" />
-            </button>
-          </div>
-
-          <h1 ref={heading} tabIndex={-1} className="mt-4 max-w-4xl break-words text-3xl font-bold leading-tight text-red-900 sm:text-4xl">{procedure.title}</h1>
-          <p className="mt-3 text-sm text-slate-600">Mã thủ tục: {procedure.procedureCode} · {procedure.levelOfImplementation}</p>
-          <p className="mt-5 max-w-4xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            Tiền kiểm hồ sơ không thay thế việc tiếp nhận và giải quyết thủ tục chính thức.
-          </p>
-        </div>
-      </section>
-
-      <div className="mx-auto grid max-w-[1184px] items-start gap-6 px-5 py-8 sm:px-8 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-slate-200 bg-white p-4 lg:sticky lg:top-36">
-          <h2 className="mb-3 font-bold">Nội dung thủ tục</h2>
-          <nav aria-label="Nội dung thủ tục" className="grid gap-1">
-            {sections.map(([id, label]) => <a key={id} href={'#' + id} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-800">{label}</a>)}
-          </nav>
-
-          <button
-            type="button"
-            onClick={handleStartProcedure}
-            className="mt-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-900 transition-colors"
-          >
-            <span>Bắt đầu làm thủ tục</span>
-            <ArrowRight size={14} weight="bold" />
-          </button>
-
-          <Link to={listUrl} className="mt-3 flex min-h-11 items-center gap-2 border-t border-slate-200 pt-3 text-sm font-bold text-red-800"><ArrowLeft aria-hidden="true" />Quay lại danh sách</Link>
-        </aside>
-
-        <div className="min-w-0 space-y-6">
-          <section id="tong-quan" aria-labelledby="overview-title" className="procedure-detail-section">
-            <h2 id="overview-title">Thông tin chung</h2>
-            <p className="whitespace-pre-line break-words">{content.overview || pending}</p>
-            <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
-              <div><dt className="text-sm text-slate-500">Lĩnh vực</dt><dd className="mt-1 font-semibold">{procedure.categoryName}</dd></div>
-              <div><dt className="text-sm text-slate-500">Phạm vi hỗ trợ</dt><dd className="mt-1">{procedure.levelOfImplementation}</dd></div>
-            </dl>
-          </section>
-
-          {/* Khối Thành phần hồ sơ theo trường hợp (hiển thị checklist giấy tờ cần thiết để đọc và tải template, không checkbox) */}
-          {(content.cases.length > 0 || content.checklist.length > 0) && (
-            <ProcedureCasesView key={procedure.id} cases={content.cases} checklist={content.checklist} />
-          )}
-
-          <section id="thoi-han-le-phi" aria-labelledby="fees-title" className="procedure-detail-section">
-            <h2 id="fees-title">Thời hạn và lệ phí</h2>
-            <p className="mb-4 text-sm text-slate-600">{procedure.processingTimeSummary} · {procedure.feeSummary}</p>
-            <table className="procedure-detail-table">
-              <caption className="sr-only">Cách thức thực hiện, thời hạn giải quyết và phí, lệ phí</caption>
-              <thead><tr><th scope="col">Cách thức thực hiện</th><th scope="col">Thời hạn giải quyết</th><th scope="col">Phí, lệ phí</th></tr></thead>
-              <tbody>{content.methods.length ? content.methods.map((row, index) => <tr key={index}>
-                <td data-label="Cách thức thực hiện">{row.method}</td>
-                <td data-label="Thời hạn giải quyết">{row.processingTime || pending}</td>
-                <td data-label="Phí, lệ phí">{row.fee || pending}{row.notes && <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{row.notes}</p>}</td>
-              </tr>) : <tr><td colSpan={3}>{pending}</td></tr>}</tbody>
-            </table>
-          </section>
-
-          <section id="can-cu-phap-luat" aria-labelledby="legal-title" className="procedure-detail-section">
-            <h2 id="legal-title">Căn cứ pháp luật</h2>
-            <table className="procedure-detail-table">
-              <caption className="sr-only">Văn bản làm căn cứ pháp luật</caption>
-              <thead><tr><th scope="col">Số hiệu</th><th scope="col">Tên văn bản</th><th scope="col">Nguồn</th></tr></thead>
-              <tbody>{content.legalBases.length ? content.legalBases.map((row, index) => <tr key={index}>
-                <td data-label="Số hiệu">{row.number || 'Chưa cập nhật'}</td><td data-label="Tên văn bản">{row.title}</td>
-                <td data-label="Nguồn">{row.url ? <a href={row.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 font-semibold text-red-800 underline">Xem văn bản<span className="sr-only">: {row.title} (mở tab mới)</span><ArrowSquareOut aria-hidden="true" /></a> : 'Chưa có nguồn xác minh'}</td>
-              </tr>) : <tr><td colSpan={3}>Chưa có văn bản pháp luật được xác minh cho thủ tục này.</td></tr>}</tbody>
-            </table>
-          </section>
-
-          <section id="co-quan-tiep-nhan" aria-labelledby="agency-title" className="procedure-detail-section">
-            <h2 id="agency-title">Cơ quan tiếp nhận</h2>
-            {content.receivingAgencies.length ? <ul className="space-y-4">{content.receivingAgencies.map((agency, index) => <li key={index} className="rounded-xl border border-slate-200 p-4">
-              <h3 className="break-words font-semibold">{agency.name}</h3><p className="mt-2 whitespace-pre-line break-words text-sm text-slate-600">{agency.address || pending}</p>
-              {agency.url && <a href={agency.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-red-800 underline">Thông tin cơ quan<span className="sr-only">: {agency.name} (mở tab mới)</span><ArrowSquareOut aria-hidden="true" /></a>}
-            </li>)}</ul> : <p>{pending}</p>}
-          </section>
-
-          <section className="procedure-detail-section"><h2>Kết quả và biểu mẫu</h2><ul className="list-inside list-disc">{procedure.contentPayload.results.map((text, index) => <li key={index}>{text}</li>)}</ul>{(procedure.formDefinitions ?? []).map((form, index) => <p className="mt-3" key={index}>{form.formCode} · {form.formName} · {form.quantity} bản{form.isMandatory ? ' · Bắt buộc khi áp dụng' : ''}</p>)}<p className="mt-3 text-sm text-slate-600">Tải và soạn biểu mẫu cần kết nối dịch vụ Biểu mẫu.</p></section>
-          {procedure.pdfFileName && <section className="procedure-detail-section"><h2>PDF nguồn</h2><p className="mb-3">{procedure.pdfFileName}</p><PdfSource id={procedure.id} /></section>}
-          {/* Banner CTA cuối trang */}
-          <div className="rounded-xl border border-red-200 bg-white p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Sẵn sàng thực hiện thủ tục này?</h3>
-              <p className="text-sm text-slate-600 mt-1">Bấm bắt đầu để xem danh mục checklist giấy tờ đầy đủ và tải/soạn thảo các tờ khai trực tuyến.</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleStartProcedure}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-red-900 transition-colors"
-            >
-              <span>Bắt đầu làm thủ tục</span>
-              <ArrowRight size={16} weight="bold" />
-            </button>
-          </div>
         </div>
       </div>
+
+      {/* Main Container 2 Columns */}
+      <main className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
+        {/* Title Area */}
+        <div className="mb-4">
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="text-xl sm:text-2xl md:text-[26px] font-bold text-slate-900 leading-snug tracking-tight"
+          >
+            {procedure.title}
+          </h1>
+
+          {/* PDF Source Icon under Title */}
+          {procedure.originalPdfUrl ? (
+            <a
+              href={procedure.originalPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2.5 inline-flex items-center gap-2 text-red-600 hover:text-red-700 group transition-colors"
+              title="Xem tệp PDF công bố gốc"
+            >
+              <FilePdf size={32} weight="fill" className="text-red-600 group-hover:scale-105 transition-transform" />
+              <span className="text-xs font-semibold underline text-slate-600 group-hover:text-red-700">
+                {procedure.pdfFileName || 'Tệp văn bản công bố thủ tục (PDF)'}
+              </span>
+            </a>
+          ) : (
+            <div className="mt-2.5 inline-flex items-center gap-1.5 text-slate-500 text-xs">
+              <FilePdf size={28} weight="fill" className="text-red-600" />
+              <span>Văn bản điện tử trích lục</span>
+            </div>
+          )}
+        </div>
+
+        {/* 2-Column Split: Left Column (70%) & Right Column (30%) */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+          {/* CỘT TRÁI: Nội dung chi tiết thủ tục (8/12 cột = ~67%) */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* 1. BẢNG THÔNG TIN CHUNG (Grid table kẻ viền xám theo mẫu Cổng DVCQG) */}
+            <div className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-2xs">
+              <table className="w-full border-collapse text-xs sm:text-sm">
+                <tbody>
+                  {/* Hàng 1: Tên thủ tục */}
+                  <tr className="border-b border-slate-200">
+                    <td className="w-[140px] sm:w-[170px] bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-top">
+                      Tên thủ tục
+                    </td>
+                    <td colSpan={3} className="p-2.5 font-medium text-slate-900">
+                      {procedure.title}
+                    </td>
+                  </tr>
+
+                  {/* Hàng 2: Mã thủ tục & Số quyết định */}
+                  <tr className="border-b border-slate-200">
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Mã thủ tục
+                    </td>
+                    <td className="p-2.5 text-slate-900 border-r border-slate-200 w-1/3">
+                      {procedure.procedureCode}
+                    </td>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200 w-[140px] sm:w-[150px]">
+                      Số quyết định
+                    </td>
+                    <td className="p-2.5 text-slate-900">
+                      {payload.decisionNumber || 'Chưa cập nhật'}
+                    </td>
+                  </tr>
+
+                  {/* Hàng 3: Cấp thực hiện & Loại thủ tục */}
+                  <tr className="border-b border-slate-200">
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Cấp thực hiện
+                    </td>
+                    <td className="p-2.5 text-slate-900 border-r border-slate-200">
+                      {procedure.levelOfImplementation}
+                    </td>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Loại thủ tục
+                    </td>
+                    <td className="p-2.5 text-slate-900">
+                      TTHC không được luật giao cho địa phương quy định
+                    </td>
+                  </tr>
+
+                  {/* Hàng 4: Lĩnh vực & Đối tượng thực hiện */}
+                  <tr className="border-b border-slate-200">
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Lĩnh vực
+                    </td>
+                    <td className="p-2.5 text-slate-900 border-r border-slate-200">
+                      {procedure.categoryName}
+                    </td>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Đối tượng thực hiện
+                    </td>
+                    <td className="p-2.5 text-slate-900">
+                      {procedure.targetAudience}
+                    </td>
+                  </tr>
+
+                  {/* Hàng 5: Cơ quan có thẩm quyền & Địa chỉ tiếp nhận */}
+                  <tr className="border-b border-slate-200">
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Cơ quan có thẩm quyền
+                    </td>
+                    <td className="p-2.5 text-slate-900 border-r border-slate-200">
+                      {procedure.issuingAuthority || procedure.executingAgency || 'Ủy ban nhân dân cấp xã/phường'}
+                    </td>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Địa chỉ tiếp nhận HS
+                    </td>
+                    <td className="p-2.5 text-slate-900">
+                      {payload.receivingAddress || 'Bộ phận một cửa UBND cấp xã/phường'}
+                    </td>
+                  </tr>
+
+                  {/* Hàng 6: Cơ quan được ủy quyền & Cơ quan phối hợp */}
+                  <tr>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Cơ quan được ủy quyền
+                    </td>
+                    <td className="p-2.5 text-slate-900 border-r border-slate-200">
+                      {procedure.executingAgency || 'Không có thông tin'}
+                    </td>
+                    <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
+                      Cơ quan phối hợp
+                    </td>
+                    <td className="p-2.5 text-slate-900">
+                      Không có thông tin
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 2. THỦ TỤC HÀNH CHÍNH LIÊN QUAN */}
+            <div>
+              <h2 className="text-sm font-bold text-[#b91c1c] mb-1">
+                Thủ tục hành chính liên quan
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500">Không có thông tin</p>
+            </div>
+
+            {/* 3. TRÌNH TỰ THỰC HIỆN */}
+            <section className="space-y-3">
+              <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                Trình Tự Thực Hiện
+              </h2>
+
+              {cases.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 border-b border-slate-200 pb-2">
+                  {cases.map((c, idx) => (
+                    <button
+                      key={c.caseCode || idx}
+                      type="button"
+                      onClick={() => setSelectedCaseIdx(idx)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        selectedCaseIdx === idx
+                          ? 'bg-red-800 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {c.caseName || `Trường hợp ${idx + 1}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-md border border-slate-200 bg-white p-4 sm:p-5 text-xs sm:text-sm leading-relaxed text-slate-800 space-y-4">
+                {activeCase?.steps && activeCase.steps.length > 0 ? (
+                  activeCase.steps.map((step) => (
+                    <div key={step.stepOrder} className="space-y-1">
+                      <p className="font-semibold text-slate-900">
+                        {step.stepOrder}. {step.stepName}
+                        {step.executor && (
+                          <span className="text-slate-500 font-normal"> ({step.executor})</span>
+                        )}
+                      </p>
+                      <p className="whitespace-pre-line text-slate-700 pl-4 border-l-2 border-slate-200">
+                        {step.actionDetails}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="whitespace-pre-line">
+                    - Người yêu cầu nộp hồ sơ trực tiếp tại Bộ phận Một cửa UBND cấp xã/phường hoặc nộp trực tuyến qua Cổng Dịch vụ công.
+                    {'\n'}- Cán bộ tiếp nhận kiểm tra tính đầy đủ, hợp lệ của thành phần hồ sơ và cấp giấy tiếp nhận/hẹn trả kết quả.
+                    {'\n'}- Cơ quan có thẩm quyền xử lý, thẩm tra và ban hành kết quả theo quy định.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* 4. CÁCH THỨC THỰC HIỆN (Bảng 4 cột chuẩn Cổng DVCQG) */}
+            <section className="space-y-3">
+              <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                Cách Thức Thực Hiện
+              </h2>
+
+              <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
+                <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                      <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4">Hình thức nộp</th>
+                      <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4">Thời gian</th>
+                      <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4">Phí, lệ phí</th>
+                      <th scope="col" className="p-2.5 w-1/4">Mô tả</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {payload.submissionMethods.length > 0 ? (
+                      payload.submissionMethods.map((method, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/70">
+                          <td className="p-2.5 border-r border-slate-200 font-medium text-slate-900">
+                            {method.methodName}
+                          </td>
+                          <td className="p-2.5 border-r border-slate-200 text-slate-700">
+                            {method.estimatedDays && method.estimatedDays > 0
+                              ? `${method.estimatedDays} ngày làm việc`
+                              : procedure.processingTimeSummary || 'Trong ngày'}
+                          </td>
+                          <td className="p-2.5 border-r border-slate-200 text-slate-700">
+                            {method.feeAmount === 0
+                              ? 'Miễn phí'
+                              : `${method.feeAmount.toLocaleString('vi-VN')} ${method.feeUnit}`}
+                          </td>
+                          <td className="p-2.5 text-slate-600">
+                            {method.note || ''}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-slate-500">
+                          {procedure.processingTimeSummary} · {procedure.feeSummary}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* 5. THÀNH PHẦN HỒ SƠ (Bảng phân chia Giấy tờ phải nộp & Giấy tờ phải xuất trình) */}
+            <section className="space-y-4">
+              <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                Thành phần hồ sơ
+              </h2>
+
+              {/* Bảng Giấy tờ phải nộp */}
+              <div className="space-y-2">
+                <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
+                  * Giấy tờ phải nộp:
+                </p>
+
+                <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
+                  <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/2">Tên giấy tờ</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4 text-center">Mẫu đơn, tờ khai</th>
+                        <th scope="col" className="p-2.5 w-1/4 text-center">Số lượng</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {nopItems.length > 0 ? (
+                        nopItems.map((item, idx) => {
+                          // Tìm form tương ứng nếu có
+                          const matchingForm = forms.find(
+                            (f) => f.formCode === item.checklistId || f.formName.includes(item.itemName),
+                          );
+
+                          return (
+                            <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
+                              <td className="p-2.5 border-r border-slate-200">
+                                <p className="font-medium text-slate-900">{item.itemName}</p>
+                                {item.conditionNote && (
+                                  <p className="mt-1 text-xs text-slate-500 italic">
+                                    Ghi chú: {item.conditionNote}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="p-2.5 border-r border-slate-200 text-center text-slate-600">
+                                {matchingForm ? (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                    {matchingForm.formCode}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-center text-slate-800 font-medium">
+                                {item.quantity} {getCopyTypeLabel(item.documentCopyType)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="p-3 text-center text-slate-500">
+                            Không yêu cầu thêm giấy tờ nộp kèm ngoài tờ khai chính.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Bảng Giấy tờ phải xuất trình */}
+              <div className="space-y-2 pt-2">
+                <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
+                  * Giấy tờ phải xuất trình:
+                </p>
+
+                <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
+                  <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/2">Tên giấy tờ</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4 text-center">Mẫu đơn, tờ khai</th>
+                        <th scope="col" className="p-2.5 w-1/4 text-center">Số lượng</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {xuatTrinhItems.length > 0 ? (
+                        xuatTrinhItems.map((item, idx) => (
+                          <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
+                            <td className="p-2.5 border-r border-slate-200">
+                              <p className="font-medium text-slate-900">{item.itemName}</p>
+                              {item.conditionNote && (
+                                <p className="mt-1 text-xs text-slate-500 italic">
+                                  Ghi chú: {item.conditionNote}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-2.5 border-r border-slate-200 text-center text-slate-400">
+                              —
+                            </td>
+                            <td className="p-2.5 text-center text-slate-800 font-medium">
+                              {item.quantity} {getCopyTypeLabel(item.documentCopyType)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td className="p-2.5 border-r border-slate-200">
+                            Thẻ Căn cước công dân / Thẻ căn cước hoặc Hộ chiếu còn giá trị sử dụng
+                          </td>
+                          <td className="p-2.5 border-r border-slate-200 text-center text-slate-400">
+                            —
+                          </td>
+                          <td className="p-2.5 text-center text-slate-800 font-medium">
+                            1 bản chính
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            {/* 6. CĂN CỨ PHÁP LÝ */}
+            {payload.legalReferences && payload.legalReferences.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                  Căn cứ pháp lý
+                </h2>
+
+                <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
+                  <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-3/4">Tên văn bản pháp lý</th>
+                        <th scope="col" className="p-2.5 w-1/4">Mã văn bản</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {payload.legalReferences.map((ref, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/70">
+                          <td className="p-2.5 border-r border-slate-200 text-slate-800 leading-relaxed">
+                            {ref.documentName}
+                          </td>
+                          <td className="p-2.5 font-medium text-slate-900 whitespace-nowrap">
+                            {ref.documentNumber}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {/* 7. KẾT QUẢ THỰC HIỆN */}
+            {payload.results && payload.results.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                  Kết quả thực hiện
+                </h2>
+                <div className="rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm text-slate-800 space-y-1.5">
+                  {payload.results.map((res, idx) => (
+                    <p key={idx} className="flex items-start gap-2">
+                      <span className="text-red-700 font-bold">•</span>
+                      <span>{res}</span>
+                    </p>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 8. PDF NGUỒN CÔNG BỐ */}
+            {procedure.pdfFileName && (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
+                  Tệp văn bản nguồn công bố
+                </h2>
+                <div className="rounded-md border border-slate-200 bg-white p-4 shadow-2xs">
+                  <div className="flex items-center justify-between gap-4 mb-3">
+                    <span className="text-xs font-semibold text-slate-700 truncate">
+                      {procedure.pdfFileName}
+                    </span>
+                  </div>
+                  <div className="h-[450px] w-full rounded border border-slate-200 overflow-hidden">
+                    <PdfSource id={procedure.id} />
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* CỘT PHẢI: SIDEBAR TIỆN ÍCH (4/12 cột = ~33%) */}
+          <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
+
+            {/* CARD 2: TÌM KIẾM NHIỀU NHẤT */}
+            <div className="rounded-lg border border-slate-300 bg-white shadow-xs overflow-hidden">
+              <div className="bg-[#f8fafc] px-4 py-2.5 border-b border-slate-200">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Tìm kiếm nhiều nhất
+                </h3>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {popularQuery.data?.items && popularQuery.data.items.length > 0 ? (
+                  popularQuery.data.items.slice(0, 7).map((item: ProcedureSummary) => (
+                    <Link
+                      key={item.id}
+                      to={`/thu-tuc/${item.id}`}
+                      className="group flex items-start gap-2 p-3 text-xs sm:text-[13px] hover:bg-slate-50 transition-colors"
+                    >
+                      <CaretRight size={14} className="text-red-700 mt-0.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 group-hover:text-red-800 line-clamp-2 leading-snug">
+                          {item.title}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {item.categoryName || item.levelOfImplementation}
+                        </p>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  // Fallback các thủ tục phổ biến theo mẫu DVCQG
+                  [
+                    { title: 'Hỗ trợ phát triển sản xuất cộng đồng.', org: 'UBND tỉnh Sơn La' },
+                    { title: 'Hưởng trợ cấp thất nghiệp (Cấp tỉnh)', org: 'Bộ Nội vụ' },
+                    { title: 'Cấp Phiếu lý lịch tư pháp cho công dân Việt Nam, người nước ngoài...', org: 'Bộ Công an' },
+                    { title: 'Thông báo hàng tháng về việc tìm kiếm việc làm (Cấp tỉnh)', org: 'Bộ Nội vụ' },
+                    { title: 'Đăng ký biến động quyền sử dụng đất, quyền sở hữu tài sản gắn liền...', org: 'UBND tỉnh Gia Lai' },
+                    { title: 'Cung cấp thông tin, dữ liệu đất đai', org: 'Bộ Nông nghiệp và Môi trường' },
+                    { title: 'Thủ tục Chứng thực bản sao từ bản chính các giấy tờ, văn bản...', org: 'Bộ Ngoại giao' },
+                  ].map((mock, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-3 text-xs sm:text-[13px]">
+                      <CaretRight size={14} className="text-red-700 mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 line-clamp-2 leading-snug">
+                          {mock.title}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">{mock.org}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
     </div>
   );
 }

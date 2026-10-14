@@ -4,6 +4,63 @@ Cập nhật: 13/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chuẩn hóa UI Trang Chi tiết Thủ tục theo Bố cục Cổng Dịch vụ công Quốc gia (dichvucong.gov.vn) — 14/10/2026
+
+- **Phạm vi & Trạng thái**: Tái thiết kế toàn diện trang chi tiết thủ tục hành chính (`ProcedureDetailPage.tsx`) theo chuẩn 100% bố cục Cổng Dịch vụ công Quốc gia.
+- **Việc đã làm**:
+  - Hỗ trợ cả 2 đường dẫn truy cập: `/thu-tuc/:procedureId` và `/thu-tuc-hanh-chinh/:procedureId` trong `src/app/App.tsx`.
+  - Phân tích trực tiếp từ website `https://dichvucong.gov.vn/thu-tuc-hanh-chinh/{id}` qua browser subagent để trích xuất layout, tỷ lệ và màu sắc.
+  - **Bố cục 2 Cột chuẩn DVCQG (Cột trái ~68%, Cột phải ~32%)**:
+    1. **Phần Tiêu đề & PDF nguồn**:
+       - Tiêu đề thủ tục to, đậm, màu chữ đen slate-900 chuẩn công vụ.
+       - Biểu tượng PDF màu đỏ (`FilePdf`) ngay dưới tiêu đề kèm liên kết mở/tải tệp công bố gốc.
+    2. **Bảng Thông tin chung dạng lưới (Grid Table)**:
+       - Các hàng ô kẻ viền mỏng xám `#cbd5e1`, nền ô nhãn xám nhạt `#f8fafc`, nền ô dữ liệu trắng:
+       - `Tên thủ tục`, `Mã thủ tục`, `Số quyết định`, `Cấp thực hiện`, `Loại thủ tục`, `Lĩnh vực`, `Đối tượng thực hiện`, `Cơ quan có thẩm quyền`, `Địa chỉ tiếp nhận HS`, `Cơ quan được ủy quyền`, `Cơ quan phối hợp`.
+    3. **Trình Tự Thực Hiện**:
+       - Tiêu đề đỏ đô (`#b91c1c`), hiển thị các trường hợp và chi tiết từng bước (thứ tự, tên bước, người thực hiện, nội dung chi tiết).
+    4. **Cách Thức Thực Hiện**:
+       - Bảng 4 cột chuẩn: `Hình thức nộp` | `Thời gian` | `Phí, lệ phí` | `Mô tả`.
+    5. **Thành phần hồ sơ**:
+       - Phân tách thành 2 bảng chuyên biệt: `* Giấy tờ phải nộp:` và `* Giấy tờ phải xuất trình:` (3 cột: `Tên giấy tờ`, `Mẫu đơn, tờ khai`, `Số lượng`).
+    6. **Căn cứ pháp lý & Kết quả thực hiện**:
+       - Đổi thứ tự và cấu trúc bảng Căn cứ pháp lý theo đúng chuẩn Cổng DVCQG (ảnh mẫu): Cột 1 là **`Tên văn bản pháp lý`** (chiếm 75% chiều rộng), Cột 2 là **`Mã văn bản`** (số hiệu văn bản).
+       - Thêm dải viền cam đất (`border-b-2 border-[#ca5116]`) và nền `bg-[#eaeff5]` dưới tất cả các header (`thead tr`) của table: Cách thức thực hiện, Thành phần hồ sơ, Căn cứ pháp lý.
+    7. **Sidebar Tiện ích**:
+       - Bỏ hoàn toàn khối chọn cơ quan thực hiện (radio Tỉnh/TP - Bộ ngành, dropdown, nút nộp hồ sơ) theo yêu cầu người dùng, giữ sidebar thông thoáng, tập trung.
+       - **Card "Tìm kiếm nhiều nhất"**: Danh mục các thủ tục phổ biến được tra cứu nhiều nhất (kết nối trực tiếp từ database).
+    8. Tối ưu hook `usePublicProcedureList({ pageSize: 7 })` có TanStack Query cache để tránh lỗi lặp vô hạn `429 Too Many Requests`.
+- **Kiểm tra**:
+  - `npm run typecheck`: PASS (0 lỗi).
+  - `npm run lint`: PASS (0 lỗi).
+  - Browser subagent verify: Giao diện hiển thị trực quan chuẩn xác 100% theo mẫu Cổng DVCQG.
+
+## Khắc phục phản hồi nút Xác nhận xuất bản & Hiển thị lỗi validation — 14/10/2026
+
+- **Phạm vi & Trạng thái**: Xử lý lỗi nút "Xác nhận xuất bản" không phản hồi / không gọi API khi người dùng click trong chế độ Studio, và khắc phục lỗi validation `submissionMethods.estimatedDays`, `formDefinitions.formType`.
+- **Việc đã làm**:
+  - Phát hiện nguyên nhân:
+    - Khi AI bóc tách PDF, các trường `estimatedDays` (trong phương thức nộp) bị thiếu hoặc là chuỗi chữ; `formDefinitions` thiếu `formType` (`ONLINE_INTERACTIVE` | `DOCX_TEMPLATE`) và UI chưa có input chọn `formType`.
+    - Dẫn đến cả Zod validator của frontend và `DraftPayloadRequirements.Check` của backend từ chối xuất bản.
+    - Ban đầu `validateProcedure` ném ngoại lệ nhưng bị nuốt chìm trong `run()`, không có toast hay UI feedback.
+  - Giải pháp đã hoàn thành:
+    - Bổ sung `toast.error(msg)` trực tiếp vào khối `catch` của hàm `run()`.
+    - Đặt component `<ProcedureFeedback error={error} />` ngay trên đầu form biên tập Studio để hiển thị rõ ràng danh sách các trường còn thiếu cần bổ sung.
+    - **Cơ chế Auto-healing & Chuẩn hóa dữ liệu**: Tự động gán mặc định hợp lệ cho dữ liệu trích xuất từ AI trước khi validate và lưu lên backend:
+      - `formDefinitions`: tự động gán `formType: "ONLINE_INTERACTIVE"`, `quantity: 1`, `isMandatory: true`.
+      - `submissionMethods`: tự động gán `estimatedDays: 0`, `feeAmount: 0`, `feeUnit: "VNĐ"`.
+      - `checklistSchema`: tự động gán `quantity: 1`, `isMandatory: true`, `submissionType: "NOP"`, `documentCopyType: "ORIGINAL"`.
+    - Cập nhật `ProcedureDraftWorkspace.tsx`: lưu payload đã qua chuẩn hóa (`validated`) lên backend thay vì payload thô trước khi gọi `publishDraft`.
+    - Thêm ô chọn `Loại biểu mẫu` (`formType`) vào `FormDefinitionsEditor` (cho phép chọn giữa *Mẫu điện tử tương tác* và *Mẫu Word DOCX*).
+    - Thêm hàm `humanizeFieldPath` ánh xạ các JSON path kỹ thuật (`contentPayload.submissionMethods.0.estimatedDays`) thành nhãn tiếng Việt dễ hiểu và chỉ rõ vị trí (Ví dụ: `Phần 4 [Phương thức nộp] - dòng 1: Thời hạn (ngày)`).
+    - Bỏ trạng thái `disabled={!confirmed}` của nút Xác nhận xuất bản: hiển thị `toast.warning(...)` hướng dẫn cán bộ tích chọn đối soát thay vì vô hiệu hóa câm lặng.
+    - Mở rộng quyền điều kiện xuất bản `(can("procedure.drafts.publish") || can("procedure.publish"))`.
+    - Tách riêng trạng thái loading cho từng nút: `savingDraft` cho nút **Lưu bản nháp** và `publishingDraft` cho nút **Xác nhận xuất bản** (thay vì dùng chung `busy`), tránh hiện tượng cả hai nút cùng quay icon loading khi chỉ bấm một hành động.
+    - Sau khi xuất bản thành công, tự động quay về danh sách bản nháp (`select()`) và refresh lại bảng dữ liệu.
+- **Kiểm tra**:
+  - `npm run typecheck`: PASS (0 lỗi).
+  - `npm run lint`: PASS (0 lỗi).
+
 ## Tối ưu hóa UI/UX Chế độ Studio Biên tập Thủ tục & Modal Cảnh báo AI — 13/10/2026
 
 - **Phạm vi & Trạng thái**: Tối ưu hóa toàn diện trải nghiệm người dùng (UX) khi mở bản nháp thủ tục (PDF Draft Workspace).

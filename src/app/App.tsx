@@ -79,6 +79,7 @@ export function App() {
                   <Route path="hoi-dap" element={<FaqPage />} />
                   <Route path="thu-tuc" element={<ProceduresPage />} />
                   <Route path="thu-tuc/:procedureId" element={<ProcedureDetailPage />} />
+                  <Route path="thu-tuc-hanh-chinh/:procedureId" element={<ProcedureDetailPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
