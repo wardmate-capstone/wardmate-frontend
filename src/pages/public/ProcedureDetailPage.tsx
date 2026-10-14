@@ -11,6 +11,7 @@ import { procedureError, type ProcedureSummary } from '@/lib/api/procedures';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
+import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
@@ -69,7 +70,7 @@ export function ProcedureDetailPage() {
   const cases = payload.cases || [];
   const activeCase = cases[selectedCaseIdx] || cases[0];
   const checklist = procedure.checklistSchema || [];
-  const forms = procedure.formDefinitions || [];
+  const forms = (procedure.formDefinitions || []).filter(form => !form.caseCode || !activeCase || form.caseCode === activeCase.caseCode);
 
   // Lọc checklist theo trường hợp
   const currentChecklist = checklist.filter((item) => {
@@ -365,6 +366,15 @@ export function ProcedureDetailPage() {
               </h2>
 
               {/* Bảng Giấy tờ phải nộp */}
+              {forms.length > 0 && <section aria-label="Biểu mẫu của thủ tục" className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+                <h3 className="font-bold">Biểu mẫu, tờ khai</h3>
+                <p className="text-sm text-slate-600">Tải phôi trống để chuẩn bị hồ sơ. Tải hoặc điền mẫu chưa phải gửi hồ sơ tiền kiểm.</p>
+                {forms.map((form, index) => <div key={`${form.formTemplateId ?? form.formCode}-${index}`} className="space-y-2 border-t border-slate-100 pt-3">
+                  <p className="font-semibold">{form.formCode} · {form.formName}</p>
+                  <p className="text-sm text-slate-600">{form.quantity} bản · {form.isMandatory ? 'Bắt buộc' : 'Theo nhu cầu'}</p>
+                  <FormTemplateActions templateId={form.formTemplateId} name={form.formName} />
+                </div>)}
+              </section>}
               <div className="space-y-2">
                 <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
                   * Giấy tờ phải nộp:
@@ -382,11 +392,6 @@ export function ProcedureDetailPage() {
                     <tbody className="divide-y divide-slate-200">
                       {nopItems.length > 0 ? (
                         nopItems.map((item, idx) => {
-                          // Tìm form tương ứng nếu có
-                          const matchingForm = forms.find(
-                            (f) => f.formCode === item.checklistId || f.formName.includes(item.itemName),
-                          );
-
                           return (
                             <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
                               <td className="p-2.5 border-r border-slate-200">
@@ -398,13 +403,7 @@ export function ProcedureDetailPage() {
                                 )}
                               </td>
                               <td className="p-2.5 border-r border-slate-200 text-center text-slate-600">
-                                {matchingForm ? (
-                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                    {matchingForm.formCode}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
+                                <span className="text-slate-400">—</span>
                               </td>
                               <td className="p-2.5 text-center text-slate-800 font-medium">
                                 {item.quantity} {getCopyTypeLabel(item.documentCopyType)}
