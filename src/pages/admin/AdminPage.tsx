@@ -13,7 +13,6 @@ import {
   ClipboardText,
   Database,
   FileCode,
-  FileText,
   House,
   Key,
   List,
@@ -50,6 +49,7 @@ import type { ManagerProfileItem } from '@/pages/manager/types';
 import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
+import { FormsView } from './FormsView';
 
 type SectionId =
   | "overview"
@@ -362,7 +362,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           {activeSection === "procedures" && (
             <ProcedureManagerPage embedded initialSection="procedures" />
           )}
-          {activeSection === "forms" && <FormsView onAction={demoAction} />}
+          {activeSection === "forms" && <FormsView />}
           {activeSection === "knowledge" && (
             <KnowledgeView onAction={demoAction} />
           )}
@@ -709,20 +709,7 @@ function SearchBar({
   );
 }
 
-function FormsView({ onAction }: { onAction: (message: string) => void }) {
-  void onAction;
-  return (
-    <section className="admin-card admin-content-card p-8">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileText size={40} className="text-slate-300 mb-2" />
-        <h2 className="text-base font-bold text-slate-800">Kho biểu mẫu điện tử</h2>
-        <p className="mt-2 text-xs text-slate-400 italic">
-          ⚠️ API quản lý danh sách biểu mẫu và tờ khai trực tuyến sẽ được tích hợp sau.
-        </p>
-      </div>
-    </section>
-  );
-}
+
 
 function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
   void onAction;
