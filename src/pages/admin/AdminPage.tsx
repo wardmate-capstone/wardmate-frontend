@@ -79,7 +79,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
         permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'],
         fallbackRoles: ['IT_ADMIN'],
       },
-      { id: "forms", label: "Danh sách biểu mẫu", icon: FileCode, fallbackRoles: ['IT_ADMIN'] },
+      { id: "forms", label: "Danh sách biểu mẫu", icon: FileCode, permissions: ['document.templates.read', 'document.templates.manage'] },
       {
         id: "knowledge",
         label: "Dữ liệu kiến thức AI",
