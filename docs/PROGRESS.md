@@ -4,7 +4,54 @@ Cập nhật: 14/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Tích hợp & Kiểm thử Cụm API Phôi Biểu mẫu (Form Templates) — 14/10/2026
+## Đóng gói 12 commit trên main — 14/10/2026
+
+- Người dùng yêu cầu chia toàn bộ phần biểu mẫu thành đúng 12 commit và push frontend lên origin/main. Baseline `d8b7e49`; đã fetch và xác minh main/origin/main đồng bộ trước khi tạo commit. Remote: https://github.com/wardmate-capstone/wardmate-frontend.git. Không có thay đổi ở repository backend.
+- 11 commit code/test: `9629d19` cấu hình Gateway/Vercel; `133121c` dependency preview; `9400c6a` API/validation/lỗi; `5eb81f6` dựng DOCX; `38b5074` thao tác xem/tải; `8c85033` kho Admin; `7ff69ab` bộ chọn; `6bad714` editor/chi tiết thủ tục; `489c394` workspace/sidebar; `6d93bf6` mẫu ở trang công khai; `8566118` kiểm thử. Commit tài liệu chứa ghi chú này là commit thứ 12.
+- Kiểm tra ngay trước đóng gói: build (gồm tsc --noEmit), lint, diff --check đạt; 21/21 test Edge liên quan đạt. Không chạy lại toàn bộ hồi quy cũ. Build còn cảnh báo Zod/chunk lớn; các giới hạn Azure 403 và audit toolchain ở các mục dưới vẫn còn.
+- Tại thời điểm tạo commit bàn giao chưa xác nhận push; bước cuối của phiên là push main và đối chiếu HEAD với remote. Kiểm tra Git để biết trạng thái đồng bộ mới nhất; push Git không phải bằng chứng deployment thành công.
+
+## Làm gọn bộ chọn và xem trước nội dung Word — 14/10/2026
+
+- Theo yêu cầu mới: `ProcedureFormPicker.tsx` tách khỏi editor, bố trí kho và mẫu đã gắn cạnh nhau trên màn hình rộng, danh sách kho gọn/cuộn độc lập. Mẫu đã gắn có tóm tắt số bản/bắt buộc/trường hợp, nút bỏ rõ tên và thiết lập trong phần mở rộng; giữ tìm mã/phân trang/nhiều lựa chọn/validation khi lưu thủ tục.
+- `RoleWorkspaceSidebars.tsx`: bỏ mục Upload biểu mẫu và icon thừa; upload/thay phôi tiếp tục ở Danh sách biểu mẫu. Không xóa xử lý section cũ để tránh ảnh hưởng liên kết nội bộ đã có.
+- `FormTemplateActions.tsx`, `DocxPreview.tsx`: Xem mẫu mở modal rộng, tải binary bằng JWT client/AbortSignal rồi render DOCX thật (chữ, bảng, trang), thu/phóng/vừa khung, tải gốc, lỗi và thử lại. Query binary chỉ khi mở/có file/đang hoạt động, gcTime 0; không gửi file sang Office/Google viewer. Không phải PDF nguồn thủ tục, không thêm endpoint chuyển đổi hoặc editor/lưu đơn giả.
+- Thêm `docx-preview` 0.4.1, tải module khi xem; package-lock cập nhật. Theo API chính thức: https://github.com/VolodymyrBaydalka/docxjs. Preview nằm trong iframe sandbox không cho script, CSP chặn request bên ngoài, tắt altChunks và liên kết tài liệu; CSS tài liệu không tác động UI ngoài. Độ giống Word phụ thuộc tính năng DOCX/font, có ghi chú trong preview.
+- `tests/fixtures/formTemplateDocx.ts`: DOCX thử nghiệm tự tạo có tiêu đề, bảng và hyperlink. Nhóm test bổ sung xác minh nội dung thật trong iframe, file hỏng, sandbox/không có href và bỏ Upload sidebar; không chỉ mock HTML render.
+- Kiểm tra: typecheck/lint/build và diff --check đạt; build còn cảnh báo Zod annotation/chunk lớn. **21/21 mock Edge đạt** (biểu mẫu + chọn mẫu hiện có + workspace-sidebar), đã xem ảnh desktop/mobile, kiểm tra trang Word nằm trọn chiều ngang khi vừa khung. Sau chuyển nút tải Word vào footer cố định, chạy lại 3 luồng preview đạt 3/3; typecheck/lint cuối đạt. DOCX thực được tạo trong test và render qua thư viện thật; HTTP vẫn mock, chưa xác minh tài khoản/file Azure thật. npm audit báo 2 high ở brace-expansion/source-map-js trong toolchain ESLint/Vite/Tailwind cũ, không thuộc cây docx-preview; chưa mở rộng sang audit fix toàn dự án. Giữ nguyên thay đổi chưa commit của người dùng; chưa commit/push/deploy.
+
+## Bộ chọn thủ tục dùng trực tiếp kho biểu mẫu — 14/10/2026
+
+- Theo ảnh mới, lỗi ở bộ chọn là thông báo từ API trung gian Catalog `/api/v1/procedure-manager/document-forms`, không phải kho mẫu Admin. Source local `DocumentFormsClient` gọi DocumentForm không chuyển JWT, quy nhiều lỗi upstream về cùng thông báo unavailable; không đủ bằng chứng xác định status upstream của deployment.
+- `ProcedureApiEditor.tsx` chuyển bộ chọn sang `getFormTemplates`/JWT client giống kho Admin: để trống duyệt kho đang hoạt động, tìm theo mã có debounce/hủy request, phân trang 10 mẫu/trang, giữ nhiều lựa chọn khi tìm/chuyển trang; dùng thông báo lỗi DocumentForm thật. Gắn đúng id/code/title, `formType: DOCX_TEMPLATE`; hiển thị trạng thái có Word, không cho gắn mới mẫu chưa có file. Không tạo endpoint hoặc fallback mẫu giả.
+- Cache bộ chọn cùng prefix form-templates nên tạo/thay file ở kho sẽ invalidate đúng; `FormsView.tsx` bỏ invalidation key trung gian không dùng nữa. Không thay đổi BE hoặc quyền Azure.
+- Các mẫu đã gắn vẫn được lưu qua API cập nhật thủ tục và công dân xem metadata/tải Word qua FormTemplateActions. Chưa thêm editor DOCX trực tuyến; đã hỏi người dùng cần chỉnh sửa file Word tải về hay chỉnh sửa/lưu trực tiếp trên web, đang chờ lựa chọn. Không nối editor HTML minh họa và không báo lưu đơn thành công giả.
+- Kiểm tra lượt này: typecheck/lint/build và diff --check đạt; build còn cảnh báo Zod annotation/chunk lớn. Nhóm `tests/form-templates.spec.ts` + `tests/procedure-manager.spec.ts:170` đạt **13/13 mock Edge**; gồm chọn nhiều mẫu/lưu/hiển thị công khai, API trung gian giả lập 503 nhưng kho trực tiếp vẫn dùng được, Bearer trên request kho, tìm mã/reset trang/giữ lựa chọn và chặn mẫu thiếu file. Đã xem ảnh bộ chọn tìm mã. Không kiểm thử tài khoản Azure thật, không báo đã sửa quyền 403 hay kết nối server-to-server BE. Giữ nguyên thay đổi nhãn “Thêm đơn” của người dùng và các thay đổi chưa commit từ lượt trước; không commit/push/deploy.
+
+## Đồng bộ nút biểu mẫu, chọn nhiều mẫu và điều tra 403 Admin — 14/10/2026
+
+- Yêu cầu mới: đồng bộ nút Xem mẫu/Tải mẫu/Thay đổi, mẫu thiếu file chỉ có Xem mẫu/Tải lên; kiểm tra quyền Admin và làm rõ nơi chọn nhiều mẫu cho thủ tục.
+- `FormTemplateActions.tsx`, `FormsView.tsx`: cùng Button outline nhỏ/bo góc/icon; thao tác quản lý nằm cùng nhóm với xem/tải. Truyền trạng thái có file để ẩn nút tải không sử dụng được. Bảng có chiều rộng tối thiểu và cuộn bên trong trên mobile.
+- `ProcedureApiDetail.tsx`, `ProcedureApiEditor.tsx`: tab Biểu mẫu chỉ xem có số mẫu/trạng thái rỗng và nút Chọn/Quản lý biểu mẫu (cần procedure.update), mở thẳng tab Biểu mẫu của modal chỉnh sửa. Bộ chọn tìm theo mã, chọn/bỏ nhiều mẫu, giữ cấu hình trường hợp/số lượng/bắt buộc. Lưu dùng API cập nhật thủ tục hiện có; không tạo endpoint mới.
+- Điều tra 403: response người dùng cung cấp là **POST /api/v1/form-templates → 403 auth.forbidden** ngay lúc tạo phôi, chưa phải upload-docx. Không coi vai trò IT_ADMIN là bằng chứng được API cấp quyền; không thêm bypass FE. Nút tạo đang hiện cho thấy FE nhận quyền manage. Code request dùng JWT client chung; kiểm thử mock xác minh Bearer được gửi. `formTemplates.ts` giữ thông báo từ chối/traceId của server, phân biệt mã iam.csrf_rejected; để Axios/browser tự dựng multipart boundary.
+- Đối chiếu BE local: IAM migration DeployedFeaturePermissionCatalog cấp document.templates.manage cho IT_ADMIN/PROCEDURE_MANAGER, JwtTokenService phát claim permissions. Nhưng DocumentForm local controller/Program chưa có auth/policy tương ứng với Azure; không đủ source đúng phiên bản để sửa policy đang trả auth.forbidden. Cần đối chiếu quyền trong JWT với policy và nguồn IAM của deployment; chưa xác minh hay khắc phục quyền thật trên Azure. Không sửa BE hoặc tự cấp quyền.
+- Kiểm tra lượt này: typecheck/lint/build đạt; build còn cảnh báo Zod annotation và chunk lớn như trước. Nhóm `tests/form-templates.spec.ts` + `tests/procedure-manager.spec.ts:170` đạt **12/12 mock Edge**, gồm 3 ca mới cho thao tác Admin/mẫu thiếu file, tạo phôi bị 403 có lý do/trace, chọn hai mẫu từ tab chỉ xem rồi kiểm tra hiển thị công khai. Đã xem ảnh Admin ở desktop và mobile; không chạy lại toàn bộ hồi quy 52 ca của lượt trước. `git diff --check` đạt. Không commit/push/deploy.
+
+## Hoàn thiện luồng kho biểu mẫu → thủ tục → tải mẫu — 14/10/2026
+
+- Phạm vi được duyệt: triển khai bước 1–4 của kế hoạch; chưa triển khai editor DOCX/lưu đơn cá nhân, phiên bản mẫu hay E-form.
+- `FormsView.tsx` dùng chung cho Admin và Quản lý thủ tục (Danh sách/Upload biểu mẫu). Query theo user ID, có AbortSignal, phân trang/tìm mã/lọc trạng thái, lỗi và thử lại. Tạo mẫu bằng RHF/Zod (mã 1–50, tên 1–255), kiểm tra file không rỗng/.docx/20 MiB, xác nhận thay phôi và invalidation cache sau ghi. Nút ghi chỉ hiện khi có `document.templates.manage`; xem kho cần read hoặc manage.
+- `src/components/forms/FormTemplateActions.tsx`: xem metadata và tải binary qua JWT client; kiểm tra mẫu hoạt động/có file, không mở Blob URL trực tiếp. Nội dung modal không khẳng định có E-form chỉ dựa trên `onlineReady`. Khách được hướng dẫn đăng nhập với returnTo nội bộ; backend vẫn quyết định quyền API.
+- `ProcedureApiEditor.tsx`: Query cho bộ chọn mẫu (debounce, hủy request cũ, cache theo user); xem/tải phôi trước khi chọn, giữ luồng lưu `formDefinitions.formTemplateId` hiện có.
+- `ProcedureDetailPage.tsx`: liệt kê mẫu từ formDefinitions theo trường hợp, số bản/bắt buộc, xem/tải hoặc thông báo chưa liên kết. Bỏ cách đoán quan hệ mẫu–checklist bằng tên; quan hệ này vẫn cần BE/nghiệp vụ xác nhận. Không tự tạo API liên kết.
+- `formTemplates.ts`: validation response, AbortSignal, xử lý lỗi tải binary/403/404/409; bảo vệ tên file mã hóa lỗi. `vercel.json`: thêm rewrite biểu mẫu trước route IAM. `.env.example`: mặc định cùng origin; base API riêng phải là Gateway phục vụ cả IAM/DocumentForm, không trỏ IAM-only.
+- Đối chiếu trước triển khai: Swagger Azure có Bearer; GET không token ở cả hai dạng route trả 401. Source BE local khác deployment (thiếu một số controller và cấu hình auth); không suy ra RBAC Azure đã xác minh chỉ từ IAM permission catalog.
+- Kiểm tra cuối: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` đạt. Build còn cảnh báo annotation từ Zod và chunk >500 kB.
+- Mock Edge: chạy cuối `tests/form-templates.spec.ts` cùng `tests/procedure-manager.spec.ts:170` đạt **9/9** (8 ca mới + ca chọn mẫu hiện có). Đã sửa lỗi hiển thị tên mẫu đã chọn hai lần phát hiện trong lượt hồi quy; xem phôi/tải được cả khi nội dung thủ tục ở chế độ chỉ đọc. Đã kiểm tra ảnh kho mẫu 390px sau khi hiệu ứng sidebar hoàn tất.
+- Hồi quy rộng: chạy 52 ca thuộc `procedure-manager`, `jwt-client`, `design-system`, `landing`: 42 đạt/10 lỗi ở lượt đầu; lỗi chọn mẫu do thay đổi mới đã sửa và chạy lại đạt ở nhóm 9/9. Còn 9 lỗi chưa xử lý trong các test đăng ký, tra cứu công khai, tab trường hợp, PDF nguồn/rollback và xuất bản nháp PDF (bộ chọn/luồng cũ không khớp UI hiện tại); chưa chạy lại toàn bộ 52 ca sau sửa. JWT 10/10 và design-system 4/4 đạt trong lượt này. Không báo hồi quy toàn bộ đạt.
+- Giới hạn: chưa kiểm thử ghi Azure bằng tài khoản thật; không ghi dữ liệu production, không thay BE, chưa deploy/commit/push. Vercel rewrite mới cần xác minh sau deploy. Chỉ kiểm thử mock binary, chưa chứng minh một DOCX thật được Word mở đúng.
+
+## Tích hợp ban đầu Cụm API Phôi Biểu mẫu (Form Templates) — 14/10/2026 (ghi nhận lịch sử)
 
 - **Phạm vi & Trạng thái**: Triển khai API client `src/lib/api/formTemplates.ts`, cấu hình proxy Vite cho Gateway Azure, và xây dựng giao diện hoàn chỉnh `FormsView.tsx` tại phân hệ Quản trị (`AdminPage.tsx`). Đã kiểm thử kết nối trực tiếp với Azure và xác nhận phản hồi HTTP 200 OK.
 - **Việc đã làm**:
@@ -31,7 +78,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - `GET /api/v1/form-templates` ➔ **200 OK** (8 bản ghi mẫu thực tế trong database).
      - `GET /api/v1/form-templates/{id}` ➔ **200 OK** (chi tiết bản ghi mẫu kèm `onlineReady: true`).
      - `GET /api/v1/form-templates/{id}/download-docx` ➔ **200 OK** (nhận trọn vẹn 19.094 bytes binary Word docx).
-     - Phân quyền RBAC xác nhận: quyền `document.templates.read` cho người dùng xem/tải, quyền `document.templates.manage` (`IT_ADMIN` / `PROCEDURE_MANAGER`) cho tạo mới và tải lên.
+     - IAM có `document.templates.read` và `document.templates.manage`; ghi nhận cũ chưa đủ bằng chứng xác nhận thực thi RBAC cho từng endpoint trên Azure. Xem kết quả đối chiếu ở mục mới phía trên.
 - **Kiểm tra**:
   - `npm run typecheck`: PASS (0 lỗi).
   - `npm run lint`: PASS (0 lỗi).
