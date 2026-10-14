@@ -10,6 +10,14 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/v1/form-templates': {
+        target: 'https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
+      },
       '/api/v1/procedures': {
         target: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         changeOrigin: true,
