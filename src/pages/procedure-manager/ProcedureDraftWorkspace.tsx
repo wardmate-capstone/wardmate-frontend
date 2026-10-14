@@ -1,3 +1,4 @@
+import { ProcedureValidationError } from '@/lib/procedureValidation';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -219,6 +220,7 @@ export function ProcedureDraftWorkspace({
   const [previewing, setPreviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState<ProcedureValidationError | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -248,6 +250,7 @@ export function ProcedureDraftWorkspace({
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     setDraft(undefined);
+    setValidationError(null);
     setError("");
     setConfirmed(false);
     setDirty(false);
@@ -287,6 +290,7 @@ export function ProcedureDraftWorkspace({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const resetUpload = () => {
+    setValidationError(null);
     previewController.current?.abort();
     previewController.current = null;
     setPreviewing(false);
@@ -311,6 +315,7 @@ export function ProcedureDraftWorkspace({
     try {
       await action();
     } catch (e) {
+      if (e instanceof ProcedureValidationError) setValidationError(e);
       const msg = procedureError(e);
       setError(msg);
       toast.error(msg);
@@ -445,7 +450,7 @@ export function ProcedureDraftWorkspace({
                 <div className="flex-1 overflow-y-auto px-6 py-5">
                   <div className="mx-auto max-w-4xl space-y-6">
                     <ProcedureFeedback error={error} />
-                    <ProcedureApiEditor
+                    <ProcedureApiEditor validationError={validationError}
                       value={payload}
                       onChange={(next) => {
                         setPayload(next);
@@ -796,7 +801,7 @@ export function ProcedureDraftWorkspace({
                 )}
                 <details open className="rounded-xl border border-slate-200 bg-white">
                   <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-700">Kiểm tra thông tin đã nhận diện</summary>
-                  <div className="border-t border-slate-200 p-4"><ProcedureApiEditor value={preview.payload} onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }} categories={categories} disabled={!can("procedure.publish") || busy} /></div>
+                  <div className="border-t border-slate-200 p-4"><ProcedureApiEditor validationError={validationError} value={preview.payload} onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }} categories={categories} disabled={!can("procedure.publish") || busy} /></div>
                 </details>
                 {can("procedure.publish") && (
                   <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
