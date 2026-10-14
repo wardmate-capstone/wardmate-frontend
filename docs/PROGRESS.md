@@ -1,8 +1,41 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 13/10/2026.
+Cập nhật: 14/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Tích hợp & Kiểm thử Cụm API Phôi Biểu mẫu (Form Templates) — 14/10/2026
+
+- **Phạm vi & Trạng thái**: Triển khai API client `src/lib/api/formTemplates.ts`, cấu hình proxy Vite cho Gateway Azure, và xây dựng giao diện hoàn chỉnh `FormsView.tsx` tại phân hệ Quản trị (`AdminPage.tsx`). Đã kiểm thử kết nối trực tiếp với Azure và xác nhận phản hồi HTTP 200 OK.
+- **Việc đã làm**:
+  1. **Tạo API client chuẩn TypeScript (`src/lib/api/formTemplates.ts`)**:
+     - `getFormTemplates(params)`: `GET /api/v1/form-templates` (phân trang, lọc `isActive`, tìm kiếm `searchCode`).
+     - `getFormTemplateById(templateId)`: `GET /api/v1/form-templates/{templateId}` (chi tiết phôi kèm cờ `onlineReady`).
+     - `createFormTemplate(payload)`: `POST /api/v1/form-templates` (khởi tạo `code` và `title`).
+     - `uploadFormTemplateDocx(templateId, file)`: `POST /api/v1/form-templates/{templateId}/upload-docx` (`multipart/form-data` tải tệp Word `.docx` lên Azure Blob).
+     - `downloadFormTemplateDocx(templateId)`: `GET /api/v1/form-templates/{templateId}/download-docx` (nhận luồng nhị phân binary DOCX blob).
+     - `triggerFileDownload(blob, fileName)`: Helper tự động tải tệp về máy tính.
+     - `formTemplateErrorMessage(error)`: Xử lý thông báo lỗi thân thiện.
+  2. **Cấu hình định tuyến Vite Proxy (`vite.config.ts`)**:
+     - Điều hướng tuyến `/api/v1/form-templates` trỏ chính xác về YARP Gateway tại `https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`.
+  3. **Xây dựng giao diện Kho Phôi Biểu Mẫu (`src/pages/admin/FormsView.tsx`)**:
+     - Bảng danh sách phôi mẫu: Mã biểu mẫu, tiêu đề, trạng thái tệp DOCX (badge xanh/vàng), trạng thái hoạt động, ngày tạo.
+     - Thanh tìm kiếm theo mã phôi và bộ lọc nhanh trạng thái (Tất cả / Đang hoạt động / Tạm dừng).
+     - Phân trang đầy đủ (Trang trước / sau, hiển thị số lượng bản ghi).
+     - Modal tạo mới phôi biểu mẫu (`POST /api/v1/form-templates`).
+     - Modal tải lên tệp DOCX (`POST /api/v1/form-templates/{id}/upload-docx`) hỗ trợ kéo thả/chọn tệp và kiểm tra định dạng.
+     - Nút tải trực tiếp file DOCX gốc (`GET /api/v1/form-templates/{id}/download-docx`) với hiệu ứng loading/tải file.
+     - Modal xem chi tiết trạng thái sẵn sàng trực tuyến (`onlineReady`).
+     - Thay thế toàn bộ placeholder cũ trong `AdminPage.tsx`.
+  4. **Kiểm thử thực tế (Smoke test trực tiếp trên Cloud Azure)**:
+     - `GET /api/v1/form-templates` ➔ **200 OK** (8 bản ghi mẫu thực tế trong database).
+     - `GET /api/v1/form-templates/{id}` ➔ **200 OK** (chi tiết bản ghi mẫu kèm `onlineReady: true`).
+     - `GET /api/v1/form-templates/{id}/download-docx` ➔ **200 OK** (nhận trọn vẹn 19.094 bytes binary Word docx).
+     - Phân quyền RBAC xác nhận: quyền `document.templates.read` cho người dùng xem/tải, quyền `document.templates.manage` (`IT_ADMIN` / `PROCEDURE_MANAGER`) cho tạo mới và tải lên.
+- **Kiểm tra**:
+  - `npm run typecheck`: PASS (0 lỗi).
+  - `npm run lint`: PASS (0 lỗi).
+  - `npm run build`: PASS (0 lỗi, production bundle sẵn sàng).
 
 ## Chuẩn hóa UI Trang Chi tiết Thủ tục theo Bố cục Cổng Dịch vụ công Quốc gia (dichvucong.gov.vn) — 14/10/2026
 
