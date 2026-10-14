@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { ProcedureFormPicker as FormDefinitionsEditor } from './ProcedureFormPicker';
 import { Button } from "@/components/ui";
-import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import {
-  procedureApi,
-  procedureError,
   procedureInputSchema,
   type Category,
   type ProcedureInput,
@@ -155,32 +153,6 @@ function RowEditor({
   );
 }
 
-function FormDefinitionsEditor({ value, change, disabled }: { value: unknown; change: (value: Row[]) => void; disabled: boolean }) {
-  const list = rows(value);
-  const [search, setSearch] = useState('');
-  const [options, setOptions] = useState<Awaited<ReturnType<typeof procedureApi.documentForms>>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (disabled) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true); setError('');
-      try { setOptions(await procedureApi.documentForms(search.trim(), controller.signal)); }
-      catch (e) { if (!controller.signal.aborted) setError(procedureError(e)); }
-      finally { if (!controller.signal.aborted) setLoading(false); }
-    }, 300);
-    return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [search, disabled]);
-  return <section className="space-y-4">
-    <h3 className="font-bold">Biểu mẫu</h3>
-    {!disabled && <label className="grid gap-2 text-sm font-semibold">Tìm biểu mẫu theo mã<input className={box} value={search} onChange={e => setSearch(e.target.value)} /></label>}
-    <ProcedureFeedback loading={loading} error={error} />
-    {!disabled && <div className="flex flex-wrap gap-2">{options.map(option => <Button key={option.id} size="small" variant="outline" disabled={list.some(row => row.formTemplateId === option.id)} onClick={() => change([...list, { formTemplateId: option.id, formCode: option.formCode, formName: option.formName, formType: option.formType, caseCode: null, quantity: 1, isMandatory: true }])}>{option.formCode} · {option.formName}</Button>)}</div>}
-    {list.map((row, index) => <div key={index} className="space-y-3 rounded-xl border border-slate-200 p-4"><p className="font-semibold">{String(row.formCode)} · {String(row.formName)}</p>{!disabled && <><div className="grid gap-4 sm:grid-cols-2"><FieldInput field={{ key: 'caseCode', label: 'Mã trường hợp (nếu có)' }} value={row.caseCode} change={next => change(list.map((item, i) => i === index ? { ...item, caseCode: next || null } : item))} /><label className="grid gap-2 text-sm font-semibold">Loại biểu mẫu<select aria-label="Loại biểu mẫu" className={box} value={String(row.formType ?? 'ONLINE_INTERACTIVE')} onChange={e => change(list.map((item, i) => i === index ? { ...item, formType: e.target.value } : item))}><option value="ONLINE_INTERACTIVE">Mẫu điện tử tương tác</option><option value="DOCX_TEMPLATE">Mẫu Word (DOCX)</option></select></label><FieldInput field={{ key: 'quantity', label: 'Số lượng', kind: 'number' }} value={row.quantity ?? 1} change={next => change(list.map((item, i) => i === index ? { ...item, quantity: next } : item))} /><FieldInput field={{ key: 'isMandatory', label: 'Bắt buộc', kind: 'boolean' }} value={row.isMandatory ?? true} change={next => change(list.map((item, i) => i === index ? { ...item, isMandatory: next } : item))} /></div><Button size="small" variant="ghost" onClick={() => change(list.filter((_, i) => i !== index))}>Bỏ biểu mẫu</Button></>}</div>)}
-    {!loading && !error && options.length === 0 && <p className="text-sm text-slate-500">Không tìm thấy biểu mẫu phù hợp.</p>}
-  </section>;
-}
 export const emptyProcedure = (): Row => ({
   procedureCode: "",
   categoryId: null,
@@ -308,13 +280,17 @@ export function ProcedureApiEditor({
   onChange,
   categories,
   disabled = false,
+  initialStep = 0,
+  onEditForms,
 }: {
   value: Row;
   onChange: (value: Row) => void;
   categories: Category[];
   disabled?: boolean;
+  initialStep?: number;
+  onEditForms?: () => void;
 }) {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(initialStep);
   const content = record(value.contentPayload);
   const set = (key: string, next: unknown) =>
     onChange({ ...value, [key]: next });
@@ -353,7 +329,8 @@ export function ProcedureApiEditor({
           </button>
         ))}
       </div>
-      <fieldset disabled={disabled} className="min-w-0 space-y-5">
+      {/* Biểu mẫu tự ẩn điều khiển sửa khi disabled; vẫn cho phép xem/tải phôi. */}
+      <fieldset disabled={disabled && step !== 4} className="min-w-0 space-y-5">
         {step === 0 && (
           <div className="space-y-5">
             {/* Nhóm 1: Định danh & Phân loại */}
@@ -536,6 +513,7 @@ export function ProcedureApiEditor({
         )}
         {step === 4 && (
           <FormDefinitionsEditor
+              onEdit={onEditForms}
               value={value.formDefinitions}
               disabled={disabled}
               change={(next) =>

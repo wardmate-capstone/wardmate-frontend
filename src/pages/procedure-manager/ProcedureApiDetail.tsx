@@ -40,6 +40,7 @@ export function ProcedureApiDetail({
     ),
   );
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [editingStep, setEditingStep] = useState(0);
   const [date, setDate] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -81,6 +82,7 @@ export function ProcedureApiDetail({
           {can("procedure.update") && <Button
             disabled={!detail.data}
             onClick={() => {
+              setEditingStep(0);
               setEditing(structuredClone(detail.data!));
               setDate("");
               setError("");
@@ -111,6 +113,12 @@ export function ProcedureApiDetail({
             onChange={() => {}}
             categories={categories}
             disabled
+            onEditForms={can('procedure.update') ? () => {
+              setEditingStep(4);
+              setEditing(structuredClone(detail.data!));
+              setDate('');
+              setError('');
+            } : undefined}
           />
           <PdfSource id={row.id} />
         </div>
@@ -265,6 +273,7 @@ export function ProcedureApiDetail({
         {editing && (
           <ProcedureApiEditor
             value={editing}
+            initialStep={editingStep}
             onChange={setEditing}
             categories={categories}
             disabled={busy}
