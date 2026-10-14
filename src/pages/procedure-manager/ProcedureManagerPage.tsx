@@ -29,6 +29,7 @@ import { toast } from "@/components/ui/Toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { getGreeting } from "@/lib/utils";
+import { FormsView } from '@/pages/admin/FormsView';
 
 export function ProcedureManagerPage({ embedded = false, initialSection = "dashboard" }: { embedded?: boolean; initialSection?: ProcedureNavSection } = {}) {
   const [params, setParams] = useSearchParams();
@@ -199,6 +200,8 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                 onOpenDrafts={() => setParams({ section: "drafts" })}
               />
             </>
+          ) : section === "forms" || section === "upload-form" ? (
+            <FormsView />
           ) : section === "procedures" ? (
             <ProcedureApiList
               categories={categories.data ?? []}

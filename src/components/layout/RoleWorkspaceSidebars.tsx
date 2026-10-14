@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UploadSimple, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -50,7 +50,7 @@ export function UnifiedProcedureSidebar({ currentSection, onSelectSection, isOpe
       { id: 'checklists', label: 'Thành phần hồ sơ', icon: ListChecks, fallbackRoles: role }, { id: 'steps', label: 'Quy trình thực hiện', icon: Path, fallbackRoles: role },
     ] },
     { title: 'Biểu mẫu', items: [
-      { id: 'forms', label: 'Danh sách biểu mẫu', icon: FileText, permissions: ['document.templates.read', 'document.templates.manage'] }, { id: 'upload-form', label: 'Upload biểu mẫu', icon: UploadSimple, permissions: ['document.templates.manage'] },
+      { id: 'forms', label: 'Danh sách biểu mẫu', icon: FileText, permissions: ['document.templates.read', 'document.templates.manage'] },
       { id: 'form-versions', label: 'Phiên bản biểu mẫu', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'attach-forms', label: 'Gắn biểu mẫu vào thủ tục', icon: LinkSimple, fallbackRoles: role },
     ] },
     { title: 'Pháp lý & AI', items: [{ id: 'legal-docs', label: 'Văn bản pháp lý', icon: Scales, fallbackRoles: role }, { id: 'procedure-legal-links', label: 'Liên kết thủ tục - VB', icon: LinkBreak, fallbackRoles: role }, { id: 'ai-knowledge', label: 'Dữ liệu kiến thức AI', icon: Brain, fallbackRoles: role }] },
