@@ -53,7 +53,7 @@ export function FormTemplateActions({ templateId, name, hasFile, managementActio
   };
   return <div className="space-y-2">
     <div className="flex flex-wrap items-center gap-2">
-      <Button size="small" variant="outline" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => setOpen(true)} aria-label={`Xem mẫu ${name}`}><Eye size={16} aria-hidden />Xem mẫu</Button>
+      <Button size="small" variant="outline" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" disabled={hasFile === false} onClick={() => setOpen(true)} aria-label={`Xem mẫu ${name}`}><Eye size={16} aria-hidden />Xem mẫu</Button>
       {hasFile !== false && <Button size="small" variant="outline" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" loading={downloading} onClick={() => void download()} aria-label={`Tải mẫu ${name}`}><DownloadSimple size={16} aria-hidden />Tải mẫu</Button>}
       {managementAction}
     </div>

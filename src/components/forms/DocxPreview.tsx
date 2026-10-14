@@ -7,6 +7,7 @@ const frameHtml = `<!doctype html><html><head><meta charset="utf-8"><meta http-e
 export function DocxPreview({ blob }: { blob: Blob }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const generation = useRef(0);
+  const effectiveZoom = useRef(1);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
 
@@ -17,7 +18,8 @@ export function DocxPreview({ blob }: { blob: Blob }) {
     if (!element || !body) return;
     const resize = () => {
       body.style.zoom = '1';
-      body.style.zoom = String(zoom === 'fit' ? Math.min(1, element.clientWidth / Math.max(1, body.scrollWidth)) : zoom / 100);
+      effectiveZoom.current = zoom === 'fit' ? Math.min(1, element.clientWidth / Math.max(1, body.scrollWidth)) : zoom / 100;
+      body.style.zoom = String(effectiveZoom.current);
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -50,9 +52,9 @@ export function DocxPreview({ blob }: { blob: Blob }) {
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm text-slate-600">Bản xem trước có thể khác đôi chút so với Word.</p>
       <div className="flex gap-1" aria-label="Thu phóng bản xem trước">
-        <Button size="small" variant="ghost" disabled={status !== 'ready'} aria-label="Thu nhỏ" onClick={() => setZoom(value => Math.max(40, (value === 'fit' ? 100 : value) - 20))}>−</Button>
+        <Button size="small" variant="ghost" disabled={status !== 'ready'} aria-label="Thu nhỏ" onClick={() => setZoom(Math.max(Math.min(5, effectiveZoom.current * 100), Math.round(effectiveZoom.current * 100 - 10)))}>−</Button>
         <Button size="small" variant="outline" disabled={status !== 'ready'} onClick={() => setZoom('fit')}>{zoom === 'fit' ? 'Vừa khung' : `${zoom}% · Vừa khung`}</Button>
-        <Button size="small" variant="ghost" disabled={status !== 'ready'} aria-label="Phóng to" onClick={() => setZoom(value => Math.min(200, (value === 'fit' ? 100 : value) + 20))}>+</Button>
+        <Button size="small" variant="ghost" disabled={status !== 'ready'} aria-label="Phóng to" onClick={() => setZoom(Math.min(200, Math.round(effectiveZoom.current * 100 + 10)))}>+</Button>
       </div>
     </div>
     {status === 'loading' && <p role="status" className="rounded-lg bg-slate-100 p-4 text-sm">Đang dựng bản xem trước…</p>}
