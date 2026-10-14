@@ -13,6 +13,8 @@ import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
 import { PdfSource } from "./ProcedureDraftWorkspace";
 import { toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
+import { ProcedureValidationError, procedureIssue } from '@/lib/procedureValidation';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 export function ProcedureApiDetail({
   row,
@@ -51,14 +53,20 @@ export function ProcedureApiDetail({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+  const [validationError, setValidationError] = useState<ProcedureValidationError | null>(null);
+  const [dateError, setDateError] = useState('');
+  const dateInput = useRef<HTMLInputElement>(null);
+  const guard = useUnsavedChanges(Boolean(editing && (date || JSON.stringify(editing) !== JSON.stringify(detail.data))), busy);
   async function run(action: () => Promise<void>) {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
     setError("");
+    setValidationError(null);
     try {
       await action();
     } catch (e) {
+      if (e instanceof ProcedureValidationError) setValidationError(e);
       setError(procedureError(e));
     } finally {
       setBusy(false);
@@ -67,6 +75,7 @@ export function ProcedureApiDetail({
   }
   return (
     <div className="space-y-5">
+      {guard.confirmation}
       <Button variant="outline" onClick={onBack}>
         Về danh sách
       </Button>
@@ -83,6 +92,7 @@ export function ProcedureApiDetail({
             disabled={!detail.data}
             onClick={() => {
               setEditingStep(0);
+              setValidationError(null); setDateError('');
               setEditing(structuredClone(detail.data!));
               setDate("");
               setError("");
@@ -115,6 +125,7 @@ export function ProcedureApiDetail({
             disabled
             onEditForms={can('procedure.update') ? () => {
               setEditingStep(4);
+              setValidationError(null); setDateError('');
               setEditing(structuredClone(detail.data!));
               setDate('');
               setError('');
@@ -237,7 +248,7 @@ export function ProcedureApiDetail({
       <Modal
         open={!!editing}
         onOpenChange={(open) => {
-          if (!open && !busy) setEditing(null);
+          if (!open) guard.requestClose(() => setEditing(null));
         }}
         title="Chỉnh sửa thủ tục"
         className="sm:max-w-5xl"
@@ -247,10 +258,11 @@ export function ProcedureApiDetail({
             onClick={() =>
               void run(async () => {
                 const input = validateProcedure(editing!);
-                if (!date || !input.contentPayload.decisionNumber.trim())
-                  throw new Error(
-                    "Nhập ngày hiệu lực và số quyết định trước khi lưu.",
-                  );
+                if (!input.contentPayload.decisionNumber.trim()) throw new ProcedureValidationError([procedureIssue('contentPayload.decisionNumber', 'Vui lòng nhập số quyết định trước khi lưu.')]);
+                if (!date) {
+                  setDateError('Vui lòng nhập ngày hiệu lực.'); dateInput.current?.focus();
+                  throw new Error('Vui lòng nhập ngày hiệu lực trước khi lưu.');
+                }
                 await procedureApi.update(
                   row.id,
                   input,
@@ -274,6 +286,7 @@ export function ProcedureApiDetail({
           <ProcedureApiEditor
             value={editing}
             initialStep={editingStep}
+            validationError={validationError}
             onChange={setEditing}
             categories={categories}
             disabled={busy}
@@ -281,9 +294,10 @@ export function ProcedureApiDetail({
         )}
         <Input
           label="Ngày hiệu lực của thay đổi"
+          ref={dateInput} error={dateError} disabled={busy}
           type="date"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onChange={(e) => { setDate(e.target.value); setDateError(''); }}
         />
       </Modal>
       <Modal
