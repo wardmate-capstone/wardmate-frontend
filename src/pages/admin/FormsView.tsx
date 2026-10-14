@@ -7,6 +7,7 @@ import { Button, Input, Modal, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { useAuthStore } from '@/stores/authStore';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { createFormTemplate, createFormTemplateSchema, formTemplateErrorMessage, getFormTemplates, uploadFormTemplateDocx, type CreateFormTemplateInput, type FormTemplateDto } from '@/lib/api/formTemplates';
 
 export function FormsView() {
@@ -34,6 +35,7 @@ export function FormsView() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['form-templates'] });
   const create = useMutation({ mutationFn: createFormTemplate });
   const upload = useMutation({ mutationFn: ({ id, file }: { id: string; file: File }) => uploadFormTemplateDocx(id, file) });
+  const guard = useUnsavedChanges((createOpen && form.formState.isDirty) || Boolean(uploadTarget && (file || replaceConfirmed)), create.isPending || upload.isPending);
   const openUpload = (target: FormTemplateDto) => {
     setUploadTarget(target); setFile(null); setReplaceConfirmed(false); setUploadError(''); upload.reset();
   };
@@ -67,6 +69,7 @@ export function FormsView() {
   if (!canRead) return <p role="alert">Bạn chưa được cấp quyền xem kho biểu mẫu.</p>;
   const totalPages = list.data?.totalPages || 1;
   return <div className="space-y-5">
+    {guard.confirmation}
     <section className="admin-card flex flex-wrap items-center justify-between gap-4 p-6">
       <div><h2 className="text-xl font-bold text-slate-900">Kho biểu mẫu Word</h2><p className="mt-2 text-sm text-slate-600">Tạo và tải lên phôi trống, sau đó chọn biểu mẫu trong phần chỉnh sửa thủ tục.</p></div>
       <div className="flex flex-wrap gap-2"><Button variant="outline" loading={list.isFetching} onClick={() => void list.refetch()}>Làm mới</Button>{canManage && <Button onClick={() => { create.reset(); setCreateOpen(true); }}>Thêm đơn </Button>}</div>
@@ -97,7 +100,7 @@ export function FormsView() {
         <nav aria-label="Phân trang biểu mẫu" className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">{list.data.totalCount} biểu mẫu · Trang {page}/{totalPages}</p><div className="flex gap-2"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trang trước</Button><Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Trang sau</Button></div></nav>
       </>}
     </section>
-    <Modal open={createOpen && canManage} onOpenChange={open => { if (!create.isPending) setCreateOpen(open); }} title="Tạo phôi biểu mẫu" description="Tạo mã và tên trước, sau đó tải lên file Word gốc.">
+    <Modal open={createOpen && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setCreateOpen(false)); }} title="Tạo phôi biểu mẫu" description="Tạo mã và tên trước, sau đó tải lên file Word gốc.">
       <form onSubmit={submitCreate} className="space-y-4" noValidate>
         <Input label="Mã biểu mẫu" maxLength={50} required {...form.register('code')} error={form.formState.errors.code?.message} disabled={create.isPending} />
         <Input label="Tên biểu mẫu" maxLength={255} required {...form.register('title')} error={form.formState.errors.title?.message} disabled={create.isPending} />
@@ -105,7 +108,7 @@ export function FormsView() {
         <Button type="submit" loading={create.isPending}>Tạo biểu mẫu</Button>
       </form>
     </Modal>
-    <Modal open={Boolean(uploadTarget) && canManage} onOpenChange={open => { if (!open && !upload.isPending) setUploadTarget(null); }} title={`Tải lên phôi: ${uploadTarget?.code ?? ''}`} description="Chọn tệp Word .docx không rỗng, tối đa 20 MiB.">
+    <Modal open={Boolean(uploadTarget) && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setUploadTarget(null)); }} title={`Tải lên phôi: ${uploadTarget?.code ?? ''}`} description="Chọn tệp Word .docx không rỗng, tối đa 20 MiB.">
       <form onSubmit={submitUpload} className="space-y-4">
         <Input key={uploadTarget?.id} label="Tệp Word" type="file" accept=".docx" disabled={upload.isPending} onChange={event => { setFile(event.target.files?.[0] ?? null); setUploadError(''); upload.reset(); }} />
         {uploadTarget?.fileDocxUrl && <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" checked={replaceConfirmed} disabled={upload.isPending} onChange={event => setReplaceConfirmed(event.target.checked)} />Tôi xác nhận thay phôi Word đang được cung cấp cho các thủ tục liên kết.</label>}
