@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mockWorkspaceAuth, authReply } from './fixtures/auth';
-import { mockCatalog, catalogReply, procedureId, formTemplateId } from './fixtures/procedures';
+import { mockCatalog, catalogReply, procedureId, formTemplateId, sampleProcedure } from './fixtures/procedures';
 import { createPreviewDocx } from './fixtures/formTemplateDocx';
 
 const original = { id: formTemplateId, code: 'BM-01', title: 'Tờ khai kiểm thử', fileDocxUrl: 'https://example.test/template.docx' as string | null, isActive: true, createdAtUtc: '2026-10-14T00:00:00Z', updatedAtUtc: null, onlineReady: true };
@@ -94,6 +94,7 @@ test('replacing a template requires confirmation and clears stale file selection
   await expect(dialog.getByRole('alert')).toContainText('xác nhận');
   expect(state.writes).toHaveLength(0);
   await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: 'Bỏ thay đổi chưa lưu?', exact: true }).getByRole('button', { name: 'Bỏ thay đổi', exact: true }).click();
   await page.getByRole('button', { name: 'Thay đổi' }).click();
   await expect(dialog.getByLabel('Tệp Word', { exact: true })).toHaveValue('');
   await dialog.getByLabel('Tệp Word', { exact: true }).setInputFiles({ name: 'mau.docx', mimeType: 'application/octet-stream', buffer: Buffer.from('mock') });
@@ -185,6 +186,7 @@ test('admin sees aligned actions and an upload button instead of download for an
   await page.goto('/admin');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'Tờ khai kiểm thử' });
+  await expect(row.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true })).toBeDisabled();
   await expect(row.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true })).toHaveCount(0);
   await expect(row.getByRole('button', { name: 'Tải lên', exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Tải lên', exact: true }).click();
@@ -305,6 +307,13 @@ test('view opens actual DOCX preview with a table, isolated styles and no extern
     return Boolean(paper && paper.left >= -1 && paper.right <= iframe.clientWidth + 1);
   })).toBe(true);
   await page.screenshot({ path: 'test-results/form-docx-preview-mobile.png' });
+  const paperWidth = () => page.getByTitle('Nội dung biểu mẫu Word').evaluate(element => (element as HTMLIFrameElement).contentDocument!.querySelector('section.docx')!.getBoundingClientRect().width);
+  const fitted = await paperWidth();
+  await page.getByRole('button', { name: 'Thu nhỏ', exact: true }).click();
+  await expect.poll(paperWidth).toBeLessThan(fitted);
+  const smaller = await paperWidth();
+  await page.getByRole('button', { name: 'Phóng to', exact: true }).click();
+  await expect.poll(paperWidth).toBeGreaterThan(smaller);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
@@ -316,4 +325,167 @@ test('invalid DOCX shows an honest preview failure and retains the download acti
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('alert')).toContainText('Không thể xem trước tệp Word');
   await expect(dialog.getByRole('button', { name: 'Tải mẫu Word', exact: true })).toBeEnabled();
+});
+
+test('save validation rejects missing or invalid business values without inventing defaults', async ({ page }) => {
+  await openWarehouse(page);
+  const result = await page.evaluate(async payload => {
+    const path = '/src/lib/procedureValidation.ts';
+    const { validateProcedure, getProcedureIssues } = await import(path);
+    const invalid: string[][] = [];
+    for (const quantity of [null, 0, -1, 1.5]) {
+      const value = structuredClone(payload);
+      Object.assign(value.formDefinitions![0], { quantity });
+      invalid.push(getProcedureIssues(value).map((issue: { path: string }) => issue.path));
+    }
+    for (const patch of [{ feeAmount: null }, { estimatedDays: null }, { feeAmount: -1 }, { estimatedDays: -1 }]) {
+      const value = structuredClone(payload);
+      Object.assign(value.contentPayload.submissionMethods[0], patch);
+      invalid.push(getProcedureIssues(value).map((issue: { path: string }) => issue.path));
+    }
+    const missing = structuredClone(payload);
+    missing.formDefinitions![0].formCode = '  ';
+    missing.formDefinitions![0].formName = '';
+    missing.levelOfImplementation = '   ';
+    const duplicate = structuredClone(payload);
+    duplicate.contentPayload.cases[1].caseCode = 'A';
+    const valid = structuredClone(payload);
+    valid.contentPayload.submissionMethods[0].estimatedDays = 0.5;
+    valid.formDefinitions![0].formType = 'ONLINE_INTERACTIVE';
+    const before = JSON.stringify(valid);
+    const saved = validateProcedure(valid);
+    return { invalid, missing: getProcedureIssues(missing), duplicate: getProcedureIssues(duplicate), saved, unchanged: before === JSON.stringify(valid) };
+  }, sampleProcedure);
+  expect(result.invalid.slice(0, 4).every(paths => paths.includes('formDefinitions.0.quantity'))).toBe(true);
+  expect(result.invalid.slice(4).every(paths => paths.some(path => /feeAmount|estimatedDays/.test(path)))).toBe(true);
+  expect(result.missing.map((issue: { path: string }) => issue.path)).toEqual(expect.arrayContaining(['formDefinitions.0.formCode', 'formDefinitions.0.formName', 'levelOfImplementation']));
+  expect(result.duplicate.map((issue: { path: string }) => issue.path)).toContain('contentPayload.cases.1.caseCode');
+  expect(result.saved.contentPayload.submissionMethods[0]).toMatchObject({ feeAmount: 0, estimatedDays: 0.5 });
+  expect(result.saved.formDefinitions[0].formType).toBe('ONLINE_INTERACTIVE');
+  expect(result.unchanged).toBe(true);
+});
+
+async function openLinkedEditor(page: Page) {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
+  const catalog = await mockCatalog(page);
+  catalog.detail.formDefinitions = [{ formTemplateId, formCode: 'BM-01', formName: original.title, formType: 'DOCX_TEMPLATE', quantity: 2, caseCode: 'A', isMandatory: false }];
+  await mockForms(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Chỉnh sửa thủ tục', exact: true });
+  await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
+  return { catalog, editor };
+}
+
+test('selected catalog action is safe and reselecting restores quantity, case and requirement', async ({ page }) => {
+  const { editor } = await openLinkedEditor(page);
+  await expect(editor.getByRole('button', { name: 'BM-01 · Tờ khai kiểm thử', exact: true })).toBeDisabled();
+  await editor.getByRole('button', { name: 'Bỏ mẫu Tờ khai kiểm thử', exact: true }).click();
+  await editor.getByRole('button', { name: /1 Thông tin chung/ }).click();
+  await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
+  await editor.getByRole('button', { name: 'BM-01 · Tờ khai kiểm thử', exact: true }).click();
+  const selected = editor.getByRole('region', { name: 'Biểu mẫu đã gắn', exact: true });
+  await selected.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
+  await expect(selected.getByLabel('Số lượng', { exact: true })).toHaveValue('2');
+  await expect(selected.getByLabel('Trường hợp áp dụng', { exact: true })).toHaveValue('A');
+  await expect(selected.getByLabel('Yêu cầu', { exact: true })).toHaveValue('optional');
+  await expect(selected.getByRole('combobox')).toHaveCount(2);
+});
+
+test('invalid quantity switches to forms, opens settings and focuses the offending input', async ({ page }) => {
+  const { catalog, editor } = await openLinkedEditor(page);
+  await editor.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
+  await editor.getByLabel('Số lượng', { exact: true }).fill('1.5');
+  await editor.getByLabel('Ngày hiệu lực của thay đổi').fill('2026-10-14');
+  await editor.getByRole('button', { name: /1 Thông tin chung/ }).click();
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(editor.getByLabel('Số lượng', { exact: true })).toBeFocused();
+  await expect(editor.getByLabel('Số lượng', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  expect(catalog.requests.filter(request => request.method === 'PUT')).toHaveLength(0);
+  await editor.getByLabel('Số lượng', { exact: true }).fill('3');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  expect(catalog.requests.find(request => request.method === 'PUT')?.body?.formDefinitions).toEqual(expect.arrayContaining([expect.objectContaining({ quantity: 3, caseCode: 'A', isMandatory: false })]));
+});
+
+test('renaming a referenced case prevents save and requires choosing an existing case', async ({ page }) => {
+  const { catalog, editor } = await openLinkedEditor(page);
+  await editor.getByRole('button', { name: /3 Quy trình/ }).click();
+  await editor.getByLabel('Mã trường hợp', { exact: true }).first().fill('A-NEW');
+  await editor.getByLabel('Ngày hiệu lực của thay đổi').fill('2026-10-14');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(editor.getByRole('button', { name: /2 Thành phần hồ sơ/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor.getByLabel('Mã trường hợp (trống = áp dụng chung)').nth(1)).toBeFocused();
+  await editor.getByLabel('Mã trường hợp (trống = áp dụng chung)').nth(1).selectOption('A-NEW');
+  await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
+  await editor.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
+  await expect(editor.getByLabel('Trường hợp áp dụng', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  await editor.getByLabel('Trường hợp áp dụng', { exact: true }).selectOption('A-NEW');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  expect(catalog.requests.find(request => request.method === 'PUT')?.body?.formDefinitions).toEqual(expect.arrayContaining([expect.objectContaining({ caseCode: 'A-NEW' })]));
+});
+
+test('escape requires an explicit choice before discarding an edited procedure', async ({ page }) => {
+  const { editor } = await openLinkedEditor(page);
+  await editor.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
+  await editor.getByLabel('Số lượng', { exact: true }).fill('4');
+  await page.keyboard.press('Escape');
+  const confirm = page.getByRole('dialog', { name: 'Bỏ thay đổi chưa lưu?', exact: true });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Tiếp tục chỉnh sửa', exact: true }).click();
+  await expect(editor.getByLabel('Số lượng', { exact: true })).toHaveValue('4');
+  await page.keyboard.press('Escape');
+  await confirm.getByRole('button', { name: 'Bỏ thay đổi', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
+  await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
+  await editor.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
+  await expect(editor.getByLabel('Số lượng', { exact: true })).toHaveValue('2');
+});
+
+test('saving locks the procedure inputs and prevents closing or duplicate writes', async ({ page }) => {
+  const { editor } = await openLinkedEditor(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let writes = 0;
+  await page.route(`**/api/v1/procedure-manager/procedures/${procedureId}`, async route => {
+    if (route.request().method() !== 'PUT') return route.fallback();
+    writes++;
+    await gate;
+    return catalogReply(route, { json: { ...sampleProcedure, ...route.request().postDataJSON() } });
+  });
+  await editor.getByLabel('Ngày hiệu lực của thay đổi').fill('2026-10-14');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect.poll(() => writes).toBe(1);
+  await expect(editor.getByLabel('Ngày hiệu lực của thay đổi')).toBeDisabled();
+  await expect(editor.getByRole('button', { name: 'Bỏ mẫu Tờ khai kiểm thử', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeVisible();
+  await editor.getByRole('button', { name: 'Đóng hộp thoại', exact: true }).click();
+  await expect(editor).toBeVisible();
+  release();
+  await expect(editor).toHaveCount(0);
+  expect(writes).toBe(1);
+});
+
+test('new procedure shows Vietnamese field errors and asks before discarding entered data', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
+  const catalog = await mockCatalog(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Thêm thủ tục', exact: true });
+  await editor.getByRole('checkbox').check();
+  await editor.getByRole('button', { name: 'Tạo thủ tục', exact: true }).click();
+  await expect(editor.getByLabel('Mã thủ tục', { exact: true })).toBeFocused();
+  await expect(editor.getByLabel('Mã thủ tục', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  expect(catalog.requests.some(request => request.method === 'POST')).toBe(false);
+  await editor.getByLabel('Mã thủ tục', { exact: true }).fill('NEW-01');
+  await editor.getByRole('button', { name: 'Đóng hộp thoại', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Bỏ thay đổi chưa lưu?', exact: true });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Tiếp tục chỉnh sửa', exact: true }).click();
+  await expect(editor.getByLabel('Mã thủ tục', { exact: true })).toHaveValue('NEW-01');
 });
