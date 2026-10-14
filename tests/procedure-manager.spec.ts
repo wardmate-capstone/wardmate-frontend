@@ -169,13 +169,21 @@ test('manager rolls back a version with required audit fields', async ({ page })
 
 test('procedure editor selects a real DocumentForm option instead of a manual id', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  let warehouseRead = false;
+  await page.route('**/api/v1/form-templates?*', route => {
+    if (route.request().method() === 'OPTIONS') return catalogReply(route, { status: 204 });
+    warehouseRead = true;
+    expect(route.request().headers().authorization).toBe('Bearer ui-test-token');
+    return catalogReply(route, { json: { items: [{ id: '07000000-0000-0000-0000-000000000005', code: 'BM-01', title: 'Tờ khai điện tử', fileDocxUrl: 'https://example.test/mau.docx', isActive: true, createdAtUtc: '2026-10-14T00:00:00Z' }], page: 1, pageSize: 10, totalCount: 1, totalPages: 1 } });
+  });
   await page.goto('/procedure-manager');
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Biểu mẫu/ }).click();
   await expect(page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
   await page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' }).click();
-  await expect(page.getByRole('paragraph').filter({ hasText: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
-  expect(state.requests.some(r => r.path.endsWith('/document-forms'))).toBe(true);
+  await expect(page.getByRole('region', { name: 'Biểu mẫu đã gắn' }).getByText('Tờ khai điện tử', { exact: true })).toBeVisible();
+  expect(warehouseRead).toBe(true);
+  expect(state.requests.some(r => r.path.endsWith('/document-forms'))).toBe(false);
 });
 
 test('manager create sends full reviewed form without invented defaults', async ({ page }) => {
