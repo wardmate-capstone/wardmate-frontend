@@ -34,6 +34,22 @@ export default defineConfig({
           Origin: 'https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         },
       },
+      '/api/v1/applications': {
+        target: 'https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
+      },
+      '/api/v1/officer/applications': {
+        target: 'https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          Origin: 'https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
+        },
+      },
       '/api': {
         target: 'https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io',
         changeOrigin: true,

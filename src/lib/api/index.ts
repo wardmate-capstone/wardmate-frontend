@@ -343,8 +343,9 @@ export async function getWards(): Promise<WardDto[]> {
 }
 
 export async function getPublicWards(): Promise<WardDto[]> {
-  const response = await api.get<WardDto[]>('/api/v1/wards', { ...cookieConfig, skipAuth: true });
-  return response.data;
+  const response = await api.get<{ value?: WardDto[] } | WardDto[]>('/api/v1/wards', { ...cookieConfig, skipAuth: true });
+  if (Array.isArray(response.data)) return response.data;
+  return response.data?.value ?? [];
 }
 
 export async function getManagerOfficers(filter: DirectoryFilter = {}): Promise<DirectoryPage> {
