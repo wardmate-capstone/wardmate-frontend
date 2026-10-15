@@ -3,9 +3,10 @@ import { createJwtClient } from './createJwtClient';
 import { redirectToLogin } from '../authRedirect';
 import { useAuthStore, type CurrentUser } from '@/stores/authStore';
 import type { UserProfileDto, ProfileInput } from '@/types/profile';
+import { configuredServiceOrigins, serviceUrls } from './serviceUrls';
 export type { UserProfileDto, ProfileInput };
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? '';
+const baseURL = serviceUrls.iam;
 // Serialize cookie rotation with login/revoke across same-origin tabs. Tokens never enter storage.
 const browserAdapter = axios.getAdapter(axios.defaults.adapter);
 const cookieAdapter: AxiosAdapter = (config) => {
@@ -36,6 +37,7 @@ function readAccessToken(data: unknown): string {
 
 export const authClient = createJwtClient({
   baseURL,
+  allowedOrigins: configuredServiceOrigins,
   refreshAccessToken: async (transport) => {
     const response = await transport.post('/api/v1/auth/refresh-token', undefined, cookieConfig);
     return readAccessToken(response.data);

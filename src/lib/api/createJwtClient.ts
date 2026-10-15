@@ -18,6 +18,7 @@ export type JwtClientOptions = {
   onSessionExpired?: () => void;
   isRefreshSessionExpired?: (error: unknown) => boolean;
   timeout?: number;
+  allowedOrigins?: string[];
 };
 
 export function createJwtClient(options: JwtClientOptions) {
@@ -70,7 +71,8 @@ export function createJwtClient(options: JwtClientOptions) {
     const rootOrigin = typeof location === 'undefined' ? 'http://localhost' : location.origin;
     const root = options.baseURL.trim() ? new URL(options.baseURL, rootOrigin) : new URL(rootOrigin);
     const target = new URL(api.getUri(request), root);
-    if (target.origin !== root.origin) throw new Error('API request must use the configured backend origin.');
+    const allowedOrigins = new Set([root.origin, ...(options.allowedOrigins ?? [])]);
+    if (!allowedOrigins.has(target.origin)) throw new Error('API request must use a configured backend origin.');
     if (request.skipAuth) {
       request.headers.delete('Authorization');
       return request;
