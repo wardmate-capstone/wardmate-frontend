@@ -1,13 +1,52 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 14/10/2026.
-Cập nhật: 14/10/2026.
+Cập nhật: 15/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Tích hợp Dịch vụ Tiền kiểm Hồ sơ Đa phiên bản & Đồng bộ Quy tắc Backend — 15/10/2026
+## Điều tra Workflow tạo hồ sơ trả 500 — 15/10/2026
 
-- **Phạm vi & Trạng thái**: Hoàn tất 100% tích hợp microservice `WardMate.Services.ApplicationWorkflow` (API Swagger: `https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`) và đồng bộ chặt chẽ với các quy tắc kiểm soát thẩm định, phân quyền và checklist mới nhất từ backend.
+- Response `POST /api/v1/applications` có trace `00-bec4f2471bb01af0c7eeb25d793fb161-1655b599d4dae45b-00`. Đối chiếu source backend xác định validation/phụ thuộc đều trả lỗi có kiểm soát; thao tác DB là nhánh còn ném 500. Azure trước đó chỉ ghi nhận đã áp dụng 5 migrations, còn model mới cần migration thứ 6 `SnapshotChecklistRequirements` để ghi metadata checklist.
+- Đã sửa backend local bật `Database:AutoMigrate=true`; cần redeploy Workflow hoặc chạy migration Azure trước khi endpoint hoạt động. FE không thể sửa schema database. `workflowError` được bổ sung hiển thị `traceId` cho lỗi 500 để vận hành tra log chính xác.
+- Kiểm tra FE: typecheck/lint sẽ được chạy ở cuối lượt. Backend không có .NET SDK; Docker daemon cũng không chạy nên chưa thể build Release local. Cấu hình JSON đã parse và xác nhận AutoMigrate=True; chưa deploy/migrate Azure.
+
+## Sửa refresh-token gọi cross-origin — 15/10/2026
+
+- Ảnh Network cho thấy browser gọi thẳng `https://wardmate-iam.../api/v1/auth/refresh-token`, làm refresh cookie HttpOnly phụ thuộc CORS/SameSite và thất bại. Nguyên nhân là service URL từ env được dùng trực tiếp ở runtime.
+- Thêm `VITE_USE_API_PROXY=true`: runtime giữ base URL rỗng và gọi `/api/...` cùng origin; Vite vẫn đọc bốn URL service trong env để làm proxy target. Catalog, Workflow và DocumentForm cũng đi cùng cơ chế nên bundle không chứa URL Azure.
+- Đã cập nhật `.env.example` và `.env.development.local` (Git ignore). Dev server phải khởi động lại sau khi đổi env. Với hosting production bật proxy, hạ tầng hosting cũng phải chuyển tiếp `/api` theo cùng bảng route; `vercel.json` hiện không chứa backend URL theo yêu cầu người dùng.
+- Kiểm tra: build đạt; tìm URL Azure trong JS build không có kết quả. Vite cổng thử nghiệm nhận `/api/v1/auth/refresh-token` và cố proxy tới IAM; sandbox chặn outbound TCP bằng `EACCES`, nên chưa xác minh response Azure thật. Cổng 5173 đang do tiến trình khác sử dụng và cần người dùng restart để nhận env mới.
+
+## Chuẩn hóa URL service qua biến môi trường — 15/10/2026
+
+- Theo yêu cầu người dùng, đã loại toàn bộ URL backend khỏi `src`, `vite.config.ts` và `vercel.json`. Giữ ba biến cũ `VITE_API_BASE_URL`, `VITE_CATALOG_API_URL`, `VITE_WORKFLOW_API_URL`; bổ sung `VITE_DOCUMENT_FORM_API_URL` vì DocumentForm dùng origin Gateway riêng.
+- `serviceUrls.ts` chuẩn hóa base URL và dựng đường dẫn cho Catalog, Workflow, DocumentForm. JWT client chỉ cho gửi access token RAM tới IAM origin hoặc các service origin được khai báo trong env; origin tùy ý vẫn bị chặn. Form templates cũng chuyển sang DocumentForm env, procedure APIs chuyển sang Catalog env.
+- `vite.config.ts` đọc env bằng `loadEnv`; proxy chỉ được tạo khi biến tương ứng có giá trị. `vercel.json` chỉ giữ SPA fallback, không chứa endpoint backend; deployment phải cấu hình bốn biến VITE trong Environment Variables rồi build lại.
+- Khôi phục URL cũ trong `.env.example`, thêm biến DocumentForm và tạo `.env.development.local` bị Git ignore cho máy hiện tại. Không đưa token/secret vào env; các URL base là cấu hình công khai.
+- Kiểm tra: typecheck, lint, build đạt; 16/16 ca JWT/Citizen CTA/Procedure detail đạt phần thân. Playwright trên máy vẫn treo ở teardown sau khi báo đủ ca đạt và được dừng bằng Ctrl+C.
+
+## Triển khai DocumentForm / ApplicationWorkflow vào FE — 15/10/2026
+
+- Đã triển khai phần FE trong `docs/document-form-workflow-plan.md`: same-origin proxy/rewrite Vite và Vercel; client Zod/TanStack Query cho submissions, application contents, supporting/generated documents và các thao tác cán bộ; Workflow giữ đủ metadata checklist và đọc đúng ProblemDetails thiếu giấy tờ.
+- Luồng công dân dùng dữ liệu thật: nút **Chuẩn bị hồ sơ** từ chi tiết thủ tục giữ `procedureId/caseCode`; modal tạo hồ sơ chọn case và phường IAM thật, không còn phường fallback; checklist upload/tải/xóa minh chứng, tải phôi, upload/chốt DOCX và reload từ server. Gửi lại tính trạng thái checklist theo bằng chứng server thay vì đánh dấu hoàn tất hàng loạt.
+- Hồ sơ đã duyệt có khu vực tạo/danh sách/tải PDF. Workspace cán bộ tải danh sách và binary supporting documents thật. Không dùng editor/toast giả hoặc localStorage/blob URL làm trạng thái hồ sơ.
+- Phần không thể hoàn tất vì thiếu hợp đồng BE được ghi chi tiết trong `docs/DOCUMENT_FORM_BACKEND_GAPS.md`: API cán bộ tìm submission theo application, ánh xạ PDF về submission, quyền IT_ADMIN/DocumentManager, snapshot file theo phiên bản, sửa formData DRAFT, vòng đời comment, QR/tiếp nhận chính thức. Client cho bốn thao tác officer submission đã sẵn sàng nhưng UI chưa thể gọi an toàn khi không có submissionId.
+- Kiểm tra: `npm run typecheck`, `npm run lint`, `npm run build` đạt; build còn cảnh báo Zod annotation và chunk chính lớn như trước. Bộ Playwright 143 ca chạy hết phần thân nhưng 5 ca timeout và runner treo ở teardown; 3 timeout liên quan locator cũ đã được phân tích/sửa; lượt chạy gộp liên quan đạt 4/5 và ca selector cuối đạt khi chạy riêng. Chưa kiểm thử mutation Azure thật do không có phiên/tài khoản thử nghiệm trong lượt này.
+- Không sửa backend, không commit/push/deploy. Giữ các thay đổi tài liệu chưa commit từ lượt lập kế hoạch.
+
+## Rà soát và kế hoạch DocumentForm / ApplicationWorkflow — 15/10/2026
+
+- Phạm vi: yêu cầu đọc hai service, đối chiếu FE/BE và lập kế hoạch tích hợp/đồng bộ UI/validation. Đã tạo `docs/document-form-workflow-plan.md`; chưa sửa chức năng, chưa commit/push/deploy.
+- Đã GET và đọc OpenAPI thật của DocumentForm qua Gateway và ApplicationWorkflow theo URL người dùng cung cấp ở lượt khảo sát đầu. **Cập nhật sau pull BE**: source `E:/wardmate-backend` đã có đầy đủ nhóm API tài liệu/metadata trước đây thiếu; đã đọc controllers, handlers, security, DTO, cấu hình index, PDF engine và `docs/system-constraints.md`. Kế hoạch phủ 23 API nghiệp vụ DocumentForm + 16 API Workflow. Chưa xác minh deployment/image/config Azure đồng bộ source mới.
+- Đính chính trạng thái cũ: **chưa đủ bằng chứng hoàn tất 100% tích hợp workflow**. FE có client/hooks/workspace nhưng chưa có luồng tài liệu liên service đầy đủ. `FormDocxEditorModal` chỉ toast khi lưu/tải; `DossierChecklistView` giữ blob URL/localStorage thay vì upload server; cập nhật checklist gửi trạng thái UI và tên file vào fileUrl; adapter làm mất metadata Azure; tạo hồ sơ thiếu caseCode. Vercel chưa rewrite workflow, routing tài liệu dưới `/applications/...` cần ưu tiên trước prefix workflow. Chi tiết và thứ tự khắc phục ở tài liệu kế hoạch.
+- Kế hoạch: P0 chốt hợp đồng/routing/DTO/cache/lỗi → P1 bắt đầu từ chi tiết thủ tục, file minh chứng/bản khai thật, gửi/gửi lại/cán bộ → P2 PDF và hồi quy. Vùng khoanh đỏ trong ảnh đề xuất nút “Chuẩn bị hồ sơ”. Tái sử dụng kho/phôi/preview hiện có.
+- Đã chốt từ source mới: formCode đối chiếu chính xác checklistId; Workflow kiểm tra fileExists/trạng thái/template hoặc tổng số lượng minh chứng đúng loại bản/hình thức; DOCX/minh chứng tối đa 20 MiB. NEED_REVISION cho sửa submission Submitted về Draft rồi chốt lại, không PATCH checklist DRAFT trong luồng bổ sung. DocumentForm approve/request-revision chuyển tiếp quyết định toàn hồ sơ sang Workflow; annotate không tạo OPEN comment. PDF chỉ từ submission đã lưu/Approved và hồ sơ APPROVED, không gửi File thay thế; Gotenberg render thật.
+- Còn phụ thuộc BE: cán bộ thiếu discovery submissionId (contents chỉ chính chủ); DocumentManager yêu cầu PROCEDURE_MANAGER nên IT_ADMIN có permission vẫn có thể bị 403, cần quyết định quyền nếu muốn quản trị phôi trong Admin. Snapshot JSON chưa đóng băng file theo phiên bản; PDF DTO chưa có SubmissionId để gán chắc chắn về từng bản khai. Editor trực tuyến vẫn cần engine DOCX thật; phương án hiện có là Word tải về/upload. Các phần đã đủ source không còn chờ “lấy source mới”.
+- Kiểm tra lượt cập nhật: đối chiếu source và nội dung/đường dẫn/diff tài liệu. Không chạy lại HTTP Azure, typecheck/lint/build/E2E hoặc build BE vì chỉ thay tài liệu; chưa thử mutation/tài khoản/quyền thật. Không sửa BE hoặc tài liệu Catalog `IMPLEMENT_PROCEDURE_API.md`; không commit/push/deploy. Kết quả test trong mục cũ thuộc phiên trước.
+
+## Tích hợp Dịch vụ Tiền kiểm Hồ sơ Đa phiên bản & Đồng bộ Quy tắc Backend — 15/10/2026 (bàn giao trước, xem đính chính ở trên)
+
+- **Phạm vi & Trạng thái ghi nhận trước đây**: Đã thêm client/hooks và kết nối một phần workspace với `WardMate.Services.ApplicationWorkflow` (API Swagger: `https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`). Rà soát 15/10 phát hiện khoảng trống tài liệu/validation/routing; không coi đây là tích hợp hoàn tất hoặc đã kiểm thử Azure thật.
 - **Việc đã làm**:
   1. **Hạ tầng API & Proxy**:
      - `vite.config.ts`: Cấu hình reverse proxy cho `/api/v1/applications` và `/api/v1/officer/applications` trỏ đến Cloud Container App.
