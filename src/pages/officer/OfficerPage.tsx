@@ -34,11 +34,35 @@ import {
   mapApplicationDtoToOfficerApplication,
 } from '@/lib/api/workflowAdapters';
 import { workflowError, workflowApi } from '@/lib/api/workflow';
+import { documentFormApi } from '@/lib/api/documentForms';
 
 export const OfficerPage: React.FC = () => {
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
+
+  async function loadSupportingDocuments(application: OfficerApplication) {
+    try {
+      const documents = await documentFormApi.listSupportingDocuments(application.id);
+      const hydrated = await Promise.all(documents.map(async (item) => {
+        const file = await documentFormApi.downloadSupportingDocument(item.id);
+        const extension = item.fileName.split('.').pop()?.toLowerCase();
+        return {
+          id: item.id,
+          name: item.fileName,
+          fileType: ['jpg', 'jpeg', 'png'].includes(extension || '') ? 'image' as const : 'pdf' as const,
+          fileSize: item.fileSizeBytes ? `${(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MB` : 'Không rõ dung lượng',
+          uploadDate: new Date(item.createdAtUtc).toLocaleString('vi-VN'),
+          url: URL.createObjectURL(file.blob),
+          status: 'pending' as const,
+        };
+      }));
+      return { ...application, documents: hydrated };
+    } catch {
+      toast.error('Không thể tải giấy tờ đính kèm. Bạn vẫn có thể xem và xử lý thông tin hồ sơ.');
+      return { ...application, documents: [] };
+    }
+  }
 
   // TanStack Query & Mutations từ Workflow API
   const { data: pendingData } = useOfficerPendingApplications({ pageSize: 50 });
@@ -97,7 +121,7 @@ export const OfficerPage: React.FC = () => {
       // Tải chi tiết hồ sơ đầy đủ từ backend để mở workspace
       const fullDto = await workflowApi.getOfficerApplication(appId).catch(() => workflowApi.getApplication(appId));
       const comments = await workflowApi.getComments(appId).catch(() => []);
-      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
+      const mappedApp = await loadSupportingDocuments(mapApplicationDtoToOfficerApplication(fullDto, comments));
 
       // Thêm audit log
       const newLog: OfficerAuditLog = {
@@ -222,7 +246,7 @@ export const OfficerPage: React.FC = () => {
     try {
       const fullDto = await workflowApi.getOfficerApplication(app.id);
       const comments = await workflowApi.getComments(app.id).catch(() => []);
-      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
+      const mappedApp = await loadSupportingDocuments(mapApplicationDtoToOfficerApplication(fullDto, comments));
       setReviewingApp(mappedApp);
     } catch (err) {
       setReviewingApp(app);
