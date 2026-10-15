@@ -7,12 +7,9 @@ import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/Wo
 import { toast } from '@/components/ui/Toast';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import type { CitizenFeedback } from '@/types/feedback';
-import type { ChecklistItem } from '@/lib/procedureContent';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
-import { usePublicProcedureList } from '@/hooks/useProcedureCategories';
+import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { getPublicWards } from '@/lib/api';
-import { FormDocxEditorModal } from './components/FormDocxEditorModal';
-import { FormPreviewModal } from './components/FormPreviewModal';
 import {
   useCitizenApplications,
   useSubmitApplicationMutation,
@@ -21,6 +18,7 @@ import {
   workflowQueryKeys,
 } from '@/hooks/useWorkflow';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
+import { documentFormApi } from '@/lib/api/documentForms';
 import { mapSummaryDtoToCitizenDossier, mapApplicationDtoToCitizenDossier } from '@/lib/api/workflowAdapters';
 import { useQuery } from '@tanstack/react-query';
 
@@ -78,6 +76,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSection = searchParams.get('section') as CitizenSectionId | null;
   const urlDossierCode = searchParams.get('dossierCode');
+  const requestedProcedureId = searchParams.get('procedureId');
+  const requestedCaseCode = searchParams.get('caseCode');
   const queryClient = useQueryClient();
 
   const { profile: userProfile, loading: profileLoading, refetch: refetchProfile } = useUserProfile();
@@ -107,18 +107,34 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   // Modal tạo hồ sơ mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProcedureId, setSelectedProcedureId] = useState<string>('');
-  const [newWardCode, setNewWardCode] = useState('PHUONG_BEN_NGHE');
+  const [selectedCaseCode, setSelectedCaseCode] = useState('');
+  const [newWardCode, setNewWardCode] = useState('');
+  const selectedProcedureQuery = usePublicProcedureDetail(selectedProcedureId);
+  const availableCases = useMemo(
+    () => selectedProcedureQuery.data?.contentPayload.cases || [],
+    [selectedProcedureQuery.data],
+  );
 
   // Khởi tạo thủ tục mặc định khi danh sách thủ tục tải xong
   useEffect(() => {
-    if (availableProcedures.length > 0 && !selectedProcedureId) {
+    if (requestedProcedureId && availableProcedures.some((item) => item.id === requestedProcedureId)) {
+      setSelectedProcedureId(requestedProcedureId);
+      setIsCreateModalOpen(true);
+    } else if (availableProcedures.length > 0 && !selectedProcedureId) {
       setSelectedProcedureId(availableProcedures[0].id);
     }
-  }, [availableProcedures, selectedProcedureId]);
+  }, [availableProcedures, requestedProcedureId, selectedProcedureId]);
+
+  useEffect(() => {
+    const nextCase = requestedCaseCode && availableCases.some((item) => item.caseCode === requestedCaseCode)
+      ? requestedCaseCode
+      : availableCases[0]?.caseCode || '';
+    setSelectedCaseCode(nextCase);
+  }, [availableCases, requestedCaseCode, selectedProcedureId]);
 
   // Khởi tạo phường mặc định khi danh sách phường tải xong
   useEffect(() => {
-    if (availableWards.length > 0 && !availableWards.some((w) => w.code === newWardCode)) {
+    if (availableWards.length > 0 && !newWardCode) {
       setNewWardCode(availableWards[0].code);
     }
   }, [availableWards, newWardCode]);
@@ -133,8 +149,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [selectedDossierDetail, setSelectedDossierDetail] = useState<CitizenDossier | null>(null);
 
   // State Modal Preview Form và Editor Form
-  const [previewFormItem, setPreviewFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
-  const [editFormItem, setEditFormItem] = useState<{ item: ChecklistItem; procedureName: string } | null>(null);
 
   // Thông báo
   const [notifications, setNotifications] = useState<CitizenNotification[]>([]);
@@ -190,11 +204,19 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     }
     try {
       setSubmittingAction(true);
-      const resubmitChecklists = (selectedDossierDetail.checklist || []).map((c) => ({
-        id: c.checklistId,
-        status: 'COMPLETED',
-        fileUrl: null,
-      }));
+      const contents = await documentFormApi.getContents(selectedDossierDetail.id);
+      const resubmitChecklists = (selectedDossierDetail.checklist || []).map((item) => {
+        const submissions = contents.submissions.filter((entry) => entry.checklistId === item.checklistId);
+        const documents = contents.supportingDocuments.filter((entry) => entry.checklistId === item.checklistId);
+        const hasEvidence = item.formTemplateId
+          ? submissions.some((entry) => entry.fileExists && entry.templateId === item.formTemplateId && ['Submitted', 'Approved'].includes(entry.status))
+          : documents
+              .filter((entry) => entry.fileExists
+                && (!item.submissionType || entry.submissionType === item.submissionType)
+                && (!item.documentCopyType || entry.documentCopyType === item.documentCopyType))
+              .reduce((total, entry) => total + entry.quantity, 0) >= item.quantity;
+        return { id: item.checklistId, status: hasEvidence ? 'COMPLETED' : 'PENDING', fileUrl: null };
+      });
 
       const updated = await resubmitMutation.mutateAsync({
         id: selectedDossierDetail.id,
@@ -217,12 +239,11 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   }
 
   // Cập nhật trạng thái mục checklist lên API
-  async function handleUpdateChecklistItem(checklistId: string, status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED', fileName?: string) {
+  async function handleUpdateChecklistItem(checklistId: string, status: 'PENDING' | 'COMPLETED') {
     if (!selectedDossierDetail?.id) return;
     try {
       await workflowApi.updateChecklist(selectedDossierDetail.id, checklistId, {
         status,
-        fileUrl: fileName,
       });
       // Cập nhật local state
       setSelectedDossierDetail((prev) => {
@@ -237,7 +258,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         };
       });
     } catch (err) {
-      console.warn('Lỗi cập nhật checklist item:', err);
+      toast.error(workflowError(err));
+      throw err;
     }
   }
 
@@ -249,10 +271,19 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         toast.error('Chưa có thủ tục hành chính nào được chọn.');
         return;
       }
+      if (!newWardCode) {
+        toast.error('Vui lòng chọn đơn vị hành chính tiếp nhận.');
+        return;
+      }
+      if (availableCases.length > 0 && !selectedCaseCode) {
+        toast.error('Vui lòng chọn trường hợp thực hiện thủ tục.');
+        return;
+      }
 
       setSubmittingAction(true);
       const created = await createMutation.mutateAsync({
         procedureId: targetProc.id,
+        caseCode: selectedCaseCode || null,
         wardCode: newWardCode,
         formData: {
           procedureTitle: targetProc.title,
@@ -457,15 +488,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               onResubmitPrecheck={handleResubmitPrecheck}
               onUpdateChecklistItem={handleUpdateChecklistItem}
               submitting={submittingAction}
-              onDownloadForm={(item) => {
-                toast.success(`Đang tải mẫu văn bản: ${item.itemName} (${item.templateFormat || 'DOCX'})`);
-              }}
-              onPreviewForm={(item) => {
-                setPreviewFormItem({ item, procedureName: selectedDossierDetail.procedureName });
-              }}
-              onEditForm={(item) => {
-                setEditFormItem({ item, procedureName: selectedDossierDetail.procedureName });
-              }}
             />
           )}
 
@@ -498,25 +520,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       </div>
 
       {/* Modal Xem trước phôi mẫu DOCX/Biểu mẫu */}
-      {previewFormItem && (
-        <FormPreviewModal
-          open={!!previewFormItem}
-          onClose={() => setPreviewFormItem(null)}
-          item={previewFormItem.item}
-          procedureName={previewFormItem.procedureName}
-        />
-      )}
-
-      {/* Modal Trình Soạn thảo Biểu mẫu A4 trực tuyến */}
-      {editFormItem && (
-        <FormDocxEditorModal
-          open={!!editFormItem}
-          onClose={() => setEditFormItem(null)}
-          item={editFormItem.item}
-          procedureName={editFormItem.procedureName}
-          userProfile={userProfile}
-        />
-      )}
 
       {/* Modal Đánh giá dịch vụ */}
       <CitizenFeedbackModal
@@ -563,7 +566,10 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                   <select
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
                     value={selectedProcedureId || availableProcedures[0]?.id || ''}
-                    onChange={(e) => setSelectedProcedureId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedProcedureId(e.target.value);
+                      setSelectedCaseCode('');
+                    }}
                   >
                     {availableProcedures.map((proc) => (
                       <option key={proc.id} value={proc.id}>
@@ -574,6 +580,23 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                 )}
               </div>
 
+              {availableCases.length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">
+                    Trường hợp thực hiện <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                    value={selectedCaseCode}
+                    onChange={(event) => setSelectedCaseCode(event.target.value)}
+                  >
+                    {availableCases.map((item) => (
+                      <option key={item.caseCode} value={item.caseCode}>{item.caseName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1.5">
                   Đơn vị hành chính tiếp nhận (Xã / Phường) <span className="text-red-500">*</span>
@@ -582,17 +605,17 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500">
                     Đang tải danh sách UBND Xã/Phường...
                   </div>
+                ) : availableWards.length === 0 ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                    Không tải được đơn vị hành chính. Vui lòng thử lại sau.
+                  </div>
                 ) : (
                   <select
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
                     value={newWardCode}
                     onChange={(e) => setNewWardCode(e.target.value)}
                   >
-                    {(availableWards.length > 0 ? availableWards : [
-                      { id: '1', code: 'PHUONG_BEN_NGHE', name: 'UBND Phường Bến Nghé' },
-                      { id: '2', code: 'PHUONG_BINH_HOA', name: 'UBND Phường Bình Hòa' },
-                      { id: '3', code: 'PHUONG_PHUOC_HAU', name: 'UBND Phường Phước Hậu' },
-                    ]).map((ward) => (
+                    {availableWards.map((ward) => (
                       <option key={ward.code} value={ward.code}>
                         {ward.name} (Mã: {ward.code})
                       </option>
@@ -617,7 +640,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               <button
                 type="button"
                 onClick={handleCreateDraft}
-                disabled={submittingAction}
+                disabled={submittingAction || !selectedProcedureId || !newWardCode || (availableCases.length > 0 && !selectedCaseCode)}
                 className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {submittingAction ? 'Đang khởi tạo...' : 'Tạo hồ sơ nháp'}
