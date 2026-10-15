@@ -142,7 +142,16 @@ export function useCitizenApplications(page = 1, pageSize = 20) {
     queryKey: ['workflow', 'citizen', 'applications', userId, { page, pageSize }],
     queryFn: ({ signal }) => workflowApi.listCitizenApplications(page, pageSize, signal),
     enabled: Boolean(userId),
-    refetchInterval: 30_000,
+    // Polling thông minh: chỉ tự động làm mới khi có hồ sơ đang chờ cán bộ thụ lý/tiền kiểm
+    refetchInterval: (query) => {
+      const items = query.state.data?.items;
+      if (!items || items.length === 0) return false;
+      const hasPending = items.some((app) => {
+        const s = (app.status || '').toUpperCase();
+        return s === 'SUBMITTED' || s === 'UNDER_REVIEW';
+      });
+      return hasPending ? 30_000 : false;
+    },
   });
 }
 
