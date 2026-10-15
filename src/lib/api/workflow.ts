@@ -1,11 +1,13 @@
 import axios from 'axios';
 import { z } from 'zod';
 import { api } from './index';
+import { servicePath, serviceUrls } from './serviceUrls';
 
 // Base URL helper for Workflow service
-const workflowBase = import.meta.env.VITE_WORKFLOW_API_URL?.replace(/\/+$/, '') ?? '';
+// Business APIs use same-origin proxy/rewrite so the shared JWT client never sends
+// the access token to a different origin.
 function workflowPath(path: string): string {
-  return workflowBase ? `${workflowBase}${path}` : path;
+  return servicePath(serviceUrls.workflow, path);
 }
 
 // ----------------------------------------------------
@@ -23,6 +25,12 @@ export const checklistDtoSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   formTemplateId: z.string().nullish(),
+  sortOrder: z.number().int(),
+  caseCode: z.string().nullish(),
+  submissionType: z.enum(['NOP', 'XUAT_TRINH']).nullish(),
+  documentCopyType: z.enum(['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY']).nullish(),
+  quantity: z.number().int().positive(),
+  conditionNote: z.string().nullish(),
 });
 
 export const historyDtoSchema = z.object({
@@ -299,7 +307,12 @@ export function workflowError(error: unknown): string {
     if (data && typeof data === 'object') {
       const code = (data as { code?: string; extensions?: { code?: string; missingItems?: Array<{ title?: string; code?: string }> } }).code
         ?? (data as { extensions?: { code?: string } }).extensions?.code;
-      const missingItems = (data as { extensions?: { missingItems?: Array<{ title?: string; code?: string }> } }).extensions?.missingItems;
+      const missingItems = (data as { missingItems?: Array<{ title?: string; code?: string }>; extensions?: { missingItems?: Array<{ title?: string; code?: string }> } }).missingItems
+        ?? (data as { extensions?: { missingItems?: Array<{ title?: string; code?: string }> } }).extensions?.missingItems;
+      const missingChecklistIds = (data as { missingChecklistIds?: string[]; extensions?: { missingChecklistIds?: string[] } }).missingChecklistIds
+        ?? (data as { extensions?: { missingChecklistIds?: string[] } }).extensions?.missingChecklistIds;
+      const traceId = (data as { traceId?: string; extensions?: { traceId?: string } }).traceId
+        ?? (data as { extensions?: { traceId?: string } }).extensions?.traceId;
 
       if (code === 'application.checklist_incomplete' && Array.isArray(missingItems) && missingItems.length > 0) {
         const itemNames = missingItems.map((m) => m.title || m.code).filter(Boolean).join(', ');
@@ -327,7 +340,9 @@ export function workflowError(error: unknown): string {
         return 'Thủ tục hành chính này hiện đã tạm ngừng tiếp nhận hồ sơ.';
       }
       if (code === 'application.documents_incomplete') {
-        return 'Cần lưu tệp giấy tờ hoặc hoàn thành biểu mẫu tương ứng trước khi nộp hồ sơ.';
+        return Array.isArray(missingChecklistIds) && missingChecklistIds.length > 0
+          ? `Cần lưu tệp hoặc chốt biểu mẫu cho ${missingChecklistIds.length} mục còn thiếu.`
+          : 'Cần lưu tệp giấy tờ hoặc hoàn thành biểu mẫu tương ứng trước khi nộp hồ sơ.';
       }
       if (code === 'application.documents_unavailable') {
         return 'Dịch vụ lưu trữ giấy tờ DocumentForm tạm thời không phản hồi. Vui lòng thử lại sau.';
@@ -346,7 +361,8 @@ export function workflowError(error: unknown): string {
       }
 
       if ('title' in data && typeof (data as { title?: unknown }).title === 'string') {
-        return (data as { title: string }).title;
+        const title = (data as { title: string }).title;
+        return error.response?.status === 500 && traceId ? `${title} Mã theo dõi: ${traceId}` : title;
       }
       if ('detail' in data && typeof (data as { detail?: unknown }).detail === 'string') {
         return (data as { detail: string }).detail;
