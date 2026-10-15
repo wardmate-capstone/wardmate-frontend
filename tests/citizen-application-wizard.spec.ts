@@ -11,12 +11,12 @@ test('không tự tạo hồ sơ mẫu khi dịch vụ hồ sơ chưa tích hợ
   await expect(page.getByText('Đủ điều kiện nộp', { exact: false })).toHaveCount(0);
 });
 
-test('Catalog không tạo hồ sơ localStorage khi dịch vụ hồ sơ chưa tích hợp', async ({ page }) => {
+test('Catalog chuyển đúng ngữ cảnh thủ tục sang luồng chuẩn bị hồ sơ và không ghi localStorage', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
   await mockCatalog(page);
   await page.goto(`/thu-tuc/${sampleProcedure.id}`);
   const before = await page.evaluate(() => JSON.stringify(localStorage));
-  await page.getByRole('button', { name: 'Bắt đầu làm thủ tục', exact: true }).first().click();
-  await expect(page.getByText('Chức năng tạo hồ sơ cần kết nối dịch vụ Hồ sơ công dân.', { exact: false })).toBeVisible();
+  await page.getByRole('link', { name: 'Chuẩn bị hồ sơ', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`procedureId=${sampleProcedure.id}.*caseCode=A`));
   expect(await page.evaluate(() => JSON.stringify(localStorage))).toBe(before);
 });

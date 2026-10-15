@@ -120,13 +120,21 @@ export function ProcedureDetailPage() {
       <main className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
         {/* Title Area */}
         <div className="mb-4">
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-xl sm:text-2xl md:text-[26px] font-bold text-slate-900 leading-snug tracking-tight"
-          >
-            {procedure.title}
-          </h1>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="text-xl sm:text-2xl md:text-[26px] font-bold text-slate-900 leading-snug tracking-tight"
+            >
+              {procedure.title}
+            </h1>
+            <Link
+              to={`/cong-dan?section=dossiers_all&procedureId=${encodeURIComponent(procedure.id)}${activeCase?.caseCode ? `&caseCode=${encodeURIComponent(activeCase.caseCode)}` : ''}`}
+              className={buttonVariants({ variant: 'primary' })}
+            >
+              Chuẩn bị hồ sơ
+            </Link>
+          </div>
 
           {/* PDF Source Icon under Title */}
           {procedure.originalPdfUrl ? (

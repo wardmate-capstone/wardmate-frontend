@@ -34,7 +34,7 @@ test('API detail shows 404 and invalid responses without mock fallback', async (
   await mockCatalog(page);
   await page.goto('/thu-tuc/missing');
   await expect(page.getByRole('alert')).toContainText('Không tìm thấy thủ tục đang hoạt động');
-  await page.getByRole('link', { name: 'Quay lại danh sách', exact: true }).click();
+  await page.getByRole('link', { name: 'Quay lại danh mục thủ tục', exact: true }).click();
   await expect(page.locator('.procedures-list > li')).toHaveCount(5);
   await page.route(`**/api/v1/procedures/${procedureId}`, route => catalogReply(route, { json: { id: procedureId, contentPayload: false } }));
   await page.goto(`/thu-tuc/${procedureId}`);
@@ -50,7 +50,7 @@ test('common checklist is visible even without cases and direct reload preserves
   await expect(page.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Quay lại danh sách', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Đường dẫn' }).getByRole('link', { name: 'Thủ tục hành chính', exact: true }).click();
   await expect(page).toHaveURL(/category=1&page=2/);
   await expect(page.locator('.procedures-list > li')).toHaveCount(1);
 });
