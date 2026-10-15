@@ -1,6 +1,6 @@
 import { ArrowLeft, CheckCircle, WarningCircle, ArrowCounterClockwise, XCircle, Info, ChatText } from '@phosphor-icons/react';
 import { DossierChecklistView } from '../components/DossierChecklistView';
-import type { ChecklistItem } from '@/lib/procedureContent';
+import { GeneratedDocumentsPanel } from '../components/GeneratedDocumentsPanel';
 import type { CitizenDossier } from '../types';
 import { getStatusBadgeClass } from '../types';
 import { useApplicationComments } from '@/hooks/useWorkflow';
@@ -10,10 +10,7 @@ interface CitizenDossierDetailViewProps {
   onBack: () => void;
   onSubmitPrecheck: () => void;
   onResubmitPrecheck?: () => void;
-  onDownloadForm: (item: ChecklistItem) => void;
-  onPreviewForm: (item: ChecklistItem) => void;
-  onEditForm: (item: ChecklistItem) => void;
-  onUpdateChecklistItem?: (checklistId: string, status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED', fileName?: string) => Promise<void>;
+  onUpdateChecklistItem?: (checklistId: string, status: 'PENDING' | 'COMPLETED') => Promise<void>;
   submitting?: boolean;
 }
 
@@ -22,9 +19,6 @@ export function CitizenDossierDetailView({
   onBack,
   onSubmitPrecheck,
   onResubmitPrecheck,
-  onDownloadForm,
-  onPreviewForm,
-  onEditForm,
   onUpdateChecklistItem,
   submitting = false,
 }: CitizenDossierDetailViewProps) {
@@ -240,19 +234,6 @@ export function CitizenDossierDetailView({
           <h3 className="text-base font-bold text-slate-900">
             Danh mục giấy tờ & biểu mẫu
           </h3>
-          {onUpdateChecklistItem && dossier.checklist && dossier.checklist.length > 0 && dossier.status === 'Bản nháp' && (
-            <button
-              type="button"
-              onClick={async () => {
-                for (const item of dossier.checklist || []) {
-                  await onUpdateChecklistItem(item.checklistId, 'COMPLETED');
-                }
-              }}
-              className="text-xs font-semibold text-red-800 hover:text-red-900 transition-colors"
-            >
-              ✓ Đánh dấu đã chuẩn bị tất cả
-            </button>
-          )}
         </div>
 
         {dossier.checklist === undefined ? (
@@ -264,13 +245,15 @@ export function CitizenDossierDetailView({
             procedureName={dossier.procedureName}
             cases={dossier.cases || []}
             checklist={dossier.checklist || []}
-            dossierCode={dossier.code}
-            onDownloadForm={onDownloadForm}
-            onPreviewForm={onPreviewForm}
-            onEditForm={onEditForm}
+            applicationId={dossier.id}
+            caseCode={dossier.caseCode}
+            dossierStatus={dossier.status}
+            onUpdateChecklistItem={onUpdateChecklistItem}
           />
         )}
       </section>
+
+      {dossier.id && dossier.status === 'Đã duyệt' && <GeneratedDocumentsPanel applicationId={dossier.id} />}
 
       {/* Thanh hành động chân trang */}
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-end gap-3">
