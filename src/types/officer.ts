@@ -132,6 +132,7 @@ export interface OfficerApplication {
   id: string;
   applicationNumber: string; // e.g. HS-2026-00125
   procedureId: string;
+  caseCode?: string;
   procedureName: string;
   procedureCategory: string;
   citizen: CitizenInfo;

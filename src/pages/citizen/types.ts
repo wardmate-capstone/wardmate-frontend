@@ -23,6 +23,7 @@ export interface CitizenDossier {
   id?: string;
   code: string;
   procedureId?: string;
+  caseCode?: string;
   procedureName: string;
   field: string;
   createdAt: string;

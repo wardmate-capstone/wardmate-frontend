@@ -37,6 +37,9 @@ export type ChecklistItem = {
   isMandatory: boolean;
   templateUrl?: string;
   templateFormat?: 'DOCX' | 'PDF';
+  formTemplateId?: string;
+  status?: 'PENDING' | 'COMPLETED' | 'REJECTED';
+  sortOrder?: number;
 };
 
 // Frontend-only schema. Reconcile with the backend content_payload and checklist_schema contract later.
