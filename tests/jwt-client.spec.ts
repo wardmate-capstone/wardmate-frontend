@@ -160,6 +160,21 @@ test('missing configuration and foreign origins never dispatch requests', async 
   expect(calls).toBe(0);
 });
 
+test('configured service origin receives the in-memory access token', async () => {
+  const serviceOrigin = 'https://workflow.wardmate.test';
+  const client = createJwtClient({ baseURL, allowedOrigins: [serviceOrigin] });
+  client.setAccessToken('service-token');
+  let authorization = '';
+  client.api.defaults.adapter = async (config) => {
+    authorization = String(config.headers?.get('Authorization') ?? '');
+    return response(config);
+  };
+
+  await client.api.get(`${serviceOrigin}/api/v1/applications`);
+  expect(authorization).toBe('Bearer service-token');
+  await expect(client.api.get('https://foreign.test/private')).rejects.toThrow();
+});
+
 test('redirect preserves a safe local destination and rejects external/auth URLs', () => {
   const path = '/officer/ho-so?status=pending#detail';
   expect(safeReturnTo(path)).toBe(path);
