@@ -9,6 +9,7 @@ import {
   type ResubmitInput,
   type UpdateChecklistInput,
 } from '@/lib/api/workflow';
+import { useAuthStore } from '@/stores/authStore';
 
 // ==========================================
 // TanStack Query Keys
@@ -28,9 +29,11 @@ export const workflowQueryKeys = {
 // ==========================================
 
 export function useOfficerPendingApplications(filters: OfficerPendingInput = {}) {
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'officer', 'pending', filters],
+    queryKey: ['workflow', 'officer', 'pending', userId, filters],
     queryFn: ({ signal }) => workflowApi.listOfficerPending(filters, signal),
+    enabled: Boolean(userId),
     refetchInterval: 15_000, // Tự động làm mới danh sách mỗi 15 giây
   });
 }
@@ -134,9 +137,11 @@ export function useApplicationDiff(id?: string, fromVersion?: number, toVersion?
 // ==========================================
 
 export function useCitizenApplications(page = 1, pageSize = 20) {
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'citizen', 'applications', { page, pageSize }],
+    queryKey: ['workflow', 'citizen', 'applications', userId, { page, pageSize }],
     queryFn: ({ signal }) => workflowApi.listCitizenApplications(page, pageSize, signal),
+    enabled: Boolean(userId),
     refetchInterval: 30_000,
   });
 }
