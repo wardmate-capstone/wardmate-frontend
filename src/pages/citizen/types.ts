@@ -20,6 +20,7 @@ export type CitizenSectionId =
 
 // Kiểu dữ liệu hồ sơ công dân
 export interface CitizenDossier {
+  id?: string;
   code: string;
   procedureId?: string;
   procedureName: string;
@@ -32,11 +33,15 @@ export interface CitizenDossier {
     | 'Cần chỉnh sửa'
     | 'Đã gửi lại'
     | 'Đã duyệt'
-    | 'Đã hoàn thành';
+    | 'Đã hoàn thành'
+    | 'Đã từ chối';
   officerNote?: string;
   officerName?: string;
   cases?: ProcedureCase[];
   checklist?: ChecklistItem[];
+  currentVersion?: number;
+  wardCode?: string;
+  formData?: Record<string, unknown>;
 }
 
 export const initialDossiers: CitizenDossier[] = [
@@ -181,6 +186,8 @@ export function getStatusBadgeClass(status: CitizenDossier['status']): string {
       return 'is-warning';
     case 'Đã gửi lại':
       return 'is-info';
+    case 'Đã từ chối':
+      return 'is-danger';
     case 'Bản nháp':
     default:
       return 'is-warning';
