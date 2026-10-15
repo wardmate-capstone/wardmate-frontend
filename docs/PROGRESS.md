@@ -1,8 +1,34 @@
 # Tiến độ và bàn giao WardMate
 
 Cập nhật: 14/10/2026.
+Cập nhật: 14/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Tích hợp Dịch vụ Tiền kiểm Hồ sơ Đa phiên bản & Đồng bộ Quy tắc Backend — 15/10/2026
+
+- **Phạm vi & Trạng thái**: Hoàn tất 100% tích hợp microservice `WardMate.Services.ApplicationWorkflow` (API Swagger: `https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io`) và đồng bộ chặt chẽ với các quy tắc kiểm soát thẩm định, phân quyền và checklist mới nhất từ backend.
+- **Việc đã làm**:
+  1. **Hạ tầng API & Proxy**:
+     - `vite.config.ts`: Cấu hình reverse proxy cho `/api/v1/applications` và `/api/v1/officer/applications` trỏ đến Cloud Container App.
+     - `.env.example`: Bổ sung biến môi trường `VITE_WORKFLOW_API_URL`.
+     - `src/lib/api/workflow.ts`: Zod schemas, TypeScript types, `workflowApi` client (15 endpoints), và hàm trích xuất/chuyển ngữ lỗi RFC 7807 (`workflowError`) hỗ trợ các mã lỗi nghiệp vụ: `checklist_incomplete`, `documents_incomplete`, `documents_unavailable`, `invalid_target`, `comments_required`, `open_comments`, `version_conflict`, `forbidden`, `invalid_ward`, v.v.
+     - `src/hooks/useWorkflow.ts`: Bộ TanStack Query hooks, query keys và mutations cho toàn bộ các thao tác hồ sơ công dân và cán bộ.
+     - `src/lib/api/workflowAdapters.ts`: Mappers chuyển đổi 2 chiều giữa Backend DTOs (`ApplicationDto`, `ApplicationSummaryDto`, `CommentDto`, `HistoryDto`) và ViewModels (`OfficerApplication`, `CitizenDossier`).
+     - `src/lib/api/index.ts`: Chuẩn hóa `getPublicWards` tự động unwrap `{ value: WardDto[] }` từ IAM API.
+  2. **Phân hệ Cán bộ Một cửa (Officer Workspace)**:
+     - `src/types/officer.ts`: Bổ sung trạng thái `'REJECTED'` vào `ApplicationStatus`.
+     - `src/pages/officer/OfficerPage.tsx`: Kết nối danh sách hồ sơ chờ tiền kiểm (`useOfficerPendingApplications`), tiếp nhận thụ lý (`assignOfficer`), duyệt/yêu cầu sửa/từ chối hồ sơ. Tự động gán thụ lý khi cán bộ mở hồ sơ chưa phân công để tránh lỗi 404 backend.
+     - `src/pages/officer/OfficerReviewWorkspaceView.tsx`: Thêm Modal Từ chối hồ sơ kèm lý do; chuẩn hóa chức năng comment tuân thủ nghiêm ngặt RFC 6901 JSON Pointer cho E-form (`/formData/...`) và GUID cho Checklist item; cài đặt guardrail chặn yêu cầu sửa nếu thiếu comment và chặn duyệt nếu còn comment OPEN; tích hợp Diff Viewer đối chiếu lịch sử phiên bản (V1 ↔ V2).
+     - `src/pages/officer/OfficerApplicationListView.tsx`: Cập nhật bộ lọc trạng thái và giao diện hàng đợi trống.
+  3. **Phân hệ Công dân (Citizen Portal)**:
+     - `src/pages/citizen/types.ts`: Bổ sung `id`, `currentVersion`, `wardCode`, `formData`, `'Đã từ chối'` vào `CitizenDossier`.
+     - `src/pages/citizen/CitizenPage.tsx`: Kết nối `useCitizenApplications()` lấy danh sách hồ sơ thực tế; Modal khởi tạo hồ sơ liên kết danh mục Catalog (`proceduresQuery`) và danh mục phường IAM (`getPublicWards`) với mã GUID và `wardCode` chuẩn; tích hợp mutation nộp tiền kiểm và nộp lại hồ sơ (`resubmit`) bảo lưu `formData` và đúng GUID checklist.
+     - `src/pages/citizen/views/CitizenDossierDetailView.tsx`: Hiển thị thông báo pháp lý bắt buộc (tiền kiểm không thay thế nộp chính thức tại UBND); hiển thị nhận xét của cán bộ (OPEN/RESOLVED); khối thông báo kết quả duyệt kèm hướng dẫn mang giấy tờ gốc đến Một cửa; khối từ chối kèm lý do; các nút hành động nộp/gửi lại tương ứng theo trạng thái.
+- **Kiểm tra**:
+  - `npm run typecheck`: PASS (0 errors, 0 warnings).
+  - `npm run lint`: PASS (0 errors).
+  - `npm run build`: PASS (Vite production bundle thành công, 0 errors).
 
 ## Đóng gói 10 commit validation/UX trên main — 14/10/2026
 
