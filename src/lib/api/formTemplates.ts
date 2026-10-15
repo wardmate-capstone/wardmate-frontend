@@ -1,6 +1,9 @@
 import { api } from '@/lib/api';
 import axios from 'axios';
 import { z } from 'zod';
+import { servicePath, serviceUrls } from './serviceUrls';
+
+const documentPath = (path: string) => servicePath(serviceUrls.documentForm, path);
 
 export const createFormTemplateSchema = z.object({
   code: z.string().trim().min(1, 'Vui lòng nhập mã biểu mẫu.').max(50, 'Mã biểu mẫu tối đa 50 ký tự.'),
@@ -63,7 +66,7 @@ export interface UploadDocxResultDto {
  * Lấy danh sách phôi biểu mẫu (có phân trang, tìm kiếm)
  */
 export async function getFormTemplates(params: GetFormTemplatesParams = {}, signal?: AbortSignal): Promise<PagedResult<FormTemplateDto>> {
-  const response = await api.get<PagedResult<FormTemplateDto>>('/api/v1/form-templates', {
+  const response = await api.get<PagedResult<FormTemplateDto>>(documentPath('/api/v1/form-templates'), {
     signal,
     params: {
       page: params.page ?? 1,
@@ -79,7 +82,7 @@ export async function getFormTemplates(params: GetFormTemplatesParams = {}, sign
  * Xem chi tiết một phôi biểu mẫu kèm cờ onlineReady
  */
 export async function getFormTemplateById(templateId: string, signal?: AbortSignal): Promise<FormTemplateDetailDto> {
-  const response = await api.get<FormTemplateDetailDto>(`/api/v1/form-templates/${templateId}`, { signal });
+  const response = await api.get<FormTemplateDetailDto>(documentPath(`/api/v1/form-templates/${templateId}`), { signal });
   return detailSchema.parse(response.data);
 }
 
@@ -88,7 +91,7 @@ export async function getFormTemplateById(templateId: string, signal?: AbortSign
  */
 export async function createFormTemplate(payload: CreateFormTemplateInput): Promise<FormTemplateDetailDto> {
   payload = createFormTemplateSchema.parse(payload);
-  const response = await api.post<FormTemplateDetailDto>('/api/v1/form-templates', {
+  const response = await api.post<FormTemplateDetailDto>(documentPath('/api/v1/form-templates'), {
     code: payload.code.trim().toUpperCase(),
     title: payload.title.trim(),
   });
@@ -103,7 +106,7 @@ export async function uploadFormTemplateDocx(templateId: string, file: File): Pr
   formData.append('file', file);
 
   const response = await api.post<UploadDocxResultDto>(
-    `/api/v1/form-templates/${templateId}/upload-docx`,
+    documentPath(`/api/v1/form-templates/${templateId}/upload-docx`),
     formData,
     {
       headers: {
@@ -119,7 +122,7 @@ export async function uploadFormTemplateDocx(templateId: string, file: File): Pr
  * Tải trực tiếp file nhị phân DOCX của biểu mẫu
  */
 export async function downloadFormTemplateDocx(templateId: string, signal?: AbortSignal): Promise<{ blob: Blob; fileName: string }> {
-  const response = await api.get<Blob>(`/api/v1/form-templates/${templateId}/download-docx`, {
+  const response = await api.get<Blob>(documentPath(`/api/v1/form-templates/${templateId}/download-docx`), {
     responseType: 'blob',
     signal,
   }).catch(async error => {

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { z } from 'zod';
 import { api } from './index';
+import { servicePath, serviceUrls } from './serviceUrls';
 
 export const categorySchema = z.object({ id: z.number().int().positive(), categoryName: z.string(), description: z.string().nullish() });
 const stepSchema = z.object({ stepOrder: z.number(), stepName: z.string(), executor: z.string(), actionDetails: z.string() });
@@ -39,8 +40,9 @@ export type Extraction = z.infer<typeof extractionSchema>;
 export type ProcedureVersion = z.infer<typeof versionSchema>;
 export type DocumentFormOption = z.infer<typeof documentFormSchema>;
 export type ProcedureQuery = { keyword?: string; categoryId?: number; pageNumber?: number; pageSize?: number; isActive?: boolean; levelOfImplementation?: string; sortBy?: string; isAscending?: boolean };
-const manager = '/api/v1/procedure-manager/procedures';
-const drafts = '/api/v1/procedure-manager/drafts';
+const catalogPath = (path: string) => servicePath(serviceUrls.catalog, path);
+const manager = catalogPath('/api/v1/procedure-manager/procedures');
+const drafts = catalogPath('/api/v1/procedure-manager/drafts');
 function toDateOnlyString(value: string): string {
   const trimmed = value.trim();
   const match = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
@@ -53,9 +55,9 @@ function toDateOnlyString(value: string): string {
 }
 
 export const procedureApi = {
-  categories: async (signal?: AbortSignal) => z.array(categorySchema).parse((await api.get('/api/v1/procedures/categories', { skipAuth: true, signal })).data),
-  list: async (query: ProcedureQuery, managed = false, signal?: AbortSignal) => pagedSchema.parse((await api.get(managed ? manager : '/api/v1/procedures', { params: query, skipAuth: !managed, signal })).data),
-  detail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`/api/v1/procedures/${encodeURIComponent(id)}`, { skipAuth: true, signal })).data),
+  categories: async (signal?: AbortSignal) => z.array(categorySchema).parse((await api.get(catalogPath('/api/v1/procedures/categories'), { skipAuth: true, signal })).data),
+  list: async (query: ProcedureQuery, managed = false, signal?: AbortSignal) => pagedSchema.parse((await api.get(managed ? manager : catalogPath('/api/v1/procedures'), { params: query, skipAuth: !managed, signal })).data),
+  detail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(catalogPath(`/api/v1/procedures/${encodeURIComponent(id)}`), { skipAuth: true, signal })).data),
   managerDetail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`${manager}/${encodeURIComponent(id)}`, { signal })).data),
   create: async (input: ProcedureInput) => detailSchema.parse((await api.post(manager, input)).data),
   update: async (id: string, input: ProcedureInput, decisionNumber: string, effectiveDate: string) =>
@@ -66,9 +68,9 @@ export const procedureApi = {
   rollback: async (id: string, versionNumber: number, input: { reason: string; decisionNumber: string; effectiveDate: string }) =>
     detailSchema.parse((await api.post(`${manager}/${id}/versions/${versionNumber}/rollback`, { ...input, effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
   versionSource: async (id: string, versionId: string) => sourceLink((await api.get(`${manager}/${id}/versions/${versionId}/source`)).data),
-  createCategory: async (input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.post('/api/v1/procedure-manager/categories', input)).data),
-  updateCategory: async (id: number, input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.put(`/api/v1/procedure-manager/categories/${id}`, input)).data),
-  deleteCategory: async (id: number) => { await api.delete(`/api/v1/procedure-manager/categories/${id}`); },
+  createCategory: async (input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.post(catalogPath('/api/v1/procedure-manager/categories'), input)).data),
+  updateCategory: async (id: number, input: { categoryName: string; description?: string | null }) => categorySchema.parse((await api.put(catalogPath(`/api/v1/procedure-manager/categories/${id}`), input)).data),
+  deleteCategory: async (id: number) => { await api.delete(catalogPath(`/api/v1/procedure-manager/categories/${id}`)); },
   drafts: async (page: number, signal?: AbortSignal) => z.array(draftSummarySchema).parse((await api.get(drafts, { params: { page, pageSize: 10 }, signal })).data),
   draft: async (id: string, signal?: AbortSignal) => draftSchema.parse((await api.get(`${drafts}/${id}`, { signal })).data),
   upload: async (file: File) => draftSchema.parse((await api.post(drafts, pdfForm(file), { timeout: 120000 })).data),
@@ -77,9 +79,9 @@ export const procedureApi = {
   retryDraft: async (id: string, revision: string) => draftSchema.parse((await api.post(`${drafts}/${id}/retry`, { revision })).data),
   publishDraft: async (id: string, revision: string) => detailSchema.parse((await api.post(`${drafts}/${id}/publish`, { revision, confirmed: true })).data),
   deleteDraft: async (id: string) => { await api.delete(`${drafts}/${id}`); },
-  documentForms: async (searchCode = '', signal?: AbortSignal) => z.array(documentFormSchema).parse((await api.get('/api/v1/procedure-manager/document-forms', { params: { page: 1, pageSize: 50, searchCode: searchCode || undefined }, signal })).data),
+  documentForms: async (searchCode = '', signal?: AbortSignal) => z.array(documentFormSchema).parse((await api.get(catalogPath('/api/v1/procedure-manager/document-forms'), { params: { page: 1, pageSize: 50, searchCode: searchCode || undefined }, signal })).data),
   source: async (id: string, draft = false) => {
-    return sourceLink((await api.get(draft ? `${drafts}/${id}/source` : `/api/v1/procedures/${id}/source`, { skipAuth: !draft })).data);
+    return sourceLink((await api.get(draft ? `${drafts}/${id}/source` : catalogPath(`/api/v1/procedures/${id}/source`), { skipAuth: !draft })).data);
   },
 };
 function sourceLink(value: unknown) {
