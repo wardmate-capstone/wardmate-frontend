@@ -296,7 +296,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
                     <Funnel size={32} className="mx-auto text-slate-300 mb-2" aria-hidden="true" />
                     <p className="font-semibold text-slate-700">Chưa có hồ sơ nào.</p>
-                    <p className="text-xs text-slate-400 mt-1 italic">⚠️ API danh sách hồ sơ cán bộ Một cửa sẽ được tích hợp sau.</p>
+                    <p className="text-xs text-slate-400 mt-1">Hàng đợi trống hoặc không có hồ sơ nào phù hợp với bộ lọc hiện tại.</p>
                   </td>
                 </tr>
               ) : (

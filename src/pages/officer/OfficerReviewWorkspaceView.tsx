@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
+import { toast } from '@/components/ui/Toast';
+import { workflowError } from '@/lib/api/workflow';
+import {
+  useAddCommentMutation,
+  useApplicationComments,
+  useApplicationVersions,
+  useApplicationDiff,
+} from '@/hooks/useWorkflow';
+import { mapCommentDtoToOfficerReviewComment } from '@/lib/api/workflowAdapters';
 import {
   ArrowLeft,
   CheckCircle,
@@ -16,6 +25,7 @@ import {
   Hourglass,
   Check,
   X,
+  XCircle,
   FilePdf,
   Info,
 } from '@phosphor-icons/react';
@@ -30,6 +40,7 @@ interface OfficerReviewWorkspaceViewProps {
   onBack: () => void;
   onRequestRevision: (appId: string, notes: string, issues: string[]) => void;
   onApproveApplication: (appId: string) => void;
+  onRejectApplication?: (appId: string, reason: string) => void;
   onUpdateComments: (appId: string, comments: OfficerReviewComment[]) => void;
 }
 
@@ -49,6 +60,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
   onBack,
   onRequestRevision,
   onApproveApplication,
+  onRejectApplication,
   onUpdateComments,
 }) => {
   const { profile } = useUserProfile();
@@ -56,16 +68,46 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
   const [activeTab, setActiveTab] = useState<ReviewTab>('citizen-info');
 
+  // Queries & Mutations từ Workflow API
+  const addCommentMutation = useAddCommentMutation();
+  const { data: remoteComments } = useApplicationComments(application.id, application.currentVersion);
+  const { data: remoteVersions } = useApplicationVersions(application.id);
+  const [diffFromVersion, setDiffFromVersion] = useState<number>(1);
+  const [diffToVersion, setDiffToVersion] = useState<number>(application.currentVersion);
+  const { data: remoteDiff, isLoading: loadingDiff } = useApplicationDiff(
+    application.id,
+    diffFromVersion,
+    diffToVersion
+  );
+
+  // Tự động gán 2 version gần nhất khi có dữ liệu versions
+  useEffect(() => {
+    if (remoteVersions && remoteVersions.length >= 2) {
+      setDiffFromVersion(remoteVersions[remoteVersions.length - 2].versionNumber);
+      setDiffToVersion(remoteVersions[remoteVersions.length - 1].versionNumber);
+    }
+  }, [remoteVersions]);
+
   // Interactive workspace states
   const [comments, setComments] = useState<OfficerReviewComment[]>(application.comments || []);
+  const activeComments = useMemo(() => {
+    if (remoteComments && remoteComments.length > 0) {
+      return remoteComments.map((c) => mapCommentDtoToOfficerReviewComment(c, officerName));
+    }
+    return comments;
+  }, [remoteComments, comments, officerName]);
+
   const [newCommentInput, setNewCommentInput] = useState('');
   const [commentCategory, setCommentCategory] = useState<'general' | 'eform' | 'document' | 'checklist'>('general');
-  const [commentTarget, setCommentTarget] = useState('');
+  const [commentTarget, setCommentTarget] = useState(application.eformFields[0]?.key || '/formData/applicantName');
+  const [commentLabel, setCommentLabel] = useState('Góp ý chung');
 
   // Modals
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [selectedIssueKeys, setSelectedIssueKeys] = useState<string[]>([]);
 
   // Document preview zoom
@@ -83,22 +125,55 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
   });
 
   // Handle adding comment
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentInput.trim()) return;
-    const newC: OfficerReviewComment = {
-      id: `c-${Date.now()}`,
-      category: commentCategory,
-      target: commentTarget || 'Nhận xét chung',
-      content: newCommentInput.trim(),
-      createdAt: 'Vừa xong',
-      officerName,
-    };
-    const updated = [...comments, newC];
-    setComments(updated);
-    onUpdateComments(application.id, updated);
-    setNewCommentInput('');
-    setCommentTarget('');
+
+    const isChecklist = commentCategory === 'checklist' || commentCategory === 'document';
+    const targetType = isChecklist ? 'CHECKLIST_ITEM' : 'FORM_FIELD';
+
+    let targetId = commentTarget;
+    if (isChecklist) {
+      if (!targetId || !application.checklist.some((c) => c.id === targetId)) {
+        targetId = application.checklist[0]?.id || '';
+      }
+    } else {
+      if (!targetId || !targetId.startsWith('/formData') || !application.eformFields.some((f) => f.key === targetId)) {
+        targetId = application.eformFields[0]?.key || '/formData/applicantName';
+      }
+    }
+
+    const fieldLabel = commentLabel || (isChecklist ? 'Mục giấy tờ đính kèm' : 'Thông tin biểu mẫu');
+
+    try {
+      await addCommentMutation.mutateAsync({
+        id: application.id,
+        input: {
+          versionNumber: application.currentVersion,
+          targetType,
+          targetId,
+          fieldLabel,
+          commentText: newCommentInput.trim(),
+        },
+      });
+      toast.success('Đã thêm nhận xét vào hồ sơ thành công.');
+      setNewCommentInput('');
+    } catch (err) {
+      // Fallback local update nếu offline
+      const newC: OfficerReviewComment = {
+        id: `c-${Date.now()}`,
+        category: isChecklist ? 'checklist' : 'eform',
+        target: fieldLabel,
+        content: newCommentInput.trim(),
+        createdAt: 'Vừa xong',
+        officerName,
+      };
+      const updated = [...comments, newC];
+      setComments(updated);
+      onUpdateComments(application.id, updated);
+      setNewCommentInput('');
+      toast.error(workflowError(err));
+    }
   };
 
   // Handle removing comment
@@ -109,11 +184,38 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
   };
 
   // Quick field comment trigger
-  const handleQuickFieldComment = (fieldLabel: string, defaultComment: string = '') => {
-    setCommentCategory('eform');
-    setCommentTarget(`E-form > ${fieldLabel}`);
+  const handleQuickFieldComment = (
+    category: 'general' | 'eform' | 'checklist' | 'document',
+    targetId: string,
+    label: string,
+    defaultComment: string = ''
+  ) => {
+    setCommentCategory(category);
+    setCommentTarget(targetId);
+    setCommentLabel(label);
     setNewCommentInput(defaultComment);
     setActiveTab('comments');
+  };
+
+  // Action guards
+  const handleOpenRevisionModal = () => {
+    if (activeComments.length === 0) {
+      toast.warning('Cần có ít nhất 1 nhận xét lỗi cụ thể trên tờ khai hoặc giấy tờ trước khi gửi yêu cầu chỉnh sửa.');
+      setActiveTab('comments');
+      return;
+    }
+    const issueList = activeComments.map((c) => `${c.target}: ${c.content}`);
+    setSelectedIssueKeys(issueList);
+    setShowRevisionModal(true);
+  };
+
+  const handleOpenApproveModal = () => {
+    if (activeComments.length > 0) {
+      toast.error('Hồ sơ vẫn còn nhận xét lỗi chưa giải quyết. Cần yêu cầu công dân sửa hoặc xóa nhận xét trước khi duyệt.');
+      setActiveTab('comments');
+      return;
+    }
+    setShowApproveModal(true);
   };
 
   const tabs: Array<{ id: ReviewTab; label: string; badge?: number }> = [
@@ -123,7 +225,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
     { id: 'documents', label: 'Giấy tờ đính kèm', badge: application.documents.length },
     { id: 'eform', label: 'Tờ khai E-form' },
     { id: 'pdf', label: 'Xem trước PDF' },
-    { id: 'comments', label: 'Comment trực tiếp', badge: comments.length },
+    { id: 'comments', label: 'Comment trực tiếp', badge: activeComments.length },
     { id: 'versions', label: 'Phiên bản & So sánh', badge: application.currentVersion > 1 ? application.currentVersion : undefined },
     { id: 'timeline', label: 'Timeline sự kiện' },
   ];
@@ -153,6 +255,8 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                     ? 'Đang kiểm tra'
                     : application.status === 'RESUBMITTED'
                     ? 'Đã gửi lại (V2)'
+                    : application.status === 'REJECTED'
+                    ? 'Đã từ chối'
                     : application.status}
                 </span>
                 {application.currentVersion > 1 && (
@@ -175,23 +279,30 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
           </div>
 
           <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+            {/* Nút Từ chối */}
             <button
               type="button"
-              onClick={() => {
-                // Collect issue labels
-                const issueList = comments.map((c) => `${c.target}: ${c.content}`);
-                setSelectedIssueKeys(issueList);
-                setShowRevisionModal(true);
-              }}
+              onClick={() => setShowRejectModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
+            >
+              <XCircle size={18} weight="bold" />
+              <span>Từ chối</span>
+            </button>
+
+            {/* Nút Yêu cầu bổ sung */}
+            <button
+              type="button"
+              onClick={handleOpenRevisionModal}
               className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-800 hover:bg-rose-100 transition-colors"
             >
               <WarningCircle size={18} weight="bold" />
-              <span>Yêu cầu bổ sung ({comments.length})</span>
+              <span>Yêu cầu bổ sung ({activeComments.length})</span>
             </button>
 
+            {/* Nút Duyệt tiền kiểm */}
             <button
               type="button"
-              onClick={() => setShowApproveModal(true)}
+              onClick={handleOpenApproveModal}
               className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-emerald-800 transition-colors shadow-2xs"
             >
               <CheckCircle size={18} weight="bold" />
@@ -261,7 +372,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickFieldComment('Họ và tên', 'Họ tên đã khớp bản gốc CCCD.')}
+                    onClick={() => handleQuickFieldComment('eform', '/formData/applicantName', 'Họ và tên người nộp', 'Họ tên đã khớp bản gốc CCCD.')}
                     className="text-xs font-semibold text-slate-600 hover:text-red-700 hover:underline inline-flex items-center gap-1"
                   >
                     <ChatText size={14} />
@@ -281,7 +392,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickFieldComment('Ngày sinh')}
+                    onClick={() => handleQuickFieldComment('eform', '/formData/dateOfBirth', 'Ngày tháng năm sinh')}
                     className="text-xs font-semibold text-slate-600 hover:text-red-700 hover:underline inline-flex items-center gap-1"
                   >
                     <ChatText size={14} />
@@ -301,7 +412,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickFieldComment('CCCD')}
+                    onClick={() => handleQuickFieldComment('eform', '/formData/identityNumber', 'Số CCCD / Định danh')}
                     className="text-xs font-semibold text-slate-600 hover:text-red-700 hover:underline inline-flex items-center gap-1"
                   >
                     <ChatText size={14} />
@@ -324,7 +435,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickFieldComment('Địa chỉ', 'Vui lòng cập nhật địa chỉ theo giấy xác nhận cư trú.')}
+                    onClick={() => handleQuickFieldComment('eform', '/formData/address', 'Địa chỉ nơi cư trú', 'Vui lòng cập nhật địa chỉ theo giấy xác nhận cư trú.')}
                     className="text-xs font-bold text-red-800 hover:underline inline-flex items-center gap-1"
                   >
                     <ChatText size={14} />
@@ -382,7 +493,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleQuickFieldComment(`Điều kiện: ${crit.label}`)}
+                      onClick={() => handleQuickFieldComment('general', application.eformFields[0]?.key || '/formData/applicantName', `Điều kiện: ${crit.label}`)}
                       className="text-xs font-semibold text-slate-600 hover:text-red-700 hover:underline px-2"
                     >
                       Thêm nhận xét
@@ -437,7 +548,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
 
                     <button
                       type="button"
-                      onClick={() => handleQuickFieldComment(`Checklist: ${item.name}`)}
+                      onClick={() => handleQuickFieldComment('checklist', item.id, item.name)}
                       className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
                       Comment
@@ -583,7 +694,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                           type="button"
                           onClick={() => {
                             selectedDoc.status = 'invalid';
-                            handleQuickFieldComment(`Tài liệu: ${selectedDoc.name}`, 'Ảnh chụp tài liệu mờ, mất góc.');
+                            handleQuickFieldComment('document', selectedDoc.id, selectedDoc.name, 'Ảnh chụp tài liệu mờ, mất góc.');
                           }}
                           className="px-3.5 py-1.5 rounded-lg bg-rose-700 text-xs font-bold text-white hover:bg-rose-800 shadow-2xs"
                         >
@@ -593,7 +704,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
 
                       <button
                         type="button"
-                        onClick={() => handleQuickFieldComment(`Tài liệu: ${selectedDoc.name}`)}
+                        onClick={() => handleQuickFieldComment('document', selectedDoc.id, selectedDoc.name)}
                         className="text-xs font-bold text-slate-700 hover:text-red-700 underline inline-flex items-center gap-1"
                       >
                         <ChatText size={16} />
@@ -665,7 +776,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                       <td className="px-4 py-3.5 text-right">
                         <button
                           type="button"
-                          onClick={() => handleQuickFieldComment(field.label, field.officerComment || '')}
+                          onClick={() => handleQuickFieldComment('eform', field.key, field.label, field.officerComment || '')}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-100"
                         >
                           <ChatText size={14} />
@@ -804,7 +915,7 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 <div className="pt-4 border-t border-slate-200">
                   <button
                     type="button"
-                    onClick={() => handleQuickFieldComment('PDF tờ khai')}
+                    onClick={() => handleQuickFieldComment('general', application.eformFields[0]?.key || '/formData/applicantName', 'Bản PDF tờ khai chính thức')}
                     className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
                   >
                     <ChatText size={16} />
@@ -831,34 +942,93 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="comment-cat-select" className="block text-xs font-bold text-slate-700 mb-1">
-                    Phân loại
+                    Phân loại nhận xét
                   </label>
                   <select
                     id="comment-cat-select"
                     value={commentCategory}
-                    onChange={(e) => setCommentCategory(e.target.value as 'general' | 'eform' | 'document' | 'checklist')}
+                    onChange={(e) => {
+                      const cat = e.target.value as 'general' | 'eform' | 'document' | 'checklist';
+                      setCommentCategory(cat);
+                      if (cat === 'general') {
+                        setCommentTarget(application.eformFields[0]?.key || '/formData/applicantName');
+                        setCommentLabel('Góp ý chung hồ sơ');
+                      } else if (cat === 'eform') {
+                        const first = application.eformFields[0];
+                        setCommentTarget(first?.key || '/formData/applicantName');
+                        setCommentLabel(first?.label || 'Trường tờ khai');
+                      } else {
+                        const first = application.checklist[0];
+                        setCommentTarget(first?.id || '');
+                        setCommentLabel(first?.name || 'Giấy tờ đính kèm');
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
                   >
-                    <option value="general">Góp ý chung</option>
-                    <option value="eform">Trường E-form</option>
-                    <option value="document">Tài liệu đính kèm</option>
-                    <option value="checklist">Thành phần hồ sơ</option>
+                    <option value="general">Góp ý chung hồ sơ</option>
+                    <option value="eform">Trường dữ liệu E-form</option>
+                    <option value="checklist">Thành phần hồ sơ / Giấy tờ</option>
                   </select>
                 </div>
 
-                <div>
-                  <label htmlFor="comment-target-input" className="block text-xs font-bold text-slate-700 mb-1">
-                    Vị trí cụ thể (tùy chọn)
-                  </label>
-                  <input
-                    id="comment-target-input"
-                    type="text"
-                    value={commentTarget}
-                    onChange={(e) => setCommentTarget(e.target.value)}
-                    placeholder="VD: E-form > Địa chỉ thường trú"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
+                {commentCategory === 'eform' && (
+                  <div>
+                    <label htmlFor="comment-target-select" className="block text-xs font-bold text-slate-700 mb-1">
+                      Trường dữ liệu E-form
+                    </label>
+                    <select
+                      id="comment-target-select"
+                      value={commentTarget}
+                      onChange={(e) => {
+                        setCommentTarget(e.target.value);
+                        const f = application.eformFields.find((x) => x.key === e.target.value);
+                        setCommentLabel(f?.label || e.target.value);
+                      }}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
+                    >
+                      {application.eformFields.map((f) => (
+                        <option key={f.key} value={f.key}>
+                          {f.label} ({f.key})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {(commentCategory === 'checklist' || commentCategory === 'document') && (
+                  <div>
+                    <label htmlFor="comment-checklist-select" className="block text-xs font-bold text-slate-700 mb-1">
+                      Thành phần hồ sơ / Giấy tờ
+                    </label>
+                    <select
+                      id="comment-checklist-select"
+                      value={commentTarget}
+                      onChange={(e) => {
+                        setCommentTarget(e.target.value);
+                        const c = application.checklist.find((x) => x.id === e.target.value);
+                        setCommentLabel(c?.name || e.target.value);
+                      }}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
+                    >
+                      {application.checklist.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.type === 'mandatory' ? '(Bắt buộc)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {commentCategory === 'general' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Phạm vi áp dụng
+                    </label>
+                    <div className="w-full rounded-lg border border-slate-200 bg-slate-100/70 px-3 py-2 text-xs text-slate-600">
+                      Toàn bộ hồ sơ ({application.applicationNumber})
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -923,56 +1093,112 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
         {/* TAB 8: PHIÊN BẢN & SO SÁNH (DIFF V1 vs V2) */}
         {activeTab === 'versions' && (
           <div className="space-y-6">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-950">Lịch sử phiên bản & Đối chiếu thay đổi</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-950">Lịch sử phiên bản & Đối chiếu thay đổi (Diff Engine)</h3>
+                <p className="text-xs text-slate-500">Tự động so sánh dữ liệu Snapshot giữa các lần nộp của công dân theo chuẩn RFC 6901</p>
+              </div>
+
+              {remoteVersions && remoteVersions.length >= 2 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-slate-600">So sánh:</span>
+                  <select
+                    value={diffFromVersion}
+                    onChange={(e) => setDiffFromVersion(Number(e.target.value))}
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 font-bold text-slate-700 text-xs"
+                  >
+                    {remoteVersions.map((v) => (
+                      <option key={v.id} value={v.versionNumber}>
+                        Bản cũ (V{v.versionNumber})
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-slate-400">↔</span>
+                  <select
+                    value={diffToVersion}
+                    onChange={(e) => setDiffToVersion(Number(e.target.value))}
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 font-bold text-slate-700 text-xs"
+                  >
+                    {remoteVersions.map((v) => (
+                      <option key={v.id} value={v.versionNumber}>
+                        Bản mới (V{v.versionNumber})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
-            {application.revisionHistory.length === 0 ? (
-              <p className="py-12 text-center text-sm text-slate-500">Hồ sơ đang ở phiên bản đầu tiên (V1), chưa có lịch sử chỉnh sửa.</p>
-            ) : (
-              <div className="space-y-6">
-                {application.revisionHistory.map((rev) => (
-                  <div key={rev.version} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="grid size-8 place-items-center rounded-lg bg-purple-100 text-purple-900 font-bold text-xs">
-                          V{rev.version}
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">Phiên bản {rev.version}</h4>
-                          <p className="text-[11px] text-slate-500">Nộp lúc: {rev.submittedAt}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-slate-600 font-semibold">{rev.summary}</span>
-                    </div>
+            {loadingDiff ? (
+              <div className="py-12 text-center text-xs text-slate-500 animate-pulse">
+                Đang đối chiếu dữ liệu giữa phiên bản V{diffFromVersion} và V{diffToVersion}...
+              </div>
+            ) : remoteDiff && remoteDiff.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Phát hiện <strong className="text-red-800">{remoteDiff.length}</strong> trường có thay đổi so với bản trước:</span>
+                  <span className="text-[11px] text-slate-400">Khác biệt được tô màu tự động</span>
+                </div>
 
-                    {/* Diff table if exists */}
-                    {rev.diffs && rev.diffs.length > 0 && (
-                      <div className="mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white">
-                        <table className="w-full text-xs text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
-                              <th className="px-3 py-2">Trường thay đổi</th>
-                              <th className="px-3 py-2 text-rose-800">Phiên bản V1 (cũ)</th>
-                              <th className="px-3 py-2 text-emerald-800">Phiên bản V2 (mới nộp lại)</th>
-                              <th className="px-3 py-2">Lý do điều chỉnh</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {rev.diffs.map((d, i) => (
-                              <tr key={i} className="hover:bg-slate-50">
-                                <td className="px-3 py-2.5 font-bold text-slate-900">{d.fieldName}</td>
-                                <td className="px-3 py-2.5 text-rose-700 line-through bg-rose-50/30">{d.v1Value}</td>
-                                <td className="px-3 py-2.5 text-emerald-800 font-semibold bg-emerald-50/30">{d.v2Value}</td>
-                                <td className="px-3 py-2.5 text-slate-600 italic">{d.reason || 'Sửa theo góp ý'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500">
+                        <th className="px-4 py-3">Trường dữ liệu</th>
+                        <th className="px-4 py-3 text-rose-800">Bản cũ (V{diffFromVersion})</th>
+                        <th className="px-4 py-3 text-emerald-800">Bản mới nộp lại (V{diffToVersion})</th>
+                        <th className="px-4 py-3">Nhận xét liên kết</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {remoteDiff.map((d, i) => (
+                        <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-4 py-3 font-bold text-slate-900">
+                            <div>{d.fieldLabel || d.fieldKey}</div>
+                            <span className="text-[10px] font-mono text-slate-400">{d.fieldKey}</span>
+                          </td>
+                          <td className="px-4 py-3 text-rose-700 line-through bg-rose-50/40">
+                            {d.oldValue !== null && d.oldValue !== undefined
+                              ? (typeof d.oldValue === 'object' ? JSON.stringify(d.oldValue) : String(d.oldValue))
+                              : <span className="italic text-slate-400">Chưa có</span>}
+                          </td>
+                          <td className="px-4 py-3 text-emerald-800 font-semibold bg-emerald-50/40">
+                            {d.newValue !== null && d.newValue !== undefined
+                              ? (typeof d.newValue === 'object' ? JSON.stringify(d.newValue) : String(d.newValue))
+                              : <span className="italic text-slate-400">Đã xóa</span>}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {d.associatedComments && d.associatedComments.length > 0 ? (
+                              <div className="space-y-1">
+                                {d.associatedComments.map((c) => (
+                                  <div key={c.id} className="text-amber-800 text-[11px] bg-amber-50 p-1.5 rounded border border-amber-200">
+                                    <strong>💬 Cán bộ:</strong> {c.commentText}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="italic text-slate-400">Không có comment cũ</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center space-y-2">
+                <ClockCounterClockwise size={32} className="mx-auto text-slate-400" />
+                <h4 className="text-sm font-bold text-slate-800">
+                  {(!remoteVersions || remoteVersions.length <= 1)
+                    ? `Hồ sơ đang ở phiên bản V${application.currentVersion} (bản nộp đầu tiên)`
+                    : `Không có sự sai khác nào giữa V${diffFromVersion} và V${diffToVersion}`}
+                </h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  {(!remoteVersions || remoteVersions.length <= 1)
+                    ? 'Khi cán bộ gửi yêu cầu bổ sung và công dân nộp lại hồ sơ, hệ thống sẽ tự động đối chiếu các trường thay đổi tại đây.'
+                    : 'Tất cả các trường dữ liệu ở hai phiên bản này đều hoàn toàn giống nhau.'}
+                </p>
               </div>
             )}
           </div>
@@ -1037,22 +1263,30 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
               Thoát workspace
             </button>
 
+            {/* Nút Từ chối */}
             <button
               type="button"
-              onClick={() => {
-                const issueList = comments.map((c) => `${c.target}: ${c.content}`);
-                setSelectedIssueKeys(issueList);
-                setShowRevisionModal(true);
-              }}
+              onClick={() => setShowRejectModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
+            >
+              <XCircle size={16} weight="bold" />
+              <span>Từ chối</span>
+            </button>
+
+            {/* Nút Yêu cầu bổ sung */}
+            <button
+              type="button"
+              onClick={handleOpenRevisionModal}
               className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-800 hover:bg-rose-100 transition-colors"
             >
               <WarningCircle size={16} weight="bold" />
-              <span>Yêu cầu bổ sung ({comments.length})</span>
+              <span>Yêu cầu bổ sung ({activeComments.length})</span>
             </button>
 
+            {/* Nút Duyệt tiền kiểm */}
             <button
               type="button"
-              onClick={() => setShowApproveModal(true)}
+              onClick={handleOpenApproveModal}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-800 transition-colors shadow-2xs"
             >
               <CheckCircle size={16} weight="bold" />
@@ -1190,6 +1424,70 @@ export const OfficerReviewWorkspaceView: React.FC<OfficerReviewWorkspaceViewProp
                 className="px-5 py-2 rounded-xl bg-emerald-700 text-xs font-bold text-white hover:bg-emerald-800 shadow-2xs"
               >
                 Xác nhận phê duyệt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: TỪ CHỐI TIỀN KIỂM */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-red-700 font-bold">
+                <XCircle size={22} weight="bold" />
+                <h4 className="text-base font-bold">Từ chối tiếp nhận tiền kiểm</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Hồ sơ <strong className="text-slate-900">{application.applicationNumber}</strong> sẽ bị <strong>TỪ CHỐI</strong> chính thức. Vui lòng nêu rõ lý do không đủ điều kiện tiếp nhận theo quy định.
+            </p>
+
+            <div>
+              <label htmlFor="reject-reason" className="block text-xs font-bold text-slate-800 mb-1">
+                Lý do từ chối chính thức (bắt buộc):
+              </label>
+              <textarea
+                id="reject-reason"
+                rows={4}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Nêu rõ lý do từ chối (tối đa 4000 ký tự)..."
+                className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-red-600 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={!rejectReason.trim()}
+                onClick={() => {
+                  if (!rejectReason.trim()) {
+                    toast.warning('Vui lòng nhập lý do từ chối chính thức.');
+                    return;
+                  }
+                  onRejectApplication?.(application.id, rejectReason.trim());
+                  setShowRejectModal(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-red-700 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50 shadow-2xs"
+              >
+                Xác nhận từ chối
               </button>
             </div>
           </div>
