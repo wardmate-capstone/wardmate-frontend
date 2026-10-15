@@ -4,6 +4,12 @@ Cập nhật: 15/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tối ưu Smart Polling cho hồ sơ công dân — 15/10/2026
+
+- Theo yêu cầu người dùng, thay thế cơ chế polling 30 giây mù quáng bằng Smart Polling có điều kiện trong `src/hooks/useWorkflow.ts` (`useCitizenApplications`).
+- `refetchInterval` được cấu hình dạng hàm: chỉ tự động làm mới mỗi 30 giây khi danh sách có hồ sơ ở trạng thái chờ cán bộ thụ lý/tiền kiểm (`SUBMITTED`, `UNDER_REVIEW`). Khi tất cả hồ sơ ở trạng thái tĩnh (`DRAFT`, `APPROVED`, `REJECTED`), polling tự động dừng (`false`), tránh bắn request dư thừa vào backend và giữ tab Network sạch.
+- Kiểm tra: `npm run typecheck` đạt 0 lỗi, `npm run lint` đạt 0 lỗi.
+
 ## Điều tra Workflow tạo hồ sơ trả 500 — 15/10/2026
 
 - Response `POST /api/v1/applications` có trace `00-bec4f2471bb01af0c7eeb25d793fb161-1655b599d4dae45b-00`. Đối chiếu source backend xác định validation/phụ thuộc đều trả lỗi có kiểm soát; thao tác DB là nhánh còn ném 500. Azure trước đó chỉ ghi nhận đã áp dụng 5 migrations, còn model mới cần migration thứ 6 `SnapshotChecklistRequirements` để ghi metadata checklist.
