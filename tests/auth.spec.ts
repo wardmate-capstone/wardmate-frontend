@@ -26,6 +26,10 @@ async function mock(context: BrowserContext, handler: (route: Route) => Promise<
       id: 'mock-user', username: 'demo', email: 'demo@example.test', profile: { fullName: 'Người Dùng Mẫu' },
       roles: ['REGISTERED_CITIZEN', 'FRONT_DESK_OFFICER'], permissions: ['profile.read'],
     });
+    // Workspace requests can complete after navigation; keep them separate from IAM assertions.
+    if (path === '/api/v1/procedures') return reply(route, 200, { items: [], currentPage: 1, pageSize: 50, totalCount: 0, totalPages: 0, hasPrevious: false, hasNext: false });
+    if (path === '/api/v1/wards') return reply(route, 200, []);
+    if (path === '/api/v1/applications' || path === '/api/v1/officer/applications/pending') return reply(route, 200, { items: [], page: 1, pageSize: 50, total: 0 });
     // Every app boot now restores the cookie before deciding whether a route is private.
     if (path.endsWith('/refresh-token') && !route.request().headers().cookie?.includes('refreshToken=')) return reply(route, 401);
     await handler(route);
@@ -61,7 +65,7 @@ test('register sends only required fields, preserves returnTo and never establis
   await page.getByLabel('Email', { exact: true }).fill('demo@example.test');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('Mock-password');
   await page.getByLabel('Xác nhận mật khẩu').fill('Mock-password');
-  await page.getByText('Tôi đồng ý với điều khoản sử dụng').click();
+  await page.getByRole('checkbox', { name: 'Tôi đồng ý với điều khoản sử dụng' }).check();
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => { (document.activeElement as HTMLElement)?.blur(); window.scrollTo({ top: 0, behavior: 'instant' }); });
@@ -106,6 +110,7 @@ test('login uses HttpOnly cookie, RAM token and safe returnTo; reload recovers o
   expect((await context.cookies()).find((value) => value.name === 'refreshToken')?.httpOnly).toBe(true);
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toMatch(/mock-access|mock-refresh/);
   await page.reload();
+  await expect(page.getByRole('heading', { name: 'Tổng quan công dân', exact: true })).toBeVisible();
   expect(await requestPrivate(page)).toBe(200);
   expect(refreshes).toBe(1);
 });

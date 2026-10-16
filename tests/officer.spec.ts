@@ -9,13 +9,10 @@ test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và khôn
   // Check header / title
   await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), Cán bộ .+$/ })).toBeVisible();
 
-  // Check stat cards exist
-  await expect(page.getByText('Chờ tiền kiểm').first()).toBeVisible();
-  await expect(page.getByText('Đang kiểm tra').first()).toBeVisible();
-  await expect(page.getByText('Cần bổ sung').first()).toBeVisible();
-  await expect(page.getByText('Đã gửi lại').first()).toBeVisible();
-  await expect(page.getByText('Đã duyệt tiền kiểm').first()).toBeVisible();
-  await expect(page.getByText('Chờ tiếp nhận').first()).toBeVisible();
+  // Check dashboard content rather than labels in the closed mobile sidebar.
+  await expect(page.getByRole('region', { name: 'Tiến độ xử lý hồ sơ trong ca trực' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Hồ sơ ưu tiên xử lý ngay (0)' })).toBeVisible();
+  await expect(page.getByRole('complementary')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Chỉ số hiệu suất ca trực' })).toBeVisible();
   await expect(page.getByText('API chỉ số hiệu suất cán bộ sẽ được tích hợp sau.', { exact: false })).toBeVisible();
 
@@ -39,7 +36,7 @@ test('Cổng cán bộ: Mở menu điều hướng mobile và chuyển sang Qu�
 
   // Application table should be visible
   await expect(page.getByRole('table', { name: 'Bảng danh sách hồ sơ hành chính' })).toBeVisible();
-  await expect(page.getByText('API danh sách hồ sơ cán bộ Một cửa sẽ được tích hợp sau.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Danh sách và chỉ số chỉ phản ánh hàng đợi', { exact: false })).toBeVisible();
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

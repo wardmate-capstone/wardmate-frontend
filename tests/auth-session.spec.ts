@@ -127,7 +127,7 @@ test('server validation is attached to the matching form field', async ({ page }
 
 test('IT_ADMIN menu exposes both approved workspaces, not officer access', async ({ page }) => {
   await iam(page, ['IT_ADMIN']);
-  await page.goto('/');
+  await page.goto('/hoi-dap');
   const accountMenu = page.getByRole('button', { name: 'Menu tài khoản', exact: true });
   await expect(accountMenu).toContainText('Tài khoản kiểm thử');
   await accountMenu.click();

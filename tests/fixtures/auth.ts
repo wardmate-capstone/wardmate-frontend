@@ -35,6 +35,9 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
       if (route.request().method() === 'PUT') profile = route.request().postDataJSON();
       return authReply(route, { json: profile });
     }
+    if (method === 'GET' && (path === '/api/v1/applications' || path === '/api/v1/officer/applications/pending')) {
+      return authReply(route, { json: { items: [], page: 1, pageSize: 50, total: 0 } });
+    }
     if (path === '/api/v1/accounts') {
       return authReply(route, {
         json: {
