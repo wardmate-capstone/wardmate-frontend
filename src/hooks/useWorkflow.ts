@@ -17,7 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 export const workflowQueryKeys = {
   officerPending: (filters?: OfficerPendingInput) => ['workflow', 'officer', 'pending', filters] as const,
-  citizenApplications: (params?: { page?: number; pageSize?: number }) => ['workflow', 'citizen', 'applications', params] as const,
+  citizenApplications: () => ['workflow', 'citizen', 'applications'] as const,
   applicationDetail: (id?: string) => ['workflow', 'application', id] as const,
   applicationComments: (id?: string, versionNumber?: number, status?: string) => ['workflow', 'application', id, 'comments', { versionNumber, status }] as const,
   applicationVersions: (id?: string) => ['workflow', 'application', id, 'versions'] as const,
@@ -45,6 +45,7 @@ export function useAssignOfficerMutation() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -57,6 +58,7 @@ export function useAddCommentMutation() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'comments'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -69,6 +71,7 @@ export function useRequestRevisionMutation() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -80,6 +83,7 @@ export function useApproveApplicationMutation() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -92,6 +96,7 @@ export function useRejectApplicationMutation() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -101,34 +106,38 @@ export function useRejectApplicationMutation() {
 // ==========================================
 
 export function useApplicationDetail(id?: string) {
+  const userId = useAuthStore(state => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'application', id],
+    queryKey: ['workflow', 'application', id, userId],
     queryFn: ({ signal }) => workflowApi.getApplication(id!, signal),
-    enabled: Boolean(id),
+    enabled: Boolean(id && userId),
   });
 }
 
 export function useApplicationComments(id?: string, versionNumber?: number, status?: string) {
+  const userId = useAuthStore(state => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'application', id, 'comments', { versionNumber, status }],
+    queryKey: ['workflow', 'application', id, 'comments', { versionNumber, status }, userId],
     queryFn: ({ signal }) => workflowApi.getComments(id!, versionNumber, status, signal),
-    enabled: Boolean(id),
+    enabled: Boolean(id && userId) && (versionNumber === undefined || versionNumber > 0),
   });
 }
 
 export function useApplicationVersions(id?: string) {
+  const userId = useAuthStore(state => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'application', id, 'versions'],
+    queryKey: ['workflow', 'application', id, 'versions', userId],
     queryFn: ({ signal }) => workflowApi.getVersions(id!, signal),
-    enabled: Boolean(id),
+    enabled: Boolean(id && userId),
   });
 }
 
 export function useApplicationDiff(id?: string, fromVersion?: number, toVersion?: number) {
+  const userId = useAuthStore(state => state.user?.id);
   return useQuery({
-    queryKey: ['workflow', 'application', id, 'diff', { fromVersion, toVersion }],
+    queryKey: ['workflow', 'application', id, 'diff', { fromVersion, toVersion }, userId],
     queryFn: ({ signal }) => workflowApi.getDiff(id!, fromVersion!, toVersion!, signal),
-    enabled: Boolean(id && fromVersion && toVersion && fromVersion !== toVersion),
+    enabled: Boolean(userId && id && fromVersion && toVersion && fromVersion < toVersion),
   });
 }
 
@@ -172,6 +181,7 @@ export function useUpdateChecklistMutation() {
       workflowApi.updateChecklist(id, checklistId, input),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -183,6 +193,7 @@ export function useSubmitApplicationMutation() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'citizen', 'applications'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }
@@ -195,6 +206,7 @@ export function useResubmitApplicationMutation() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'citizen', 'applications'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'versions'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'comments'] });
     },
