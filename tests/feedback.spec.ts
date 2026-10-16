@@ -30,7 +30,8 @@ test.describe('Citizen Satisfaction Feedback Modal (FE-TASK-31)', () => {
     const star5Btn = dialog.getByRole('radio', { name: /5 sao - Rất hài lòng/ });
     await star5Btn.click();
     await expect(dialog.getByText('Rất hài lòng')).toBeVisible();
-    await expect(submitBtn).toBeEnabled();
+    await expect(submitBtn).toBeDisabled();
+    await expect(dialog.getByRole('status')).toContainText('Chức năng gửi đánh giá chưa khả dụng');
 
     // Toggle criteria aspects
     const aspectBtn = dialog.getByRole('button', { name: 'Thời gian tiền kiểm nhanh chóng' });
@@ -42,12 +43,11 @@ test.describe('Citizen Satisfaction Feedback Modal (FE-TASK-31)', () => {
     await textarea.fill('Cán bộ hướng dẫn rất tận tình và chu đáo.');
     await expect(dialog.getByText(/\d+\/500/)).toBeVisible();
 
-    // Submit feedback
-    await submitBtn.click();
+    // No contract exists: preserve the form and never claim a server write.
+    await expect(submitBtn).toBeDisabled();
+    await expect(dialog).toBeVisible();
+    await expect(page.getByText(/Phản hồi đã được ghi nhận/)).toHaveCount(0);
 
-    // Verify modal closes and single toast notification appears
-    await expect(dialog).not.toBeVisible();
-    await expect(page.getByText(/Cảm ơn bạn đã đánh giá dịch vụ 5 sao/)).toBeVisible();
   });
 
   test('can close modal via "Để sau" button and keyboard Escape', async ({ page }) => {

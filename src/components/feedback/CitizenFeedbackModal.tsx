@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import React, { useRef, useState } from 'react';
 import { Star, Check } from '@phosphor-icons/react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +14,7 @@ interface CitizenFeedbackModalProps {
   onOpenChange: (open: boolean) => void;
   procedureName?: string;
   applicationCode?: string;
-  onSubmitFeedback?: (data: CitizenFeedback) => void;
+  onSubmitFeedback?: (data: CitizenFeedback) => void | Promise<void>;
 }
 
 export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
@@ -29,6 +30,9 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  const [submitError, setSubmitError] = useState('');
+  const lock = useRef(false);
+  const guard = useUnsavedChanges(Boolean(rating || selectedAspects.length || comment.trim()), isSubmitting);
   const activeRating = hoverRating || rating;
 
   const handleToggleAspect = (aspect: string) => {
@@ -45,40 +49,21 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
   };
 
   const handleClose = () => {
-    onOpenChange(false);
-    setTimeout(() => {
-      handleReset();
-    }, 200);
+    guard.requestClose(() => { onOpenChange(false); handleReset(); setSubmitError(''); });
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (rating === 0) return;
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const feedbackData: CitizenFeedback = {
-        id: `fb-${Date.now()}`,
-        procedureName,
-        applicationCode,
-        rating,
-        aspects: selectedAspects,
-        comment: comment.trim(),
-        createdAt: new Date().toISOString(),
-      };
-
-      if (onSubmitFeedback) {
-        onSubmitFeedback(feedbackData);
-      }
-
-      setIsSubmitting(false);
-      onOpenChange(false);
-      handleReset();
-    }, 300);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!rating || !onSubmitFeedback || lock.current) return;
+    lock.current = true; setIsSubmitting(true); setSubmitError('');
+    try {
+      await onSubmitFeedback({ id: '', procedureName, applicationCode, rating, aspects: selectedAspects, comment: comment.trim(), createdAt: new Date().toISOString() });
+      onOpenChange(false); handleReset();
+    } catch { setSubmitError('Chưa gửi được đánh giá. Nội dung vẫn được giữ để bạn thử lại.'); }
+    finally { lock.current = false; setIsSubmitting(false); }
   };
 
   return (
-    <Modal
+    <><Modal
       open={open}
       onOpenChange={handleClose}
       title="Đánh giá trải nghiệm dịch vụ"
@@ -89,6 +74,8 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!onSubmitFeedback && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Chức năng gửi đánh giá chưa khả dụng. Nội dung chưa được gửi đến cán bộ.</p>}
+        {submitError && <p role="alert">{submitError}</p>}
           {/* Section 1: Star Rating */}
           <div className="space-y-2 text-center sm:text-left">
             <label className="block text-sm font-bold text-slate-900">
@@ -109,6 +96,13 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
                       key={star}
                       type="button"
                       role="radio"
+                      tabIndex={rating === star || (!rating && star === 1) ? 0 : -1}
+                      onKeyDown={event => {
+                        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+                        event.preventDefault();
+                        const next = event.key === 'Home' ? 1 : event.key === 'End' ? 5 : ((star - 1 + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : 4)) % 5) + 1;
+                        setRating(next); event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=radio]')[next - 1]?.focus();
+                      }}
                       aria-checked={rating === star}
                       aria-label={`${star} sao - ${FEEDBACK_RATING_LABELS[star]}`}
                       onClick={() => setRating(star)}
@@ -212,7 +206,7 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
               <Button
                 type="submit"
                 loading={isSubmitting}
-                disabled={rating === 0 || isSubmitting}
+                disabled={!onSubmitFeedback || rating === 0 || isSubmitting}
                 className="min-w-[120px]"
               >
                 Gửi đánh giá
@@ -220,6 +214,6 @@ export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
             </div>
           </div>
         </form>
-    </Modal>
+    </Modal>{guard.confirmation}</>
   );
 };
