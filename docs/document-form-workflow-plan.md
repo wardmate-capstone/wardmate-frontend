@@ -1,5 +1,7 @@
 # Kế hoạch DocumentForm và ApplicationWorkflow
 
+> **Đã có bản rà soát thay thế ngày 16/10/2026:** xem [kế hoạch tích hợp API và UI/validation mới](document-form-integration-plan-2026-10-16.md). Nội dung bên dưới giữ làm lịch sử ngày 15/10, không dùng để kết luận hiện trạng. BE/Azure đã có discovery cán bộ, contents cho cán bộ, submissionId trên PDF và API QR; FE còn việc tích hợp và các giới hạn QR/lifecycle được ghi trong bản mới.
+
 Ngày rà soát: 15/10/2026 (Asia/Saigon), cập nhật theo source BE mới pull. Trạng thái: đã triển khai toàn bộ phần FE mà hợp đồng backend hiện tại cho phép; các phần bị chặn được ghi tại `docs/DOCUMENT_FORM_BACKEND_GAPS.md`.
 
 ## 1. Nguồn và độ tin cậy
