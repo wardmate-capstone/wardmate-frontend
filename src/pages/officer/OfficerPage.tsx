@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/Toast';
 // INITIAL_OFFICER_APPLICATIONS, INITIAL_OFFICER_AUDIT_LOGS, INITIAL_OFFICER_NOTIFICATIONS đã được xóa — dữ liệu hồ sơ, audit, thông báo sẽ lấy từ API sau.
 import type {
@@ -7,7 +7,6 @@ import type {
   OfficerAuditLog,
   OfficerNotification,
   OfficerReviewComment,
-  OfficialReceiptData,
 } from '@/types/officer';
 
 import { UnifiedOfficerSidebar as OfficerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
@@ -34,39 +33,19 @@ import {
   mapApplicationDtoToOfficerApplication,
 } from '@/lib/api/workflowAdapters';
 import { workflowError, workflowApi } from '@/lib/api/workflow';
-import { documentFormApi } from '@/lib/api/documentForms';
+import { Button } from '@/components/ui';
 
 export const OfficerPage: React.FC = () => {
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
-  async function loadSupportingDocuments(application: OfficerApplication) {
-    try {
-      const documents = await documentFormApi.listSupportingDocuments(application.id);
-      const hydrated = await Promise.all(documents.map(async (item) => {
-        const file = await documentFormApi.downloadSupportingDocument(item.id);
-        const extension = item.fileName.split('.').pop()?.toLowerCase();
-        return {
-          id: item.id,
-          name: item.fileName,
-          fileType: ['jpg', 'jpeg', 'png'].includes(extension || '') ? 'image' as const : 'pdf' as const,
-          fileSize: item.fileSizeBytes ? `${(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MB` : 'Không rõ dung lượng',
-          uploadDate: new Date(item.createdAtUtc).toLocaleString('vi-VN'),
-          url: URL.createObjectURL(file.blob),
-          status: 'pending' as const,
-        };
-      }));
-      return { ...application, documents: hydrated };
-    } catch {
-      toast.error('Không thể tải giấy tờ đính kèm. Bạn vẫn có thể xem và xử lý thông tin hồ sơ.');
-      return { ...application, documents: [] };
-    }
-  }
-
   // TanStack Query & Mutations từ Workflow API
-  const { data: pendingData } = useOfficerPendingApplications({ pageSize: 50 });
+  const [queuePage, setQueuePage] = useState(1);
+  const queue = useOfficerPendingApplications({ page: queuePage, pageSize: 50 });
+  const pendingData = queue.data;
   const assignMutation = useAssignOfficerMutation();
+  const assignLock = useRef(false);
   const requestRevisionMutation = useRequestRevisionMutation();
   const approveMutation = useApproveApplicationMutation();
   const rejectMutation = useRejectApplicationMutation();
@@ -112,6 +91,8 @@ export const OfficerPage: React.FC = () => {
 
   // ACTION: Nhận xử lý hồ sơ (Tiếp nhận hồ sơ tiền kiểm)
   const handleTakeApplication = async (appId: string) => {
+    if (assignLock.current) return;
+    assignLock.current = true;
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
     try {
@@ -119,9 +100,9 @@ export const OfficerPage: React.FC = () => {
       toast.success(`Đã nhận xử lý hồ sơ ${appNumber}. Đang mở không gian thẩm định.`);
 
       // Tải chi tiết hồ sơ đầy đủ từ backend để mở workspace
-      const fullDto = await workflowApi.getOfficerApplication(appId).catch(() => workflowApi.getApplication(appId));
+      const fullDto = await workflowApi.getOfficerApplication(appId);
       const comments = await workflowApi.getComments(appId).catch(() => []);
-      const mappedApp = await loadSupportingDocuments(mapApplicationDtoToOfficerApplication(fullDto, comments));
+      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
 
       // Thêm audit log
       const newLog: OfficerAuditLog = {
@@ -138,14 +119,14 @@ export const OfficerPage: React.FC = () => {
       setReviewingApp(mappedApp);
     } catch (err) {
       toast.error(workflowError(err));
-    }
+      await queue.refetch();
+    } finally { assignLock.current = false; }
   };
 
   // ACTION: Yêu cầu bổ sung
   const handleRequestRevision = async (appId: string, notes: string, issues: string[]) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
-    try {
       await requestRevisionMutation.mutateAsync({ id: appId, input: { reason: notes } });
 
       // Audit Log
@@ -164,17 +145,14 @@ export const OfficerPage: React.FC = () => {
       toast.warning(`Đã gửi yêu cầu bổ sung hồ sơ ${appNumber} đến công dân.`);
       setReviewingApp(null);
       setActiveSection('apps-need-revision');
-    } catch (err) {
-      toast.error(workflowError(err));
-    }
+
   };
 
   // ACTION: Duyệt tiền kiểm
   const handleApproveApplication = async (appId: string) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
-    try {
-      await approveMutation.mutateAsync(appId);
+      const result = await approveMutation.mutateAsync(appId);
 
       // Audit Log
       const newLog: OfficerAuditLog = {
@@ -190,18 +168,15 @@ export const OfficerPage: React.FC = () => {
       setAuditLogs((prev) => [newLog, ...prev]);
 
       toast.success(`Hồ sơ ${appNumber} đã được DUYỆT TIỀN KIỂM thành công!`);
-      setReviewingApp(null);
+      setReviewingApp(mapApplicationDtoToOfficerApplication(result.application));
       setActiveSection('apps-approved');
-    } catch (err) {
-      toast.error(workflowError(err));
-    }
+
   };
 
   // ACTION: Từ chối tiền kiểm
   const handleRejectApplication = async (appId: string, reason: string) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
-    try {
       await rejectMutation.mutateAsync({ id: appId, input: { reason } });
 
       // Audit Log
@@ -220,9 +195,7 @@ export const OfficerPage: React.FC = () => {
       toast.error(`Đã từ chối tiếp nhận tiền kiểm hồ sơ ${appNumber}.`);
       setReviewingApp(null);
       setActiveSection('apps-all');
-    } catch (err) {
-      toast.error(workflowError(err));
-    }
+
   };
 
   // ACTION: Cập nhật comments
@@ -238,67 +211,24 @@ export const OfficerPage: React.FC = () => {
   // ACTION: Mở chi tiết hồ sơ thẩm định (tải chi tiết từ backend)
   const handleOpenReview = async (app: OfficerApplication) => {
     // Nếu hồ sơ đang chờ tiếp nhận (chưa phân công), tự động nhận xử lý trước khi mở workspace
-    if (app.status === 'SUBMITTED_FOR_REVIEW') {
-      await handleTakeApplication(app.id);
+    if (app.status === 'SUBMITTED_FOR_REVIEW' || app.status === 'RESUBMITTED') {
+      toast.info('Bấm Nhận xử lý để nhận thụ lý trước khi mở hồ sơ.');
       return;
     }
 
     try {
       const fullDto = await workflowApi.getOfficerApplication(app.id);
       const comments = await workflowApi.getComments(app.id).catch(() => []);
-      const mappedApp = await loadSupportingDocuments(mapApplicationDtoToOfficerApplication(fullDto, comments));
+      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
       setReviewingApp(mappedApp);
     } catch (err) {
-      setReviewingApp(app);
       toast.error(workflowError(err));
     }
   };
 
   // ACTION: Xác nhận tiếp nhận chính thức tại quầy
-  const handleConfirmReceipt = (appId: string, receiptData: OfficialReceiptData) => {
-    const targetApp = applications.find((a) => a.id === appId);
-    if (!targetApp) return;
-
-    const now = '21/09/2026 10:15';
-    const updatedApps = applications.map((app) => {
-      if (app.id === appId) {
-        return {
-          ...app,
-          status: 'OFFICIALLY_RECEIVED' as const,
-          officialReceipt: receiptData,
-          timeline: [
-            ...app.timeline,
-            {
-              id: `t-${Date.now()}`,
-              time: now,
-              title: 'Đã tiếp nhận hồ sơ chính thức tại quầy Một cửa',
-              actor: officerName,
-              description: `Đã đối chiếu hồ sơ giấy và cấp số biên nhận ${receiptData.receiptNumber}`,
-              type: 'officer' as const,
-              status: 'done' as const,
-            },
-          ],
-        };
-      }
-      return app;
-    });
-
-    setApplications(updatedApps);
-
-    // Audit Log
-    const newLog: OfficerAuditLog = {
-      id: `log-${Date.now()}`,
-      time: now,
-      applicationNumber: targetApp.applicationNumber,
-      citizenName: targetApp.citizen.fullName,
-      action: 'Tiếp nhận chính thức',
-      details: `Cấp biên nhận ${receiptData.receiptNumber}, hẹn trả lúc ${receiptData.appointmentDate}`,
-      officerName,
-      badgeTone: 'success',
-    };
-    setAuditLogs([newLog, ...auditLogs]);
-
-    toast.success(`Đã tiếp nhận chính thức hồ sơ ${targetApp.applicationNumber}. Cấp biên nhận ${receiptData.receiptNumber}.`);
+  const handleConfirmReceipt = () => {
+    toast.info('Chức năng tiếp nhận chính thức chưa được cung cấp.');
   };
 
   // ACTION: Mark all notifications read
@@ -368,9 +298,13 @@ export const OfficerPage: React.FC = () => {
 
         {/* Semantic Main Content */}
         <main id="officer-main" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabIndex={-1}>
+          {queue.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(queue.error)}</p><Button variant="outline" onClick={() => void queue.refetch()}>Thử tải lại hàng đợi</Button></div>}
+          {!reviewingApp && <p className="mb-4 rounded-xl border bg-white p-3 text-sm text-slate-600">Danh sách và chỉ số chỉ phản ánh hàng đợi chờ/đang kiểm tra trên trang hiện tại. Các mục cần bổ sung, đã duyệt và tiếp nhận tại quầy chưa có nguồn dữ liệu đầy đủ.</p>}
+          {!reviewingApp && activeSection.startsWith('apps-') && <div className="mb-4 flex flex-wrap items-center gap-3"><Button variant="outline" disabled={queuePage === 1 || queue.isFetching} onClick={() => setQueuePage(p => p - 1)}>Trang trước</Button><span>Trang {queuePage} · {pendingData?.total ?? 0} hồ sơ trong hàng đợi</span><Button variant="outline" disabled={queue.isFetching || queuePage * 50 >= (pendingData?.total ?? 0)} onClick={() => setQueuePage(p => p + 1)}>Trang sau</Button></div>}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView
+              key={reviewingApp.id}
               application={reviewingApp}
               onBack={() => setReviewingApp(null)}
               onRequestRevision={handleRequestRevision}
