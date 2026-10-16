@@ -1,79 +1,37 @@
-import { useState } from 'react';
-import { DownloadSimple, FilePdf, SpinnerGap } from '@phosphor-icons/react';
+import { useRef, useState } from 'react';
 import { Button, toast } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useGeneratedDocuments } from '@/hooks/useDocumentForms';
-import { documentFormApi, documentFormError, downloadBlob } from '@/lib/api/documentForms';
+import { documentFormApi, documentFormError, type GeneratedDocumentDto } from '@/lib/api/documentForms';
+import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
 
-interface Props {
-  applicationId: string;
-}
-
-export function GeneratedDocumentsPanel({ applicationId }: Props) {
+/** Mount only after Workflow confirms APPROVED. */
+export function GeneratedDocumentsPanel({ applicationId }: { applicationId: string }) {
   const contents = useApplicationContents(applicationId);
   const generated = useGeneratedDocuments(applicationId);
   const mutations = useDocumentMutations();
-  const [busyId, setBusyId] = useState<string>();
-  const approvedSubmissions = contents.data?.submissions.filter((item) => item.status === 'Approved') || [];
-
-  async function generate(submissionId: string) {
-    setBusyId(submissionId);
-    try {
-      await mutations.generatePdf.mutateAsync({ applicationId, submissionId });
-      toast.success('Đã tạo tệp PDF từ bản khai được duyệt.');
-    } catch (error) {
-      toast.error(documentFormError(error));
-    } finally {
-      setBusyId(undefined);
-    }
+  const [selected, setSelected] = useState<GeneratedDocumentDto>();
+  const [error, setError] = useState('');
+  const lock = useRef(false);
+  const approved = contents.data?.submissions.filter(x => x.status === 'Approved') ?? [];
+  const knownIds = new Set(contents.data?.submissions.map(x => x.id));
+  const unmatched = generated.data?.filter(x => !x.submissionId || !knownIds.has(x.submissionId)) ?? [];
+  function renderPdfs(items: GeneratedDocumentDto[]) {
+    return items.length ? <ul className="space-y-2">{items.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span>PDF · {new Date(item.createdAtUtc).toLocaleString('vi-VN')}</span><Button variant="outline" size="small" onClick={() => setSelected(item)}>Xem và tải PDF</Button></li>)}</ul> : <p className="text-sm text-slate-600">Chưa có bản PDF.</p>;
   }
-
-  async function download(id: string, index: number) {
-    setBusyId(id);
-    try {
-      const result = await documentFormApi.downloadGeneratedDocument(id);
-      downloadBlob(result.blob, result.fileName || `ban-khai-da-duyet-${index + 1}.pdf`);
-    } catch (error) {
-      toast.error(documentFormError(error));
-    } finally {
-      setBusyId(undefined);
-    }
-  }
-
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
-        <div>
-          <h3 className="font-bold text-slate-900">Bản PDF sau tiền kiểm</h3>
-          <p className="mt-1 text-xs text-slate-600">Tạo và tải bản PDF từ tờ khai đã được cán bộ duyệt.</p>
-        </div>
-        {approvedSubmissions.map((item) => (
-          <Button key={item.id} size="small" loading={busyId === item.id} onClick={() => void generate(item.id)}>
-            <FilePdf /> Tạo PDF: {item.fileName}
-          </Button>
-        ))}
-      </div>
-
-      {(contents.isPending || generated.isPending) && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-slate-600"><SpinnerGap className="animate-spin" /> Đang tải tài liệu…</p>
-      )}
-      {(contents.isError || generated.isError) && (
-        <p className="mt-4 text-sm text-red-700">{documentFormError(contents.error || generated.error)}</p>
-      )}
-      {!contents.isPending && approvedSubmissions.length === 0 && (
-        <p className="mt-4 text-sm text-slate-600">Chưa có tờ khai ở trạng thái đã duyệt để tạo PDF.</p>
-      )}
-      {!!generated.data?.length && (
-        <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200">
-          {generated.data.map((item, index) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-              <span className="flex items-center gap-2 font-semibold text-slate-800"><FilePdf className="text-red-700" /> Bản PDF {index + 1}</span>
-              <button type="button" className="inline-flex items-center gap-1 font-semibold text-red-800 hover:underline" disabled={busyId === item.id} onClick={() => void download(item.id, index)}>
-                <DownloadSimple /> Tải xuống
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
+  return <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+    <h3 className="font-bold text-slate-900">Bản PDF sau tiền kiểm</h3>
+    <p className="text-sm text-slate-600">PDF được tạo từ bản khai đã lưu và được duyệt. Không thay thế việc tiếp nhận hồ sơ chính thức.</p>
+    {(contents.isPending || generated.isPending) && <p role="status">Đang tải tài liệu…</p>}
+    {(contents.isError || generated.isError) && <div role="alert"><p>{documentFormError(contents.error || generated.error)}</p><Button variant="outline" onClick={() => { void contents.refetch(); void generated.refetch(); }}>Thử lại</Button></div>}
+    {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
+    {approved.map(item => <div key={item.id} className="space-y-3 rounded-xl border p-4"><h4 className="break-all font-semibold">{item.fileName}</h4><Button size="small" disabled={!item.fileExists || mutations.generatePdf.isPending} loading={mutations.generatePdf.isPending && mutations.generatePdf.variables?.submissionId === item.id} onClick={async () => {
+      if (lock.current) return; lock.current = true; setError('');
+      try { await mutations.generatePdf.mutateAsync({ applicationId, submissionId: item.id }); toast.success('Đã tạo bản PDF sau tiền kiểm.'); }
+      catch (err) { setError(documentFormError(err)); }
+      finally { lock.current = false; }
+    }}>Tạo PDF: {item.fileName}</Button>{!item.fileExists && <p role="alert">Không tìm thấy bản khai trong kho lưu trữ.</p>}{renderPdfs(generated.data?.filter(x => x.submissionId === item.id) ?? [])}</div>)}
+    {contents.isSuccess && !approved.length && <p>Chưa có bản khai đã duyệt để tạo PDF.</p>}
+    {!!unmatched.length && <div className="space-y-2"><h4 className="font-semibold">PDF chưa xác định bản khai nguồn</h4>{renderPdfs(unmatched)}</div>}
+    {selected && <div className="space-y-3"><h4 className="font-semibold">Bản PDF được chọn</h4><DocumentFilePreview key={selected.id} fileId={selected.id} fileName={`ban-khai-${selected.id}.pdf`} load={signal => documentFormApi.downloadGeneratedDocument(selected.id, signal)} /></div>}
+  </section>;
 }
