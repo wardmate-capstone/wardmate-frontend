@@ -1,3 +1,4 @@
+import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
@@ -83,8 +84,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
       toast.info('Chưa có thông tin số CCCD để sao chép.');
       return;
     }
-    navigator.clipboard.writeText(profile.identityNumber);
-    toast.success(`Đã sao chép số CCCD: ${profile.identityNumber}`);
+    void copyToClipboard(profile.identityNumber, 'Đã sao chép số CCCD.');
   };
 
   const initials = (profile.fullName || profile.username || 'U')
@@ -129,7 +129,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-              onClick={() => toast.success(`Đã xuất phiếu trích lục thông tin ${profile.fullName} (PDF).`)}
+              onClick={() => window.print()}
             >
               <Printer size={16} /> In phiếu thông tin
             </button>
@@ -322,7 +322,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                         <input
                           type="text"
                           maxLength={12}
-                          value={formData.identityNumber}
+                          aria-label="Số định danh cá nhân (CCCD)" value={formData.identityNumber}
                           onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
                           placeholder="Nhập 12 chữ số CCCD"
                           className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
@@ -361,7 +361,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <input
                       type="text"
-                      value={formData.fullName}
+                      aria-label="Họ và tên khai sinh" value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       placeholder="Ví dụ: NGUYỄN VĂN A"
                       className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
@@ -382,7 +382,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                     {isEditing ? (
                       <input
                         type="date"
-                        value={formData.dateOfBirth}
+                        aria-label="Ngày sinh" value={formData.dateOfBirth}
                         onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                         className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                       />
@@ -400,7 +400,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                     </label>
                     {isEditing ? (
                       <select
-                        value={formData.gender}
+                        aria-label="Giới tính" value={formData.gender}
                         onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'Nam' | 'Nữ' | 'Khác' })}
                         className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                       >
@@ -443,7 +443,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <input
                       type="tel"
-                      value={formData.phoneNumber}
+                      aria-label="Số điện thoại" value={formData.phoneNumber}
                       onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       placeholder="Ví dụ: 0912345678"
                       className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
@@ -483,7 +483,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <textarea
                       rows={3}
-                      value={formData.permanentAddress}
+                      aria-label="Địa chỉ thường trú" value={formData.permanentAddress}
                       onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
                       placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
                       className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
@@ -504,7 +504,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <textarea
                       rows={3}
-                      value={formData.temporaryAddress}
+                      aria-label="Địa chỉ tạm trú" value={formData.temporaryAddress}
                       onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
                       placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
                       className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"

@@ -1,3 +1,4 @@
+import { copyToClipboard } from '@/lib/clipboard';
 import { useState, useEffect } from 'react';
 import {
   ShieldCheck,
@@ -75,7 +76,7 @@ export function CitizenProfileView({
     formData.temporaryAddress === (initialProfile?.temporaryAddress || '');
 
   useEffect(() => {
-    if (initialProfile) {
+    if (initialProfile && !isEditing) {
       setFormData({
         fullName: initialProfile.fullName || '',
         identityNumber: initialProfile.identityNumber || '',
@@ -87,7 +88,7 @@ export function CitizenProfileView({
       });
       setErrors({});
     }
-  }, [initialProfile]);
+  }, [initialProfile, isEditing]);
 
   function handleChange(field: keyof typeof formData, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -117,8 +118,7 @@ export function CitizenProfileView({
       toast.info('Chưa có thông tin số CCCD để sao chép.');
       return;
     }
-    navigator.clipboard.writeText(formData.identityNumber);
-    toast.success(`Đã sao chép số CCCD: ${formData.identityNumber}`);
+    void copyToClipboard(formData.identityNumber, 'Đã sao chép số CCCD.');
   };
 
   async function handleSaveProfile(e?: React.FormEvent) {
@@ -186,7 +186,8 @@ export function CitizenProfileView({
     ? formData.fullName.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase()
     : 'CD';
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const displayName = formData.fullName || 'Công dân chưa cập nhật tên';
 
   return (
@@ -205,7 +206,7 @@ export function CitizenProfileView({
                 </h1>
 
                 <span className="admin-status-badge is-success flex items-center gap-1">
-                  <ShieldCheck size={14} /> Đã xác thực
+                  <ShieldCheck size={14} /> Thông tin kê khai
                 </span>
 
                 <span className="admin-status-badge is-success">
@@ -222,7 +223,7 @@ export function CitizenProfileView({
                 <button
                   type="button"
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                  onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
+                  onClick={() => window.print()}
                 >
                   <Printer size={16} /> In phiếu thông tin
                 </button>
@@ -306,7 +307,7 @@ export function CitizenProfileView({
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-red-700" weight="fill" />
-                Thẻ Căn cước công dân gắn chip / VNeID
+                Thông tin định danh do người dùng kê khai
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
@@ -318,7 +319,7 @@ export function CitizenProfileView({
                       id="profile-identityNumber"
                       type="text"
                       maxLength={12}
-                      value={formData.identityNumber}
+                      aria-label="Số định danh cá nhân (CCCD)" value={formData.identityNumber}
                       onChange={(e) => handleChange('identityNumber', e.target.value.replace(/\D/g, ''))}
                       placeholder="Nhập 12 chữ số CCCD"
                       className={`w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs ${
@@ -373,7 +374,7 @@ export function CitizenProfileView({
                   <input
                     id="profile-fullName"
                     type="text"
-                    value={formData.fullName}
+                    aria-label="Họ và tên khai sinh" value={formData.fullName}
                     onChange={(e) => handleChange('fullName', e.target.value)}
                     placeholder="Ví dụ: NGUYỄN VĂN A"
                     className={`w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
@@ -404,7 +405,7 @@ export function CitizenProfileView({
                     <input
                       id="profile-dateOfBirth"
                       type="date"
-                      value={formData.dateOfBirth}
+                      aria-label="Ngày sinh" value={formData.dateOfBirth}
                       max={todayStr}
                       min="1900-01-01"
                       onChange={(e) => handleChange('dateOfBirth', e.target.value)}
@@ -434,7 +435,7 @@ export function CitizenProfileView({
                   <>
                     <select
                       id="profile-gender"
-                      value={formData.gender}
+                      aria-label="Giới tính" value={formData.gender}
                       onChange={(e) => handleChange('gender', e.target.value)}
                       className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
                         errors.gender ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
@@ -469,7 +470,7 @@ export function CitizenProfileView({
                   <input
                     id="profile-phoneNumber"
                     type="tel"
-                    value={formData.phoneNumber}
+                    aria-label="Số điện thoại" value={formData.phoneNumber}
                     onChange={(e) => handleChange('phoneNumber', e.target.value)}
                     placeholder="Ví dụ: 0912345678"
                     className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
@@ -519,7 +520,7 @@ export function CitizenProfileView({
                   <textarea
                     id="profile-permanentAddress"
                     rows={3}
-                    value={formData.permanentAddress}
+                    aria-label="Địa chỉ thường trú" value={formData.permanentAddress}
                     onChange={(e) => handleChange('permanentAddress', e.target.value)}
                     placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
                     className={`w-full p-3 text-xs font-medium text-slate-900 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400 ${
@@ -548,7 +549,7 @@ export function CitizenProfileView({
                   <textarea
                     id="profile-temporaryAddress"
                     rows={3}
-                    value={formData.temporaryAddress}
+                    aria-label="Địa chỉ tạm trú" value={formData.temporaryAddress}
                     onChange={(e) => handleChange('temporaryAddress', e.target.value)}
                     placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
                     className={`w-full p-3 text-xs font-medium text-slate-900 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400 ${

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
+import { copyToClipboard } from '@/lib/clipboard';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ShieldCheck,
   IdentificationCard,
@@ -85,18 +87,21 @@ export const UnifiedSelfProfileView: React.FC = () => {
     phoneNumber: '',
     identityNumber: '',
     dateOfBirth: '',
-    gender: 'Nam',
+    gender: '',
     permanentAddress: '',
     temporaryAddress: '',
   });
 
+  const saveLock = useRef(false);
+  const [errors, setErrors] = useState<ProfileFieldErrors>({});
   const handleStartEdit = () => {
+    setErrors({});
     setFormData({
-      fullName: profile?.fullName || user?.username || '',
+      fullName: profile?.fullName || '',
       phoneNumber: profile?.phoneNumber || '',
       identityNumber: profile?.identityNumber || '',
       dateOfBirth: profile?.dateOfBirth || '',
-      gender: profile?.gender || 'Nam',
+      gender: profile?.gender || '',
       permanentAddress: profile?.permanentAddress || '',
       temporaryAddress: profile?.temporaryAddress || '',
     });
@@ -112,16 +117,19 @@ export const UnifiedSelfProfileView: React.FC = () => {
       toast.info('Chưa có thông tin số CCCD để sao chép.');
       return;
     }
-    navigator.clipboard.writeText(profile.identityNumber);
-    toast.success(`Đã sao chép số CCCD: ${profile.identityNumber}`);
+    void copyToClipboard(profile.identityNumber, 'Đã sao chép số CCCD.');
   };
 
   const handleSaveProfile = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!formData.fullName.trim()) {
-      toast.error('Họ và tên không được để trống.');
+    if (saveLock.current) return;
+    const validation = validateProfile(formData);
+    setErrors(validation.errors);
+    if (!validation.isValid) {
+      document.getElementById('self-profile-' + Object.keys(validation.errors)[0])?.focus();
       return;
     }
+    saveLock.current = true;
 
     setIsSaving(true);
     try {
@@ -140,6 +148,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
     } catch (err) {
       toast.error(`Cập nhật thất bại: ${authErrorMessage(err)}`);
     } finally {
+      saveLock.current = false;
       setIsSaving(false);
     }
   };
@@ -148,6 +157,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isEditing && Object.keys(errors).length > 0 && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p className="font-bold">Kiểm tra thông tin trước khi lưu</p><ul>{Object.entries(errors).map(([field, message]) => <li key={field} id={'self-error-' + field}><button type="button" className="min-h-11 text-left underline" onClick={() => document.getElementById('self-profile-' + field)?.focus()}>{message}</button></li>)}</ul></div>}
       {/* Top Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200">
         <div className="flex items-center gap-2">
@@ -163,7 +173,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                onClick={() => toast.success(`Đã xuất phiếu thông tin tài khoản ${displayName} (PDF).`)}
+                onClick={() => window.print()}
               >
                 <Printer size={16} /> In phiếu thông tin
               </button>
@@ -212,7 +222,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 </h1>
 
                 <span className="admin-status-badge is-success flex items-center gap-1">
-                  <ShieldCheck size={14} /> Đã xác thực
+                  <ShieldCheck size={14} /> Thông tin kê khai
                 </span>
 
                 <span className="admin-status-badge is-success">
@@ -286,7 +296,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-red-700" weight="fill" />
-                Thẻ Căn cước công dân gắn chip / VNeID
+                Thông tin định danh do người dùng kê khai
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
@@ -297,7 +307,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                     <input
                       type="text"
                       maxLength={12}
-                      value={formData.identityNumber}
+                      aria-label="Số định danh cá nhân (CCCD)" id="self-profile-identityNumber" disabled={isSaving} aria-invalid={Boolean(errors.identityNumber)} aria-describedby={errors.identityNumber ? "self-error-identityNumber" : undefined} value={formData.identityNumber}
                       onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
                       placeholder="Nhập 12 chữ số CCCD"
                       className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
@@ -338,7 +348,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
               {isEditing ? (
                 <input
                   type="text"
-                  value={formData.fullName}
+                  aria-label="Họ và tên khai sinh" id="self-profile-fullName" disabled={isSaving} aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? "self-error-fullName" : undefined} value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Ví dụ: NGUYỄN VĂN A"
                   className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
@@ -361,7 +371,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={formData.dateOfBirth}
+                    aria-label="Ngày sinh" id="self-profile-dateOfBirth" disabled={isSaving} aria-invalid={Boolean(errors.dateOfBirth)} aria-describedby={errors.dateOfBirth ? "self-error-dateOfBirth" : undefined} value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                   />
@@ -379,7 +389,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 </label>
                 {isEditing ? (
                   <select
-                    value={formData.gender}
+                    aria-label="Giới tính" id="self-profile-gender" disabled={isSaving} aria-invalid={Boolean(errors.gender)} aria-describedby={errors.gender ? "self-error-gender" : undefined} value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                     className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                   >
@@ -405,7 +415,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
               {isEditing ? (
                 <input
                   type="tel"
-                  value={formData.phoneNumber}
+                  aria-label="Số điện thoại" id="self-profile-phoneNumber" disabled={isSaving} aria-invalid={Boolean(errors.phoneNumber)} aria-describedby={errors.phoneNumber ? "self-error-phoneNumber" : undefined} value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   placeholder="Ví dụ: 0912345678"
                   className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
@@ -447,7 +457,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
               {isEditing ? (
                 <textarea
                   rows={3}
-                  value={formData.permanentAddress}
+                  aria-label="Địa chỉ thường trú" id="self-profile-permanentAddress" disabled={isSaving} aria-invalid={Boolean(errors.permanentAddress)} aria-describedby={errors.permanentAddress ? "self-error-permanentAddress" : undefined} value={formData.permanentAddress}
                   onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
                   placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
                   className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
@@ -468,7 +478,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
               {isEditing ? (
                 <textarea
                   rows={3}
-                  value={formData.temporaryAddress}
+                  aria-label="Địa chỉ tạm trú" id="self-profile-temporaryAddress" disabled={isSaving} aria-invalid={Boolean(errors.temporaryAddress)} aria-describedby={errors.temporaryAddress ? "self-error-temporaryAddress" : undefined} value={formData.temporaryAddress}
                   onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
                   placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
                   className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"

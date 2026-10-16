@@ -1,3 +1,4 @@
+import { copyToClipboard } from '@/lib/clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsClockwise,
@@ -687,11 +688,10 @@ export function UserRolesModal({
 function UserBadge({ id, username }: { id: string; username?: string }) {
   const [copied, setCopied] = useState(false);
 
-  const copyId = (e: React.MouseEvent) => {
+  const copyId = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(id);
+    if (!await copyToClipboard(id, 'Đã sao chép ID tài khoản.')) return;
     setCopied(true);
-    toast.success("Đã sao chép ID tài khoản.");
     setTimeout(() => setCopied(false), 2000);
   };
 
