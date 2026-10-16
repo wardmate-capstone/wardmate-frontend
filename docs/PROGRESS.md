@@ -4,6 +4,18 @@ Cập nhật: 16/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chỉnh UI đầu trang chi tiết thủ tục — 16/10/2026
+
+- `src/pages/procedure-manager/ProcedureApiDetail.tsx`: bố trí tiêu đề và thông tin bên trái, nút thao tác bên phải ở desktop; nhãn riêng cho mã thủ tục/lĩnh vực, Badge trạng thái kèm icon, nút quay lại dạng ghost. Mobile xếp dọc, nút rộng toàn hàng; tái sử dụng Button/Badge và icon Phosphor hiện có. Giữ nguyên quyền, modal và hành vi API.
+- Kiểm tra lượt này: typecheck, lint, build và `git diff --check` đạt; build còn cảnh báo annotation Zod/chunk lớn. Hai ca Edge/mock hiện có (chỉnh sửa và mở công khai) báo đạt phần thân. Script preview tạm báo đạt ở 1440/768/390/360px, không tràn ngang toàn trang; đã xem ảnh desktop/mobile tại `test-results/procedure-header-{1440,360}.png`, script tạm đã xóa. Cả hai lượt Playwright treo teardown, đã dừng bằng Ctrl+C; không coi là runner thoát thành công. Lượt preview ban đầu không chạy vì cổng 4317 còn bị lượt trước giữ, đã chạy lại sau khi dừng lượt trước.
+- Chưa xác minh môi trường thật, screen reader hoặc zoom trình duyệt 200%. Giữ thay đổi có sẵn ở `tsconfig.json` và ghi chú baseUrl; không commit/push/deploy. Không còn việc triển khai trong phạm vi ảnh yêu cầu.
+
+## Sửa cảnh báo `baseUrl` trong VS Code — 16/10/2026
+
+- VS Code dùng TypeScript mới hơn và đánh dấu `compilerOptions.baseUrl` là deprecated. Dự án không cần tùy chọn này: target trong `paths` có thể dùng đường dẫn tương đối từ `tsconfig.json`, còn Vite đã khai báo alias `@` tới `src` trong `vite.config.ts`.
+- Đã bỏ `baseUrl` thay vì dùng `ignoreDeprecations` để che cảnh báo, đồng thời đổi target thành `paths: { "@/*": ["./src/*"] }` để tương thích TypeScript 5.8 của dự án. Không đổi import hoặc cấu trúc build.
+- Kiểm tra: `npm run typecheck`, `npm run lint`, `npm run build` và `git diff --check` đạt. Build còn cảnh báo annotation Zod và chunk lớn như baseline. Không commit/push trong lượt này vì yêu cầu push trước không mặc nhiên áp dụng cho task mới.
+
 ## Rà soát FE, UI/UX và sửa lỗi — 16/10/2026
 
 - Phạm vi mới nhất: rà soát FE công khai/auth và cả 5 workspace. Giữ toàn bộ thay đổi DocumentForm chưa commit của lượt trước; không sửa BE, không commit/push/deploy.

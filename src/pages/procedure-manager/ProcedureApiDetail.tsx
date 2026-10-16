@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { Button, Input, Modal } from "@/components/ui";
+import { ArrowLeft, Eye, EyeSlash, PencilSimple } from "@phosphor-icons/react";
+import { Badge, Button, Input, Modal } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import {
@@ -76,18 +77,25 @@ export function ProcedureApiDetail({
   return (
     <div className="space-y-5">
       {guard.confirmation}
-      <Button variant="outline" onClick={onBack}>
+      <Button variant="ghost" className="-ml-3 px-3" onClick={onBack}>
+        <ArrowLeft size={18} aria-hidden="true" />
         Về danh sách
       </Button>
-      <div className="admin-card space-y-3 p-5">
-        <h1 className="text-2xl font-bold">
-          {detail.data?.title ?? row.title}
-        </h1>
-        <p>
-          {row.procedureCode} · {row.categoryName} ·{" "}
-          {row.isActive ? "Đang công khai" : "Ngừng công khai"}
-        </p>
-        <div className="flex flex-wrap gap-3">
+      <header className="admin-card flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between xl:gap-8">
+        <div className="min-w-0 space-y-3">
+          <h1 className="break-words text-xl font-bold leading-snug tracking-tight text-slate-950 sm:text-2xl">
+            {detail.data?.title ?? row.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+            <span className="min-w-0 break-words">Mã thủ tục: <strong className="font-semibold text-slate-800">{row.procedureCode}</strong></span>
+            <span className="min-w-0 break-words">Lĩnh vực: <span className="font-medium text-slate-800">{row.categoryName}</span></span>
+            <Badge variant={row.isActive ? "success" : "neutral"} className="max-w-full">
+              {row.isActive ? <Eye size={16} className="shrink-0" aria-hidden="true" /> : <EyeSlash size={16} className="shrink-0" aria-hidden="true" />}
+              {row.isActive ? "Đang công khai" : "Ngừng công khai"}
+            </Badge>
+          </div>
+        </div>
+        {(can("procedure.update") || can("procedure.status")) && <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row xl:shrink-0 xl:border-t-0 xl:pt-0">
           {can("procedure.update") && <Button
             disabled={!detail.data}
             onClick={() => {
@@ -98,6 +106,7 @@ export function ProcedureApiDetail({
               setError("");
             }}
           >
+            <PencilSimple size={18} aria-hidden="true" />
             Chỉnh sửa
           </Button>}
           {can("procedure.status") && <Button
@@ -107,10 +116,11 @@ export function ProcedureApiDetail({
               setError("");
             }}
           >
+            {row.isActive ? <EyeSlash size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
             {row.isActive ? "Ngừng công khai" : "Mở công khai"}
           </Button>}
-        </div>
-      </div>
+        </div>}
+      </header>
       <ProcedureFeedback
         loading={detail.loading}
         error={detail.error}
