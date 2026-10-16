@@ -1,0 +1,121 @@
+import { test, expect } from '@playwright/test';
+import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
+
+const docx = { name: 'to-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('mock-upload') };
+const pdf = { name: 'giay-to.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-test') };
+async function detail(page: import('@playwright/test').Page) {
+  await page.goto('/citizen?section=dossiers_all');
+  await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Danh mục giấy tờ & biểu mẫu' })).toBeVisible();
+}
+
+test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản thực trước khi gửi', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await detail(page);
+  const form = page.locator(`#checklist-${documentIds.checklist}`);
+  const evidence = page.locator(`#checklist-${documentIds.evidence}`);
+  await form.getByLabel('Lưu bản nháp DOCX').setInputFiles(docx);
+  await expect(form.getByText('Nháp đã lưu', { exact: true })).toBeVisible();
+  expect(state.writes.filter(x => /submissions\/.+\/submit$/.test(x.path))).toHaveLength(0);
+  state.failChot = true;
+  await form.getByRole('button', { name: 'Chốt bản khai', exact: true }).click();
+  await expect(form.getByRole('alert')).toContainText('Kho lưu trữ');
+  state.failPatch = true;
+  await form.getByRole('button', { name: 'Chốt bản khai', exact: true }).click();
+  await expect(form.getByRole('alert')).toContainText('Tệp đã lưu nhưng chưa đồng bộ checklist');
+  await form.getByRole('button', { name: 'Đồng bộ checklist' }).click();
+  await expect(form.getByText('Đã chốt', { exact: true })).toBeVisible();
+  expect(state.writes.filter(x => x.path.endsWith('/draft'))).toHaveLength(1);
+  await evidence.getByLabel('Đính kèm giấy tờ').setInputFiles(pdf);
+  const upload = page.getByRole('dialog', { name: 'Khai số bản trong tệp' });
+  await upload.getByLabel('Số bản thực tế').fill('0');
+  await upload.getByRole('button', { name: 'Lưu giấy tờ' }).click();
+  await expect(upload.getByRole('alert')).toContainText('lớn hơn 0');
+  await upload.getByLabel('Số bản thực tế').fill('2');
+  await upload.getByRole('button', { name: 'Lưu giấy tờ' }).click();
+  await expect(upload).toHaveCount(0);
+  expect(state.evidenceQuantity).toBe(2);
+  await page.getByRole('button', { name: 'Nộp tiền kiểm ngay', exact: true }).first().click();
+  const confirm = page.getByRole('dialog', { name: 'Xác nhận gửi tiền kiểm' });
+  await expect(confirm.getByRole('button', { name: 'Xác nhận gửi', exact: true })).toBeDisabled();
+  await confirm.getByRole('checkbox').check();
+  await confirm.getByRole('button', { name: 'Xác nhận gửi', exact: true }).click();
+  await expect.poll(() => state.status).toBe('SUBMITTED');
+  expect(state.writes.filter(x => x.path === `/api/v1/applications/${documentIds.application}/submit`)).toHaveLength(1);
+  await page.reload();
+  await expect(form.getByText('Đã chốt', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('cán bộ discovery, DOCX thật, annotate và lỗi nhận xét không sinh bản local', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page, 'officer', 'UNDER_REVIEW');
+  state.submissionStatus = 'Submitted'; state.evidenceQuantity = 2;
+  await page.goto('/officer');
+  await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
+  await page.getByRole('button', { name: 'Bản khai & giấy tờ', exact: true }).click();
+  await expect.poll(() => state.reads.some(x => x.includes('/by-application/'))).toBe(true);
+  await expect.poll(() => state.reads.filter(x => x.endsWith('/download-docx')).length).toBe(0);
+  await page.getByRole('button', { name: 'Mở bản khai', exact: true }).click();
+  await expect(page.frameLocator('iframe[title="Nội dung biểu mẫu Word"]').getByText('ĐƠN ĐỀ NGHỊ KIỂM THỬ')).toBeVisible();
+  await page.getByLabel('Tải lại DOCX có ghi chú').setInputFiles(docx);
+  await expect(page.getByText('Đã lưu bản khai có ghi chú.', { exact: false })).toBeVisible();
+  expect(state.status).toBe('UNDER_REVIEW');
+  await page.getByRole('button', { name: 'Nhận xét mục giấy tờ', exact: true }).first().click();
+  state.failComment = true;
+  await page.getByLabel('Nội dung nhận xét').fill('Cần sửa tờ khai');
+  await page.getByRole('button', { name: 'Lưu nhận xét vào hồ sơ' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: /Mục|mục|dữ liệu/ }).first()).toBeVisible();
+  expect(state.comments).toHaveLength(0);
+  await expect(page.getByLabel('Nội dung nhận xét')).toHaveValue('Cần sửa tờ khai');
+  state.failComment = false;
+  await page.getByRole('button', { name: 'Lưu nhận xét vào hồ sơ' }).click();
+  await expect(page.getByText('Cần sửa tờ khai', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Duyệt tiền kiểm', exact: true }).click();
+  await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('OPEN');
+  expect(state.writes.filter(x => x.path.endsWith('/approve'))).toHaveLength(0);
+});
+
+test('QR chưa có không giả mã; PDF tạo xong tải ảnh thật và tách nguồn legacy', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page, 'citizen', 'APPROVED');
+  state.submissionStatus = 'Approved'; state.evidenceQuantity = 2;
+  state.pdfs.push({ id: documentIds.evidence, applicationId: documentIds.application, submissionId: null, documentType: 'ORIGINAL_SUBMISSION', createdAtUtc: '2026-10-15T01:00:00Z' });
+  await page.goto('/citizen?section=qr_code');
+  await expect(page.getByText('Hồ sơ đã duyệt nhưng chưa có mã QR.', { exact: false })).toBeVisible();
+  await expect(page.locator('img[alt^="ma-qr-"]')).toHaveCount(0);
+  expect(state.writes).toHaveLength(0);
+  await detail(page);
+  await expect(page.getByRole('heading', { name: 'PDF chưa xác định bản khai nguồn' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tạo PDF: to-khai.docx', exact: true }).click();
+  await expect.poll(() => state.pdfs.length).toBe(2);
+  expect(state.pdfs[1].submissionId).toBe(documentIds.submission);
+  await page.goto('/citizen?section=qr_code');
+  await expect(page.locator('img[alt^="ma-qr-"]')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^Tải xuống ma-qr/ }).click();
+  expect((await download).suggestedFilename()).toContain('.png');
+  await expect(page.getByRole('button', { name: 'In phiếu hẹn' })).toHaveCount(0);
+});
+
+test('cán bộ mở queue không tự nhận xử lý và quyết định lỗi giữ modal', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page, 'officer', 'SUBMITTED');
+  state.submissionStatus = 'Submitted'; state.evidenceQuantity = 2;
+  await page.goto('/officer');
+  await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
+  expect(state.writes).toHaveLength(0);
+  await page.getByRole('button', { name: 'Nhận xử lý', exact: true }).click();
+  await expect(page.getByRole('article', { name: 'Không gian làm việc tiền kiểm hồ sơ' })).toBeVisible();
+  state.failDecision = true;
+  await page.getByRole('button', { name: 'Duyệt tiền kiểm', exact: true }).click();
+  await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Trạng thái đã được tải lại');
+  expect(state.writes.filter(x => x.path.includes('/officer/submissions/') && x.path.endsWith('/approve'))).toHaveLength(0);
+  state.failDecision = false;
+  await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
+  await expect.poll(() => state.status).toBe('APPROVED');
+  await page.getByRole('button', { name: 'PDF sau tiền kiểm', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Bản PDF sau tiền kiểm', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tạo PDF: to-khai.docx', exact: true })).toBeEnabled();
+});
