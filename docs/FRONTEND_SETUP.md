@@ -40,3 +40,11 @@ Nguồn cấu hình: https://ui.shadcn.com/docs/components-json.
 - Kiểm tra routing Vite thực tế bằng `node tests/api-proxy-check.mjs`: script tự dựng target HTTP cục bộ, không gọi Azure, kiểm tra 12 route và giữ nguyên query.
 - Playwright cấu hình cả bốn service về localhost mock, tắt runtime proxy trong browser tests để không lấy target từ env cá nhân. Kiểm thử browser mock không thay thế script routing hoặc kiểm thử phân quyền/Blob/Gotenberg thật.
 - QR yêu cầu hồ sơ APPROVED nhưng vẫn có thể chưa được tạo; FE chỉ hiển thị PNG server trả về. Việc cấp QR ngay sau duyệt và tra cứu công khai/đúng version vẫn cần hợp đồng BE; không coi QR là giấy hẹn hay tiếp nhận chính thức.
+
+## Soạn DOCX online — 16/10/2026
+
+- `src/components/documents/DocxOnlineEditor.tsx` lazy load engine `@docx-editor.dev/react/core/fonts` 2.31.0 (Apache-2.0), chỉ tải khi mở editor. Công dân mở từ checklist hoặc mục Bản khai của tôi; cán bộ mở từ panel tài liệu. Save xuất DOCX thật rồi gọi API có sẵn; không có editor server hay API chuyển đổi tự đặt.
+- Vite `build.target` và `optimizeDeps.esbuildOptions.target` là ES2022 vì font shaping dùng top-level await/WASM. Hosting cần phục vụ assets/font/WASM đúng MIME; browser mục tiêu là trình duyệt hiện đại, hiện QA bằng Edge.
+- Font thay thế Word được đóng gói cùng frontend, không bật Google Fonts/telemetry/collaboration hay gửi file sang website tham chiếu. Bundle editor lớn hơn 500 kB; giữ lazy import tại điểm mở.
+- Theo lựa chọn người dùng, dùng bản miễn phí: thêm và đọc đầy đủ comment Word qua Word rồi upload lại. Không cài gói Pro. Review content vẫn cần đối chiếu Word; không cam kết mọi mẫu giữ layout tuyệt đối.
+- API audit: `docs/DOCUMENT_FORM_API_AUDIT_2026-10-16.md`; tests editor: `tests/docx-online.spec.ts`, dùng DOCX ZIP/XML thực và API mock.

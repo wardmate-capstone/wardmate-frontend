@@ -37,8 +37,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    // DOCX font shaping initializes its WASM module with top-level await.
+    optimizeDeps: { esbuildOptions: { target: 'es2022' } },
     server: { host: 'localhost', port: 5173, strictPort: true, proxy },
     build: {
+      target: 'es2022',
       rollupOptions: {
         output: {
           manualChunks: {
