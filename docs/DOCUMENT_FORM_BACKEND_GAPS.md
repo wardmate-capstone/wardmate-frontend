@@ -34,9 +34,9 @@ Cần hợp đồng danh sách/tra cứu rộng hơn với phân quyền, trạn
 
 ## 5. Quyền quản lý phôi IT_ADMIN
 
-BE DocumentManager yêu cầu PROCEDURE_MANAGER. IT_ADMIN trong DocumentUser không tự có quyền ghi. FormsView dùng permission document.templates.manage để hiện nút nên có thể bị 403.
+BE DocumentManager yêu cầu PROCEDURE_MANAGER. IT_ADMIN trong DocumentUser không tự có quyền ghi. FormsView hiện đã yêu cầu cả role PROCEDURE_MANAGER và permission document.templates.manage để hiện nút ghi; IT_ADMIN đơn lẻ chỉ xem.
 
-FE có thể chặn ghi theo role hiện có ngay. Nếu muốn IT_ADMIN ghi, cần quyết định sửa policy BE hoặc cấp thêm role ở IAM; FE không tự mở quyền.
+Nếu muốn IT_ADMIN ghi, cần quyết định sửa policy BE hoặc cấp thêm role ở IAM; FE không tự mở quyền.
 
 ## 6. Snapshot nhị phân theo version
 
@@ -50,7 +50,7 @@ Workflow có snapshot JSON/checklist; DocumentForm tra file hiện tại theo ap
 ## 8. Tiếp nhận chính thức và editor trình duyệt
 
 - Chưa thấy hợp đồng ghi nhận tiếp nhận tại quầy; không dùng APPROVED/QR thay thế.
-- Có docx-preview để xem, chưa có engine Word nhập/xuất DOCX bảo toàn comment. Tải/sửa bằng Word/upload triển khai được ngay; editor web cần chốt engine/hạ tầng/license riêng.
+- Đã thêm editor trình duyệt miễn phí `@docx-editor.dev/react` 2.31.0: mở/sửa/xuất DOCX và nối lưu nháp/annotate. Không có UI tạo/đọc đầy đủ Word comments trong bản miễn phí. Người dùng đã chọn thêm comment bằng Word rồi tải lại; không cài gói Pro. Có nhắc đối chiếu Word khi file có review content hoặc cảnh báo tương thích. Chi tiết ma trận 26 API và giới hạn: [DOCUMENT_FORM_API_AUDIT_2026-10-16.md](DOCUMENT_FORM_API_AUDIT_2026-10-16.md).
 
 ## 9. Giới hạn xác minh
 
