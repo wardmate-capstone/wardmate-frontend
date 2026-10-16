@@ -1,3 +1,9 @@
+import { useState } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
+import { Button, Modal } from '@/components/ui';
+import { useApplicationContents } from '@/hooks/useDocumentForms';
+import { hasChecklistEvidence } from '@/lib/documentEvidence';
+import { workflowError } from '@/lib/api/workflow';
 import { ArrowLeft, CheckCircle, WarningCircle, ArrowCounterClockwise, XCircle, Info, ChatText } from '@phosphor-icons/react';
 import { DossierChecklistView } from '../components/DossierChecklistView';
 import { GeneratedDocumentsPanel } from '../components/GeneratedDocumentsPanel';
@@ -8,8 +14,8 @@ import { useApplicationComments } from '@/hooks/useWorkflow';
 interface CitizenDossierDetailViewProps {
   dossier: CitizenDossier;
   onBack: () => void;
-  onSubmitPrecheck: () => void;
-  onResubmitPrecheck?: () => void;
+  onSubmitPrecheck: () => Promise<void>;
+  onResubmitPrecheck?: () => Promise<void>;
   onUpdateChecklistItem?: (checklistId: string, status: 'PENDING' | 'COMPLETED') => Promise<void>;
   submitting?: boolean;
 }
@@ -22,8 +28,17 @@ export function CitizenDossierDetailView({
   onUpdateChecklistItem,
   submitting = false,
 }: CitizenDossierDetailViewProps) {
-  const { data: comments, isLoading: loadingComments } = useApplicationComments(dossier.id, dossier.currentVersion);
+  const { data: comments, isLoading: loadingComments, isError: commentsError } = useApplicationComments(dossier.id, dossier.currentVersion);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [documentBusy, setDocumentBusy] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const contents = useApplicationContents(dossier.id);
+  const mutating = useIsMutating() > 0 || documentBusy;
+  const missing = contents.data ? (dossier.checklist || []).filter(x => x.isMandatory && !hasChecklistEvidence(x, contents.data!)) : [];
+  const canSend = ['Bản nháp', 'Cần chỉnh sửa'].includes(dossier.status) && dossier.checklist !== undefined && contents.isSuccess && !missing.length && !mutating && !submitting;
+  const openConfirm = () => { setAcknowledged(false); setSendError(''); setConfirmOpen(true); };
   const openComments = comments?.filter((c) => c.status === 'OPEN') || [];
   const resolvedComments = comments?.filter((c) => c.status === 'RESOLVED') || [];
 
@@ -59,7 +74,7 @@ export function CitizenDossierDetailView({
             <span className={`admin-status-badge ${getStatusBadgeClass(dossier.status)}`}>
               {dossier.status}
             </span>
-            {dossier.currentVersion && (
+            {(dossier.currentVersion ?? 0) > 0 && (
               <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                 Phiên bản v{dossier.currentVersion}
               </span>
@@ -70,8 +85,8 @@ export function CitizenDossierDetailView({
             {dossier.status === 'Bản nháp' && (
               <button
                 type="button"
-                onClick={onSubmitPrecheck}
-                disabled={submitting}
+                onClick={openConfirm}
+                disabled={submitting || mutating}
                 className="inline-flex items-center gap-2 rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 <CheckCircle size={16} weight="bold" />
@@ -82,8 +97,8 @@ export function CitizenDossierDetailView({
             {dossier.status === 'Cần chỉnh sửa' && onResubmitPrecheck && (
               <button
                 type="button"
-                onClick={onResubmitPrecheck}
-                disabled={submitting}
+                onClick={openConfirm}
+                disabled={submitting || mutating}
                 className="inline-flex items-center gap-2 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-purple-800 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 <ArrowCounterClockwise size={16} weight="bold" />
@@ -173,13 +188,14 @@ export function CitizenDossierDetailView({
               <WarningCircle size={20} weight="fill" className="text-amber-700" />
               <span>Yêu cầu bổ sung & chỉnh sửa từ Cán bộ ({openComments.length} mục cần sửa)</span>
             </div>
-            {dossier.currentVersion && (
+            {(dossier.currentVersion ?? 0) > 0 && (
               <span className="text-xs font-semibold text-amber-800">
                 Phiên bản xét duyệt: v{dossier.currentVersion}
               </span>
             )}
           </div>
 
+          {commentsError && <p role="alert">Chưa tải được nhận xét. Vui lòng tải lại trang trước khi rà soát yêu cầu bổ sung.</p>}
           {loadingComments ? (
             <p className="text-xs text-amber-800 italic">Đang tải danh sách ý kiến của cán bộ...</p>
           ) : openComments.length === 0 ? (
@@ -210,6 +226,7 @@ export function CitizenDossierDetailView({
                   <p className="text-slate-700 leading-relaxed font-medium pl-6">
                     {comment.commentText || 'Cán bộ chưa nhập nội dung ghi chú.'}
                   </p>
+                  {comment.targetType === 'CHECKLIST_ITEM' && comment.targetId && <button type="button" className="min-h-11 text-red-800 underline" onClick={() => { const element = document.getElementById(`checklist-${comment.targetId}`); element?.focus(); element?.scrollIntoView({ block: 'center' }); }}>Đến mục cần chỉnh sửa</button>}
                   <div className="text-[10px] text-slate-400 pl-6">
                     Thời gian yêu cầu: {new Date(comment.createdAt).toLocaleString('vi-VN')}
                   </div>
@@ -229,6 +246,7 @@ export function CitizenDossierDetailView({
       )}
 
       {/* Danh mục thành phần hồ sơ và biểu mẫu */}
+      {!!missing.length && <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="font-bold">Các mục còn thiếu tài liệu</p><ul>{missing.map(item => <li key={item.checklistId}><button className="min-h-11 text-left text-red-800 underline" onClick={() => { const el = document.getElementById('checklist-' + item.checklistId); el?.focus(); el?.scrollIntoView({ block: 'center' }); }}>{item.itemName}</button></li>)}</ul></div>}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
         <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
@@ -249,6 +267,7 @@ export function CitizenDossierDetailView({
             caseCode={dossier.caseCode}
             dossierStatus={dossier.status}
             onUpdateChecklistItem={onUpdateChecklistItem}
+            onBusyChange={setDocumentBusy}
           />
         )}
       </section>
@@ -256,6 +275,9 @@ export function CitizenDossierDetailView({
       {dossier.id && dossier.status === 'Đã duyệt' && <GeneratedDocumentsPanel applicationId={dossier.id} />}
 
       {/* Thanh hành động chân trang */}
+      <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={dossier.status === 'Cần chỉnh sửa' ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa.">
+        <div className="space-y-4">{contents.isPending && <p role="status">Đang kiểm tra tài liệu…</p>}{contents.isError && <p role="alert">Chưa tải được tài liệu. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ tài liệu. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="size-5 shrink-0" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (dossier.status === 'Cần chỉnh sửa') await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
+      </Modal>
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-end gap-3">
         <button
           type="button"
@@ -267,8 +289,8 @@ export function CitizenDossierDetailView({
         {dossier.status === 'Bản nháp' && dossier.checklist !== undefined && (
           <button
             type="button"
-            onClick={onSubmitPrecheck}
-            disabled={submitting}
+            onClick={openConfirm}
+            disabled={submitting || mutating}
             className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {submitting ? 'Đang gửi...' : 'Nộp tiền kiểm ngay'}
@@ -277,8 +299,8 @@ export function CitizenDossierDetailView({
         {dossier.status === 'Cần chỉnh sửa' && onResubmitPrecheck && (
           <button
             type="button"
-            onClick={onResubmitPrecheck}
-            disabled={submitting}
+            onClick={openConfirm}
+            disabled={submitting || mutating}
             className="rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-purple-800 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {submitting ? 'Đang gửi lại...' : 'Gửi lại hồ sơ đã sửa'}
