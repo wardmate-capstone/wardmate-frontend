@@ -1,71 +1,57 @@
-# API backend còn thiếu cho luồng Document Form và Workflow
+# Khoảng trống hợp đồng DocumentForm và Workflow
 
-Cập nhật: 15/10/2026. Nội dung này được đối chiếu với source backend hiện có tại `E:\wardmate-backend`, không suy đoán từ Swagger.
+Cập nhật: **16/10/2026 (Asia/Saigon)**. Đối chiếu source `E:/wardmate-backend` và OpenAPI DocumentForm Azure trong lượt này. Kế hoạch hiện hành: [document-form-integration-plan-2026-10-16.md](document-form-integration-plan-2026-10-16.md).
 
-## 1. Cán bộ chưa thể tìm `submissionId` của bản khai theo hồ sơ
+## 1. Đã có BE; không còn bị chặn thiếu API
 
-Các API cán bộ của Document Form đều cần `submissionId`:
+| Hạng mục từng thiếu | Hợp đồng hiện tại | FE đã triển khai local |
+| --- | --- | --- |
+| Cán bộ tìm submissionId | GET `/api/v1/officer/submissions/by-application/{applicationId}` trả array UserSubmissionSummaryDto | Đã nối client/hook/UI, dùng id làm submissionId |
+| Cán bộ đọc contents | GET `/api/v1/applications/{applicationId}/contents`, DocumentUser + ApplicationAccess.Read | Đã đọc theo quyền, kết hợp summary với fileExists; binary tải khi chọn |
+| PDF liên kết bản khai | GeneratedDocumentDto có submissionId nullable; GET generated-documents nhận query submissionId | Đã thêm schema/param/key và nhóm PDF; nguồn cũ null tách riêng |
+| QR metadata/ảnh | GET `/api/v1/applications/{applicationId}/approved-qr` và `/approved-qr/image` | Đã thêm proxy/client/UI PNG thật và trạng thái chưa có QR |
 
-- `GET /api/v1/officer/submissions/{submissionId}/download`
-- `POST /api/v1/officer/submissions/{submissionId}/comments`
-- `POST /api/v1/officer/submissions/{submissionId}/request-revision`
-- `POST /api/v1/officer/submissions/{submissionId}/approve`
+Endpoint thao tác cán bộ chính xác là `download-docx` và PUT `annotate-docx` multipart File, không phải `/download` hay `/comments`. Word comments và comments Workflow là hai nguồn riêng.
 
-Nhưng backend chưa có API cho cán bộ liệt kê các bản khai thuộc một `applicationId`. API `GET /api/v1/applications/{applicationId}/contents` chỉ cho chủ hồ sơ có role `DocumentCitizen`, nên không thể dùng trong workspace cán bộ.
+## 2. QR chưa bảo đảm có ngay sau duyệt
 
-Đề nghị bổ sung:
+- HTTP hiện tại: OfficerSubmissionsController → ApplicationAccess.Decide → Workflow quyết định → Check đồng bộ submission Approved; FE cũng duyệt qua Workflow.
+- ApproveSubmissionCommandHandler có tạo QR nhưng không tìm thấy caller trong source HTTP hiện tại. GET QR chỉ đọc ApprovedQrs, không tạo.
+- GeneratePdfDocumentCommand tạo QR còn thiếu trước render, nên hồ sơ APPROVED chưa tạo PDF có thể chưa có QR. Hồ sơ không có DOCX chưa có đường tạo bằng generate-pdf.
+- BE cần đưa tạo QR vào luồng đang chạy, xác định hồ sơ không có DOCX, đồng thời/thất bại và linkage version. FE trước mắt hiển thị chưa có QR; không tự POST khi mở trang.
 
-```http
-GET /api/v1/officer/applications/{applicationId}/submissions
-```
+## 3. QR chưa có hợp đồng tra cứu công khai và phiên bản
 
-Response tối thiểu cần có: `id`, `applicationId`, `checklistId`, `templateId`, `fileName`, `fileSizeBytes`, `status`, `officerComment`, `submittedAt`, `reviewedAt`, `fileExists`.
+- ApprovedQrService mặc định mã hóa Gateway `/api/v1/applications/{applicationId}`; GET hồ sơ yêu cầu xác thực. Chưa thấy endpoint công khai riêng để xác minh QR.
+- DTO có id/applicationId/submissionId/qrCodeValue/generatedAt, chưa workflowVersion. Một QR theo application không tự chứng minh snapshot tài liệu nào đã duyệt.
+- Cần chốt trang đích, quyền, dữ liệu tối thiểu công khai, version và lifecycle. Không gọi QR là giấy hẹn hoặc phiếu tiếp nhận chính thức.
 
-Khi có endpoint này, FE sẽ nối các thao tác xem/tải bản khai, ghi chú, yêu cầu sửa và duyệt ngay trên từng checklist. Hiện FE đã khai báo đầy đủ client cho bốn API thao tác phía trên nhưng không thể hiển thị đúng bản khai cho cán bộ khi chưa có API khám phá ID.
+## 4. Danh sách cán bộ ngoài pending
 
-## 2. DTO PDF không chỉ ra bản khai nguồn
+ApplicationReviewStore.Pending chỉ trả SUBMITTED/UNDER_REVIEW trong phường, chưa giao hoặc giao cho người hiện tại; validator chỉ nhận hai filter status này. FE đang dùng nguồn đó cho cả cần bổ sung/đã duyệt nên refetch làm hồ sơ rời queue; cache cục bộ không thay API lịch sử đầy đủ.
 
-`GeneratedDocumentDto` hiện có `id`, `applicationId`, `documentType`, `pdfBlobUrl`, `createdAtUtc` nhưng không có `submissionId` hoặc `templateId`. Khi một hồ sơ có nhiều tờ khai, FE không thể biết PDF nào tương ứng với tờ khai nào.
+Cần hợp đồng danh sách/tra cứu rộng hơn với phân quyền, trạng thái, phân trang/tổng số. Chưa tự đặt route/response mới. Trước mắt UI chỉ cam kết queue được cung cấp.
 
-Đề nghị thêm ít nhất `submissionId`, và nên thêm `templateId` cùng `fileName` vào:
+## 5. Quyền quản lý phôi IT_ADMIN
 
-- response `POST /api/v1/applications/{applicationId}/generate-pdf`
-- response `GET /api/v1/applications/{applicationId}/generated-documents`
+BE DocumentManager yêu cầu PROCEDURE_MANAGER. IT_ADMIN trong DocumentUser không tự có quyền ghi. FormsView dùng permission document.templates.manage để hiện nút nên có thể bị 403.
 
-## 3. Phân quyền Document Manager chưa thống nhất với workspace quản trị
+FE có thể chặn ghi theo role hiện có ngay. Nếu muốn IT_ADMIN ghi, cần quyết định sửa policy BE hoặc cấp thêm role ở IAM; FE không tự mở quyền.
 
-Các endpoint quản lý mẫu yêu cầu role `PROCEDURE_MANAGER`. Nếu tài khoản `IT_ADMIN` không đồng thời có role này thì màn quản trị mẫu sẽ nhận 403 dù UI cho phép quản trị viên truy cập.
+## 6. Snapshot nhị phân theo version
 
-Đề nghị thống nhất một trong hai cách:
+Workflow có snapshot JSON/checklist; DocumentForm tra file hiện tại theo applicationId. Chưa có hợp đồng đọc bộ blob bất biến của v1/v2. Cần snapshot liên kết file/version trước khi cam kết xem lại/so sánh file lịch sử. Diff JSON vẫn dùng được với nhãn chính xác.
 
-- cho policy Document Manager chấp nhận `PROCEDURE_MANAGER` hoặc `IT_ADMIN`; hoặc
-- bảo đảm IAM luôn gán thêm `PROCEDURE_MANAGER` cho tài khoản quản trị cần quản lý mẫu.
+## 7. formData DRAFT và comment thủ công
 
-## 4. Tệp chưa được đóng băng theo phiên bản Workflow
+- Chưa có API sửa formData chung khi DRAFT. Không cho sửa rồi báo lưu thành công nếu không có đường ghi; resubmit vẫn nhận formData cho NEED_REVISION theo hợp đồng đã có.
+- Chưa có API xóa/resolve/reopen comment thủ công. **Đã có** tự chuyển OPEN version cũ thành RESOLVED khi resubmit thành công trong ReviewHandlers; FE giữ status/version, không xóa local hoặc gợi ý xóa để duyệt.
 
-Workflow lưu snapshot dữ liệu/checklist khi nộp và gửi lại, nhưng tệp Document Form và supporting document vẫn được tra theo `applicationId`. Backend chưa có quan hệ phiên bản rõ ràng để cán bộ xem lại đúng bộ tệp của phiên bản cũ.
+## 8. Tiếp nhận chính thức và editor trình duyệt
 
-Đề nghị lưu `workflowVersion`/`applicationVersionId` trên submission và supporting document, hoặc tạo snapshot liên kết các ID tệp khi Workflow tạo phiên bản.
+- Chưa thấy hợp đồng ghi nhận tiếp nhận tại quầy; không dùng APPROVED/QR thay thế.
+- Có docx-preview để xem, chưa có engine Word nhập/xuất DOCX bảo toàn comment. Tải/sửa bằng Word/upload triển khai được ngay; editor web cần chốt engine/hạ tầng/license riêng.
 
-## 5. Chưa có API cập nhật `formData` của hồ sơ DRAFT
+## 9. Giới hạn xác minh
 
-Workflow cho tạo hồ sơ với `formData`, nhưng chưa có endpoint cập nhật dữ liệu khai chung khi hồ sơ còn DRAFT. Nếu các trường hồ sơ chung được cho phép sửa sau khi tạo, cần endpoint ví dụ:
-
-```http
-PATCH /api/v1/applications/{applicationId}
-```
-
-với optimistic concurrency hoặc version phù hợp.
-
-## 6. Chưa có vòng đời xử lý bình luận chi tiết
-
-Backend cho tạo và đọc comment nhưng chưa có API đánh dấu `RESOLVED`, mở lại hoặc xóa comment. UI chỉ có thể hiển thị trạng thái do backend trả về.
-
-Đề nghị bổ sung endpoint đổi trạng thái comment, kèm kiểm tra quyền theo chủ hồ sơ/cán bộ phụ trách.
-
-## 7. QR và tiếp nhận chính thức chưa có hợp đồng API
-
-Các màn “Mã QR hồ sơ” và “Tiếp nhận tại quầy” hiện không có endpoint backend để phát hành/xác thực QR hoặc ghi nhận tiếp nhận chính thức. Đây là nghiệp vụ khác với kết quả tiền kiểm `APPROVED`.
-
-Cần chốt hợp đồng riêng nếu giữ hai chức năng này. FE không nên tự chuyển `APPROVED` thành đã tiếp nhận chính thức.
-
+Đã GET OpenAPI và đọc source; chưa kiểm thử quyền thực tế, migration, Blob/Gotenberg, QR scan hoặc mutation Azure bằng tài khoản thử nghiệm. Các bước trong `E:/môtảapi.docx` là đầu vào kế hoạch, không phải kết quả đã chạy. Status theo implementation: chưa APPROVED có nhánh 409; sai phạm vi có thể 404 thay vì luôn 403.
