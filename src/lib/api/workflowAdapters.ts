@@ -95,6 +95,9 @@ export function mapCommentDtoToOfficerReviewComment(c: CommentDto, officerFallba
     content: c.commentText || '',
     createdAt: formatDateTime(c.createdAt),
     officerName: officerFallback,
+    status: c.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN',
+    versionNumber: c.versionNumber,
+    targetId: c.targetId || undefined,
   };
 }
 
@@ -157,12 +160,12 @@ export function mapSummaryDtoToOfficerApplication(summary: ApplicationSummaryDto
 export function mapApplicationDtoToOfficerApplication(dto: ApplicationDto, comments: CommentDto[] = []): OfficerApplication {
   const formData = parseFormData(dto.formData);
   const status = mapStatus(dto.status, dto.resubmitCount);
-  const currentVersion = dto.currentVersionNumber || dto.resubmitCount + 1 || 1;
+  const currentVersion = dto.currentVersionNumber;
 
   // Citizen info extracted from formData
   const citizen: CitizenInfo = {
     fullName: String(formData.applicantName || formData.fullName || formData.name || 'Công dân nộp hồ sơ'),
-    citizenId: String(formData.citizenId || formData.cccd || formData.idNumber || '—'),
+    citizenId: String(formData.identityNumber || formData.citizenId || formData.cccd || formData.idNumber || '—'),
     phoneNumber: String(formData.phoneNumber || formData.phone || '—'),
     email: String(formData.email || '—'),
     address: String(formData.address || formData.currentAddress || (dto.wardCode ? `Phường: ${dto.wardCode}` : '—')),
@@ -202,12 +205,7 @@ export function mapApplicationDtoToOfficerApplication(dto: ApplicationDto, comme
     });
 
   // E-form fields
-  const eformFields: EformField[] = Object.entries(formData).map(([k, v]) => ({
-    key: `/formData/${k}`,
-    label: humanizeFieldName(k),
-    value: typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v ?? ''),
-    status: 'valid',
-  }));
+  const eformFields: EformField[] = formDataFields(formData);
 
   // Timeline from backend history
   const timeline: TimelineItem[] = (dto.history || []).map(mapHistoryDtoToTimelineItem);
@@ -311,4 +309,15 @@ export function mapApplicationDtoToCitizenDossier(dto: ApplicationDto): CitizenD
     formData: parseFormData(dto.formData),
     checklist,
   };
+}
+
+export function formDataFields(raw: unknown): EformField[] {
+  const result: EformField[] = [];
+  function visit(value: unknown, path: string, label: string) {
+    if (value !== null && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) visit(child, path + '/' + key.replace(/~/g, '~0').replace(/\//g, '~1'), label ? label + ' / ' + humanizeFieldName(key) : humanizeFieldName(key));
+    } else result.push({ key: path, label, value: String(value ?? ''), status: 'valid' });
+  }
+  visit(parseFormData(raw), '/formData', '');
+  return result;
 }

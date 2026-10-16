@@ -10,6 +10,8 @@ function workflowPath(path: string): string {
   return servicePath(serviceUrls.workflow, path);
 }
 
+const formDataInputSchema = z.record(z.string(), z.unknown()).refine(value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= 65536, 'Dữ liệu kê khai vượt quá 65.536 byte UTF-8.');
+
 // ----------------------------------------------------
 // Zod Schemas & Domain Types
 // ----------------------------------------------------
@@ -237,6 +239,8 @@ export const workflowApi = {
 
   // === Phân hệ Công dân (Citizen) & Xem hồ sơ ===
   createApplication: async (input: CreateApplicationInput) => {
+    const validation = formDataInputSchema.safeParse(input.formData);
+    if (!validation.success) throw new Error('Dữ liệu kê khai phải là object JSON, tối đa 65.536 byte UTF-8.');
     const res = await api.post(workflowPath('/api/v1/applications'), input);
     return applicationDtoSchema.parse(res.data);
   },
@@ -265,6 +269,8 @@ export const workflowApi = {
   },
 
   resubmitApplication: async (id: string, input: ResubmitInput) => {
+    const validation = formDataInputSchema.safeParse(input.formData);
+    if (!validation.success) throw new Error('Dữ liệu kê khai phải là object JSON, tối đa 65.536 byte UTF-8.');
     const res = await api.post(workflowPath(`/api/v1/applications/${id}/resubmit`), input);
     return reviewResultDtoSchema.parse(res.data);
   },

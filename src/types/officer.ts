@@ -104,6 +104,9 @@ export interface TimelineItem {
 }
 
 export interface OfficerReviewComment {
+  status?: 'OPEN' | 'RESOLVED';
+  versionNumber?: number;
+  targetId?: string;
   id: string;
   category: 'eform' | 'document' | 'checklist' | 'general';
   target: string;
