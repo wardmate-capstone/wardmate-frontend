@@ -232,7 +232,7 @@ export const ManagerPage: React.FC = () => {
   };
 
   const handleExportQuickReport = () => {
-    toast.success('Đang kết xuất báo cáo nhanh định kỳ (PDF)...');
+    window.print();
   };
 
   const currentMeta = managerSectionTitles[currentSection] || {

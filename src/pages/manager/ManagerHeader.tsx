@@ -1,9 +1,9 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import React from 'react';
 import {
   List,
   SidebarSimple,
-  Bell,
   MagnifyingGlass,
   ArrowSquareOut,
 } from '@phosphor-icons/react';
@@ -107,23 +107,15 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
             type="button"
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-2xs transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-900 shrink-0"
             onClick={onExportReport}
-            title="Xuất báo cáo tổng hợp"
+            title="In màn hình hiện tại"
           >
             <ArrowSquareOut size={16} className="text-slate-500" />
-            <span className="hidden sm:inline">Xuất báo cáo</span>
+            <span className="hidden sm:inline">In màn hình</span>
           </button>
         )}
 
         {/* Nút thông báo chuông */}
-        <button
-          type="button"
-          className="relative grid size-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-2xs transition-colors hover:bg-slate-50 hover:text-red-800"
-          aria-label="Thông báo hệ thống"
-          title="Thông báo"
-        >
-          <Bell size={19} />
-          <span className="absolute top-2 right-2 size-2 rounded-full bg-red-600 ring-2 ring-white" />
-        </button>
+        <NotificationBell />
 
         {/* Divider ngăn cách nhẹ */}
         <div className="h-6 w-px bg-slate-200 hidden sm:block mx-0.5" />

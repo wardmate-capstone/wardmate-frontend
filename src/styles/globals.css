@@ -811,3 +811,11 @@
     .procedure-manager-layout .admin-sidebar.is-compact .admin-nav-section > button > span { white-space: nowrap; }
   }
 }
+
+@media print {
+  .admin-sidebar, .admin-topbar, .skip-link, header, nav, button,
+  [data-sonner-toaster], .admin-sidebar-overlay { display: none !important; }
+  .admin-workspace, .admin-workspace.is-sidebar-collapsed { margin-left: 0 !important; }
+  .admin-layout, .admin-workspace, main { overflow: visible !important; max-width: none !important; }
+  body { background: white !important; }
+}

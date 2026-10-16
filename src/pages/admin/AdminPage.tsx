@@ -1,4 +1,5 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
@@ -6,7 +7,6 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { getGreeting } from "@/lib/utils";
 import {
   ArrowsClockwise,
-  Bell,
   Books,
   Buildings,
   CaretDown,
@@ -330,14 +330,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <SidebarSimple size={21} />
           </button>
           <div className="admin-topbar-actions">
-            <button
-              type="button"
-              aria-label="Thông báo"
-              onClick={() => toast.info("Bạn có 3 thông báo quản trị mới.")}
-            >
-              <Bell size={21} />
-              <span>3</span>
-            </button>
+            <NotificationBell />
             <UserDropdown />
           </div>
         </header>}
