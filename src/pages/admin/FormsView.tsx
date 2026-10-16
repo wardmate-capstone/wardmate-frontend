@@ -12,8 +12,8 @@ import { createFormTemplate, createFormTemplateSchema, formTemplateErrorMessage,
 
 export function FormsView() {
   const user = useAuthStore(s => s.user);
-  const canManage = user?.permissions.includes('document.templates.manage') ?? false;
-  const canRead = canManage || (user?.permissions.includes('document.templates.read') ?? false);
+  const canManage = Boolean(user?.roles.includes('PROCEDURE_MANAGER') && user.permissions.includes('document.templates.manage'));
+  const canRead = Boolean(user?.permissions.includes('document.templates.read') || user?.permissions.includes('document.templates.manage'));
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
@@ -70,6 +70,7 @@ export function FormsView() {
   const totalPages = list.data?.totalPages || 1;
   return <div className="space-y-5">
     {guard.confirmation}
+    {!canManage && user?.roles.includes('IT_ADMIN') && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Bạn có thể xem kho biểu mẫu. Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.</p>}
     <section className="admin-card flex flex-wrap items-center justify-between gap-4 p-6">
       <div><h2 className="text-xl font-bold text-slate-900">Kho biểu mẫu Word</h2><p className="mt-2 text-sm text-slate-600">Tạo và tải lên phôi trống, sau đó chọn biểu mẫu trong phần chỉnh sửa thủ tục.</p></div>
       <div className="flex flex-wrap gap-2"><Button variant="outline" loading={list.isFetching} onClick={() => void list.refetch()}>Làm mới</Button>{canManage && <Button onClick={() => { create.reset(); setCreateOpen(true); }}>Thêm đơn </Button>}</div>

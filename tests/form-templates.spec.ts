@@ -178,8 +178,8 @@ test('citizen downloads by linked ID; inactive and unlinked templates cannot dow
   await expect(page.getByRole('alert')).toContainText('tạm ngừng');
 });
 
-test('admin sees aligned actions and an upload button instead of download for an empty template', async ({ page }) => {
-  await mockWorkspaceAuth(page, ['IT_ADMIN']);
+test('admin with procedure-manager role can upload an empty template', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN', 'PROCEDURE_MANAGER']);
   await mockCatalog(page);
   const state = await mockForms(page);
   state.item.fileDocxUrl = null;
@@ -198,8 +198,8 @@ test('admin sees aligned actions and an upload button instead of download for an
   await page.screenshot({ path: 'test-results/form-template-admin-actions.png', fullPage: true });
 });
 
-test('admin create preserves the server forbidden reason and trace without attempting upload', async ({ page }) => {
-  await mockWorkspaceAuth(page, ['IT_ADMIN']);
+test('admin with procedure-manager role preserves server forbidden reason and trace', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN', 'PROCEDURE_MANAGER']);
   await mockCatalog(page);
   const state = await mockForms(page);
   await page.route('**/api/v1/form-templates', async route => {
@@ -216,6 +216,18 @@ test('admin create preserves the server forbidden reason and trace without attem
   await dialog.getByRole('button', { name: 'Tạo biểu mẫu', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Bạn không có quyền thực hiện thao tác này.');
   await expect(dialog.getByRole('alert')).toContainText('mock-trace');
+  expect(state.writes).toHaveLength(0);
+});
+
+test('IT_ADMIN without PROCEDURE_MANAGER reads templates without write controls', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN']);
+  await mockCatalog(page);
+  const state = await mockForms(page);
+  await page.goto('/admin');
+  await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
+  await expect(page.getByText('Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Thay đổi', exact: true })).toHaveCount(0);
   expect(state.writes).toHaveLength(0);
 });
 
