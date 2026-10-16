@@ -12,8 +12,9 @@ export type ModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  bodyClassName?: string;
 };
-export function Modal({ open, onOpenChange, title, description, trigger, children, footer, className }: ModalProps) {
+export function Modal({ open, onOpenChange, title, description, trigger, children, footer, className, bodyClassName }: ModalProps) {
   const descriptionId = useId();
   const previousFocus = useRef<HTMLElement | null>(null);
   return (
@@ -35,7 +36,7 @@ export function Modal({ open, onOpenChange, title, description, trigger, childre
             {description && <Dialog.Description id={descriptionId} className="mt-2 text-sm text-slate-600">{description}</Dialog.Description>}
           </div>
           <Dialog.Close aria-label="Đóng hộp thoại" className="absolute right-4 top-4 grid size-12 place-items-center rounded-xl text-slate-600 hover:bg-slate-100"><X size={22} aria-hidden="true" /></Dialog.Close>
-          <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+          <div className={cn('min-h-0 flex-1 overflow-y-auto p-6', bodyClassName)}>{children}</div>
           {footer && <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 p-6">{footer}</div>}
         </Dialog.Content>
       </Dialog.Portal>
