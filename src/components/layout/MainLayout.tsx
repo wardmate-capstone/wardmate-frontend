@@ -71,7 +71,7 @@ export function MainLayout() {
               <Dialog.Trigger asChild><button type="button" className="mobile-menu-button" aria-label="Mở menu"><Menu size={24} aria-hidden="true" /></button></Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-[70] bg-slate-950/50 data-[state=open]:animate-in" />
-                <Dialog.Content className="fixed right-0 top-0 z-[80] flex h-dvh w-[min(90vw,380px)] flex-col rounded-l-3xl bg-white p-6 shadow-2xl focus:outline-none">
+                <Dialog.Content aria-describedby={undefined} className="fixed right-0 top-0 z-[80] flex h-dvh w-[min(90vw,380px)] flex-col overflow-y-auto rounded-l-3xl bg-white p-6 shadow-2xl focus:outline-none">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-5">
                     <Dialog.Title className="text-xl font-bold text-red-900">Danh mục</Dialog.Title>
                     <Dialog.Close asChild><button type="button" className="mobile-menu-button" aria-label="Đóng menu"><X size={22} aria-hidden="true" /></button></Dialog.Close>

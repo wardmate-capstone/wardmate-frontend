@@ -1,4 +1,6 @@
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useSearchParams } from 'react-router-dom';
 import { CaretDown, X } from '@phosphor-icons/react';
 import { BrandMark } from '@/components/brand/BrandMark';
@@ -32,6 +34,8 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
   isCompact: boolean;
 }) {
   const [params, setParams] = useSearchParams();
+  const desktop = useMediaQuery('(min-width: 1024px)');
+  const previousFocus = useRef<HTMLElement | null>(null);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const user = useAuthStore(state => state.user);
   const roles = user?.roles ?? [];
@@ -57,9 +61,7 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
     };
   }, [activeFeature]);
 
-  return <>
-    {isOpen && <button type="button" className="admin-sidebar-overlay" onClick={onClose} aria-label="Đóng menu điều hướng" />}
-    <aside id={sidebarId} className={`admin-sidebar workspace-sidebar workspace-sidebar-${workspace} ${isOpen ? 'is-open' : ''} ${isCompact ? 'is-compact' : ''}`} aria-label={`Thanh điều hướng ${subtitle}`}>
+  const sidebar = <aside id={sidebarId} className={`admin-sidebar workspace-sidebar workspace-sidebar-${workspace} ${isOpen ? 'is-open' : ''} ${isCompact ? 'is-compact' : ''}`} aria-label={`Thanh điều hướng ${subtitle}`}>
       <div className="admin-brand"><BrandMark className="admin-brand-mark" size={42} /><div><BrandWordmark subtitle={subtitle} compact /></div><button type="button" onClick={onClose} aria-label="Đóng menu"><X size={21} /></button></div>
       <nav className="admin-nav">
         {visibleGroups.map(group => <div className="admin-nav-section" key={group.title}><p>{group.title}</p>{group.items.map(({ id, label, icon: Icon, children }) => {
@@ -72,7 +74,19 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
           return <button key={id} type="button" className={activeSection === id ? 'is-active' : ''} aria-current={activeSection === id ? 'page' : undefined} onClick={() => select(id)} title={isCompact ? label : undefined}><Icon size={20} aria-hidden /><span>{label}</span></button>;
         })}</div>)}
       </nav>
-    </aside>
+    </aside>;
+  return <>
+    {desktop ? sidebar : <Dialog.Root open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="admin-sidebar-overlay" />
+        <Dialog.Content aria-describedby={undefined} className="fixed inset-y-0 left-0 z-50 w-[268px] max-w-[85vw] outline-none"
+          onOpenAutoFocus={() => { previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+          onCloseAutoFocus={event => { event.preventDefault(); if (previousFocus.current?.isConnected) previousFocus.current.focus(); }}>
+          <Dialog.Title className="sr-only">Điều hướng {subtitle}</Dialog.Title>
+          {sidebar}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>}
     {activeFeature && <section data-permission-feature-panel aria-label={activeFeature.label} className={`fixed bottom-0 left-0 right-0 top-[72px] z-20 flex min-w-0 overflow-hidden bg-slate-50 ${isCompact ? 'lg:left-20' : 'lg:left-72'}`}><main className="admin-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden py-5"><PermissionFeatureContent feature={activeFeature} /></main></section>}
   </>;
 }
