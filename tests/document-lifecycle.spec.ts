@@ -25,10 +25,10 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
   const form = page.locator(`#checklist-${documentIds.checklist}`);
   const writesBefore = state.writes.length;
-  await form.getByLabel('Thay bản nháp DOCX').setInputFiles({ name: 'to-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('corrected-docx') });
-  await expect(form.getByText('Nháp đã lưu', { exact: true })).toBeVisible();
-  await form.getByRole('button', { name: 'Chốt bản khai', exact: true }).click();
-  await expect(form.getByText('Đã chốt', { exact: true })).toBeVisible();
+  await form.getByLabel('Thay tệp Word đã điền').setInputFiles({ name: 'to-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('corrected-docx') });
+  await expect(form.getByText('Đã lưu bản nháp', { exact: true })).toBeVisible();
+  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
   expect(state.writes.slice(writesBefore).some(x => x.path.includes('/checklists/'))).toBe(false);
   await page.getByRole('button', { name: 'Gửi lại hồ sơ đã sửa', exact: true }).first().click();
   const confirm = page.getByRole('dialog', { name: 'Xác nhận gửi lại hồ sơ' });
@@ -55,7 +55,7 @@ test('validation file chặn tệp rỗng, sai đuôi và quá 20 MiB trước u
   await page.goto('/citizen?section=dossiers_all');
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
   const form = page.locator(`#checklist-${documentIds.checklist}`);
-  const upload = form.getByLabel('Lưu bản nháp DOCX');
+  const upload = form.getByLabel('Tải lên tệp Word đã điền');
   await upload.setInputFiles({ name: 'rong.docx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(0) });
   await expect(form.getByRole('alert')).toContainText('không có nội dung');
   await upload.setInputFiles({ name: 'sai.pdf', mimeType: 'application/pdf', buffer: Buffer.from('abc') });

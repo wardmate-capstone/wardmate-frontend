@@ -6,7 +6,7 @@ const pdf = { name: 'giay-to.pdf', mimeType: 'application/pdf', buffer: Buffer.f
 async function detail(page: import('@playwright/test').Page) {
   await page.goto('/citizen?section=dossiers_all');
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Danh mục giấy tờ & biểu mẫu' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Giấy tờ và biểu mẫu' })).toBeVisible();
 }
 
 test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản thực trước khi gửi', async ({ page }) => {
@@ -15,17 +15,17 @@ test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản th
   await detail(page);
   const form = page.locator(`#checklist-${documentIds.checklist}`);
   const evidence = page.locator(`#checklist-${documentIds.evidence}`);
-  await form.getByLabel('Lưu bản nháp DOCX').setInputFiles(docx);
-  await expect(form.getByText('Nháp đã lưu', { exact: true })).toBeVisible();
+  await form.getByLabel('Tải lên tệp Word đã điền').setInputFiles(docx);
+  await expect(form.getByText('Đã lưu bản nháp', { exact: true })).toBeVisible();
   expect(state.writes.filter(x => /submissions\/.+\/submit$/.test(x.path))).toHaveLength(0);
   state.failChot = true;
-  await form.getByRole('button', { name: 'Chốt bản khai', exact: true }).click();
+  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('Kho lưu trữ');
   state.failPatch = true;
-  await form.getByRole('button', { name: 'Chốt bản khai', exact: true }).click();
-  await expect(form.getByRole('alert')).toContainText('Tệp đã lưu nhưng chưa đồng bộ checklist');
-  await form.getByRole('button', { name: 'Đồng bộ checklist' }).click();
-  await expect(form.getByText('Đã chốt', { exact: true })).toBeVisible();
+  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await expect(form.getByRole('alert')).toContainText('Tệp đã lưu nhưng chưa cập nhật trạng thái giấy tờ');
+  await form.getByRole('button', { name: 'Kiểm tra lại giấy tờ' }).click();
+  await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
   expect(state.writes.filter(x => x.path.endsWith('/draft'))).toHaveLength(1);
   await evidence.getByLabel('Đính kèm giấy tờ').setInputFiles(pdf);
   const upload = page.getByRole('dialog', { name: 'Khai số bản trong tệp' });
@@ -36,7 +36,7 @@ test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản th
   await upload.getByRole('button', { name: 'Lưu giấy tờ' }).click();
   await expect(upload).toHaveCount(0);
   expect(state.evidenceQuantity).toBe(2);
-  await page.getByRole('button', { name: 'Nộp tiền kiểm ngay', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Gửi hồ sơ tiền kiểm', exact: true }).first().click();
   const confirm = page.getByRole('dialog', { name: 'Xác nhận gửi tiền kiểm' });
   await expect(confirm.getByRole('button', { name: 'Xác nhận gửi', exact: true })).toBeDisabled();
   await confirm.getByRole('checkbox').check();
@@ -44,7 +44,7 @@ test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản th
   await expect.poll(() => state.status).toBe('SUBMITTED');
   expect(state.writes.filter(x => x.path === `/api/v1/applications/${documentIds.application}/submit`)).toHaveLength(1);
   await page.reload();
-  await expect(form.getByText('Đã chốt', { exact: true })).toBeVisible();
+  await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

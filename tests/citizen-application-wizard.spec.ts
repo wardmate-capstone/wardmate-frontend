@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog, sampleProcedure } from './fixtures/procedures';
 
@@ -7,7 +7,7 @@ test('không tự tạo hồ sơ mẫu khi dịch vụ hồ sơ chưa tích hợ
   await page.goto('/citizen?section=dossiers_draft');
   await expect(page.getByText('Không có hồ sơ nào ở trạng thái "Bản nháp".')).toBeVisible();
   await expect(page.getByRole('button', { name: /Chi tiết/i })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Nộp tiền kiểm ngay' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gửi hồ sơ tiền kiểm' })).toHaveCount(0);
   await expect(page.getByText('Đủ điều kiện nộp', { exact: false })).toHaveCount(0);
 });
 
