@@ -226,6 +226,10 @@ export function documentFormError(error: unknown): string {
       'document.concurrent_edit': 'Bản khai vừa được thay đổi. Vui lòng tải lại rồi thử lại.',
       'document.workflow_unavailable': 'Chưa thể xác minh hồ sơ với dịch vụ tiền kiểm.',
       'document.storage_unavailable': 'Kho lưu trữ tài liệu tạm thời không phản hồi.',
+      'document.blob_upload_failed': 'Kho lưu trữ chưa thể lưu tệp Word. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
+      'document.empty_file': 'Tệp đã chọn không có nội dung.',
+      'document.invalid_docx_file': 'Tệp DOCX không hợp lệ hoặc bị hỏng. Vui lòng kiểm tra lại bằng Word.',
+      'document.file_too_large': 'Tệp vượt quá giới hạn 20 MiB.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
       'document.qr_not_found': 'Hồ sơ đã duyệt nhưng chưa có mã QR. Bạn có thể tạo PDF từ bản khai đã duyệt rồi tải lại mã QR.',
       'document.concurrent_update': 'Dữ liệu vừa thay đổi. Vui lòng tải lại hồ sơ.',
@@ -242,6 +246,7 @@ export function documentFormError(error: unknown): string {
     if (error.response?.status === 403) return 'Bạn không có quyền thao tác với tài liệu này.';
     if (error.response?.status === 404) return 'Không tìm thấy tài liệu yêu cầu.';
   }
+  if (error instanceof Error && !axios.isAxiosError(error)) return error.message;
   return 'Không thể xử lý tài liệu. Vui lòng kiểm tra kết nối và thử lại.';
 }
 

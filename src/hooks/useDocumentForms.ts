@@ -14,9 +14,9 @@ export function useApplicationContents(applicationId?: string, enabled = true) {
   const userId = useAuthStore(s => s.user?.id);
   return useQuery({ queryKey: [...documentQueryKeys.contents(applicationId), userId], queryFn: ({ signal }) => documentFormApi.getContents(applicationId!, signal), enabled: enabled && Boolean(applicationId && userId) });
 }
-export function useCitizenSubmissions(applicantId?: string, enabled = true) {
+export function useCitizenSubmissions(applicantId?: string, enabled = true, params: { status?: string; page?: number; pageSize?: number } = {}) {
   const userId = useAuthStore(s => s.user?.id);
-  return useQuery({ queryKey: [...documentQueryKeys.submissions(applicantId), userId], queryFn: ({ signal }) => documentFormApi.listSubmissions(applicantId!, {}, signal), enabled: enabled && Boolean(applicantId && applicantId === userId) });
+  return useQuery({ queryKey: [...documentQueryKeys.submissions(applicantId), userId, params], queryFn: ({ signal }) => documentFormApi.listSubmissions(applicantId!, params, signal), enabled: enabled && Boolean(applicantId && applicantId === userId) });
 }
 export function useOfficerSubmissions(applicationId: string) {
   const user = useAuthStore(s => s.user);
