@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import {
   MagnifyingGlass,
-  Funnel,
   Eye,
   NotePencil,
   Star,
   QrCode,
 } from '@phosphor-icons/react';
-import { toast } from '@/components/ui/Toast';
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
 
@@ -61,6 +59,7 @@ export function CitizenDossiersView({
     });
   }, [dossiers, targetStatus, selectedField, searchTerm]);
 
+  const fields = [...new Set(dossiers.map(item => item.field).filter(Boolean))];
   return (
     <section className="admin-card admin-table-card admin-content-card">
       <div className="admin-toolbar">
@@ -77,19 +76,18 @@ export function CitizenDossiersView({
         <div className="flex items-center gap-2">
           <select
             className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+            aria-label="Lọc hồ sơ theo lĩnh vực"
             value={selectedField}
             onChange={(e) => setSelectedField(e.target.value)}
           >
             <option value="all">Tất cả lĩnh vực</option>
-            <option value="Hộ tịch">Hộ tịch</option>
-            <option value="Chứng thực">Chứng thực</option>
-            <option value="Địa chính">Địa chính</option>
+            {fields.map(field => <option key={field} value={field}>{field}</option>)}
           </select>
           <button
             type="button"
-            onClick={() => toast.info('Đang hiển thị danh sách hồ sơ theo bộ lọc')}
+            onClick={() => { setSearchTerm(''); setSelectedField('all'); }}
           >
-            <Funnel size={16} /> Lọc
+            Xóa bộ lọc
           </button>
         </div>
       </div>
@@ -148,7 +146,7 @@ export function CitizenDossiersView({
                       <button
                         type="button"
                         className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
-                        onClick={() => toast.info(`Mở giao diện bổ sung giấy tờ cho hồ sơ ${item.code}`)}
+                        onClick={() => onOpenDossierDetail(item)}
                         title="Bổ sung / Chỉnh sửa hồ sơ"
                       >
                         <NotePencil size={14} weight="bold" />

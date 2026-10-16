@@ -155,15 +155,15 @@ export function CitizenDashboardView({
               <ShieldCheck size={20} className="shrink-0 text-emerald-600 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 font-bold">Đối chiếu giấy tờ gốc</strong>
-                <span>Tiền kiểm trực tuyến giúp bạn chuẩn bị đủ 100% giấy tờ trước khi mang bản gốc đến đối chiếu tại Một cửa.</span>
+                <span>Kiểm tra danh mục giấy tờ và mang bản gốc theo yêu cầu để cơ quan có thẩm quyền đối chiếu.</span>
               </div>
             </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
               <QrCode size={20} className="shrink-0 text-red-700 mt-0.5" />
               <div>
-                <strong className="block text-slate-900 font-bold">Quét mã QR tại Ki-ốt</strong>
-                <span>Xuất trình mã QR hồ sơ đã duyệt để lấy số thứ tự ưu tiên tại UBND phường.</span>
+                <strong className="block text-slate-900 font-bold">Mã QR hồ sơ tiền kiểm</strong>
+                <span>Mở mục Mã QR hồ sơ để kiểm tra mã đã được cấp. Thực hiện tiếp nhận theo hướng dẫn của cơ quan có thẩm quyền.</span>
               </div>
             </div>
 
@@ -171,7 +171,7 @@ export function CitizenDashboardView({
               <Clock size={20} className="shrink-0 text-sky-600 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 font-bold">Giờ làm việc tiếp nhận</strong>
-                <span>Sáng: 07:30 – 11:30 | Chiều: 13:30 – 17:00 (Từ Thứ Hai đến Thứ Sáu, Thứ Bảy làm việc buổi sáng).</span>
+                <span>Kiểm tra lịch làm việc được công bố của phường/xã tiếp nhận trước khi đến.</span>
               </div>
             </div>
           </div>

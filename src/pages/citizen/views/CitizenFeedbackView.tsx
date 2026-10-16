@@ -16,7 +16,7 @@ export function CitizenFeedbackView({ onOpenFeedback }: CitizenFeedbackViewProps
         <button
           type="button"
           className="admin-primary-action shrink-0"
-          onClick={() => onOpenFeedback('Đăng ký khai sinh', 'HS-2026-00128')}
+          onClick={() => onOpenFeedback('Dịch vụ hỗ trợ thủ tục')}
         >
           <Star size={18} weight="fill" /> Gửi đánh giá mới
         </button>
