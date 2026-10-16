@@ -167,6 +167,17 @@ export function triggerFileDownload(blob: Blob, fileName: string): void {
 export function formTemplateErrorMessage(error: unknown): string {
   if (error instanceof z.ZodError) return 'Dữ liệu biểu mẫu không hợp lệ. Vui lòng tải lại hoặc liên hệ quản trị viên.';
   if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    const support = data && typeof data === 'object' && typeof data.traceId === 'string' && data.traceId.trim()
+      ? ` Mã hỗ trợ: ${data.traceId}` : '';
+    // BE trả lỗi Blob có kiểm soát dưới dạng 400 { code, message }.
+    // Không hiển thị message vì có thể chứa chi tiết exception của Storage.
+    if (data?.code === 'document.blob_upload_failed') {
+      return 'Kho lưu trữ chưa thể lưu tệp Word. Vui lòng thử lại sau; nếu lỗi tiếp diễn, liên hệ quản trị viên kiểm tra dịch vụ lưu trữ.' + support;
+    }
+    if (error.response && error.response.status >= 500) {
+      return 'Dịch vụ biểu mẫu đang gặp lỗi. Chưa xác nhận được kết quả thao tác. Vui lòng tải lại dữ liệu trước khi thử lại; nếu lỗi tiếp diễn, gửi mã hỗ trợ cho quản trị viên.' + support;
+    }
     if (error.response?.status === 403) {
       const body = error.response.data;
       if (body?.code === 'iam.csrf_rejected') return 'Máy chủ từ chối yêu cầu do kiểm tra nguồn truy cập hoặc bảo vệ CSRF. Vui lòng liên hệ quản trị viên.';
@@ -177,14 +188,12 @@ export function formTemplateErrorMessage(error: unknown): string {
     if (error.response?.status === 404) return 'Không tìm thấy biểu mẫu hoặc biểu mẫu chưa có tệp Word gốc.';
     if (error.response?.status === 409) return 'Mã biểu mẫu đã tồn tại. Vui lòng chọn mã khác.';
     if (!error.response) return 'Không thể kết nối kho biểu mẫu. Vui lòng thử lại.';
-    const data = error.response?.data;
     if (data && typeof data === 'object') {
       const messages: Record<string, string> = {
         'document.invalid_template': 'Mã biểu mẫu cần 1–50 ký tự và tên cần 1–255 ký tự.',
         'document.invalid_docx_file': 'Tệp Word không hợp lệ hoặc bị hỏng. Vui lòng chọn tệp .docx khác.',
         'document.empty_file': 'Tệp đã chọn không có nội dung.',
         'document.file_too_large': 'Tệp Word vượt quá giới hạn 20 MiB.',
-        'document.blob_upload_failed': 'Chưa thể lưu tệp Word. Vui lòng thử lại sau.',
       };
       if ('code' in data && typeof data.code === 'string' && messages[data.code]) return messages[data.code];
       if ('message' in data && typeof data.message === 'string' && data.message.trim()) {

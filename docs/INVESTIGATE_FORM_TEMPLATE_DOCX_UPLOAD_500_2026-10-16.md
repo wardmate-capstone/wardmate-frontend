@@ -2,6 +2,14 @@
 
 Ngày điều tra: 16/10/2026 (Asia/Saigon).
 
+## Cập nhật sau bản sửa BE và xử lý FE — 16/10/2026
+
+- Đã đối chiếu lại source `UploadFormTemplateDocxCommand.cs`, `FormTemplatesController.cs` và `DocumentFormErrors.cs` tại `E:/wardmate-backend`. Handler hiện bắt exception upload Blob (trừ hủy thao tác), trả `document.blob_upload_failed`. Controller hiện chuyển lỗi này thành **400 `{code,message}`**, không phải 503. Multipart field `file`, endpoint và DTO thành công `{templateId,blobUrl}` giữ nguyên.
+- Khi `SaveChangesAsync` thất bại, BE thử xóa blob mới rồi ném lại exception; nhánh này vẫn có thể trả **500 ProblemDetails**. Việc bắt exception không chứng minh cấu hình/kết nối Storage đã được khôi phục hoặc bản BE mới đã triển khai trên Azure.
+- FE tại `src/lib/api/formTemplates.ts` đã có ánh xạ mã lỗi Blob từ trước. Lượt này làm rõ thông báo lỗi kho lưu trữ, hướng dẫn liên hệ quản trị viên nếu lặp lại; không hiển thị exception Storage từ `message`. Lỗi 5xx được chuyển thành thông báo tiếng Việt về kết quả chưa xác nhận, hướng dẫn tải lại dữ liệu trước khi thử lại và kèm `traceId` nếu response có.
+- Luồng `FormsView.tsx` giữ nguyên tệp và xác nhận thay phôi khi upload lỗi, chỉ đóng modal/báo thành công/invalidate cache khi POST thành công. Bổ sung hồi quy trong `tests/form-templates.spec.ts` cho cả tải mới và thay phôi, với lỗi Blob theo BE hiện tại và 500 theo response đã báo.
+- Kết quả kiểm tra lượt sửa FE được ghi tại `docs/PROGRESS.md`. Chưa gọi mutation production hoặc xác minh lại trace gốc trên Azure. Các phần dưới là bằng chứng tại thời điểm điều tra **trước bản sửa BE**, không phải mô tả handler hiện tại.
+
 ## Hiện tượng
 
 Request thất bại:
