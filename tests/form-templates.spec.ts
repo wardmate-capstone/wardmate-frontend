@@ -68,6 +68,49 @@ test('manager creates and uploads a template, validates input and retries upload
   expect(state.writes).toHaveLength(3);
 });
 
+for (const replace of [false, true]) {
+  for (const storageFailure of [true, false]) {
+    test(`${replace ? 'replace' : 'first upload'} preserves DOCX and recovers from ${storageFailure ? 'BE storage error' : '500 ProblemDetails'}`, async ({ page }) => {
+      const state = await openWarehouse(page);
+      if (!replace) {
+        state.item.fileDocxUrl = null;
+        await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
+      }
+      await page.getByRole('button', { name: replace ? 'Thay đổi' : 'Tải lên', exact: true }).click();
+      const dialog = page.getByRole('dialog');
+      const docx = await createPreviewDocx();
+      await dialog.getByLabel('Tệp Word', { exact: true }).setInputFiles({ name: 'mau.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docx });
+      if (replace) await dialog.getByRole('checkbox').check();
+      let attempts = 0;
+      let failed = true;
+      await page.route(`**/api/v1/form-templates/${formTemplateId}/upload-docx`, async route => {
+        if (route.request().method() !== 'POST') return route.fallback();
+        attempts++;
+        expect(route.request().headers()['content-type']).toContain('multipart/form-data; boundary=');
+        expect(route.request().postDataBuffer()?.includes(docx)).toBe(true);
+        if (!failed) return route.fallback();
+        return authReply(route, { status: storageFailure ? 400 : 500, json: storageFailure
+          ? { code: 'document.blob_upload_failed', message: 'Failed to upload file to storage: internal-storage-exception' }
+          : { type: 'https://www.rfc-editor.org/rfc/rfc9110#section-15.6.1', status: 500, title: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.', instance: `/api/v1/form-templates/${formTemplateId}/upload-docx`, traceId: 'mock-upload-trace' } });
+      });
+      await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+      await expect(dialog.getByRole('alert')).toContainText(storageFailure ? 'Kho lưu trữ chưa thể lưu tệp Word' : 'Chưa xác nhận được kết quả thao tác');
+      if (!storageFailure) await expect(dialog.getByRole('alert')).toContainText('Mã hỗ trợ: mock-upload-trace');
+      await expect(dialog.getByRole('alert')).not.toContainText('internal-storage-exception');
+      await expect(dialog.getByLabel('Tệp Word', { exact: true })).toHaveValue(/mau\.docx$/);
+      if (replace) await expect(dialog.getByRole('checkbox')).toBeChecked();
+      await expect(page.getByText('Đã cập nhật phôi Word.', { exact: true })).toHaveCount(0);
+      expect(attempts).toBe(1);
+      expect(state.item.fileDocxUrl).toBe(replace ? original.fileDocxUrl : null);
+      failed = false;
+      await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(page.getByText('Đã có DOCX', { exact: true })).toBeVisible();
+      expect(attempts).toBe(2);
+    });
+  }
+}
+
 test('read permission permits viewing and downloading but hides writes', async ({ page }) => {
   const state = await openWarehouse(page, ['document.templates.read']);
   await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
@@ -390,6 +433,27 @@ async function openLinkedEditor(page: Page) {
   await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
   return { catalog, editor };
 }
+
+test('effective date is required, focuses on save and clears the field error after entry', async ({ page }) => {
+  const { catalog, editor } = await openLinkedEditor(page);
+  const date = editor.getByLabel('Ngày hiệu lực của thay đổi', { exact: false });
+  await expect(date).toHaveAttribute('required', '');
+  await date.focus();
+  await date.blur();
+  await expect(date).toHaveAttribute('aria-invalid', 'true');
+  const errorId = await date.getAttribute('id');
+  const inlineError = editor.locator(`[id="${errorId}-error"]`);
+  await expect(inlineError).toHaveText('Vui lòng nhập ngày hiệu lực của thay đổi.');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(date).toBeFocused();
+  expect(catalog.requests.filter(request => request.method === 'PUT')).toHaveLength(0);
+  await date.fill('2026-10-26');
+  await expect(inlineError).toHaveCount(0);
+  await expect(date).not.toHaveAttribute('aria-invalid', 'true');
+  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  expect(catalog.requests.find(request => request.method === 'PUT')?.body?.effectiveDate).toBe('2026-10-26');
+});
 
 test('selected catalog action is safe and reselecting restores quantity, case and requirement', async ({ page }) => {
   const { editor } = await openLinkedEditor(page);

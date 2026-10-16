@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { z } from 'zod';
 import { ArrowLeft, Eye, EyeSlash, PencilSimple } from "@phosphor-icons/react";
 import { Badge, Button, Input, Modal } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
@@ -17,6 +18,9 @@ import { toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
 import { ProcedureValidationError, procedureIssue } from '@/lib/procedureValidation';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+
+const effectiveDateSchema = z.string().min(1, 'Vui lòng nhập ngày hiệu lực của thay đổi.')
+  .pipe(z.iso.date('Ngày hiệu lực không hợp lệ. Vui lòng chọn ngày đầy đủ.'));
 
 export function ProcedureApiDetail({
   row,
@@ -277,27 +281,30 @@ export function ProcedureApiDetail({
         footer={
           <Button
             loading={busy}
-            onClick={() =>
+            onClick={() => {
+              const checkedDate = effectiveDateSchema.safeParse(date);
+              if (!checkedDate.success) {
+                setDateError(checkedDate.error.issues[0].message);
+                dateInput.current?.focus();
+                dateInput.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                return;
+              }
               void run(async () => {
                 const input = validateProcedure(editing!);
                 if (!input.contentPayload.decisionNumber.trim()) throw new ProcedureValidationError([procedureIssue('contentPayload.decisionNumber', 'Vui lòng nhập số quyết định trước khi lưu.')]);
-                if (!date) {
-                  setDateError('Vui lòng nhập ngày hiệu lực.'); dateInput.current?.focus();
-                  throw new Error('Vui lòng nhập ngày hiệu lực trước khi lưu.');
-                }
                 await procedureApi.update(
                   row.id,
                   input,
                   input.contentPayload.decisionNumber,
-                  date,
+                  checkedDate.data,
                 );
                 setEditing(null);
                 detail.refresh();
                 versions.refresh();
                 onChange(!!row.isActive);
                 toast.success("Đã cập nhật thủ tục và lưu phiên bản trước.");
-              })
-            }
+              });
+            }}
           >
             Lưu thay đổi
           </Button>
@@ -316,10 +323,16 @@ export function ProcedureApiDetail({
         )}
         <Input
           label="Ngày hiệu lực của thay đổi"
+          required
+          hint="Bắt buộc nhập ngày hiệu lực trước khi lưu thay đổi."
           ref={dateInput} error={dateError} disabled={busy}
           type="date"
           value={date}
           onChange={(e) => { setDate(e.target.value); setDateError(''); }}
+          onBlur={() => {
+            const result = effectiveDateSchema.safeParse(date);
+            setDateError(result.success ? '' : result.error.issues[0].message);
+          }}
         />
       </Modal>
       <Modal
