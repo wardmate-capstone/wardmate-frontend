@@ -195,6 +195,7 @@ export function ProcedureApiEditor({
   disabled = false,
   initialStep = 0,
   onEditForms,
+  onEditChecklist,
   validationError,
 }: {
   value: Row;
@@ -203,6 +204,7 @@ export function ProcedureApiEditor({
   disabled?: boolean;
   initialStep?: number;
   onEditForms?: () => void;
+  onEditChecklist?: () => void;
   validationError?: ProcedureValidationError | null;
 }) {
   const [step, setStep] = useState(initialStep);
@@ -340,38 +342,55 @@ export function ProcedureApiEditor({
           </div>
         )}
         {step === 1 && (
-          <RowEditor
-            prefix="checklistSchema"
-            title="Giấy tờ"
-            value={value.checklistSchema}
-            change={(next) => set("checklistSchema", next)}
-            fields={[
-              { key: "checklistId", label: "Mã giấy tờ" },
-              {
-                key: "caseCode",
-                label: "Mã trường hợp (trống = áp dụng chung)",
-                options: rows(content.cases).map(item => String(item.caseCode ?? '')).filter(Boolean),
-              },
-              { key: "itemName", label: "Tên giấy tờ" },
-              {
-                key: "submissionType",
-                label: "Hình thức",
-                options: ["NOP", "XUAT_TRINH"],
-              },
-              {
-                key: "documentCopyType",
-                label: "Loại bản",
-                options: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY"],
-              },
-              { key: "quantity", label: "Số lượng", kind: "number" },
-              {
-                key: "isMandatory",
-                label: "Bắt buộc khi áp dụng",
-                kind: "boolean",
-              },
-              { key: "conditionNote", label: "Điều kiện áp dụng / ghi chú" },
-            ]}
-          />
+          <div className="space-y-4">
+            {disabled && onEditChecklist && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    Danh mục giấy tờ & thành phần hồ sơ quy định
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    Bạn có thể cập nhật riêng danh mục giấy tờ theo quyết định ban hành mới mà không làm thay đổi các phần khác của thủ tục.
+                  </p>
+                </div>
+                <Button size="small" variant="outline" onClick={onEditChecklist}>
+                  Cập nhật danh mục giấy tờ (Checklist)
+                </Button>
+              </div>
+            )}
+            <RowEditor
+              prefix="checklistSchema"
+              title="Giấy tờ"
+              value={value.checklistSchema}
+              change={(next) => set("checklistSchema", next)}
+              fields={[
+                { key: "checklistId", label: "Mã giấy tờ" },
+                {
+                  key: "caseCode",
+                  label: "Mã trường hợp (trống = áp dụng chung)",
+                  options: rows(content.cases).map(item => String(item.caseCode ?? '')).filter(Boolean),
+                },
+                { key: "itemName", label: "Tên giấy tờ" },
+                {
+                  key: "submissionType",
+                  label: "Hình thức",
+                  options: ["NOP", "XUAT_TRINH"],
+                },
+                {
+                  key: "documentCopyType",
+                  label: "Loại bản",
+                  options: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY"],
+                },
+                { key: "quantity", label: "Số lượng", kind: "number" },
+                {
+                  key: "isMandatory",
+                  label: "Bắt buộc khi áp dụng",
+                  kind: "boolean",
+                },
+                { key: "conditionNote", label: "Điều kiện áp dụng / ghi chú" },
+              ]}
+            />
+          </div>
         )}
         {step === 2 && (
           <section className="space-y-5">

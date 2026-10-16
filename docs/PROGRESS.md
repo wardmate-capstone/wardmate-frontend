@@ -4,6 +4,31 @@ Cập nhật: 16/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tích hợp API Cập nhật Checklist & Đồng bộ Ràng buộc Procedure Catalog — 16/10/2026
+
+- Tích hợp hoàn chỉnh API và giao diện quản lý riêng danh mục giấy tờ (Checklist) cho thủ tục:
+  1. **Core API & Types (`src/lib/api/procedures.ts`)**:
+     - Thêm Zod schema `checklistUpdateInputSchema` và type `ChecklistUpdateInput`.
+     - Thêm method `procedureApi.updateChecklist(id, input)` gọi `PUT /api/v1/procedure-manager/procedures/{id}/checklist` kèm chuẩn hóa ngày hiệu lực ISO DateOnly (`YYYY-MM-DD`).
+     - Cập nhật `formsSchema`: chặn toàn bộ GUID rỗng toàn số 0 (`00000000-0000-0000-0000-000000000000`) cho `formTemplateId`.
+     - Bổ sung an toàn cho `src/lib/api/serviceUrls.ts` khi chạy trong môi trường node test.
+  2. **Validation Rules (`src/lib/procedureValidation.ts`)**:
+     - Đồng bộ quy tắc kiểm tra với `ProcedureInputValidator.cs` của backend:
+       - Checklist: Tối đa 500 mục, mã giấy tờ (`checklistId`) duy nhất, <= 255 ký tự, không có khoảng trắng đầu/cuối (`trim`), mã trường hợp (`caseCode`) phải thuộc danh sách `cases` của thủ tục.
+       - Biểu mẫu: `formCode` và `formName` <= 255 ký tự, không có khoảng trắng thừa, chặn trùng `formCode` trong cùng trường hợp hoặc trùng với biểu mẫu dùng chung.
+       - Trường hợp: `caseCode` <= 100 ký tự, `trim`, duy nhất.
+     - Hàm `validateChecklistItems(items, allowedCases)` phục vụ kiểm tra độc lập danh mục checklist.
+  3. **UI / UX Quản lý Checklist (`ProcedureChecklistModal.tsx` & `ProcedureApiDetail.tsx`)**:
+     - Tạo mới component `ProcedureChecklistModal`: Modal chuyên dụng cho phép thêm, xóa, sửa từng mục checklist (mã, trường hợp, tên, hình thức, loại bản sao, số lượng, bắt buộc, ghi chú điều kiện).
+     - Nhập số quyết định ban hành (`decisionNumber`) và ngày có hiệu lực (`effectiveDate`).
+     - Tự động truyền `expectedUpdatedAt` từ dữ liệu thủ tục để kích hoạt kiểm soát cập nhật đồng thời (Optimistic Concurrency Control).
+     - Bắt lỗi HTTP 409 `procedure.concurrent_update` và hiển thị cảnh báo trực quan kèm nút **"Tải lại dữ liệu mới nhất"** để nạp lại dữ liệu mà không làm mất phiên.
+     - Tích hợp nút **"Cập nhật giấy tờ (Checklist)"** tại trang chi tiết thủ tục (hòa hợp với Header mới) và banner hướng dẫn trực tiếp trong tab Thành phần hồ sơ của `ProcedureApiEditor`.
+  4. **Kiểm tra**:
+     - `npm run typecheck`: 0 lỗi.
+     - `npm run lint`: 0 lỗi.
+     - `tests/procedure-checklist.spec.ts`: 7/7 test cases PASS.
+
 ## Chỉnh UI đầu trang chi tiết thủ tục — 16/10/2026
 
 - `src/pages/procedure-manager/ProcedureApiDetail.tsx`: bố trí tiêu đề và thông tin bên trái, nút thao tác bên phải ở desktop; nhãn riêng cho mã thủ tục/lĩnh vực, Badge trạng thái kèm icon, nút quay lại dạng ghost. Mobile xếp dọc, nút rộng toàn hàng; tái sử dụng Button/Badge và icon Phosphor hiện có. Giữ nguyên quyền, modal và hành vi API.

@@ -2,13 +2,14 @@ function normalize(value: string | undefined) {
   return value?.trim().replace(/\/+$/, '') ?? '';
 }
 
-const useApiProxy = import.meta.env.VITE_USE_API_PROXY === 'true';
+const env = (import.meta as unknown as { env?: Record<string, string> }).env ?? {};
+const useApiProxy = env.VITE_USE_API_PROXY === 'true';
 
 export const serviceUrls = {
-  iam: useApiProxy ? '' : normalize(import.meta.env.VITE_API_BASE_URL),
-  catalog: useApiProxy ? '' : normalize(import.meta.env.VITE_CATALOG_API_URL),
-  workflow: useApiProxy ? '' : normalize(import.meta.env.VITE_WORKFLOW_API_URL),
-  documentForm: useApiProxy ? '' : normalize(import.meta.env.VITE_DOCUMENT_FORM_API_URL),
+  iam: useApiProxy ? '' : normalize(env.VITE_API_BASE_URL),
+  catalog: useApiProxy ? '' : normalize(env.VITE_CATALOG_API_URL),
+  workflow: useApiProxy ? '' : normalize(env.VITE_WORKFLOW_API_URL),
+  documentForm: useApiProxy ? '' : normalize(env.VITE_DOCUMENT_FORM_API_URL),
 };
 
 export function servicePath(baseUrl: string, path: string) {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/procedures";
 import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
 import { PdfSource } from "./ProcedureDraftWorkspace";
+import { ProcedureChecklistModal } from "./ProcedureChecklistModal";
 import { toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
 import { ProcedureValidationError, procedureIssue } from '@/lib/procedureValidation';
@@ -44,6 +45,7 @@ export function ProcedureApiDetail({
   );
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [editingStep, setEditingStep] = useState(0);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const [date, setDate] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -109,6 +111,13 @@ export function ProcedureApiDetail({
             <PencilSimple size={18} aria-hidden="true" />
             Chỉnh sửa
           </Button>}
+          {can("procedure.update") && <Button
+            variant="outline"
+            disabled={!detail.data}
+            onClick={() => setChecklistOpen(true)}
+          >
+            Cập nhật giấy tờ (Checklist)
+          </Button>}
           {can("procedure.status") && <Button
             variant="outline"
             onClick={() => {
@@ -139,6 +148,9 @@ export function ProcedureApiDetail({
               setEditing(structuredClone(detail.data!));
               setDate('');
               setError('');
+            } : undefined}
+            onEditChecklist={can('procedure.update') ? () => {
+              setChecklistOpen(true);
             } : undefined}
           />
           <PdfSource id={row.id} />
@@ -341,6 +353,26 @@ export function ProcedureApiDetail({
         />
         <ProcedureFeedback error={error} />
       </Modal>
+      {detail.data && (
+        <ProcedureChecklistModal
+          open={checklistOpen}
+          onOpenChange={setChecklistOpen}
+          procedureId={row.id}
+          expectedUpdatedAt={detail.data.updatedAt}
+          initialItems={detail.data.checklistSchema ?? []}
+          cases={detail.data.contentPayload.cases ?? []}
+          currentDecisionNumber={detail.data.contentPayload.decisionNumber}
+          onSuccess={() => {
+            detail.refresh();
+            versions.refresh();
+            onChange(!!row.isActive);
+          }}
+          onReload={() => {
+            detail.refresh();
+            versions.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

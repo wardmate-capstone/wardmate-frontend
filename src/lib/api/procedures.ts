@@ -12,7 +12,13 @@ export const contentSchema = z.object({
   results: z.array(z.string()), cases: z.array(z.object({ caseCode: z.string(), caseName: z.string(), steps: z.array(stepSchema) })),
 });
 export const checklistSchema = z.array(z.object({ checklistId: z.string(), caseCode: z.string().nullish(), submissionType: z.enum(['NOP', 'XUAT_TRINH']), itemName: z.string(), documentCopyType: z.enum(['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY']), quantity: z.number().int().positive().max(2147483647), conditionNote: z.string().nullish(), isMandatory: z.boolean() }));
-export const formsSchema = z.array(z.object({ formTemplateId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).nullish(), caseCode: z.string().nullish(), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']), quantity: z.number().int().positive().max(2147483647), isMandatory: z.boolean() }));
+export const formsSchema = z.array(z.object({ formTemplateId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).refine(val => val !== '00000000-0000-0000-0000-000000000000', { message: 'Mã template không được là GUID rỗng' }).nullish(), caseCode: z.string().nullish(), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']), quantity: z.number().int().positive().max(2147483647), isMandatory: z.boolean() }));
+export const checklistUpdateInputSchema = z.object({
+  expectedUpdatedAt: z.string(),
+  decisionNumber: z.string().trim().min(1).max(100),
+  effectiveDate: z.string(),
+  items: checklistSchema,
+});
 export const procedureInputSchema = z.object({
   procedureCode: z.string().trim().min(1).max(50), categoryId: z.number().int().positive(), title: z.string().trim().min(10).max(500),
   issuingAuthority: z.string().nullish(), executingAgency: z.string().nullish(),
@@ -31,6 +37,7 @@ const versionSchema = z.object({ id: z.string(), versionNumber: z.number(), deci
 const documentFormSchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']) });
 export type Category = z.infer<typeof categorySchema>;
 export type ProcedureInput = z.infer<typeof procedureInputSchema>;
+export type ChecklistUpdateInput = z.infer<typeof checklistUpdateInputSchema>;
 export type ProcedureDetail = z.infer<typeof detailSchema>;
 export type ProcedureSummary = z.infer<typeof summarySchema>;
 export type ProcedurePage = z.infer<typeof pagedSchema>;
@@ -62,6 +69,8 @@ export const procedureApi = {
   create: async (input: ProcedureInput) => detailSchema.parse((await api.post(manager, input)).data),
   update: async (id: string, input: ProcedureInput, decisionNumber: string, effectiveDate: string) =>
     detailSchema.parse((await api.put(`${manager}/${id}`, { ...input, decisionNumber, effectiveDate: toDateOnlyString(effectiveDate) })).data),
+  updateChecklist: async (id: string, input: ChecklistUpdateInput) =>
+    detailSchema.parse((await api.put(`${manager}/${encodeURIComponent(id)}/checklist`, { ...input, effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
   publish: async (input: ProcedureInput) => detailSchema.parse((await api.post(`${manager}/publish`, input)).data),
   status: async (id: string, isActive: boolean, reason: string) => { await api.patch(`${manager}/${id}/status`, { isActive, reason }); },
   versions: async (id: string, signal?: AbortSignal) => z.array(versionSchema).parse((await api.get(`${manager}/${id}/versions`, { signal })).data),
