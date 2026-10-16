@@ -12,6 +12,7 @@ export type CitizenSectionId =
   | 'dossiers_approved'
   | 'dossiers_completed'
   | 'dossier_detail'
+  | 'submissions'
   // Tiện ích
   | 'notifications'
   | 'qr_code'

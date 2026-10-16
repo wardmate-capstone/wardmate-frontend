@@ -52,6 +52,7 @@ import { CitizenNotificationsView } from './views/CitizenNotificationsView';
 import { CitizenQrCodeView } from './views/CitizenQrCodeView';
 import { CitizenFeedbackView } from './views/CitizenFeedbackView';
 import { CitizenProfileView } from './views/CitizenProfileView';
+import { CitizenSubmissionsView } from './views/CitizenSubmissionsView';
 
 // Re-export types for backward compatibility
 export type { CitizenSectionId, CitizenDossier } from './types';
@@ -66,7 +67,8 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
   dossiers_completed: { title: 'Hồ sơ đã hoàn thành' },
-  dossier_detail: { title: 'Chi tiết hồ sơ & Checklist chuẩn bị' },
+  dossier_detail: { title: 'Chi tiết hồ sơ' },
+  submissions: { title: 'Bản khai của tôi' },
   notifications: { title: 'Thông báo & Cập nhật' },
   qr_code: { title: 'Mã QR hồ sơ điện tử' },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
@@ -371,6 +373,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
+      { id: 'submissions', label: 'Bản khai của tôi', icon: FileText, permissions: ['document.submissions.read'] },
       { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, children: [
         { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: Files, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
         { id: 'dossiers_draft', label: 'Bản nháp', icon: FileText, permissions: ['document.submissions.write'] },
@@ -502,6 +505,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           {activeSection === 'dossier_detail' && selectedDossierDetail && (
             <CitizenDossierDetailView
               dossier={selectedDossierDetail}
+              wardName={availableWards.find(ward => ward.code === selectedDossierDetail.wardCode)?.name}
               onBack={() => selectSection(selectedDossierDetail.status === 'Bản nháp' ? 'dossiers_draft' : 'dossiers_all')}
               onSubmitPrecheck={handleSubmitPrecheck}
               onResubmitPrecheck={handleResubmitPrecheck}
@@ -509,6 +513,11 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               submitting={submittingAction}
             />
           )}
+
+          {activeSection === 'submissions' && <CitizenSubmissionsView onOpenApplication={async id => {
+            const fullDto = await workflowApi.getApplication(id);
+            await handleOpenDossierDetail(mapApplicationDtoToCitizenDossier(fullDto));
+          }} />}
 
           {activeSection === 'notifications' && (
             <CitizenNotificationsView
