@@ -1,8 +1,12 @@
-import { useRef, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { Button } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
+import { Modal, toast } from '@/components/ui';
+import { useAuthStore } from '@/stores/authStore';
+
+const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
 
 export function OfficerDocumentsPanel({ applicationId, editable, onComment }: { applicationId: string; editable: boolean; onComment: (checklistId: string) => void }) {
   const contents = useApplicationContents(applicationId);
@@ -12,10 +16,12 @@ export function OfficerDocumentsPanel({ applicationId, editable, onComment }: { 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [revision, setRevision] = useState(0);
   const lock = useRef(false);
+  const user = useAuthStore(s => s.user);
+  const [editing, setEditing] = useState<{ id: string; name: string }>();
   const documents = contents.data?.supportingDocuments ?? [];
   return <section className="space-y-4">
     <h3 className="font-bold">Bản khai và giấy tờ đã lưu</h3>
-    <p className="text-sm text-slate-600">Để ghi chú Word: tải bản khai, thêm bình luận trong Word rồi tải lại DOCX. Ghi chú trong Word chưa phải nhận xét yêu cầu bổ sung của hồ sơ.</p>
+    <p className="text-sm text-slate-600">Có thể chỉnh sửa DOCX trực tuyến. Để thêm hoặc đọc đầy đủ bình luận Word, tải bản khai và mở bằng Word rồi tải lại. Bình luận Word chưa phải nhận xét yêu cầu bổ sung của hồ sơ.</p>
     {(contents.isPending || submissions.isPending) && <p role="status">Đang tải danh sách tài liệu…</p>}
     {(contents.isError || submissions.isError) && <div role="alert"><p>{documentFormError(contents.error || submissions.error)}</p><Button variant="outline" onClick={() => { void contents.refetch(); void submissions.refetch(); }}>Thử tải lại danh sách</Button></div>}
     {submissions.data?.map(item => {
@@ -32,5 +38,15 @@ export function OfficerDocumentsPanel({ applicationId, editable, onComment }: { 
     {documents.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div className="min-w-0"><h4 className="break-all font-semibold">{item.fileName}</h4><p className="text-sm">{item.quantity} bản{!item.fileExists && ' · Không tìm thấy tệp trong kho'}</p></div><div className="flex flex-wrap gap-2"><Button size="small" variant="outline" onClick={() => setSelected({ id: item.id, name: item.fileName, form: false })}>Mở giấy tờ</Button>{editable && item.checklistId && <Button size="small" variant="outline" onClick={() => onComment(item.checklistId!)}>Nhận xét mục giấy tờ</Button>}</div></div>)}
     {contents.isSuccess && submissions.isSuccess && !documents.length && !submissions.data.length && <p>Hồ sơ chưa có tệp đã lưu.</p>}
     {selected && <div className="space-y-3 rounded-xl border bg-slate-50 p-4"><h4 className="break-all font-bold">{selected.name}</h4><DocumentFilePreview key={`${selected.id}-${revision}`} fileId={selected.id} revision={`${revision}-${submissions.data?.find(x => x.id === selected.id)?.updatedAt ?? ''}`} fileName={selected.name} load={signal => selected.form ? documentFormApi.officerDownloadSubmission(selected.id, signal) : documentFormApi.downloadSupportingDocument(selected.id, signal)} /></div>}
+    {submissions.data?.filter(item => editable && item.applicationId === applicationId && item.checklistId && ['Submitted', 'RevisionRequested'].includes(item.status)).map(item => <Button key={item.id} variant="outline" size="small" onClick={() => setEditing({ id: item.id, name: item.fileName })}>Chỉnh sửa trực tuyến: {item.fileName}</Button>)}
+    {editing && <Suspense fallback={<Modal open onOpenChange={open => { if (!open) setEditing(undefined); }} title="Mở bản khai trực tuyến"><p role="status">Đang tải trình soạn thảo…</p></Modal>}><DocxOnlineEditor
+      sourceKey={`${applicationId}-${editing.id}`} title={editing.name} author={user?.profile?.fullName || user?.username || 'Cán bộ'}
+      load={signal => documentFormApi.officerDownloadSubmission(editing.id, signal)}
+      onSave={async file => {
+        if (!editable) throw new Error('Hồ sơ không còn cho phép chỉnh sửa. Vui lòng tải lại trạng thái.');
+        await mutations.annotate.mutateAsync({ applicationId, submissionId: editing.id, file });
+        setRevision(value => value + 1); toast.success('Đã lưu bản DOCX vào hồ sơ.');
+      }} onClose={() => setEditing(undefined)}
+    /></Suspense>}
   </section>;
 }
