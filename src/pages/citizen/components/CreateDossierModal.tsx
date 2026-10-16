@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Modal } from '@/components/ui';
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { workflowError } from '@/lib/api/workflow';
 
 const schema = z.object({ procedureId: z.string().uuid('Chọn thủ tục hợp lệ.'), wardCode: z.string().trim().min(1, 'Chọn phường/xã tiếp nhận.').max(50), caseCode: z.string().max(100, 'Mã trường hợp tối đa 100 ký tự.') });
@@ -18,7 +17,6 @@ export function CreateDossierModal({ open, onClose, initial, procedures, wards, 
   const [error, setError] = useState('');
   const lock = useRef(false);
   const wasOpen = useRef(false);
-  const guard = useUnsavedChanges(form.formState.isDirty, busy);
   useEffect(() => {
     if (open && !wasOpen.current) { form.reset(initial); setError(''); }
     wasOpen.current = open;
@@ -33,7 +31,7 @@ export function CreateDossierModal({ open, onClose, initial, procedures, wards, 
       form.setValue('caseCode', matchingDefault?.caseCode ?? (cases.length === 1 ? cases[0].caseCode : ''));
     }
   }, [open, loading, cases, initial.caseCode, initial.procedureId, initial.wardCode, form]);
-  return <><Modal open={open} onOpenChange={next => { if (!next) guard.requestClose(onClose); }} title="Chuẩn bị hồ sơ tiền kiểm mới" description="Khởi tạo bản nháp để chuẩn bị giấy tờ trước khi gửi tiền kiểm.">
+  return <Modal open={open} onOpenChange={next => { if (!next && !busy && !lock.current) onClose(); }} title="Chuẩn bị hồ sơ tiền kiểm mới" description="Khởi tạo bản nháp để chuẩn bị giấy tờ trước khi gửi tiền kiểm.">
     <form className="space-y-4" noValidate onSubmit={form.handleSubmit(async values => {
       if (loading || unavailable || busy || lock.current) return;
       if (!procedures.some(x => x.id === values.procedureId)) { form.setError('procedureId', { message: 'Thủ tục không có trong danh mục hiện tại.' }); return; }
@@ -49,5 +47,5 @@ export function CreateDossierModal({ open, onClose, initial, procedures, wards, 
       {(!procedures.length || !wards.length) && !loading && <p role="alert">Chưa tải được danh mục bắt buộc. Đóng và tải lại trang để thử lại.</p>}{error && <p role="alert" className="text-sm text-red-800">{error}</p>}
       <Button type="submit" loading={busy} disabled={loading || unavailable || !procedures.length || !wards.length}>Tạo hồ sơ nháp</Button>
     </form>
-  </Modal>{guard.confirmation}</>;
+  </Modal>;
 }
