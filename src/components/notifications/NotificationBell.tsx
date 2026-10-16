@@ -1,3 +1,6 @@
+import { createPortal } from 'react-dom';
+import { useAuthStore } from '@/stores/authStore';
+import { getManagementHome } from '@/lib/authRedirect';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -5,7 +8,6 @@ import {
   Checks,
   BellSlash,
   ArrowSquareOut,
-  ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import { useCitizenNotifications } from '@/hooks/useCitizenNotifications';
 import { NotificationItem } from './NotificationItem';
@@ -25,13 +27,15 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    resetNotifications,
   } = useCitizenNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const user = useAuthStore(state => state.user);
+  const destination = user ? getManagementHome(user.roles, user.permissions) ?? '/citizen?section=dossiers_all' : '/dang-nhap?returnTo=%2Fcitizen%3Fsection%3Ddossiers_all';
 
   // Close on Escape or click outside
   useEffect(() => {
@@ -47,12 +51,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) && !panelRef.current?.contains(e.target as Node)
       ) {
         setIsOpen(false);
       }
     };
 
+    panelRef.current?.focus();
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -93,15 +98,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       </button>
 
       {/* Notification Dropdown Panel */}
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           role="dialog"
           aria-label="Danh sách thông báo"
-          className={`absolute z-[100] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150 ${
-            isMobileDrawer
-              ? 'right-0 w-[min(90vw,360px)] top-12'
-              : 'right-0 top-12 w-[380px] sm:w-[420px]'
-          }`}
+          ref={panelRef} tabIndex={-1}
+          style={{ top: Math.min((buttonRef.current?.getBoundingClientRect().bottom ?? 80) + 8, window.innerHeight - 200), right: Math.min(Math.max(12, window.innerWidth - (buttonRef.current?.getBoundingClientRect().right ?? window.innerWidth - 12)), Math.max(12, window.innerWidth - Math.min(window.innerWidth - 24, isMobileDrawer ? 360 : 420) - 12)), width: 'calc(100vw - 24px)', maxWidth: isMobileDrawer ? 360 : 420, maxHeight: 'calc(100dvh - 150px)' }}
+          className="fixed z-[100] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl outline-none ring-1 ring-black/5"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50 rounded-t-2xl">
@@ -179,7 +182,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                 </p>
                 <p className="mt-1 text-xs text-slate-400 max-w-[240px]">
                   {filter === 'unread'
-                    ? 'Tất cả các thông báo cập nhật hồ sơ đã được xử lý.'
+                    ? 'Chưa có dữ liệu thông báo được xác minh.'
                     : 'Các cập nhật về tiến độ tiền kiểm hồ sơ sẽ xuất hiện tại đây.'}
                 </p>
               </div>
@@ -188,27 +191,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
           {/* Footer Actions */}
           <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 bg-slate-50/50 rounded-b-2xl text-xs text-slate-500">
-            <button
-              type="button"
-              onClick={resetNotifications}
-              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors"
-              title="Khôi phục dữ liệu thông báo mẫu"
-            >
-              <ArrowCounterClockwise size={14} aria-hidden="true" />
-              <span>Dữ liệu mẫu</span>
-            </button>
+            <span>Chưa kết nối thông báo.</span>
 
             <Link
-              to="/tai-khoan"
+              to={destination}
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-1 font-medium text-red-800 hover:text-red-950 hover:underline"
             >
-              <span>Hồ sơ của tôi</span>
+              <span>{user ? 'Mở phân hệ của tôi' : 'Đăng nhập để xem hồ sơ'}</span>
               <ArrowSquareOut size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };

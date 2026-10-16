@@ -1,33 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { CitizenNotification } from '@/types/notification';
-import { INITIAL_MOCK_NOTIFICATIONS } from '@/data/mockNotifications';
 
-const STORAGE_KEY = 'wardmate_citizen_notifications_v1';
-
+// Until a server notification contract is integrated, never present fixtures as account data.
 export function useCitizenNotifications() {
-  const [notifications, setNotifications] = useState<CitizenNotification[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Fallback on storage errors
-    }
-    return INITIAL_MOCK_NOTIFICATIONS;
-  });
-
-  // Keep localStorage updated
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
-    } catch {
-      // Ignore write errors
-    }
-  }, [notifications]);
+  const [notifications, setNotifications] = useState<CitizenNotification[]>([]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -46,7 +22,7 @@ export function useCitizenNotifications() {
   }, []);
 
   const resetNotifications = useCallback(() => {
-    setNotifications(INITIAL_MOCK_NOTIFICATIONS);
+    setNotifications([]);
   }, []);
 
   return {
