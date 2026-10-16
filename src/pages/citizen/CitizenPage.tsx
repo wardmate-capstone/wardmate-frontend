@@ -1,12 +1,12 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
-import type { CitizenFeedback } from '@/types/feedback';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { getPublicWards } from '@/lib/api';
@@ -19,6 +19,8 @@ import {
 } from '@/hooks/useWorkflow';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { documentFormApi } from '@/lib/api/documentForms';
+import { hasChecklistEvidence } from '@/lib/documentEvidence';
+import { CreateDossierModal, type CreateDossierValues } from './components/CreateDossierModal';
 import { mapSummaryDtoToCitizenDossier, mapApplicationDtoToCitizenDossier } from '@/lib/api/workflowAdapters';
 import { useQuery } from '@tanstack/react-query';
 
@@ -39,7 +41,6 @@ import {
   Star,
   UserCircle,
   WarningCircle,
-  X,
 } from '@phosphor-icons/react';
 
 // Types & Views
@@ -86,14 +87,14 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // TanStack Query: Lấy danh sách hồ sơ công dân từ backend
-  const citizenAppsQuery = useCitizenApplications(1, 50);
+  const [dossierPage, setDossierPage] = useState(1);
+  const citizenAppsQuery = useCitizenApplications(dossierPage, 50);
   const submitMutation = useSubmitApplicationMutation();
   const resubmitMutation = useResubmitApplicationMutation();
   const createMutation = useCreateApplicationMutation();
 
   // Lấy danh sách thủ tục công khai từ Catalog để chọn khi tạo hồ sơ
   const proceduresQuery = usePublicProcedureList({ pageNumber: 1, pageSize: 50 });
-  const availableProcedures = proceduresQuery.data?.items || [];
 
   // Lấy danh sách phường xã từ IAM
   const wardsQuery = useQuery({
@@ -110,6 +111,12 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [selectedCaseCode, setSelectedCaseCode] = useState('');
   const [newWardCode, setNewWardCode] = useState('');
   const selectedProcedureQuery = usePublicProcedureDetail(selectedProcedureId);
+  const availableProcedures = useMemo(() => {
+    const listed = proceduresQuery.data?.items ?? [];
+    const detail = selectedProcedureQuery.data;
+    return detail && !listed.some(item => item.id === detail.id) ? [...listed, detail] : listed;
+  }, [proceduresQuery.data, selectedProcedureQuery.data]);
+  const consumedProcedure = useRef<string | null>(null);
   const availableCases = useMemo(
     () => selectedProcedureQuery.data?.contentPayload.cases || [],
     [selectedProcedureQuery.data],
@@ -117,7 +124,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   // Khởi tạo thủ tục mặc định khi danh sách thủ tục tải xong
   useEffect(() => {
-    if (requestedProcedureId && availableProcedures.some((item) => item.id === requestedProcedureId)) {
+    if (requestedProcedureId && consumedProcedure.current !== requestedProcedureId) {
+      consumedProcedure.current = requestedProcedureId;
       setSelectedProcedureId(requestedProcedureId);
       setIsCreateModalOpen(true);
     } else if (availableProcedures.length > 0 && !selectedProcedureId) {
@@ -126,11 +134,11 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   }, [availableProcedures, requestedProcedureId, selectedProcedureId]);
 
   useEffect(() => {
-    const nextCase = requestedCaseCode && availableCases.some((item) => item.caseCode === requestedCaseCode)
+    const nextCase = selectedProcedureId === requestedProcedureId && requestedCaseCode && availableCases.some((item) => item.caseCode === requestedCaseCode)
       ? requestedCaseCode
-      : availableCases[0]?.caseCode || '';
+      : availableCases.length === 1 ? availableCases[0].caseCode : '';
     setSelectedCaseCode(nextCase);
-  }, [availableCases, requestedCaseCode, selectedProcedureId]);
+  }, [availableCases, requestedCaseCode, requestedProcedureId, selectedProcedureId]);
 
   // Khởi tạo phường mặc định khi danh sách phường tải xong
   useEffect(() => {
@@ -155,8 +163,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string }>({
-    procedure: 'Chứng thực bản sao từ bản chính',
-    code: 'HS-2026-00094',
+    procedure: 'Dịch vụ hỗ trợ thủ tục',
   });
 
   // Tải chi tiết đầy đủ của hồ sơ (checklist, form data) khi mở
@@ -171,12 +178,23 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         const mapped = mapApplicationDtoToCitizenDossier(fullDto);
         setSelectedDossierDetail(mapped);
       } catch (err) {
-        console.warn('Không thể tải chi tiết checklist đầy đủ:', err);
+        toast.error(`Chưa tải được chi tiết hồ sơ: ${workflowError(err)}`);
       }
     }
   }
 
   // Xử lý nộp tiền kiểm lần đầu
+  async function validateEvidence() {
+    if (!selectedDossierDetail?.id) throw new Error('Không tìm thấy hồ sơ.');
+    const fresh = await workflowApi.getApplication(selectedDossierDetail.id);
+    const mapped = mapApplicationDtoToCitizenDossier(fresh);
+    setSelectedDossierDetail(mapped);
+    const contents = await documentFormApi.getContents(fresh.id);
+    const missing = (mapped.checklist || []).filter(x => x.isMandatory && !hasChecklistEvidence(x, contents));
+    if (missing.length) throw new Error('Chưa đủ tài liệu: ' + missing.map(x => x.itemName).join(', '));
+    return { fresh, mapped, contents };
+  }
+
   async function handleSubmitPrecheck() {
     if (!selectedDossierDetail?.id) {
       toast.error('Không tìm thấy thông tin hồ sơ.');
@@ -184,13 +202,20 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     }
     try {
       setSubmittingAction(true);
-      const updated = await submitMutation.mutateAsync(selectedDossierDetail.id);
+      const { fresh, mapped, contents } = await validateEvidence();
+      if (fresh.status !== 'DRAFT') throw new Error('Hồ sơ không còn ở trạng thái bản nháp.');
+      for (const item of mapped.checklist || []) {
+        const status = hasChecklistEvidence(item, contents) ? 'COMPLETED' : 'PENDING';
+        if (status !== item.status) await workflowApi.updateChecklist(fresh.id, item.checklistId, { status });
+      }
+      const updated = await submitMutation.mutateAsync(fresh.id);
       toast.success(`Hồ sơ ${updated.applicationCode} đã được nộp tiền kiểm trực tuyến thành công! Cán bộ sẽ sớm phản hồi.`);
       setSelectedDossierDetail(mapApplicationDtoToCitizenDossier(updated));
       queryClient.invalidateQueries({ queryKey: workflowQueryKeys.citizenApplications() });
     } catch (err) {
       const msg = workflowError(err);
       toast.error(`Không thể nộp tiền kiểm: ${msg}`);
+      throw err;
     } finally {
       setSubmittingAction(false);
     }
@@ -204,25 +229,15 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     }
     try {
       setSubmittingAction(true);
-      const contents = await documentFormApi.getContents(selectedDossierDetail.id);
-      const resubmitChecklists = (selectedDossierDetail.checklist || []).map((item) => {
-        const submissions = contents.submissions.filter((entry) => entry.checklistId === item.checklistId);
-        const documents = contents.supportingDocuments.filter((entry) => entry.checklistId === item.checklistId);
-        const hasEvidence = item.formTemplateId
-          ? submissions.some((entry) => entry.fileExists && entry.templateId === item.formTemplateId && ['Submitted', 'Approved'].includes(entry.status))
-          : documents
-              .filter((entry) => entry.fileExists
-                && (!item.submissionType || entry.submissionType === item.submissionType)
-                && (!item.documentCopyType || entry.documentCopyType === item.documentCopyType))
-              .reduce((total, entry) => total + entry.quantity, 0) >= item.quantity;
-        return { id: item.checklistId, status: hasEvidence ? 'COMPLETED' : 'PENDING', fileUrl: null };
-      });
+      const { fresh, mapped, contents } = await validateEvidence();
+      if (fresh.status !== 'NEED_REVISION') throw new Error('Hồ sơ không còn ở trạng thái cần chỉnh sửa.');
+      const resubmitChecklists = (mapped.checklist || []).map(item => ({ id: item.checklistId, status: hasChecklistEvidence(item, contents) ? 'COMPLETED' : 'PENDING', fileUrl: null }));
 
       const updated = await resubmitMutation.mutateAsync({
         id: selectedDossierDetail.id,
         input: {
-          expectedVersionNumber: selectedDossierDetail.currentVersion || 1,
-          formData: selectedDossierDetail.formData || {},
+          expectedVersionNumber: fresh.currentVersionNumber,
+          formData: mapped.formData || {},
           checklists: resubmitChecklists,
         },
       });
@@ -233,6 +248,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     } catch (err) {
       const msg = workflowError(err);
       toast.error(`Không thể gửi lại hồ sơ: ${msg}`);
+      throw err;
     } finally {
       setSubmittingAction(false);
     }
@@ -264,18 +280,18 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   }
 
   // Tạo mới hồ sơ nháp
-  async function handleCreateDraft() {
+  async function handleCreateDraft(values: CreateDossierValues) {
     try {
-      const targetProc = availableProcedures.find((p) => p.id === selectedProcedureId) || availableProcedures[0];
+      const targetProc = availableProcedures.find((p) => p.id === values.procedureId);
       if (!targetProc) {
         toast.error('Chưa có thủ tục hành chính nào được chọn.');
         return;
       }
-      if (!newWardCode) {
+      if (!values.wardCode) {
         toast.error('Vui lòng chọn đơn vị hành chính tiếp nhận.');
         return;
       }
-      if (availableCases.length > 0 && !selectedCaseCode) {
+      if (availableCases.length > 0 && !values.caseCode) {
         toast.error('Vui lòng chọn trường hợp thực hiện thủ tục.');
         return;
       }
@@ -283,12 +299,12 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       setSubmittingAction(true);
       const created = await createMutation.mutateAsync({
         procedureId: targetProc.id,
-        caseCode: selectedCaseCode || null,
-        wardCode: newWardCode,
+        caseCode: values.caseCode || null,
+        wardCode: values.wardCode,
         formData: {
           procedureTitle: targetProc.title,
           procedureCode: targetProc.procedureCode,
-          applicantName: userProfile?.fullName || 'Công dân',
+          applicantName: userProfile?.fullName || '',
           identityNumber: userProfile?.identityNumber || '',
           phoneNumber: userProfile?.phoneNumber || '',
         },
@@ -306,6 +322,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     } catch (err) {
       const msg = workflowError(err);
       toast.error(`Không thể tạo hồ sơ: ${msg}`);
+      throw err;
     } finally {
       setSubmittingAction(false);
     }
@@ -330,6 +347,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   function selectSection(id: CitizenSectionId) {
     setActiveSection(id);
+    setDossierPage(1);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('section', id);
@@ -344,9 +362,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     setIsFeedbackModalOpen(true);
   }
 
-  function handleSubmitFeedback(data: CitizenFeedback) {
-    toast.success(`Cảm ơn bạn đã đánh giá dịch vụ ${data.rating} sao! Phản hồi đã được ghi nhận.`);
-  }
+
 
   const isDossierSection = activeSection.startsWith('dossiers_');
   const citizenRole = ['REGISTERED_CITIZEN'];
@@ -429,6 +445,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
         {/* NỘI DUNG CHÍNH (MAIN) */}
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
+          {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => void citizenAppsQuery.refetch()}>Thử tải lại hồ sơ</Button></div>}
+          {isDossierSection && citizenAppsQuery.isPending && <p role="status">Đang tải hồ sơ của bạn…</p>}
+          {isDossierSection && citizenAppsQuery.isSuccess && <div className="mb-4 flex flex-wrap items-center gap-3"><Button variant="outline" disabled={dossierPage === 1 || citizenAppsQuery.isFetching} onClick={() => setDossierPage(p => p - 1)}>Trang trước</Button><span className="text-sm">Trang {dossierPage} · {citizenAppsQuery.data.total} hồ sơ. Bộ lọc áp dụng trên trang hiện tại.</span><Button variant="outline" disabled={citizenAppsQuery.isFetching || dossierPage * 50 >= citizenAppsQuery.data.total} onClick={() => setDossierPage(p => p + 1)}>Trang sau</Button></div>}
           {/* Header Trang */}
           <div className="admin-page-heading mb-6">
             <div>
@@ -445,7 +464,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                   <Plus size={18} weight="bold" /> Chuẩn bị hồ sơ mới
                 </button>
               )}
-              {isDossierSection && (
+              {isDossierSection && citizenAppsQuery.isSuccess && (
                 <button
                   className="admin-primary-action"
                   type="button"
@@ -470,7 +489,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
             <ProceduresPage />
           )}
 
-          {isDossierSection && (
+          {isDossierSection && citizenAppsQuery.isSuccess && (
             <CitizenDossiersView
               activeSection={activeSection}
               dossiers={dossiers}
@@ -527,128 +546,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         onOpenChange={setIsFeedbackModalOpen}
         procedureName={selectedFeedbackDossier.procedure}
         applicationCode={selectedFeedbackDossier.code}
-        onSubmitFeedback={handleSubmitFeedback}
       />
 
-      {/* Modal Khởi tạo hồ sơ tiền kiểm mới */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Chuẩn bị hồ sơ tiền kiểm mới</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Khởi tạo bản nháp để chuẩn bị giấy tờ và kiểm tra trước khi đến quầy</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                aria-label="Đóng"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5">
-                  Chọn thủ tục hành chính <span className="text-red-500">*</span>
-                </label>
-                {proceduresQuery.isLoading ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500">
-                    Đang tải danh sách thủ tục...
-                  </div>
-                ) : availableProcedures.length === 0 ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-                    Chưa có thủ tục nào được xuất bản trong hệ thống.
-                  </div>
-                ) : (
-                  <select
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                    value={selectedProcedureId || availableProcedures[0]?.id || ''}
-                    onChange={(e) => {
-                      setSelectedProcedureId(e.target.value);
-                      setSelectedCaseCode('');
-                    }}
-                  >
-                    {availableProcedures.map((proc) => (
-                      <option key={proc.id} value={proc.id}>
-                        {proc.title} (Mã: {proc.procedureCode || proc.id.slice(0, 8)})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {availableCases.length > 0 && (
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1.5">
-                    Trường hợp thực hiện <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                    value={selectedCaseCode}
-                    onChange={(event) => setSelectedCaseCode(event.target.value)}
-                  >
-                    {availableCases.map((item) => (
-                      <option key={item.caseCode} value={item.caseCode}>{item.caseName}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5">
-                  Đơn vị hành chính tiếp nhận (Xã / Phường) <span className="text-red-500">*</span>
-                </label>
-                {wardsQuery.isLoading ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500">
-                    Đang tải danh sách UBND Xã/Phường...
-                  </div>
-                ) : availableWards.length === 0 ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
-                    Không tải được đơn vị hành chính. Vui lòng thử lại sau.
-                  </div>
-                ) : (
-                  <select
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-medium text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                    value={newWardCode}
-                    onChange={(e) => setNewWardCode(e.target.value)}
-                  >
-                    {availableWards.map((ward) => (
-                      <option key={ward.code} value={ward.code}>
-                        {ward.name} (Mã: {ward.code})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-[11px] leading-relaxed text-amber-900">
-                <strong>Lưu ý:</strong> Bản nháp sẽ được khởi tạo trong tài khoản của bạn. Sau khi điền tờ khai và đính kèm đủ các giấy tờ bắt buộc, bạn có thể nộp tiền kiểm để Cán bộ một cửa xem xét trực tuyến.
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateDraft}
-                disabled={submittingAction || !selectedProcedureId || !newWardCode || (availableCases.length > 0 && !selectedCaseCode)}
-                className="rounded-xl bg-red-800 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-red-900 transition-all active:scale-[0.98] disabled:opacity-50"
-              >
-                {submittingAction ? 'Đang khởi tạo...' : 'Tạo hồ sơ nháp'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
     </div>
   );
 }
