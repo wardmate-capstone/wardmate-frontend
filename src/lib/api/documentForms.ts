@@ -67,10 +67,18 @@ export const supportingDocumentSchema = z.object({
 export const generatedDocumentSchema = z.object({
   id: guid,
   applicationId: guid,
+  submissionId: guid.nullish(),
   documentType: z.string(),
   pdfBlobUrl: z.string().nullish(),
   createdAtUtc: z.string(),
 });
+
+export const approvedQrSchema = z.object({
+  id: guid, applicationId: guid, submissionId: guid,
+  qrCodeValue: z.string(), generatedAt: z.string(),
+});
+
+export const documentQuantitySchema = z.coerce.number().int('Số bản phải là số nguyên.').min(1, 'Số bản phải lớn hơn 0.').max(2147483647, 'Số bản vượt quá giới hạn cho phép.');
 
 const submissionPageSchema = z.object({
   items: z.array(submissionSchema),
@@ -88,6 +96,7 @@ export type ApplicationContentItem = z.infer<typeof contentItemSchema>;
 export type ApplicationContentsDto = z.infer<typeof applicationContentsSchema>;
 export type SupportingDocumentDto = z.infer<typeof supportingDocumentSchema>;
 export type GeneratedDocumentDto = z.infer<typeof generatedDocumentSchema>;
+export type ApprovedQrDto = z.infer<typeof approvedQrSchema>;
 
 export const DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
 export const SUPPORTING_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'] as const;
@@ -171,11 +180,20 @@ export const documentFormApi = {
     const response = await api.post(documentPath(`/api/v1/applications/${applicationId}/generate-pdf`), data, { headers: { 'Content-Type': undefined } });
     return generatedDocumentSchema.parse(response.data);
   },
-  listGeneratedDocuments: async (applicationId: string, signal?: AbortSignal) => {
-    const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/generated-documents`), { signal });
+  listGeneratedDocuments: async (applicationId: string, signal?: AbortSignal, submissionId?: string) => {
+    const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/generated-documents`), { signal, params: { submissionId } });
     return z.array(generatedDocumentSchema).parse(response.data);
   },
   downloadGeneratedDocument: (documentId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/generated-documents/${documentId}/download`, signal),
+  getApprovedQr: async (applicationId: string, signal?: AbortSignal) => {
+    const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/approved-qr`), { signal });
+    return approvedQrSchema.parse(response.data);
+  },
+  downloadApprovedQr: (applicationId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/applications/${applicationId}/approved-qr/image`, signal),
+  officerListSubmissions: async (applicationId: string, signal?: AbortSignal) => {
+    const response = await api.get(documentPath(`/api/v1/officer/submissions/by-application/${applicationId}`), { signal });
+    return z.array(submissionSchema).parse(response.data);
+  },
   officerDownloadSubmission: (submissionId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/officer/submissions/${submissionId}/download-docx`, signal),
   officerAnnotateSubmission: async (submissionId: string, file: File) => {
     const data = new FormData(); appendFile(data, file);
@@ -209,6 +227,11 @@ export function documentFormError(error: unknown): string {
       'document.workflow_unavailable': 'Chưa thể xác minh hồ sơ với dịch vụ tiền kiểm.',
       'document.storage_unavailable': 'Kho lưu trữ tài liệu tạm thời không phản hồi.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
+      'document.qr_not_found': 'Hồ sơ đã duyệt nhưng chưa có mã QR. Bạn có thể tạo PDF từ bản khai đã duyệt rồi tải lại mã QR.',
+      'document.concurrent_update': 'Dữ liệu vừa thay đổi. Vui lòng tải lại hồ sơ.',
+      'document.sync_unavailable': 'Chưa đồng bộ được trạng thái bản khai. Vui lòng tải lại trước khi thử tiếp.',
+      'document.application_not_approved': 'Hồ sơ chưa được duyệt tiền kiểm.',
+      'document.workflow_decision_rejected': 'Chưa thể quyết định hồ sơ. Vui lòng kiểm tra trạng thái, quyền thụ lý và nhận xét còn mở.',
     };
     if (typeof code === 'string' && messages[code]) return messages[code];
     if (body && typeof body === 'object') {
@@ -219,7 +242,16 @@ export function documentFormError(error: unknown): string {
     if (error.response?.status === 403) return 'Bạn không có quyền thao tác với tài liệu này.';
     if (error.response?.status === 404) return 'Không tìm thấy tài liệu yêu cầu.';
   }
-  return error instanceof Error ? error.message : 'Không thể xử lý tài liệu. Vui lòng thử lại.';
+  return 'Không thể xử lý tài liệu. Vui lòng kiểm tra kết nối và thử lại.';
+}
+
+export function submissionStatusLabel(status: string) {
+  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt' } as Record<string, string>)[status] ?? 'Chưa xác định';
+}
+
+export function safeDocumentLink(value: string) {
+  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : undefined; }
+  catch { return undefined; }
 }
 
 export function downloadBlob(blob: Blob, fileName: string) {
