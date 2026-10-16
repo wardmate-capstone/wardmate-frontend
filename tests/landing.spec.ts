@@ -53,41 +53,34 @@ test('điều hướng đến đăng nhập và chuyển sang đăng ký', async
 });
 
 test('đăng ký kiểm tra mật khẩu xác nhận', async ({ page }) => {
+  await page.route('**/api/v1/auth/refresh-token', route => route.fulfill({ status: 401, json: { code: 'auth.unauthorized' } }));
+  const restored = page.waitForResponse(response => response.url().endsWith('/auth/refresh-token'));
   await page.goto('/dang-ky');
+  await restored;
   await page.getByLabel('Họ và tên').fill('Nguyễn Văn An');
   await page.getByLabel('Tên đăng nhập', { exact: true }).fill('nguyenvanan');
   await page.getByLabel('Email', { exact: true }).fill('an@example.com');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('matkhau123');
   await page.getByLabel('Xác nhận mật khẩu').fill('khongkhop123');
-  await page.getByText('Tôi đồng ý với điều khoản sử dụng').click();
+  await page.getByRole('checkbox', { name: 'Tôi đồng ý với điều khoản sử dụng' }).check();
   await page.getByRole('button', { name: 'Tạo tài khoản' }).click();
   await expect(page.getByText('Mật khẩu xác nhận chưa khớp.')).toBeVisible();
 });
 
-test('quên mật khẩu gửi hướng dẫn khôi phục và quay lại đăng nhập', async ({ page }) => {
+test('quên mật khẩu giải thích chưa khả dụng và giữ lối về đăng nhập', async ({ page }) => {
   await page.goto('/dang-nhap');
   await page.getByRole('link', { name: 'Quên mật khẩu?' }).click();
   await expect(page).toHaveURL(/\/quen-mat-khau$/);
-  await expect(page.getByRole('heading', { name: 'Quên mật khẩu' })).toBeVisible();
-
-  await page.getByLabel('Số điện thoại hoặc email').fill('an@example.com');
-  await page.getByRole('button', { name: 'Gửi hướng dẫn khôi phục' }).click();
-  await expect(page.getByRole('heading', { name: 'Kiểm tra thông tin liên hệ' })).toBeVisible();
-  await page.getByRole('link', { name: 'Tiếp tục đặt mật khẩu' }).click();
-  await expect(page).toHaveURL(/\/dat-lai-mat-khau$/);
+  await expect(page.getByRole('status')).toContainText('Tính năng khôi phục mật khẩu chưa khả dụng');
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Về trang đăng nhập', exact: true })).toHaveAttribute('href', '/dang-nhap');
 });
 
-test('đặt lại mật khẩu kiểm tra xác nhận và hiển thị trạng thái hoàn tất', async ({ page }) => {
+test('đặt lại mật khẩu không thu thập mật khẩu hoặc báo thành công khi chưa có API', async ({ page }) => {
   await page.goto('/dat-lai-mat-khau');
-  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('matkhau123');
-  await page.getByLabel('Xác nhận mật khẩu mới', { exact: true }).fill('khongkhop123');
-  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Mật khẩu xác nhận chưa khớp.');
-
-  await page.getByLabel('Xác nhận mật khẩu mới', { exact: true }).fill('matkhau123');
-  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click();
-  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu thành công' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Đăng nhập ngay' })).toHaveAttribute('href', '/dang-nhap');
+  await expect(page.getByRole('status')).toContainText('mật khẩu của bạn chưa thay đổi');
+  await expect(page.locator('input[type=password]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu thành công' })).toHaveCount(0);
 });
 
 test('trang không tìm thấy có lối quay về rõ ràng và không tràn ngang', async ({ page }) => {
@@ -99,17 +92,17 @@ test('trang không tìm thấy có lối quay về rõ ràng và không tràn ng
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('trang hỏi đáp mở câu trả lời và gửi thắc mắc', async ({ page }) => {
+test('trang hỏi đáp mở câu trả lời và giải thích chức năng gửi chưa khả dụng', async ({ page }) => {
   await page.goto('/hoi-dap');
   await expect(page.getByRole('heading', { name: 'Câu hỏi thường gặp' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' })).toBeVisible();
   await page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' }).click();
   await expect(page.getByText('Mã QR chỉ được tạo sau khi cán bộ duyệt tiền kiểm.')).toBeVisible();
 
-  await page.getByLabel('Chủ đề').selectOption('ho-so');
-  await page.getByLabel('Câu hỏi của bạn').fill('Tôi cần bổ sung tài liệu như thế nào?');
-  await page.getByRole('button', { name: 'Gửi câu hỏi' }).click();
-  await expect(page.getByRole('heading', { name: 'Cảm ơn bạn đã gửi thắc mắc' })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Chức năng gửi câu hỏi chưa khả dụng');
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Cảm ơn bạn đã gửi thắc mắc' })).toHaveCount(0);
+
 });
 
 test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', async ({ page }) => {
