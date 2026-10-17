@@ -24,7 +24,7 @@ const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string 
   'apps-reviewing': { title: 'Hồ sơ đang kiểm tra' },
   'apps-need-revision': { title: 'Hồ sơ cần bổ sung' },
   'apps-resubmitted': { title: 'Hồ sơ đã gửi lại' },
-  'apps-approved': { title: 'Hồ sơ đã duyệt tiền kiểm' },
+  'apps-approved': { title: 'Hồ sơ có giấy tờ sẵn sàng' },
   'apps-ready-submit': { title: 'Chờ tiếp nhận chính thức' },
   'receipt-waiting': { title: 'Tiếp nhận hồ sơ tại quầy' },
   'receipt-received': { title: 'Hồ sơ đã tiếp nhận chính thức' },

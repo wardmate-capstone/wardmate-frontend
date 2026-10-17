@@ -48,7 +48,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
       case 'apps-resubmitted':
         return 'RESUBMITTED';
       case 'apps-approved':
-        return 'APPROVED';
+        return 'DOCUMENTS_READY';
       case 'apps-ready-submit':
         return 'READY_TO_SUBMIT';
       default:
@@ -129,13 +129,15 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             <span>{priorityBadge || 'Đã gửi lại'}</span>
           </span>
         );
-      case 'APPROVED':
+      case 'DOCUMENTS_READY':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
             <CheckCircle size={14} />
-            <span>Đã duyệt tiền kiểm</span>
+            <span>Giấy tờ sẵn sàng</span>
           </span>
         );
+      case 'APPROVED':
+        return <span className="text-xs text-slate-600">Đã duyệt (luồng cũ)</span>;
       case 'READY_TO_SUBMIT':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
@@ -395,7 +397,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                           </button>
                         )}
 
-                        {(app.status === 'APPROVED' || app.status === 'READY_TO_SUBMIT' || app.status === 'NEED_REVISION') && (
+                        {(app.status === 'DOCUMENTS_READY' || app.status === 'APPROVED' || app.status === 'READY_TO_SUBMIT' || app.status === 'NEED_REVISION') && (
                           <button
                             type="button"
                             onClick={() => onOpenReviewWorkspace(app)}
