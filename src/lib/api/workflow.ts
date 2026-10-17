@@ -63,6 +63,7 @@ export const applicationDtoSchema = z.object({
   currentVersionNumber: z.number().int(),
   notes: z.string().nullish(),
   approvedAt: z.string().nullish(),
+  documentsReadyAt: z.string().nullish(),
   wardCode: z.string().nullish(),
 });
 
@@ -170,10 +171,6 @@ export type AddCommentInput = {
   commentText: string;
 };
 
-export type RejectInput = {
-  reason: string;
-};
-
 export type RequestRevisionInput = {
   reason: string;
 };
@@ -222,19 +219,14 @@ export const workflowApi = {
     return reviewResultDtoSchema.parse(res.data);
   },
 
-  approveApplication: async (id: string) => {
-    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/approve`));
-    return reviewResultDtoSchema.parse(res.data);
-  },
-
-  rejectApplication: async (id: string, input: RejectInput) => {
-    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/reject`), input);
+  confirmReadiness: async (id: string) => {
+    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/confirm-readiness`));
     return reviewResultDtoSchema.parse(res.data);
   },
 
   getOfficerApplication: async (id: string, signal?: AbortSignal) => {
     const res = await api.get(workflowPath(`/api/v1/officer/applications/${id}`), { signal });
-    return applicationDtoSchema.parse(res.data);
+    return applicationDtoSchema.refine(value => value.id.toLowerCase() === id.toLowerCase(), 'Dữ liệu không thuộc hồ sơ đang mở.').parse(res.data);
   },
 
   // === Phân hệ Công dân (Citizen) & Xem hồ sơ ===
@@ -328,7 +320,7 @@ export function workflowError(error: unknown): string {
         return 'Cần ít nhất một nhận xét lỗi cụ thể trên tờ khai hoặc giấy tờ phiên bản hiện tại trước khi yêu cầu công dân sửa.';
       }
       if (code === 'application.open_comments') {
-        return 'Hồ sơ còn nhận xét lỗi chưa giải quyết. Cần yêu cầu công dân sửa hoặc xóa nhận xét trước khi duyệt.';
+        return 'Hồ sơ còn nhận xét lỗi chưa giải quyết. Cần yêu cầu công dân sửa và kiểm tra lại trước khi xác nhận giấy tờ sẵn sàng.';
       }
       if (code === 'application.version_conflict') {
         return 'Phiên bản hồ sơ đã thay đổi bởi thao tác khác. Vui lòng tải lại hồ sơ để xem nội dung mới nhất.';
