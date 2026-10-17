@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { mockWorkspaceAuth } from './fixtures/auth';
+import { authReply, mockWorkspaceAuth } from './fixtures/auth';
+import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
 test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['FRONT_DESK_OFFICER']));
 
 test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và không tràn ngang trên mobile', async ({ page }) => {
@@ -57,7 +58,27 @@ test('Cổng cán bộ: Tiếp nhận hồ sơ tại quầy và đối chiếu h
   await page.getByRole('button', { name: 'Tiếp nhận tại quầy' }).click();
 
   // Search screen and waiting list
-  await expect(page.getByRole('heading', { name: 'Tìm kiếm hồ sơ đã duyệt tiền kiểm' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tìm kiếm hồ sơ có giấy tờ sẵn sàng' })).toBeVisible();
   await expect(page.getByText('Không tìm thấy hồ sơ nào đang chờ tiếp nhận.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Bắt đầu đối chiếu giấy tờ' })).toHaveCount(0);
+});
+
+test('Cổng cán bộ: Không cấp biên nhận hoặc tiếp nhận giả khi chưa có API', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page, 'officer', 'DOCUMENTS_READY');
+  // Inject a ready application to exercise the receipt UI even though the real
+  // pending queue currently only returns submitted/under-review records.
+  await page.route('**/api/v1/officer/applications/pending*', route => authReply(route, {
+    json: { items: [{ id: documentIds.application, applicationCode: 'HS-TEST-01', procedureId: documentIds.template, procedureTitle: 'Thủ tục thử nghiệm', status: 'DOCUMENTS_READY', createdAt: '2026-10-17T01:00:00Z' }], page: 1, pageSize: 50, total: 1 },
+  }));
+  await page.goto('/officer');
+  await page.getByRole('button', { name: 'Tiếp nhận tại quầy', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Chưa thể xác nhận tiếp nhận');
+  await page.getByRole('button', { name: 'Bắt đầu đối chiếu giấy tờ' }).click();
+  const confirm = page.getByRole('button', { name: 'Xác nhận tiếp nhận chính thức tại quầy', exact: true });
+  await expect(confirm).toBeDisabled();
+  for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
+  await expect(confirm).toBeDisabled();
+  await expect(page.getByText(/BN-2026-|24\/09\/2026|21\/09\/2026/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Xác nhận & Cấp biên nhận' })).toHaveCount(0);
+  expect(state.writes).toHaveLength(0);
 });

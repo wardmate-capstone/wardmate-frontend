@@ -110,7 +110,7 @@ test('officer online DOCX saves through annotate without deciding the dossier', 
   expect(await zip.file('word/comments.xml')!.async('string')).toContain('GHI CHU WORD CAN GIU');
   expect(await zip.file('word/document.xml')!.async('string')).toContain('commentRangeStart');
   expect(state.writes.filter(x => x.path.endsWith('/annotate-docx'))).toHaveLength(1);
-  expect(state.writes.filter(x => /approve|request-revision/.test(x.path))).toHaveLength(0);
+  expect(state.writes.filter(x => /approve|confirm-readiness|request-revision/.test(x.path))).toHaveLength(0);
   expect(state.status).toBe('UNDER_REVIEW');
 });
 
