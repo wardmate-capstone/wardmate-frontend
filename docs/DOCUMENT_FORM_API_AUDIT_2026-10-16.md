@@ -2,6 +2,8 @@
 
 Ngày: 16/10/2026 (Asia/Saigon).
 
+> Cập nhật 17/10/2026: đây là bản audit lịch sử. Người dùng đã chọn BE local mới nhất: `/approve` đổi thành `/confirm-readiness`; `Approved`/`APPROVED` được thay bằng `ReadyForDownload`/`DOCUMENTS_READY` cho thao tác mới. UI đã nối hai quyết định qua submission khi có đơn, chỉ dùng Workflow trực tiếp khi discovery thành công và không có đơn. Không gọi hai API quyết định cho cùng thao tác. Hợp đồng và giới hạn hiện tại tại [FRONTEND_SETUP.md](FRONTEND_SETUP.md#hợp-đồng-cán-bộ-mới--17102026); snapshot OpenAPI bên dưới giữ nguyên theo ngày thu thập, chưa xác minh revision Azure mới.
+
 ## Nguồn đối chiếu và phạm vi
 
 - Đã đọc `E:/Mô Tả API.docx` như tài liệu mô tả/kịch bản, không thực hiện các lệnh gọi mutation trong tài liệu.
