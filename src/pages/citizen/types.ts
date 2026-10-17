@@ -34,6 +34,7 @@ export interface CitizenDossier {
     | 'Chờ tiền kiểm'
     | 'Cần chỉnh sửa'
     | 'Đã gửi lại'
+    | 'Giấy tờ sẵn sàng'
     | 'Đã duyệt'
     | 'Đã hoàn thành'
     | 'Đã từ chối';
@@ -180,6 +181,7 @@ export function getStatusBadgeClass(status: CitizenDossier['status']): string {
   switch (status) {
     case 'Đã hoàn thành':
       return 'is-success';
+    case 'Giấy tờ sẵn sàng':
     case 'Đã duyệt':
       return 'is-success';
     case 'Chờ tiền kiểm':

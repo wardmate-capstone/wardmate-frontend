@@ -18,7 +18,8 @@ export type ApplicationStatus =
   | 'UNDER_REVIEW'         // Đang kiểm tra
   | 'NEED_REVISION'        // Cần bổ sung
   | 'RESUBMITTED'          // Đã gửi lại
-  | 'APPROVED'             // Đã duyệt tiền kiểm
+  | 'DOCUMENTS_READY'      // Giấy tờ sẵn sàng, có thể tải PDF
+  | 'APPROVED'             // Trạng thái lịch sử, không mở khóa PDF
   | 'REJECTED'             // Từ chối tiền kiểm
   | 'READY_TO_SUBMIT'      // Chờ tiếp nhận chính thức
   | 'OFFICIALLY_RECEIVED'; // Đã tiếp nhận tại UBND
