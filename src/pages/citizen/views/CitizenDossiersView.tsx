@@ -39,7 +39,7 @@ export function CitizenDossiersView({
       case 'dossiers_resubmitted':
         return 'Đã gửi lại';
       case 'dossiers_approved':
-        return 'Đã duyệt';
+        return 'Giấy tờ sẵn sàng';
       case 'dossiers_completed':
         return 'Đã hoàn thành';
       default:

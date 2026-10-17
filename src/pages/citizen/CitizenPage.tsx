@@ -380,7 +380,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         { id: 'dossiers_pending', label: 'Chờ tiền kiểm', icon: Hourglass, permissions: ['document.submissions.read'] },
         { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, permissions: ['document.submissions.write'] },
         { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, permissions: ['document.submissions.read'] },
-        { id: 'dossiers_approved', label: 'Đã duyệt tiền kiểm', icon: CheckCircle, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, permissions: ['document.submissions.read'] },
         { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: FileText, permissions: ['document.submissions.read'] },
       ] },
     ] },

@@ -26,13 +26,13 @@ export function CitizenDashboardView({
 }: CitizenDashboardViewProps) {
   const pendingCount = dossiers.filter((d) => d.status === 'Chờ tiền kiểm').length;
   const revisionCount = dossiers.filter((d) => d.status === 'Cần chỉnh sửa').length;
-  const approvedCount = dossiers.filter((d) => d.status === 'Đã duyệt').length;
+  const approvedCount = dossiers.filter((d) => d.status === 'Giấy tờ sẵn sàng').length;
   const completedCount = dossiers.filter((d) => d.status === 'Đã hoàn thành').length;
 
   const stats = [
     { label: 'Hồ sơ đang xử lý', value: `${pendingCount + revisionCount}`, icon: Clock, tone: 'info' },
     { label: 'Cần bổ sung gấp', value: `${revisionCount}`, icon: WarningCircle, tone: 'danger' },
-    { label: 'Đã duyệt tiền kiểm', value: `${approvedCount}`, icon: CheckCircle, tone: 'warning' },
+    { label: 'Giấy tờ sẵn sàng', value: `${approvedCount}`, icon: CheckCircle, tone: 'warning' },
     { label: 'Đã hoàn tất thủ tục', value: `${completedCount}`, icon: SealCheck, tone: 'success' },
   ];
 
