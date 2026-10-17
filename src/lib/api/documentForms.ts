@@ -32,6 +32,14 @@ export const saveSubmissionResultSchema = z.object({
   message: z.string().nullish(),
 });
 
+const officerDecisionResultSchema = z.object({ submissionId: guid, message: z.string() });
+function parseOfficerDecision(data: unknown, submissionId: string) {
+  const result = officerDecisionResultSchema.parse(data);
+  if (result.submissionId.toLowerCase() !== submissionId.toLowerCase())
+    throw new Error('Phản hồi quyết định không khớp với bản khai đang kiểm tra. Vui lòng tải lại hồ sơ.');
+  return result;
+}
+
 export const contentItemSchema = z.object({
   id: guid,
   checklistId: guid.nullish(),
@@ -126,7 +134,7 @@ async function binaryRequest(url: string, signal?: AbortSignal) {
 export const documentFormApi = {
   getContents: async (applicationId: string, signal?: AbortSignal) => {
     const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/contents`), { signal });
-    return applicationContentsSchema.parse(response.data);
+    return applicationContentsSchema.refine(value => value.applicationId.toLowerCase() === applicationId.toLowerCase(), 'Dữ liệu không thuộc hồ sơ đang mở.').parse(response.data);
   },
   listSubmissions: async (applicantId: string, params: { status?: string; page?: number; pageSize?: number } = {}, signal?: AbortSignal) => {
     const response = await api.get(documentPath('/api/v1/citizen/submissions'), {
@@ -192,16 +200,25 @@ export const documentFormApi = {
   downloadApprovedQr: (applicationId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/applications/${applicationId}/approved-qr/image`, signal),
   officerListSubmissions: async (applicationId: string, signal?: AbortSignal) => {
     const response = await api.get(documentPath(`/api/v1/officer/submissions/by-application/${applicationId}`), { signal });
-    return z.array(submissionSchema).parse(response.data);
+    return z.array(submissionSchema).refine(items => items.every(item => item.applicationId?.toLowerCase() === applicationId.toLowerCase()), 'Danh sách bản khai không khớp hồ sơ.').parse(response.data);
   },
   officerDownloadSubmission: (submissionId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/officer/submissions/${submissionId}/download-docx`, signal),
   officerAnnotateSubmission: async (submissionId: string, file: File) => {
+    const issue = validateDocumentFile(file, true);
+    if (issue) throw new Error(issue);
     const data = new FormData(); appendFile(data, file);
     const response = await api.put(documentPath(`/api/v1/officer/submissions/${submissionId}/annotate-docx`), data, { headers: { 'Content-Type': undefined } });
     return saveSubmissionResultSchema.parse(response.data);
   },
-  officerRequestRevision: (submissionId: string, comment: string) => api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/request-revision`), { comment }),
-  officerApprove: (submissionId: string) => api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/approve`), {}),
+  officerRequestRevision: async (submissionId: string, comment: string) => {
+    const value = z.string().trim().min(1).max(4000).parse(comment);
+    const response = await api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/request-revision`), { comment: value });
+    return parseOfficerDecision(response.data, submissionId);
+  },
+  officerConfirmReadiness: async (submissionId: string) => {
+    const response = await api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/confirm-readiness`), {});
+    return parseOfficerDecision(response.data, submissionId);
+  },
 };
 
 export function validateDocumentFile(file: File, docxOnly = false): string | null {
@@ -231,10 +248,13 @@ export function documentFormError(error: unknown): string {
       'document.invalid_docx_file': 'Tệp DOCX không hợp lệ hoặc bị hỏng. Vui lòng kiểm tra lại bằng Word.',
       'document.file_too_large': 'Tệp vượt quá giới hạn 20 MiB.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
-      'document.qr_not_found': 'Hồ sơ đã duyệt nhưng chưa có mã QR. Bạn có thể tạo PDF từ bản khai đã duyệt rồi tải lại mã QR.',
+      'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Bạn có thể tạo PDF từ bản khai sẵn sàng rồi tải lại mã QR.',
       'document.concurrent_update': 'Dữ liệu vừa thay đổi. Vui lòng tải lại hồ sơ.',
       'document.sync_unavailable': 'Chưa đồng bộ được trạng thái bản khai. Vui lòng tải lại trước khi thử tiếp.',
-      'document.application_not_approved': 'Hồ sơ chưa được duyệt tiền kiểm.',
+      'document.application_not_approved': 'Hồ sơ thuộc luồng cũ, chưa được xác nhận giấy tờ sẵn sàng.',
+      'document.application_not_ready': 'Hồ sơ chưa được xác nhận giấy tờ sẵn sàng để tải PDF.',
+      'document.readiness_invalid': 'Hồ sơ thiếu thông tin cán bộ xác nhận. Vui lòng liên hệ đơn vị phụ trách.',
+      'document.workflow_review_failed': 'Chưa thực hiện được quyết định. Kiểm tra quyền thụ lý, trạng thái và nhận xét còn mở.',
       'document.workflow_decision_rejected': 'Chưa thể quyết định hồ sơ. Vui lòng kiểm tra trạng thái, quyền thụ lý và nhận xét còn mở.',
     };
     if (typeof code === 'string' && messages[code]) return messages[code];
@@ -251,7 +271,7 @@ export function documentFormError(error: unknown): string {
 }
 
 export function submissionStatusLabel(status: string) {
-  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt' } as Record<string, string>)[status] ?? 'Chưa xác định';
+  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt (luồng cũ)', ReadyForDownload: 'Giấy tờ sẵn sàng' } as Record<string, string>)[status] ?? 'Chưa xác định';
 }
 
 export function safeDocumentLink(value: string) {
