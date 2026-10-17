@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
 
 test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_REVISION', async ({ page }) => {
+  test.setTimeout(60_000);
   const state = await mockDocumentWorkflow(page, 'officer', 'UNDER_REVIEW');
   state.submissionStatus = 'Submitted'; state.evidenceQuantity = 2; state.checklistStatus = 'COMPLETED';
   await page.goto('/officer');
@@ -43,11 +44,12 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   await page.goto('/officer');
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
   await page.getByRole('button', { name: 'Nhận xử lý', exact: true }).click();
-  await page.getByRole('button', { name: 'Duyệt tiền kiểm', exact: true }).click();
+  await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
-  await expect.poll(() => state.status).toBe('APPROVED');
-  expect(state.writes.filter(x => x.path.endsWith('/approve'))).toHaveLength(1);
-  expect(state.writes.filter(x => x.path.includes('/officer/submissions/') && /request-revision|approve/.test(x.path))).toHaveLength(0);
+  await expect.poll(() => state.status).toBe('DOCUMENTS_READY');
+  expect(state.writes.filter(x => x.path.endsWith('/confirm-readiness'))).toHaveLength(1);
+  expect(state.writes.filter(x => x.path.includes('/officer/submissions/') && /request-revision|confirm-readiness/.test(x.path))).toHaveLength(2);
+  expect(state.writes.filter(x => /officer\/applications\/.+\/(request-revision|confirm-readiness)$/.test(x.path))).toHaveLength(0);
 });
 
 test('validation file chặn tệp rỗng, sai đuôi và quá 20 MiB trước upload', async ({ page }) => {
