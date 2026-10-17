@@ -32,6 +32,7 @@ export function useApprovedQr(applicationId?: string) {
 }
 export function useDocumentMutations() {
   const client = useQueryClient();
+  const userId = useAuthStore(s => s.user?.id);
   const refresh = async (applicationId: string, applicantId?: string) => {
     await Promise.all([
       client.invalidateQueries({ queryKey: documentQueryKeys.application(applicationId) }),
@@ -44,7 +45,14 @@ export function useDocumentMutations() {
     submitDraft: useMutation({ mutationFn: (input: { submissionId: string; applicationId: string; applicantId: string }) => documentFormApi.submitDraft(input.submissionId, input.applicantId), onSuccess: (_, input) => refresh(input.applicationId, input.applicantId) }),
     uploadSupporting: useMutation({ mutationFn: documentFormApi.uploadSupportingDocument, onSuccess: (_, input) => refresh(input.applicationId) }),
     deleteSupporting: useMutation({ mutationFn: (input: { documentId: string; applicationId: string }) => documentFormApi.deleteSupportingDocument(input.documentId), onSuccess: (_, input) => refresh(input.applicationId) }),
-    annotate: useMutation({ mutationFn: (input: { submissionId: string; applicationId: string; file: File }) => documentFormApi.officerAnnotateSubmission(input.submissionId, input.file), onSuccess: (_, input) => refresh(input.applicationId) }),
+    annotate: useMutation({
+      mutationFn: (input: { submissionId: string; applicationId: string; file: File }) => documentFormApi.officerAnnotateSubmission(input.submissionId, input.file),
+      onSettled: (_, _error, input) => Promise.all([
+        refresh(input.applicationId),
+        client.invalidateQueries({ queryKey: ['workflow', 'application', input.applicationId] }),
+        client.invalidateQueries({ queryKey: ['document-binary', userId, input.submissionId] }),
+      ]).then(() => undefined),
+    }),
     generatePdf: useMutation({ mutationFn: (input: { applicationId: string; submissionId: string }) => documentFormApi.generatePdf(input.applicationId, input.submissionId), onSuccess: (_, input) => refresh(input.applicationId) }),
   };
 }
