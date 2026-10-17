@@ -25,8 +25,7 @@ import {
   useOfficerPendingApplications,
   useAssignOfficerMutation,
   useRequestRevisionMutation,
-  useApproveApplicationMutation,
-  useRejectApplicationMutation,
+  useConfirmReadinessMutation,
 } from '@/hooks/useWorkflow';
 import {
   mapSummaryDtoToOfficerApplication,
@@ -47,8 +46,7 @@ export const OfficerPage: React.FC = () => {
   const assignMutation = useAssignOfficerMutation();
   const assignLock = useRef(false);
   const requestRevisionMutation = useRequestRevisionMutation();
-  const approveMutation = useApproveApplicationMutation();
-  const rejectMutation = useRejectApplicationMutation();
+  const readinessMutation = useConfirmReadinessMutation();
 
   // Hồ sơ cán bộ — đồng bộ với dữ liệu backend
   const [applications, setApplications] = useState<OfficerApplication[]>([]);
@@ -82,8 +80,8 @@ export const OfficerPage: React.FC = () => {
       reviewing: applications.filter((a) => a.status === 'UNDER_REVIEW').length,
       needRevision: applications.filter((a) => a.status === 'NEED_REVISION').length,
       resubmitted: applications.filter((a) => a.status === 'RESUBMITTED').length,
-      approved: applications.filter((a) => a.status === 'APPROVED').length,
-      readySubmit: applications.filter((a) => a.status === 'READY_TO_SUBMIT' || a.status === 'APPROVED').length,
+      approved: applications.filter((a) => a.status === 'DOCUMENTS_READY').length,
+      readySubmit: applications.filter((a) => a.status === 'READY_TO_SUBMIT' || a.status === 'DOCUMENTS_READY').length,
       receivedToday: applications.filter((a) => a.status === 'OFFICIALLY_RECEIVED').length,
       unreadNotifs: notifications.filter((n) => !n.isRead).length,
     };
@@ -124,10 +122,10 @@ export const OfficerPage: React.FC = () => {
   };
 
   // ACTION: Yêu cầu bổ sung
-  const handleRequestRevision = async (appId: string, notes: string, issues: string[]) => {
+  const handleRequestRevision = async (appId: string, notes: string, issues: string[], submissionId?: string) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
-      await requestRevisionMutation.mutateAsync({ id: appId, input: { reason: notes } });
+      await requestRevisionMutation.mutateAsync({ id: appId, input: { reason: notes }, submissionId });
 
       // Audit Log
       const newLog: OfficerAuditLog = {
@@ -149,10 +147,10 @@ export const OfficerPage: React.FC = () => {
   };
 
   // ACTION: Duyệt tiền kiểm
-  const handleApproveApplication = async (appId: string) => {
+  const handleConfirmReadiness = async (appId: string, submissionId?: string) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
-      const result = await approveMutation.mutateAsync(appId);
+      await readinessMutation.mutateAsync({ id: appId, submissionId });
 
       // Audit Log
       const newLog: OfficerAuditLog = {
@@ -160,41 +158,16 @@ export const OfficerPage: React.FC = () => {
         time: new Date().toLocaleTimeString('vi-VN'),
         applicationNumber: appNumber,
         citizenName: targetApp?.citizen.fullName || 'Công dân',
-        action: 'Duyệt tiền kiểm',
-        details: 'Hồ sơ đạt mọi tiêu chí, hoàn tất duyệt tiền kiểm',
+        action: 'Xác nhận giấy tờ sẵn sàng',
+        details: 'Giấy tờ sẵn sàng để người dân tải và mang đến phường',
         officerName,
         badgeTone: 'success',
       };
       setAuditLogs((prev) => [newLog, ...prev]);
 
-      toast.success(`Hồ sơ ${appNumber} đã được DUYỆT TIỀN KIỂM thành công!`);
-      setReviewingApp(mapApplicationDtoToOfficerApplication(result.application));
+      toast.success(`Hồ sơ ${appNumber} đã được xác nhận giấy tờ sẵn sàng.`);
+      // The detail query reloads the authoritative state after confirmation.
       setActiveSection('apps-approved');
-
-  };
-
-  // ACTION: Từ chối tiền kiểm
-  const handleRejectApplication = async (appId: string, reason: string) => {
-    const targetApp = applications.find((a) => a.id === appId);
-    const appNumber = targetApp?.applicationNumber || appId;
-      await rejectMutation.mutateAsync({ id: appId, input: { reason } });
-
-      // Audit Log
-      const newLog: OfficerAuditLog = {
-        id: `log-${Date.now()}`,
-        time: new Date().toLocaleTimeString('vi-VN'),
-        applicationNumber: appNumber,
-        citizenName: targetApp?.citizen.fullName || 'Công dân',
-        action: 'Từ chối tiền kiểm',
-        details: `Lý do: ${reason}`,
-        officerName,
-        badgeTone: 'danger',
-      };
-      setAuditLogs((prev) => [newLog, ...prev]);
-
-      toast.error(`Đã từ chối tiếp nhận tiền kiểm hồ sơ ${appNumber}.`);
-      setReviewingApp(null);
-      setActiveSection('apps-all');
 
   };
 
@@ -224,11 +197,6 @@ export const OfficerPage: React.FC = () => {
     } catch (err) {
       toast.error(workflowError(err));
     }
-  };
-
-  // ACTION: Xác nhận tiếp nhận chính thức tại quầy
-  const handleConfirmReceipt = () => {
-    toast.info('Chức năng tiếp nhận chính thức chưa được cung cấp.');
   };
 
   // ACTION: Mark all notifications read
@@ -308,8 +276,7 @@ export const OfficerPage: React.FC = () => {
               application={reviewingApp}
               onBack={() => setReviewingApp(null)}
               onRequestRevision={handleRequestRevision}
-              onApproveApplication={handleApproveApplication}
-              onRejectApplication={handleRejectApplication}
+              onConfirmReadiness={handleConfirmReadiness}
               onUpdateComments={handleUpdateComments}
             />
           ) : (
@@ -348,7 +315,6 @@ export const OfficerPage: React.FC = () => {
                   applications={applications}
                   activeSubTab={receiptSubTab}
                   onSelectSubTab={(tab) => setReceiptSubTab(tab)}
-                  onConfirmReceipt={handleConfirmReceipt}
                   onViewApplication={handleOpenReview}
                 />
               )}

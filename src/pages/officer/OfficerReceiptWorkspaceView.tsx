@@ -1,22 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { useUserProfile } from '@/hooks/useUserProfile';
-import { useAuthStore } from '@/stores/authStore';
 import {
   MagnifyingGlass,
   CheckSquare,
   CheckCircle,
   FilePdf,
-  Printer,
   X,
   IdentificationBadge,
 } from '@phosphor-icons/react';
-import type { OfficerApplication, OfficialReceiptData } from '@/types/officer';
+import type { OfficerApplication } from '@/types/officer';
 
 interface OfficerReceiptWorkspaceViewProps {
   applications: OfficerApplication[];
   activeSubTab: 'waiting' | 'received';
   onSelectSubTab: (tab: 'waiting' | 'received') => void;
-  onConfirmReceipt: (appId: string, receiptData: OfficialReceiptData) => void;
   onViewApplication: (app: OfficerApplication) => void;
 }
 
@@ -24,12 +20,8 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
   applications,
   activeSubTab,
   onSelectSubTab,
-  onConfirmReceipt,
   onViewApplication,
 }) => {
-  const { profile } = useUserProfile();
-  const user = useAuthStore((state) => state.user);
-  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<OfficerApplication | null>(null);
 
@@ -41,15 +33,10 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
     signatureVerified: false,
   });
 
-  // Modal
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [receiptNumber, setReceiptNumber] = useState(`BN-2026-${Math.floor(10000 + Math.random() * 90000)}`);
-  const [appointmentDate, setAppointmentDate] = useState('24/09/2026 15:30');
-
   // Applications in waiting for official receipt (READY_TO_SUBMIT or APPROVED)
   const waitingApps = useMemo(() => {
     return applications.filter(
-      (a) => a.status === 'READY_TO_SUBMIT' || a.status === 'APPROVED'
+      (a) => a.status === 'READY_TO_SUBMIT' || a.status === 'DOCUMENTS_READY'
     );
   }, [applications]);
 
@@ -71,8 +58,6 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
     );
   }, [waitingApps, searchQuery]);
 
-  const allChecksPassed = Object.values(paperChecks).every(Boolean);
-
   const handleOpenReceiptProcess = (app: OfficerApplication) => {
     setSelectedApp(app);
     // Reset check state
@@ -82,25 +67,11 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
       printedForm: false,
       signatureVerified: false,
     });
-    setReceiptNumber(`BN-2026-${Math.floor(10000 + Math.random() * 90000)}`);
-  };
-
-  const handleFinalConfirm = () => {
-    if (!selectedApp) return;
-    onConfirmReceipt(selectedApp.id, {
-      receivedAt: '21/09/2026 10:15',
-      receivedBy: `Cán bộ ${officerName}`,
-      deskNumber: 'Quầy 02',
-      receiptNumber,
-      appointmentDate,
-    });
-    setShowConfirmModal(false);
-    setSelectedApp(null);
-    onSelectSubTab('received');
   };
 
   return (
     <section aria-label="Tiếp nhận hồ sơ chính thức tại quầy" className="space-y-6">
+      <p id="receipt-service-unavailable" role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Chức năng tiếp nhận chính thức chưa được cung cấp. Chưa thể xác nhận tiếp nhận, cấp số biên nhận hoặc giấy hẹn trên hệ thống.</p>
       {/* Sub-tab Switch */}
       <nav aria-label="Lựa chọn phân hệ tiếp nhận" className="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button
@@ -144,7 +115,7 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-slate-950">Tìm kiếm hồ sơ đã duyệt tiền kiểm</h3>
+                    <h3 className="text-base font-bold text-slate-950">Tìm kiếm hồ sơ có giấy tờ sẵn sàng</h3>
                     <p className="text-xs text-slate-500">
                       Khi công dân đến quầy, tra cứu theo Mã hồ sơ, CCCD, Số điện thoại hoặc Họ tên
                     </p>
@@ -209,14 +180,14 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
                                 {app.applicationNumber}
                               </strong>
                               <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
-                                Đã duyệt tiền kiểm (V{app.currentVersion})
+                                Giấy tờ sẵn sàng (V{app.currentVersion})
                               </span>
                             </div>
                             <p className="text-xs font-semibold text-slate-800 mt-0.5">
                               {app.citizen.fullName} · CCCD: <span className="font-mono">{app.citizen.citizenId}</span> · SĐT: {app.citizen.phoneNumber}
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5">
-                              Thủ tục: <strong>{app.procedureName}</strong> · Đã duyệt lúc: {app.reviewedAt || app.submittedAt}
+                              Thủ tục: <strong>{app.procedureName}</strong> · Xác nhận sẵn sàng lúc: {app.reviewedAt || 'Chưa có thông tin'}
                             </p>
                           </div>
                         </div>
@@ -304,7 +275,7 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
                       {selectedApp.documents.map((d) => (
                         <li key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                           <span>{d.name}</span>
-                          <span className="text-emerald-700 font-semibold text-[11px]">✓ Đã duyệt tiền kiểm</span>
+                          <span className="text-emerald-700 font-semibold text-[11px]">✓ Giấy tờ sẵn sàng</span>
                         </li>
                       ))}
                     </ul>
@@ -399,18 +370,14 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
                   <div className="pt-3">
                     <button
                       type="button"
-                      disabled={!allChecksPassed}
-                      onClick={() => setShowConfirmModal(true)}
+                      disabled
+                      aria-describedby="receipt-service-unavailable"
                       className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-800 py-3 text-sm font-bold text-white hover:bg-teal-900 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all"
                     >
                       <CheckCircle size={18} weight="bold" />
                       <span>Xác nhận tiếp nhận chính thức tại quầy</span>
                     </button>
-                    {!allChecksPassed && (
-                      <p className="text-[11px] text-slate-500 text-center mt-2">
-                        Vui lòng đánh dấu đủ 4 tiêu chí đối chiếu để kích hoạt nút tiếp nhận
-                      </p>
-                    )}
+
                   </div>
                 </div>
               </div>
@@ -463,13 +430,13 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
                         {app.procedureName}
                       </td>
                       <td className="px-4 py-3.5 font-mono font-bold text-teal-800">
-                        {app.officialReceipt?.receiptNumber || 'BN-2026-00892'}
+                        {app.officialReceipt?.receiptNumber || 'Chưa có thông tin'}
                       </td>
                       <td className="px-4 py-3.5 text-slate-600">
-                        {app.officialReceipt?.receivedAt || '21/09/2026 10:15'}
+                        {app.officialReceipt?.receivedAt || 'Chưa có thông tin'}
                       </td>
                       <td className="px-4 py-3.5 text-emerald-800 font-medium">
-                        {app.officialReceipt?.appointmentDate || '24/09/2026 16:30'}
+                        {app.officialReceipt?.appointmentDate || 'Chưa có thông tin'}
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -480,13 +447,7 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
                           >
                             Chi tiết
                           </button>
-                          <button
-                            type="button"
-                            className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                            title="In biên nhận hẹn trả"
-                          >
-                            <Printer size={16} />
-                          </button>
+
                         </div>
                       </td>
                     </tr>
@@ -498,67 +459,6 @@ export const OfficerReceiptWorkspaceView: React.FC<OfficerReceiptWorkspaceViewPr
         </div>
       )}
 
-      {/* CONFIRMATION MODAL (Screen 24 in Officer.md) */}
-      {showConfirmModal && selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-teal-800 font-bold">
-                <CheckCircle size={22} weight="bold" />
-                <h4 className="text-base font-bold">Xác nhận tiếp nhận hồ sơ chính thức</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(false)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-5">
-              Hồ sơ giấy của công dân <strong className="text-slate-900">{selectedApp.citizen.fullName}</strong> đã được kiểm tra và đối chiếu đầy đủ với hồ sơ điện tử.
-            </p>
-
-            <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Mã hồ sơ tiếp nhận:</span>
-                <strong className="font-mono text-slate-900">{selectedApp.applicationNumber}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Số biên nhận cấp ra:</span>
-                <strong className="font-mono text-teal-900">{receiptNumber}</strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Thời gian hẹn trả kết quả:</span>
-                <input
-                  type="text"
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  className="rounded border border-slate-300 px-2 py-0.5 text-xs font-bold text-slate-900 text-right"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleFinalConfirm}
-                className="px-5 py-2 rounded-xl bg-teal-800 text-xs font-bold text-white hover:bg-teal-900 shadow-2xs"
-              >
-                Xác nhận & Cấp biên nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
