@@ -14,12 +14,12 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
   await mockWorkspaceAuth(page, [actor === 'citizen' ? 'REGISTERED_CITIZEN' : 'FRONT_DESK_OFFICER']);
   await mockCatalog(page);
   const docx = await createPreviewDocx();
-  const state = { actor, status, version: status === 'DRAFT' ? 0 : 1, submissionStatus: '', checklistStatus: 'PENDING', evidenceQuantity: 0, failChot: false, failPatch: false, failComment: false, failDecision: false, qr: false,
+  const state = { actor, status, version: status === 'DRAFT' ? 0 : 1, submissionStatus: '', checklistStatus: 'PENDING', evidenceQuantity: 0, failChot: false, failPatch: false, failComment: false, failDecision: false, withoutForm: false, qr: false,
     writes: [] as { path: string; body: string }[], reads: [] as string[], comments: [] as Record<string, unknown>[], pdfs: [] as Record<string, unknown>[] };
   const checklists = () => [
     { id: documentIds.checklist, code: 'TO_KHAI', title: 'Tờ khai thử nghiệm', formTemplateId: documentIds.template, quantity: 1, submissionType: 'NOP', documentCopyType: 'ORIGINAL', sortOrder: 1, isRequired: true, status: state.checklistStatus, createdAt: time, updatedAt: time },
     { id: documentIds.evidence, code: 'GIAY_TO', title: 'Giấy tờ thử nghiệm', formTemplateId: null, quantity: 2, submissionType: 'NOP', documentCopyType: 'ORIGINAL', sortOrder: 2, isRequired: true, status: state.evidenceQuantity >= 2 ? 'COMPLETED' : 'PENDING', createdAt: time, updatedAt: time },
-  ];
+  ].filter(x => !state.withoutForm || x.id !== documentIds.checklist);
   const app = () => ({ id: documentIds.application, applicationCode: 'HS-TEST-01', userId: documentIds.citizen, procedureId: documentIds.template, procedureTitle: 'Thủ tục thử nghiệm', caseCode: null, wardCode: 'WARD_A', status: state.status, formData: { applicantName: 'Người kiểm thử', 'a/b~c': 'Giá trị kiểm thử' }, checklists: checklists(), history: [], resubmitCount: Math.max(0, state.version - 1), currentVersionNumber: state.version, assignedOfficerId: state.status === 'DRAFT' ? null : documentIds.officer, createdAt: time, updatedAt: time });
   const submission = () => ({ id: documentIds.submission, templateId: documentIds.template, applicationId: documentIds.application, checklistId: documentIds.checklist, applicantId: documentIds.citizen, fileName: 'to-khai.docx', fileSizeBytes: docx.length, status: state.submissionStatus, createdAt: time, updatedAt: time });
   const saved = () => ({ submissionId: documentIds.submission, status: state.submissionStatus, fileName: 'to-khai.docx', fileSizeBytes: docx.length, updatedAt: time });
@@ -67,13 +67,14 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
     } else if (path.endsWith('/request-revision')) state.status = 'NEED_REVISION';
     else if (path.endsWith('/resubmit')) { state.status = 'SUBMITTED'; state.version++; state.comments.forEach(x => { x.status = 'RESOLVED'; }); }
     else if (path.endsWith('/assign')) state.status = 'UNDER_REVIEW';
-    else if (path.endsWith('/approve')) {
+    else if (path.endsWith('/confirm-readiness')) {
       if (state.failDecision) return reply({ code: 'application.invalid_status' }, 409);
-      state.status = 'APPROVED'; state.submissionStatus = 'Approved';
+      state.status = 'DOCUMENTS_READY'; state.submissionStatus = 'ReadyForDownload';
     } else if (path.endsWith('/submit')) { state.status = 'SUBMITTED'; state.version = 1; }
     else if (path.endsWith('/generate-pdf')) {
       state.qr = true; const pdf = { id: documentIds.supporting, applicationId: documentIds.application, submissionId: documentIds.submission, documentType: 'ORIGINAL_SUBMISSION', createdAtUtc: time }; state.pdfs.push(pdf); return reply(pdf);
     } else if (method === 'DELETE') { state.evidenceQuantity = 0; return authReply(route, { status: 204 }); }
+    if (path.includes('/officer/submissions/') && /request-revision|confirm-readiness/.test(path)) return reply({ submissionId: path.split('/').at(-2), message: 'Workflow đã cập nhật hồ sơ.' });
     return reply({ application: app(), currentVersionNumber: state.version, resubmitCount: Math.max(0, state.version - 1), assignedOfficerId: documentIds.officer });
   });
   return state;
