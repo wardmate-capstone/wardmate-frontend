@@ -57,6 +57,7 @@ function mapStatus(status?: string | null, resubmitCount = 0): ApplicationStatus
   if (s === 'SUBMITTED') return resubmitCount > 0 ? 'RESUBMITTED' : 'SUBMITTED_FOR_REVIEW';
   if (s === 'UNDER_REVIEW') return 'UNDER_REVIEW';
   if (s === 'NEED_REVISION') return 'NEED_REVISION';
+  if (s === 'DOCUMENTS_READY') return 'DOCUMENTS_READY';
   if (s === 'APPROVED') return 'APPROVED';
   if (s === 'REJECTED') return 'REJECTED';
   return 'SUBMITTED_FOR_REVIEW';
@@ -107,7 +108,8 @@ export function mapHistoryDtoToTimelineItem(h: HistoryDto): TimelineItem {
     SUBMITTED: 'Công dân nộp hồ sơ tiền kiểm',
     UNDER_REVIEW: 'Cán bộ tiếp nhận và bắt đầu kiểm tra',
     NEED_REVISION: 'Cán bộ gửi yêu cầu bổ sung/chỉnh sửa hồ sơ',
-    APPROVED: 'Cán bộ đã duyệt tiền kiểm thành công',
+    DOCUMENTS_READY: 'Cán bộ xác nhận giấy tờ sẵn sàng để mang đến phường',
+    APPROVED: 'Đã duyệt theo luồng cũ',
     REJECTED: 'Cán bộ từ chối hồ sơ',
     CANCELLED: 'Hồ sơ đã bị hủy',
   };
@@ -250,6 +252,7 @@ export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): C
   if (s === 'DRAFT') status = 'Bản nháp';
   else if (s === 'SUBMITTED' || s === 'UNDER_REVIEW') status = 'Chờ tiền kiểm';
   else if (s === 'NEED_REVISION') status = 'Cần chỉnh sửa';
+  else if (s === 'DOCUMENTS_READY') status = 'Giấy tờ sẵn sàng';
   else if (s === 'APPROVED') status = 'Đã duyệt';
   else if (s === 'REJECTED') status = 'Đã từ chối';
 
@@ -273,6 +276,7 @@ export function mapApplicationDtoToCitizenDossier(dto: ApplicationDto): CitizenD
   else if (s === 'SUBMITTED') status = dto.resubmitCount > 0 ? 'Đã gửi lại' : 'Chờ tiền kiểm';
   else if (s === 'UNDER_REVIEW') status = 'Chờ tiền kiểm';
   else if (s === 'NEED_REVISION') status = 'Cần chỉnh sửa';
+  else if (s === 'DOCUMENTS_READY') status = 'Giấy tờ sẵn sàng';
   else if (s === 'APPROVED') status = 'Đã duyệt';
   else if (s === 'REJECTED') status = 'Đã từ chối';
 
