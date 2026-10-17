@@ -4,11 +4,11 @@ import {
   type OfficerPendingInput,
   type AddCommentInput,
   type RequestRevisionInput,
-  type RejectInput,
   type CreateApplicationInput,
   type ResubmitInput,
   type UpdateChecklistInput,
 } from '@/lib/api/workflow';
+import { documentFormApi } from '@/lib/api/documentForms';
 import { useAuthStore } from '@/stores/authStore';
 
 // ==========================================
@@ -66,40 +66,29 @@ export function useAddCommentMutation() {
 export function useRequestRevisionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: RequestRevisionInput }) =>
-      workflowApi.requestRevision(id, input),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
-      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
-    },
+    mutationFn: async ({ id, input, submissionId }: { id: string; input: RequestRevisionInput; submissionId?: string }) =>
+      { await (submissionId ? documentFormApi.officerRequestRevision(submissionId, input.reason) : workflowApi.requestRevision(id, input)); },
+    onSettled: (_, _error, { id }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] }),
+    ]).then(() => undefined),
   });
 }
 
-export function useApproveApplicationMutation() {
+export function useConfirmReadinessMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => workflowApi.approveApplication(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
-      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
-    },
+    mutationFn: async ({ id, submissionId }: { id: string; submissionId?: string }) =>
+      { await (submissionId ? documentFormApi.officerConfirmReadiness(submissionId) : workflowApi.confirmReadiness(id)); },
+    onSettled: (_, _error, { id }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] }),
+    ]).then(() => undefined),
   });
 }
 
-export function useRejectApplicationMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: RejectInput }) =>
-      workflowApi.rejectApplication(id, input),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
-      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
-    },
-  });
-}
 
 // ==========================================
 // Chi tiết hồ sơ, Version & Diff Hooks
