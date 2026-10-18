@@ -267,8 +267,6 @@ export const OfficerPage: React.FC = () => {
         {/* Semantic Main Content */}
         <main id="officer-main" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabIndex={-1}>
           {queue.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(queue.error)}</p><Button variant="outline" onClick={() => void queue.refetch()}>Thử tải lại hàng đợi</Button></div>}
-          {!reviewingApp && <p className="mb-4 rounded-xl border bg-white p-3 text-sm text-slate-600">Danh sách và chỉ số chỉ phản ánh hàng đợi chờ/đang kiểm tra trên trang hiện tại. Các mục cần bổ sung, đã duyệt và tiếp nhận tại quầy chưa có nguồn dữ liệu đầy đủ.</p>}
-          {!reviewingApp && activeSection.startsWith('apps-') && <div className="mb-4 flex flex-wrap items-center gap-3"><Button variant="outline" disabled={queuePage === 1 || queue.isFetching} onClick={() => setQueuePage(p => p - 1)}>Trang trước</Button><span>Trang {queuePage} · {pendingData?.total ?? 0} hồ sơ trong hàng đợi</span><Button variant="outline" disabled={queue.isFetching || queuePage * 50 >= (pendingData?.total ?? 0)} onClick={() => setQueuePage(p => p + 1)}>Trang sau</Button></div>}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView
@@ -306,6 +304,16 @@ export const OfficerPage: React.FC = () => {
                   onOpenReviewWorkspace={handleOpenReview}
                   onTakeApplication={handleTakeApplication}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
+                  onRefresh={() => void queue.refetch()}
+                  isRefreshing={queue.isFetching}
+                  pagination={{
+                    currentPage: queuePage,
+                    totalItems: pendingData?.total ?? applications.length,
+                    pageSize: 50,
+                    onPrevPage: () => setQueuePage((p) => Math.max(1, p - 1)),
+                    onNextPage: () => setQueuePage((p) => p + 1),
+                    isFetching: queue.isFetching,
+                  }}
                 />
               )}
 

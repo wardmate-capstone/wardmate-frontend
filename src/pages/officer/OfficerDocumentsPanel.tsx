@@ -3,12 +3,22 @@ import { Badge, Button } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
-import { Modal, toast } from '@/components/ui';
+import { toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 
 const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
 
-export function OfficerDocumentsPanel({ applicationId, editable, onComment }: { applicationId: string; editable: boolean; onComment: (checklistId: string) => void }) {
+export function OfficerDocumentsPanel({
+  applicationId,
+  editable,
+  onComment,
+  referenceData,
+}: {
+  applicationId: string;
+  editable: boolean;
+  onComment: (checklistId: string) => void;
+  referenceData?: { label: string; value: string }[];
+}) {
   const contents = useApplicationContents(applicationId);
   const submissions = useOfficerSubmissions(applicationId);
   const mutations = useDocumentMutations();
@@ -54,14 +64,33 @@ export function OfficerDocumentsPanel({ applicationId, editable, onComment }: { 
     {contents.isSuccess && submissions.isSuccess && !documents.length && !submissions.data.length && <p>Hồ sơ chưa có tệp đã lưu.</p>}
     {selected && <div className="space-y-3 rounded-xl border bg-slate-50 p-4"><h4 className="break-all font-bold">{selected.name}</h4><DocumentFilePreview key={`${selected.id}-${revision}`} fileId={selected.id} revision={`${revision}-${submissions.data?.find(x => x.id === selected.id)?.updatedAt ?? ''}`} fileName={selected.name} load={signal => selected.form ? documentFormApi.officerDownloadSubmission(selected.id, signal) : documentFormApi.downloadSupportingDocument(selected.id, signal)} /></div>}
     {submissions.data?.filter(item => editable && item.applicationId === applicationId && item.checklistId && ['Submitted', 'RevisionRequested'].includes(item.status)).map(item => <Button key={item.id} variant="outline" size="small" onClick={() => setEditing({ id: item.id, name: item.fileName })}>Chỉnh sửa trực tuyến: {item.fileName}</Button>)}
-    {editing && <Suspense fallback={<Modal open onOpenChange={open => { if (!open) setEditing(undefined); }} title="Mở bản khai trực tuyến"><p role="status">Đang tải trình soạn thảo…</p></Modal>}><DocxOnlineEditor
-      sourceKey={`${applicationId}-${editing.id}`} title={editing.name} author={user?.profile?.fullName || user?.username || 'Cán bộ'}
-      load={signal => documentFormApi.officerDownloadSubmission(editing.id, signal)}
-      onSave={async file => {
-        if (!editable) throw new Error('Hồ sơ không còn cho phép chỉnh sửa. Vui lòng tải lại trạng thái.');
-        await mutations.annotate.mutateAsync({ applicationId, submissionId: editing.id, file });
-        setRevision(value => value + 1); toast.success('Đã lưu bản DOCX vào hồ sơ.');
-      }} onClose={() => setEditing(undefined)}
-    /></Suspense>}
+    {editing && (
+      <Suspense
+        fallback={
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở DOCX Studio">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-800/90 px-6 py-5 shadow-2xl border border-slate-700">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+              <p className="text-sm font-medium">Đang khởi tạo WardMate DOCX Studio…</p>
+            </div>
+          </div>
+        }
+      >
+        <DocxOnlineEditor
+          sourceKey={`${applicationId}-${editing.id}`}
+          title={editing.name}
+          subtitle={`Hồ sơ ${applicationId}`}
+          author={user?.profile?.fullName || user?.username || 'Cán bộ'}
+          referenceData={referenceData}
+          load={signal => documentFormApi.officerDownloadSubmission(editing.id, signal)}
+          onSave={async file => {
+            if (!editable) throw new Error('Hồ sơ không còn cho phép chỉnh sửa. Vui lòng tải lại trạng thái.');
+            await mutations.annotate.mutateAsync({ applicationId, submissionId: editing.id, file });
+            setRevision(value => value + 1);
+            toast.success('Đã lưu bản DOCX vào hồ sơ.');
+          }}
+          onClose={() => setEditing(undefined)}
+        />
+      </Suspense>
+    )}
   </section>;
 }

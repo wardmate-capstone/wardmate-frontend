@@ -13,7 +13,17 @@ import {
   FilePdf,
   CaretDown,
 } from '@phosphor-icons/react';
+import { Button } from '@/components/ui';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
+
+export interface PaginationConfig {
+  currentPage: number;
+  totalItems: number;
+  pageSize: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+  isFetching?: boolean;
+}
 
 interface OfficerApplicationListViewProps {
   applications: OfficerApplication[];
@@ -22,6 +32,9 @@ interface OfficerApplicationListViewProps {
   onOpenReviewWorkspace: (app: OfficerApplication) => void;
   onTakeApplication: (appId: string) => void;
   onQuickPreview: (app: OfficerApplication) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  pagination?: PaginationConfig;
 }
 
 export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProps> = ({
@@ -30,6 +43,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   onOpenReviewWorkspace,
   onTakeApplication,
   onQuickPreview,
+  onRefresh,
+  isRefreshing = false,
+  pagination,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProcedure, setSelectedProcedure] = useState('ALL');
@@ -279,6 +295,26 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
       {/* Semantic Application Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-5 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700">Hàng đợi hồ sơ tiếp nhận</span>
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {filteredApps.length} hồ sơ
+            </span>
+          </div>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              title="Làm mới danh sách hồ sơ từ máy chủ (không cần F5)"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
+            >
+              <ArrowCounterClockwise size={14} className={isRefreshing ? 'animate-spin text-red-700' : 'text-slate-500'} />
+              <span>{isRefreshing ? 'Đang tải…' : 'Làm mới'}</span>
+            </button>
+          )}
+        </div>
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
@@ -414,6 +450,39 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             </tbody>
           </table>
         </div>
+
+        {/* Bottom Pagination Footer */}
+        {pagination && (
+          <nav
+            aria-label="Phân trang hàng đợi"
+            className="flex flex-wrap items-center justify-between border-t border-slate-200 bg-slate-50/70 px-5 py-3 gap-3"
+          >
+            <div className="text-xs text-slate-600">
+              Trang <strong className="font-semibold text-slate-900">{pagination.currentPage}</strong> · <strong className="font-semibold text-slate-900">{pagination.totalItems}</strong> hồ sơ trong hàng đợi
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="small"
+                disabled={pagination.currentPage <= 1 || pagination.isFetching}
+                onClick={pagination.onPrevPage}
+              >
+                Trang trước
+              </Button>
+              <span className="text-xs font-semibold px-2 text-slate-700">
+                Trang {pagination.currentPage}
+              </span>
+              <Button
+                variant="outline"
+                size="small"
+                disabled={pagination.isFetching || pagination.currentPage * pagination.pageSize >= pagination.totalItems}
+                onClick={pagination.onNextPage}
+              >
+                Trang sau
+              </Button>
+            </div>
+          </nav>
+        )}
       </div>
     </section>
   );

@@ -35,9 +35,9 @@ test('Cổng cán bộ: Mở menu điều hướng mobile và chuyển sang Qu�
   // Click on "Tất cả hồ sơ"
   await page.getByRole('button', { name: 'Tất cả hồ sơ' }).click();
 
-  // Application table should be visible
+  // Application table and pagination should be visible
   await expect(page.getByRole('table', { name: 'Bảng danh sách hồ sơ hành chính' })).toBeVisible();
-  await expect(page.getByText('Danh sách và chỉ số chỉ phản ánh hàng đợi', { exact: false })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Phân trang hàng đợi' })).toBeVisible();
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
