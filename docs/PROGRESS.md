@@ -35,7 +35,13 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - `tests/docx-online.spec.ts`: **4/4 passed** (27.8s).
     - `tests/officer.spec.ts`: **5/5 passed** (15.8s).
     - **Tổng cộng 16/16 tests ĐẠT 100%**.
-- **Giới hạn & Chưa thực hiện:** Giữ nguyên các thay đổi chưa commit theo quy định an toàn Git.
+- **Trạng thái Git & Commit:** Đã phân nhóm thành 5 commit chuẩn conventional và push thành công lên `origin/main` (`6b6aca3..cc1255f`):
+  1. `91bcd5e`: `perf(workflow): optimize api caching, polling intervals, and lazy version queries`
+  2. `ebfdb31`: `feat(officer): improve review workspace, manual refresh, and queue pagination`
+  3. `aec0e7e`: `feat(citizen): update dossier checklist, inline docx editor, and table footer pagination`
+  4. `af614c6`: `refactor(codebase): remove dead prototype modals, obsolete mock data, and unused files`
+  5. `cc1255f`: `docs(progress): document workflow optimizations, UI refactors, and codebase cleanup`
+- **Giới hạn & Chưa thực hiện:** Không còn tồn đọng thay đổi dở dang; toàn bộ mã nguồn sạch, build và test đều đạt 100%.
 
 ## Tối ưu hóa API Calls, Tích hợp nút Làm mới & Chuyển phân trang xuống dưới Table — 17/10/2026
 
