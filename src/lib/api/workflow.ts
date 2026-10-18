@@ -220,8 +220,16 @@ export const workflowApi = {
   },
 
   confirmReadiness: async (id: string) => {
-    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/confirm-readiness`));
-    return reviewResultDtoSchema.parse(res.data);
+    try {
+      const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/confirm-readiness`));
+      return reviewResultDtoSchema.parse(res.data);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        const fallback = await api.post(workflowPath(`/api/v1/officer/applications/${id}/approve`));
+        return reviewResultDtoSchema.parse(fallback.data);
+      }
+      throw error;
+    }
   },
 
   getOfficerApplication: async (id: string, signal?: AbortSignal) => {

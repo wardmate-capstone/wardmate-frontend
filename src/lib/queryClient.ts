@@ -4,8 +4,12 @@ import axios from 'axios';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
+      // Giữ dữ liệu hợp lệ trong 2 phút; không tự động gọi lại liên tục khi render
+      staleTime: 2 * 60_000,
+      gcTime: 10 * 60_000,
+      // Tắt tự động refetch ngầm khi chuyển tab/focus cửa sổ để tránh spam API
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       retry: (count, error) => {
         if (axios.isCancel(error) || !axios.isAxiosError(error)) return false;
         const status = error.response?.status;

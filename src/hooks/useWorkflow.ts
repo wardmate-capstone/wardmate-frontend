@@ -34,7 +34,8 @@ export function useOfficerPendingApplications(filters: OfficerPendingInput = {})
     queryKey: ['workflow', 'officer', 'pending', userId, filters],
     queryFn: ({ signal }) => workflowApi.listOfficerPending(filters, signal),
     enabled: Boolean(userId),
-    refetchInterval: 15_000, // Tự động làm mới danh sách mỗi 15 giây
+    // Tắt polling ngầm để người dùng chủ động bấm Làm mới qua nút trên bảng
+    refetchInterval: false,
   });
 }
 
@@ -112,21 +113,21 @@ export function useApplicationComments(id?: string, versionNumber?: number, stat
   });
 }
 
-export function useApplicationVersions(id?: string) {
+export function useApplicationVersions(id?: string, enabled = true) {
   const userId = useAuthStore(state => state.user?.id);
   return useQuery({
     queryKey: ['workflow', 'application', id, 'versions', userId],
     queryFn: ({ signal }) => workflowApi.getVersions(id!, signal),
-    enabled: Boolean(id && userId),
+    enabled: enabled && Boolean(id && userId),
   });
 }
 
-export function useApplicationDiff(id?: string, fromVersion?: number, toVersion?: number) {
+export function useApplicationDiff(id?: string, fromVersion?: number, toVersion?: number, enabled = true) {
   const userId = useAuthStore(state => state.user?.id);
   return useQuery({
     queryKey: ['workflow', 'application', id, 'diff', { fromVersion, toVersion }, userId],
     queryFn: ({ signal }) => workflowApi.getDiff(id!, fromVersion!, toVersion!, signal),
-    enabled: Boolean(userId && id && fromVersion && toVersion && fromVersion < toVersion),
+    enabled: enabled && Boolean(userId && id && fromVersion && toVersion && fromVersion < toVersion),
   });
 }
 
@@ -140,16 +141,7 @@ export function useCitizenApplications(page = 1, pageSize = 20) {
     queryKey: ['workflow', 'citizen', 'applications', userId, { page, pageSize }],
     queryFn: ({ signal }) => workflowApi.listCitizenApplications(page, pageSize, signal),
     enabled: Boolean(userId),
-    // Polling thông minh: chỉ tự động làm mới khi có hồ sơ đang chờ cán bộ thụ lý/tiền kiểm
-    refetchInterval: (query) => {
-      const items = query.state.data?.items;
-      if (!items || items.length === 0) return false;
-      const hasPending = items.some((app) => {
-        const s = (app.status || '').toUpperCase();
-        return s === 'SUBMITTED' || s === 'UNDER_REVIEW';
-      });
-      return hasPending ? 30_000 : false;
-    },
+    refetchInterval: false,
   });
 }
 
