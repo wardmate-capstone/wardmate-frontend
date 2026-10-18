@@ -1,8 +1,96 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 17/10/2026.
+Cập nhật: 18/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Rà soát & Dọn dẹp Mã nguồn và File Không Còn Sử dụng — 18/10/2026
+
+- **Yêu cầu người dùng:** Kiểm tra kỹ lưỡng toàn bộ mã nguồn frontend để tìm và xóa bớt các file hoặc đoạn code không còn sử dụng (dead code / orphan files), giúp dự án gọn gàng, giảm rối mắt và dễ bảo trì. Yêu cầu kiểm tra cẩn thận trước khi xóa.
+- **Quá trình phân tích & Kiểm tra an toàn:**
+  1. Sử dụng công cụ phân tích tĩnh `knip` kết hợp rà soát toàn bộ cây import (`grep_search`) xuyên suốt thư mục `src/`, `tests/` và `docs/`.
+  2. Xác minh các file kiểm thử đặc thù:
+     - `tests/fixtures/ui.tsx`: Được tham chiếu qua thẻ `<script src="/tests/fixtures/ui.tsx">` trong `ui.html` phục vụ `tests/design-system.spec.ts` -> **Giữ nguyên 100%, không xóa**.
+     - `tests/api-proxy-check.mjs`: Được ghi chú trong tài liệu `docs/FRONTEND_SETUP.md` và `docs/PROGRESS.md` -> **Giữ nguyên, không xóa**.
+- **Các file và đoạn code thừa đã loại bỏ:**
+  1. **5 file mã nguồn mồ côi (Orphan Files) không được import ở bất cứ đâu (~1.200 dòng code):**
+     - `src/pages/citizen/components/FormDocxEditorModal.tsx` (640 dòng): Modal soạn thảo prototype cũ bằng HTML div/canvas trước khi tích hợp `@docx-editor.dev` và `DocxOnlineEditor.tsx`.
+     - `src/pages/citizen/components/FormPreviewModal.tsx` (144 dòng): Modal xem trước bản khai mockup cũ, đã được thay thế bởi `DocumentFilePreview.tsx`.
+     - `src/pages/citizen/components/uploader/DocumentPreviewModal.tsx` (97 dòng): Component modal cũ nằm lẻ loi trong thư mục `uploader/`. Đã dọn cả thư mục rỗng.
+     - `src/pages/public/components/ProcedureCasesView.tsx` (280 dòng): Component trường hợp thủ tục prototype cũ nằm lẻ loi trong thư mục `components/`. Đã dọn cả thư mục rỗng.
+     - `src/data/mockNotifications.ts` (51 dòng): Dữ liệu thông báo giả lập ban đầu không còn được sử dụng.
+  2. **Dữ liệu giả lập dư thừa trong `src/pages/citizen/types.ts`:**
+     - Xóa mảng `initialDossiers` (70 dòng dữ liệu hồ sơ giả lập cũ).
+     - Xóa mảng `citizenChartData` và type `ChartRange` (40 dòng biểu đồ thống kê mockup cũ).
+  3. **Tối ưu import trùng lặp:**
+     - `src/pages/citizen/CitizenPage.tsx`: Gộp 2 dòng import trùng lặp từ `@tanstack/react-query` (`useQuery` và `useQueryClient`).
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production thành công 100%** (`vite build` hoàn tất trong 18s).
+  - Playwright test:
+    - `tests/citizen-dossier-ui.spec.ts`: **2/2 passed** (18.8s).
+    - `tests/procedure-detail.spec.ts`: **3/3 passed** (19.2s).
+    - `tests/citizen-application-wizard.spec.ts`: **2/2 passed** (15.9s).
+    - `tests/docx-online.spec.ts`: **4/4 passed** (27.8s).
+    - `tests/officer.spec.ts`: **5/5 passed** (15.8s).
+    - **Tổng cộng 16/16 tests ĐẠT 100%**.
+- **Giới hạn & Chưa thực hiện:** Giữ nguyên các thay đổi chưa commit theo quy định an toàn Git.
+
+## Tối ưu hóa API Calls, Tích hợp nút Làm mới & Chuyển phân trang xuống dưới Table — 17/10/2026
+
+- **Yêu cầu người dùng:**
+  - Tối ưu hóa việc gọi API của các dịch vụ hiện tại (Workflow, Document Form, v.v.), khắc phục tình trạng gọi API liên tục và quá nhiều lần (auto-polling, refetch on window focus liên tục).
+  - Đặt các nút/icon Làm mới (Reload) trực tiếp vào các bảng quản lý hồ sơ (table) cho cả Cán bộ và Công dân, cũng như tại các trang chi tiết hồ sơ / không gian thẩm định, giúp Cán bộ khi có nhận xét hoặc Công dân khi nộp hồ sơ chỉ cần bấm nút để cập nhật tức thì mà không cần phải nhấn F5 trình duyệt.
+  - Xóa bỏ banner text cảnh báo không cần thiết ở đầu trang Cán bộ ("Danh sách và chỉ số chỉ phản ánh hàng đợi chờ/đang kiểm tra...").
+  - Chuyển thanh phân trang ("Trang trước / Trang sau") từ vị trí phía trên xuống chân bảng hồ sơ (table footer).
+- **Giải pháp & Triển khai chi tiết:**
+  1. **Khắc phục tình trạng spam/gọi API liên tục:**
+     - `src/lib/queryClient.ts`: Tắt chế độ tự động refetch gây phiền toái `refetchOnWindowFocus: false` và `refetchOnReconnect: false`. Tăng thời gian lưu bộ nhớ cache hợp lý: `staleTime: 2 * 60_000` (2 phút không gọi lại nếu dữ liệu còn mới trong RAM), `gcTime: 10 * 60_000` (10 phút dọn rác cache).
+     - `src/hooks/useWorkflow.ts`: Tắt polling chạy ngầm liên tục (`refetchInterval: false`) ở cả `useOfficerPendingApplications` (trước đó là 15s) và `useCitizenApplications`. Bổ sung tham số `enabled` để lazy-load danh sách phiên bản và so sánh diff (`useApplicationVersions`, `useApplicationDiff`) chỉ khi tab `versions` được chọn.
+  2. **Tích hợp nút Làm mới trực tiếp vào Table Quản lý Hồ sơ:**
+     - `src/pages/officer/OfficerApplicationListView.tsx`: Thêm thanh toolbar quản lý ngay phía trên thẻ `<table>`, bao gồm hiển thị tổng số hồ sơ trong hàng đợi và nút "Làm mới" với icon `ArrowCounterClockwise` xoay tròn (`animate-spin`) khi đang tải.
+     - `src/pages/officer/OfficerPage.tsx`: Truyền prop `onRefresh={() => void queue.refetch()}` và trạng thái `isRefreshing={queue.isFetching}` xuống `OfficerApplicationListView`.
+     - `src/pages/citizen/views/CitizenDossiersView.tsx`: Thêm nút "Làm mới" ngay trên thanh tiêu đề bảng hồ sơ công dân (`admin-table-wrap`) kèm icon `ArrowClockwise` xoay khi đang lấy dữ liệu mới.
+     - `src/pages/citizen/CitizenPage.tsx`: Truyền prop `onRefresh={() => void citizenAppsQuery.refetch()}` và `isRefreshing={citizenAppsQuery.isFetching}` xuống `CitizenDossiersView`.
+     - `src/pages/citizen/views/CitizenDossierDetailView.tsx`: Thêm nút "Làm mới hồ sơ" ở thanh header của chi tiết hồ sơ.
+     - `src/pages/officer/OfficerReviewWorkspaceView.tsx`: Thêm nút "Làm mới dữ liệu" ở thanh điều hướng phụ của không gian thẩm định.
+  3. **Xóa banner text & chuyển phân trang xuống chân bảng hồ sơ:**
+     - `src/pages/officer/OfficerPage.tsx`: Xóa bỏ thẻ `<p className="mb-4 rounded-xl border bg-white p-3 text-sm text-slate-600">...` khỏi đầu trang; xóa cụm phân trang phía trên; truyền cấu hình `pagination={{ currentPage, totalItems, pageSize, onPrevPage, onNextPage, isFetching }}` vào `OfficerApplicationListView`.
+     - `src/pages/officer/OfficerApplicationListView.tsx`: Bổ sung `<nav aria-label="Phân trang hàng đợi">` ở chân container bảng `rounded-2xl border`, hiển thị số trang hiện tại, tổng số hồ sơ, nút `Trang trước` và `Trang sau`.
+     - `tests/officer.spec.ts`: Cập nhật assertion kiểm tra thẻ điều hướng phân trang ở bảng hồ sơ thay cho text banner đã xóa.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - Playwright test: Chạy toàn bộ các bộ test liên quan:
+    - `tests/officer.spec.ts` (5/5 passed) & `tests/citizen-dossier-ui.spec.ts` (2/2 passed) -> **7/7 passed**.
+    - `tests/officer-submissions.spec.ts` & `tests/document-workflow.spec.ts`: **18/18 passed**.
+    - **Tổng cộng 25/25 tests ĐẠT 100%**, không có bất kỳ regression nào.
+- **Giới hạn & Chưa thực hiện:** Giữ nguyên các thay đổi chưa commit theo quy định an toàn Git.
+
+## Kế hoạch tái thiết kế UI/UX Workflow & Triển khai DOCX Studio Workspace + Officer Review Studio — 17/10/2026
+
+- **Phạm vi & Yêu cầu:** Người dùng yêu cầu đọc lại toàn bộ mã nguồn FE và BE của Workflow & Document Form để lên kế hoạch làm lại giao diện sao cho tối ưu, đơn giản, dễ tiếp cận nhưng vẫn đảm bảo đầy đủ chức năng và nghiệp vụ.
+  - Phần chỉnh sửa trực tuyến Word (DOCX Online Editor) chạy ở **Workspace riêng biệt toàn màn hình** (đã hoàn thành ở Bước 1).
+  - Tái cấu trúc không gian thẩm định của Cán bộ (Officer Review Studio) và tối ưu hóa quy trình ra quyết định (đã hoàn thành ở Bước 2).
+- **Kế hoạch tổng thể:** Đã lập kế hoạch chi tiết lưu tại artifact `workflow_ui_ux_redesign_plan.md` gồm 4 giai đoạn.
+- **Triển khai Bước 1 - DOCX Studio Workspace:**
+  - `DocxOnlineEditor.tsx`: Chuyển từ cửa sổ Modal Radix sang Workspace toàn màn hình chuyên biệt (`fixed inset-0 z-50 flex flex-col bg-slate-900/40 backdrop-blur-sm`).
+  - Top Bar (56px) hiển thị tên đơn, trạng thái lưu tức thời, phím tắt `Ctrl + S`, nút Lưu to rõ.
+  - Ribbon Toolbar phân tab (Trang đầu, Chèn, Bố trí) phong cách Office hiện đại.
+  - Bàn làm việc rộng rãi (Desk Canvas) với mô phỏng A4, bộ điều khiển Zoom (75% - 150%) và ngăn tham chiếu thông tin đối chiếu (Collapsible Reference Drawer).
+  - Suspense Fallback dạng Studio Backdrop mượt mà tại `OfficerDocumentsPanel.tsx`, `CitizenSubmissionsView.tsx`, `DossierChecklistView.tsx`.
+- **Triển khai Bước 2 - Master-Detail Officer Review Studio & Pre-flight Verification:**
+  - `OfficerReviewWorkspaceView.tsx`:
+    - **Header Banner chuyên nghiệp:** Tích hợp breadcrumb "Quay lại danh sách hồ sơ", mã hồ sơ, tên thủ tục, huy hiệu trạng thái sắc nét, và thanh chỉ số nhanh (Checklist bắt buộc: X/Y hoàn tất, Nhận xét: Z đang mở, Bản khai Word, Thẩm quyền xử lý).
+    - **Thao tác quyết định nhanh (Action Group):** 2 nút quyết định chính to rõ: `Yêu cầu bổ sung` (màu hổ phách) và `Xác nhận giấy tờ sẵn sàng` (màu xanh ngọc).
+    - **Tabs Bar phân đoạn hiện đại:** Thay tab cũ bằng hệ thống tab có biểu tượng trực quan từ Lucide React (`FileText`, `FileCheck`, `AlertTriangle`, `GitCompare`, `History`, `ShieldCheck`) và bộ đếm số lượng.
+    - **Thêm nhận xét siêu tốc (Quick Comment Templates):** Bổ sung 4 gợi ý mẫu nhận xét thông dụng (`Ảnh chụp/bản scan chưa rõ nét...`, `Cần ký và ghi rõ họ tên...`, `Thông tin họ tên hoặc ngày sinh chưa khớp...`, `Vui lòng tải lại bản chính...`) cho phép cán bộ click 1 chạm là tự điền vào khung nhận xét.
+    - **Pre-flight Condition Checklist trong Decision Modal:** Tự động đối soát và hiển thị trực quan các điều kiện tiên quyết (giấy tờ bắt buộc đã hoàn tất hay chưa, còn nhận xét OPEN dở dang nào không, bản khai điện tử đã liên kết đúng chưa) trước khi cán bộ chốt quyết định.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - Playwright test: Chạy toàn bộ 3 bộ test liên quan `tests/officer-submissions.spec.ts` (14/14 passed), `tests/document-workflow.spec.ts` (4/4 passed), `tests/officer.spec.ts` (5/5 passed) — **Tổng cộng 23/23 tests ĐẠT 100%**.
+  - Dev server chạy trên `http://localhost:5173`.
+- **Giới hạn & Chưa thực hiện:** Chưa commit/push theo quy định. Sẵn sàng cho Bước 3 & 4 (Công dân).
 
 ## Chia 20 commit và bàn giao lên main — 17/10/2026
 
