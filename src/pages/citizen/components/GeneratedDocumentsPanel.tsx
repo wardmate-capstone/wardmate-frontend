@@ -12,7 +12,7 @@ export function GeneratedDocumentsPanel({ applicationId }: { applicationId: stri
   const [selected, setSelected] = useState<GeneratedDocumentDto>();
   const [error, setError] = useState('');
   const lock = useRef(false);
-  const approved = contents.data?.submissions.filter(x => x.status === 'ReadyForDownload') ?? [];
+  const approved = contents.data?.submissions.filter(x => ['ReadyForDownload', 'Approved'].includes(x.status)) ?? [];
   const knownIds = new Set(contents.data?.submissions.map(x => x.id));
   const unmatched = generated.data?.filter(x => !x.submissionId || !knownIds.has(x.submissionId)) ?? [];
   function renderPdfs(items: GeneratedDocumentDto[]) {

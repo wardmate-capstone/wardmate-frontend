@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Button, Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useCitizenSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, type UserSubmissionDto } from '@/lib/api/documentForms';
@@ -23,6 +23,30 @@ export function CitizenSubmissionsView({ onOpenApplication }: { onOpenApplicatio
       {query.data.items.map(item => <article key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div className="min-w-0"><h3 className="break-all font-semibold">{item.fileName}</h3><p className="text-sm text-slate-600">{submissionStatusLabel(item.status)} · {new Date(item.updatedAt || item.createdAt).toLocaleString('vi-VN')}</p>{item.officerComment && <p className="mt-2 whitespace-pre-wrap text-sm">Ghi chú cán bộ: {item.officerComment}</p>}</div><div className="flex flex-wrap gap-2"><Button variant="outline" size="small" onClick={() => setSelected(item)}>Xem bản khai</Button>{item.applicationId ? <Button size="small" disabled={opening} onClick={async () => { setOpening(true); setError(''); try { await onOpenApplication(item.applicationId!); } catch (err) { setError(documentFormError(err)); } finally { setOpening(false); } }}>Mở hồ sơ liên quan</Button> : <p className="text-sm text-amber-800">Bản khai cũ chưa liên kết hồ sơ.</p>}</div></article>)}
       <nav aria-label="Phân trang bản khai" className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">{query.data.totalCount} bản khai · Trang {page}/{Math.max(1, query.data.totalPages)}</p><div className="flex gap-2"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(x => x - 1)}>Bản khai trước</Button><Button variant="outline" disabled={page >= query.data.totalPages} onClick={() => setPage(x => x + 1)}>Bản khai sau</Button></div></nav>
     </>}
-    {selected && user && <Suspense fallback={<Modal open onOpenChange={open => { if (!open) setSelected(undefined); }} title="Xem bản khai"><p role="status">Đang tải trình soạn thảo…</p></Modal>}><DocxOnlineEditor sourceKey={selected.id} title={selected.fileName} author={user.profile?.fullName || user.username} readOnly onClose={() => setSelected(undefined)} load={async signal => { await documentFormApi.getSubmission(selected.id, user.id, signal); return documentFormApi.downloadSubmission(selected.id, user.id, signal); }} /></Suspense>}
+    {selected && user && (
+      <Suspense
+        fallback={
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở DOCX Studio">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-800/90 px-6 py-5 shadow-2xl border border-slate-700">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+              <p className="text-sm font-medium">Đang khởi tạo WardMate DOCX Studio…</p>
+            </div>
+          </div>
+        }
+      >
+        <DocxOnlineEditor
+          sourceKey={selected.id}
+          title={selected.fileName}
+          subtitle="Xem nội dung bản khai"
+          author={user.profile?.fullName || user.username}
+          readOnly
+          onClose={() => setSelected(undefined)}
+          load={async signal => {
+            await documentFormApi.getSubmission(selected.id, user.id, signal);
+            return documentFormApi.downloadSubmission(selected.id, user.id, signal);
+          }}
+        />
+      </Suspense>
+    )}
   </section>;
 }

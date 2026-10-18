@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
@@ -22,7 +22,6 @@ import { documentFormApi } from '@/lib/api/documentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { CreateDossierModal, type CreateDossierValues } from './components/CreateDossierModal';
 import { mapSummaryDtoToCitizenDossier, mapApplicationDtoToCitizenDossier } from '@/lib/api/workflowAdapters';
-import { useQuery } from '@tanstack/react-query';
 
 // Icons
 import {
@@ -450,7 +449,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => void citizenAppsQuery.refetch()}>Thử tải lại hồ sơ</Button></div>}
           {isDossierSection && citizenAppsQuery.isPending && <p role="status">Đang tải hồ sơ của bạn…</p>}
-          {isDossierSection && citizenAppsQuery.isSuccess && <div className="mb-4 flex flex-wrap items-center gap-3"><Button variant="outline" disabled={dossierPage === 1 || citizenAppsQuery.isFetching} onClick={() => setDossierPage(p => p - 1)}>Trang trước</Button><span className="text-sm">Trang {dossierPage} · {citizenAppsQuery.data.total} hồ sơ. Bộ lọc áp dụng trên trang hiện tại.</span><Button variant="outline" disabled={citizenAppsQuery.isFetching || dossierPage * 50 >= citizenAppsQuery.data.total} onClick={() => setDossierPage(p => p + 1)}>Trang sau</Button></div>}
           {/* Header Trang */}
           <div className="admin-page-heading mb-6">
             <div>
@@ -499,6 +497,16 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               onOpenFeedback={handleOpenFeedback}
               onSelectSection={selectSection}
               onOpenDossierDetail={handleOpenDossierDetail}
+              onRefresh={() => void citizenAppsQuery.refetch()}
+              isRefreshing={citizenAppsQuery.isFetching}
+              pagination={{
+                currentPage: dossierPage,
+                totalItems: citizenAppsQuery.data.total,
+                pageSize: 50,
+                isFetching: citizenAppsQuery.isFetching,
+                onPrevPage: () => setDossierPage(p => Math.max(1, p - 1)),
+                onNextPage: () => setDossierPage(p => p + 1),
+              }}
             />
           )}
 

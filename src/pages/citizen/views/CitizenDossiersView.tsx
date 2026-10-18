@@ -5,9 +5,20 @@ import {
   NotePencil,
   Star,
   QrCode,
+  ArrowClockwise,
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
+import { Button } from '@/components/ui';
+
+export interface CitizenPaginationProps {
+  currentPage: number;
+  totalItems: number;
+  pageSize: number;
+  isFetching?: boolean;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+}
 
 interface CitizenDossiersViewProps {
   activeSection: CitizenSectionId;
@@ -15,6 +26,9 @@ interface CitizenDossiersViewProps {
   onOpenFeedback: (procedure: string, code?: string) => void;
   onSelectSection: (id: CitizenSectionId) => void;
   onOpenDossierDetail: (dossier: CitizenDossier) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  pagination?: CitizenPaginationProps;
 }
 
 export function CitizenDossiersView({
@@ -23,6 +37,9 @@ export function CitizenDossiersView({
   onOpenFeedback,
   onSelectSection,
   onOpenDossierDetail,
+  onRefresh,
+  isRefreshing = false,
+  pagination,
 }: CitizenDossiersViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
@@ -93,6 +110,26 @@ export function CitizenDossiersView({
       </div>
 
       <div className="admin-table-wrap">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700">Hồ sơ tiền kiểm</span>
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {filteredDossiers.length} hồ sơ
+            </span>
+          </div>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              title="Làm mới danh sách hồ sơ (không cần F5)"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
+            >
+              <ArrowClockwise size={14} className={isRefreshing ? 'animate-spin text-red-700' : 'text-slate-500'} />
+              <span>{isRefreshing ? 'Đang tải…' : 'Làm mới'}</span>
+            </button>
+          )}
+        </div>
         <table>
           <thead>
             <tr>
@@ -190,6 +227,39 @@ export function CitizenDossiersView({
             ? 'Bạn chưa có hồ sơ nào trong mục này.'
             : `Không có hồ sơ nào ở trạng thái "${targetStatus}".`}
         </p>
+      )}
+
+      {/* Bottom Pagination Footer */}
+      {pagination && (
+        <nav
+          aria-label="Phân trang danh sách hồ sơ"
+          className="flex flex-wrap items-center justify-between border-t border-slate-200 bg-slate-50/70 px-5 py-3 gap-3"
+        >
+          <div className="text-xs text-slate-600">
+            Trang <strong className="font-semibold text-slate-900">{pagination.currentPage}</strong> · <strong className="font-semibold text-slate-900">{pagination.totalItems}</strong> hồ sơ. Bộ lọc áp dụng trên trang hiện tại.
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="small"
+              disabled={pagination.currentPage <= 1 || pagination.isFetching}
+              onClick={pagination.onPrevPage}
+            >
+              Trang trước
+            </Button>
+            <span className="text-xs font-semibold px-2 text-slate-700">
+              Trang {pagination.currentPage}
+            </span>
+            <Button
+              variant="outline"
+              size="small"
+              disabled={pagination.isFetching || pagination.currentPage * pagination.pageSize >= pagination.totalItems}
+              onClick={pagination.onNextPage}
+            >
+              Trang sau
+            </Button>
+          </div>
+        </nav>
       )}
     </section>
   );
