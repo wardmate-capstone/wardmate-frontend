@@ -9,6 +9,7 @@ import {
   MapPin,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
+import { Skeleton } from '@/components/ui';
 import axios from 'axios';
 import { updateMyProfile, authErrorMessage } from '@/lib/api';
 import type { UserProfileDto } from '@/types/profile';
@@ -202,7 +203,11 @@ export function CitizenProfileView({
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">
-                  {loading ? 'Đang tải...' : displayName}
+                  {loading ? (
+                    <Skeleton className="h-7 w-44 rounded-lg" aria-label="Đang tải họ tên" />
+                  ) : (
+                    displayName
+                  )}
                 </h1>
 
                 <span className="admin-status-badge is-success flex items-center gap-1">
@@ -330,6 +335,8 @@ export function CitizenProfileView({
                       {formData.identityNumber?.length || 0}/12
                     </span>
                   </div>
+                ) : loading ? (
+                  <Skeleton className="h-7 w-48 rounded-lg" />
                 ) : formData.identityNumber && formData.identityNumber !== 'Chưa cập nhật' && formData.identityNumber !== 'Chưa được cập nhật' ? (
                   <div className="flex flex-col">
                     <span className="font-mono text-xl font-black text-red-950 tracking-wider">
@@ -387,6 +394,8 @@ export function CitizenProfileView({
                     </p>
                   )}
                 </>
+              ) : loading ? (
+                <Skeleton className="my-1 h-5 w-48 rounded" />
               ) : (
                 <div className="text-sm font-bold text-slate-900 py-1 border-b border-slate-100">
                   {formData.fullName || 'Chưa được cập nhật'}
@@ -419,6 +428,8 @@ export function CitizenProfileView({
                       </p>
                     )}
                   </>
+                ) : loading ? (
+                  <Skeleton className="my-1.5 h-4 w-28 rounded" />
                 ) : (
                   <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
                     {formatDate(formData.dateOfBirth)}
@@ -452,6 +463,8 @@ export function CitizenProfileView({
                       </p>
                     )}
                   </>
+                ) : loading ? (
+                  <Skeleton className="my-1.5 h-4 w-16 rounded" />
                 ) : (
                   <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
                     {formData.gender || 'Chưa được cập nhật'}
@@ -483,6 +496,8 @@ export function CitizenProfileView({
                     </p>
                   )}
                 </>
+              ) : loading ? (
+                <Skeleton className="my-1.5 h-4 w-32 rounded" />
               ) : (
                 <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100 font-mono">
                   {formatPhone(formData.phoneNumber) || 'Chưa được cập nhật'}
@@ -533,6 +548,11 @@ export function CitizenProfileView({
                     </p>
                   )}
                 </>
+              ) : loading ? (
+                <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">
+                  <Skeleton className="h-3.5 w-full rounded" />
+                  <Skeleton className="h-3.5 w-4/5 rounded" />
+                </div>
               ) : (
                 <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
                   {formData.permanentAddress || <span className="text-slate-400 italic">Chưa được cập nhật</span>}
@@ -562,6 +582,11 @@ export function CitizenProfileView({
                     </p>
                   )}
                 </>
+              ) : loading ? (
+                <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">
+                  <Skeleton className="h-3.5 w-full rounded" />
+                  <Skeleton className="h-3.5 w-3/4 rounded" />
+                </div>
               ) : (
                 <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
                   {formData.temporaryAddress || <span className="text-slate-400 italic">Chưa được cập nhật</span>}

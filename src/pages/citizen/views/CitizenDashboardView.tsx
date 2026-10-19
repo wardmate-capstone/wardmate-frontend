@@ -12,17 +12,20 @@ import {
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
+import { Skeleton, ListSkeleton } from '@/components/ui';
 
 interface CitizenDashboardViewProps {
   dossiers: CitizenDossier[];
   onSelectSection: (id: CitizenSectionId) => void;
   onOpenFeedback: (procedure: string, code?: string) => void;
+  isLoading?: boolean;
 }
 
 export function CitizenDashboardView({
   dossiers,
   onSelectSection,
   onOpenFeedback,
+  isLoading = false,
 }: CitizenDashboardViewProps) {
   const pendingCount = dossiers.filter((d) => d.status === 'Chờ tiền kiểm').length;
   const revisionCount = dossiers.filter((d) => d.status === 'Cần chỉnh sửa').length;
@@ -55,7 +58,14 @@ export function CitizenDashboardView({
               </span>
               <small>{label}</small>
             </div>
-            <strong>{value}</strong>
+            {isLoading ? (
+              <Skeleton
+                className="mt-4 h-9 w-16 rounded-lg"
+                aria-label={`Đang tải số liệu ${label}`}
+              />
+            ) : (
+              <strong>{value}</strong>
+            )}
           </article>
         ))}
       </section>
@@ -97,50 +107,58 @@ export function CitizenDashboardView({
             </button>
           </div>
 
-          <div className="divide-y divide-slate-100 px-5">
-            {dossiers.slice(0, 4).map((dossier) => (
-              <div key={dossier.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <strong className="text-xs text-slate-900">{dossier.code}</strong>
-                    <span className={`admin-status-badge ${getStatusBadgeClass(dossier.status)}`}>
-                      {dossier.status}
-                    </span>
+          {isLoading ? (
+            <div className="p-4">
+              <ListSkeleton rows={3} />
+            </div>
+          ) : !dossiers.length ? (
+            <p className="p-5 text-xs text-slate-500">Chưa có hồ sơ gần đây.</p>
+          ) : (
+            <div className="divide-y divide-slate-100 px-5">
+              {dossiers.slice(0, 4).map((dossier) => (
+                <div key={dossier.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-xs text-slate-900">{dossier.code}</strong>
+                      <span className={`admin-status-badge ${getStatusBadgeClass(dossier.status)}`}>
+                        {dossier.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-slate-800 truncate">{dossier.procedureName}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Cập nhật: {dossier.updatedAt}</p>
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-slate-800 truncate">{dossier.procedureName}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Cập nhật: {dossier.updatedAt}</p>
-                </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                  {dossier.status === 'Cần chỉnh sửa' && (
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    {dossier.status === 'Cần chỉnh sửa' && (
+                      <button
+                        type="button"
+                        className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                        onClick={() => onSelectSection('dossiers_need_revision')}
+                      >
+                        Bổ sung ngay
+                      </button>
+                    )}
+                    {dossier.status === 'Đã hoàn thành' && (
+                      <button
+                        type="button"
+                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"
+                        onClick={() => onOpenFeedback(dossier.procedureName, dossier.code)}
+                      >
+                        Đánh giá
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100"
-                      onClick={() => onSelectSection('dossiers_need_revision')}
+                      className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                      onClick={() => onSelectSection('qr_code')}
                     >
-                      Bổ sung ngay
+                      Xem QR
                     </button>
-                  )}
-                  {dossier.status === 'Đã hoàn thành' && (
-                    <button
-                      type="button"
-                      className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"
-                      onClick={() => onOpenFeedback(dossier.procedureName, dossier.code)}
-                    >
-                      Đánh giá
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                    onClick={() => onSelectSection('qr_code')}
-                  >
-                    Xem QR
-                  </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
 
         {/* Khối Hướng dẫn Một cửa */}

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ChecklistItem, ProcedureCase } from '@/lib/procedureContent';
-import { Badge, Button, Input, Modal, toast } from '@/components/ui';
+import { Badge, Button, ChecklistSkeleton, Input, Modal, toast } from '@/components/ui';
 import { CheckCircle, FileDoc, Paperclip, PencilSimple, UploadSimple, DownloadSimple, ArrowClockwise, CaretDown } from '@phosphor-icons/react';
 import { useAuthStore } from '@/stores/authStore';
 import { useApplicationContents, useDocumentMutations } from '@/hooks/useDocumentForms';
@@ -81,7 +81,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     catch (error) { toast.error(documentFormError(error)); }
   }
 
-  if (contents.isPending) return <p role="status" className="py-6 text-sm text-slate-500">Đang tải giấy tờ đã lưu…</p>;
+  if (contents.isPending) return <ChecklistSkeleton count={Math.max(2, current.length || 3)} />;
   if (contents.isError) return <div role="alert"><p>{documentFormError(contents.error)}</p><Button variant="outline" onClick={() => void contents.refetch()}>Thử lại</Button></div>;
   return <div className="space-y-4 [&_button]:min-h-11" aria-busy={busy}>
     {!current.length && <p>Hồ sơ không có mục giấy tờ cần đính kèm.</p>}

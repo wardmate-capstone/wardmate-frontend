@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { useApprovedQr } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, safeDocumentLink } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
@@ -20,7 +20,15 @@ export function CitizenQrCodeView({ dossiers }: { dossiers: CitizenDossier[] }) 
 function ApprovedQr({ applicationId }: { applicationId: string }) {
   const qr = useApprovedQr(applicationId);
   const missing = axios.isAxiosError(qr.error) && qr.error.response?.status === 404;
-  if (qr.isPending) return <p role="status">Đang tải thông tin mã QR…</p>;
+  if (qr.isPending) {
+    return (
+      <div role="status" aria-label="Đang tải thông tin mã QR" className="space-y-4 rounded-xl border border-slate-100 bg-slate-50/50 p-6 text-center">
+        <Skeleton className="mx-auto h-4 w-40" />
+        <Skeleton className="mx-auto h-52 w-52 rounded-2xl" />
+        <Skeleton className="mx-auto h-9 w-32 rounded-xl" />
+      </div>
+    );
+  }
   if (qr.isError) return <div className="space-y-3" role={missing ? 'status' : 'alert'}><p>{documentFormError(qr.error)}</p>{missing && <p className="text-sm text-slate-600">Mở chi tiết hồ sơ và tạo PDF từ bản khai sẵn sàng, sau đó tải lại mã QR. Hồ sơ không có bản khai DOCX cần được hỗ trợ cấp mã.</p>}<Button variant="outline" onClick={() => void qr.refetch()}>Tải lại mã QR</Button></div>;
   if (!qr.data) return null;
   const link = safeDocumentLink(qr.data.qrCodeValue);

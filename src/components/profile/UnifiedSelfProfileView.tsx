@@ -16,6 +16,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
+import { Skeleton } from '@/components/ui';
 
 function formatDate(value?: string | null): string {
   if (!value) return 'Chưa được cập nhật';
@@ -218,7 +219,11 @@ export const UnifiedSelfProfileView: React.FC = () => {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">
-                  {loading ? 'Đang tải...' : displayName}
+                  {loading ? (
+                    <Skeleton className="h-7 w-44 rounded-lg" aria-label="Đang tải họ tên" />
+                  ) : (
+                    displayName
+                  )}
                 </h1>
 
                 <span className="admin-status-badge is-success flex items-center gap-1">
@@ -316,6 +321,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                       {formData.identityNumber?.length || 0}/12
                     </span>
                   </div>
+                ) : loading ? (
+                  <Skeleton className="h-7 w-48 rounded-lg" />
                 ) : profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
                   <span className="font-mono text-xl font-black text-red-950 tracking-wider">
                     {profile.identityNumber}
@@ -353,6 +360,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   placeholder="Ví dụ: NGUYỄN VĂN A"
                   className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                 />
+              ) : loading ? (
+                <Skeleton className="my-1 h-5 w-48 rounded" />
               ) : (
                 <div className="text-sm font-bold text-slate-900 py-1 border-b border-slate-100">
                   {profile?.fullName && profile.fullName !== 'Chưa cập nhật' && profile.fullName !== 'Chưa được cập nhật'
@@ -375,6 +384,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                   />
+                ) : loading ? (
+                  <Skeleton className="my-1.5 h-4 w-28 rounded" />
                 ) : (
                   <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
                     {formatDate(profile?.dateOfBirth)}
@@ -397,6 +408,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                     <option value="Nữ">Nữ</option>
                     <option value="Khác">Khác</option>
                   </select>
+                ) : loading ? (
+                  <Skeleton className="my-1.5 h-4 w-16 rounded" />
                 ) : (
                   <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
                     {profile?.gender && profile.gender !== 'Chưa cập nhật' && profile.gender !== 'Chưa được cập nhật'
@@ -420,6 +433,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   placeholder="Ví dụ: 0912345678"
                   className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                 />
+              ) : loading ? (
+                <Skeleton className="my-1.5 h-4 w-32 rounded" />
               ) : (
                 <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100">
                   {profile?.phoneNumber && profile.phoneNumber !== 'Chưa cập nhật' && profile.phoneNumber !== 'Chưa được cập nhật'
@@ -462,6 +477,11 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
                   className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
                 />
+              ) : loading ? (
+                <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">
+                  <Skeleton className="h-3.5 w-full rounded" />
+                  <Skeleton className="h-3.5 w-4/5 rounded" />
+                </div>
               ) : (
                 <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
                   {profile?.permanentAddress && profile.permanentAddress !== 'Chưa cập nhật' && profile.permanentAddress !== 'Chưa được cập nhật'
@@ -483,6 +503,11 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
                   className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
                 />
+              ) : loading ? (
+                <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">
+                  <Skeleton className="h-3.5 w-full rounded" />
+                  <Skeleton className="h-3.5 w-3/4 rounded" />
+                </div>
               ) : (
                 <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
                   {profile?.temporaryAddress && profile.temporaryAddress !== 'Chưa cập nhật' && profile.temporaryAddress !== 'Chưa được cập nhật'

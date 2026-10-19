@@ -448,7 +448,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         {/* NỘI DUNG CHÍNH (MAIN) */}
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => void citizenAppsQuery.refetch()}>Thử tải lại hồ sơ</Button></div>}
-          {isDossierSection && citizenAppsQuery.isPending && <p role="status">Đang tải hồ sơ của bạn…</p>}
           {/* Header Trang */}
           <div className="admin-page-heading mb-6">
             <div>
@@ -465,7 +464,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                   <Plus size={18} weight="bold" /> Chuẩn bị hồ sơ mới
                 </button>
               )}
-              {isDossierSection && citizenAppsQuery.isSuccess && (
+              {isDossierSection && (
                 <button
                   className="admin-primary-action"
                   type="button"
@@ -483,6 +482,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               dossiers={dossiers}
               onSelectSection={selectSection}
               onOpenFeedback={handleOpenFeedback}
+              isLoading={citizenAppsQuery.isPending}
             />
           )}
 
@@ -490,7 +490,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
             <ProceduresPage />
           )}
 
-          {isDossierSection && citizenAppsQuery.isSuccess && (
+          {isDossierSection && (
             <CitizenDossiersView
               activeSection={activeSection}
               dossiers={dossiers}
@@ -499,14 +499,15 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               onOpenDossierDetail={handleOpenDossierDetail}
               onRefresh={() => void citizenAppsQuery.refetch()}
               isRefreshing={citizenAppsQuery.isFetching}
-              pagination={{
+              isLoading={citizenAppsQuery.isPending}
+              pagination={citizenAppsQuery.data ? {
                 currentPage: dossierPage,
                 totalItems: citizenAppsQuery.data.total,
                 pageSize: 50,
                 isFetching: citizenAppsQuery.isFetching,
                 onPrevPage: () => setDossierPage(p => Math.max(1, p - 1)),
                 onNextPage: () => setDossierPage(p => p + 1),
-              }}
+              } : undefined}
             />
           )}
 

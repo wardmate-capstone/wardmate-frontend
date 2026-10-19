@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
-import { Badge, Button, Modal } from '@/components/ui';
+import { Badge, Button, Modal, Skeleton } from '@/components/ui';
 import { useApplicationContents } from '@/hooks/useDocumentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { workflowError } from '@/lib/api/workflow';
@@ -114,7 +114,9 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             {commentsQuery.isError ? (
               <div role="alert" className="space-y-2"><p className="text-xs text-red-800">Chưa tải được ý kiến của cán bộ.</p><Button variant="outline" size="small" onClick={() => void commentsQuery.refetch()}>Tải lại ý kiến</Button></div>
             ) : commentsQuery.isPending ? (
-              <p role="status" className="text-xs text-slate-500">Đang tải ý kiến cán bộ…</p>
+              <div role="status" aria-label="Đang tải ý kiến cán bộ" className="space-y-2">
+                <Skeleton className="h-16 w-full rounded-xl bg-amber-100/60" />
+              </div>
             ) : !openComments.length ? (
               <p className="text-xs text-slate-600">Vui lòng xem ghi chú và kiểm tra lại giấy tờ trước khi gửi lại.</p>
             ) : (
@@ -200,7 +202,13 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
           </div>
           <div className="space-y-4 p-5">
             {contents.isPending ? (
-              <p role="status" className="text-xs text-slate-500">Đang kiểm tra giấy tờ…</p>
+              <div role="status" aria-label="Đang kiểm tra tiến độ giấy tờ" className="space-y-3 py-1">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-4 w-10" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
             ) : contents.isError ? (
               <div role="alert" className="space-y-2">
                 <p className="text-xs text-red-800">Chưa kiểm tra được giấy tờ đã lưu.</p>
@@ -268,7 +276,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
       </aside>
     </div>
     <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={revising ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa.">
-      <div className="space-y-4">{contents.isPending && <p role="status">Đang kiểm tra giấy tờ…</p>}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
+      <div className="space-y-4">{contents.isPending && <Skeleton className="h-4 w-48" role="status" aria-label="Đang kiểm tra giấy tờ" />}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
     </Modal>
   </div>;
 }

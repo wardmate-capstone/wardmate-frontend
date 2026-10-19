@@ -9,7 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
-import { Button } from '@/components/ui';
+import { Button, TableSkeletonRows } from '@/components/ui';
 
 export interface CitizenPaginationProps {
   currentPage: number;
@@ -28,6 +28,7 @@ interface CitizenDossiersViewProps {
   onOpenDossierDetail: (dossier: CitizenDossier) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isLoading?: boolean;
   pagination?: CitizenPaginationProps;
 }
 
@@ -39,6 +40,7 @@ export function CitizenDossiersView({
   onOpenDossierDetail,
   onRefresh,
   isRefreshing = false,
+  isLoading = false,
   pagination,
 }: CitizenDossiersViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,19 +116,19 @@ export function CitizenDossiersView({
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-700">Hồ sơ tiền kiểm</span>
             <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {filteredDossiers.length} hồ sơ
+              {isLoading ? 'Đang tải…' : `${filteredDossiers.length} hồ sơ`}
             </span>
           </div>
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isLoading}
               title="Làm mới danh sách hồ sơ (không cần F5)"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
             >
-              <ArrowClockwise size={14} className={isRefreshing ? 'animate-spin text-red-700' : 'text-slate-500'} />
-              <span>{isRefreshing ? 'Đang tải…' : 'Làm mới'}</span>
+              <ArrowClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
+              <span>{isRefreshing || isLoading ? 'Đang tải…' : 'Làm mới'}</span>
             </button>
           )}
         </div>
@@ -142,86 +144,90 @@ export function CitizenDossiersView({
             </tr>
           </thead>
           <tbody>
-            {filteredDossiers.map((item) => (
-              <tr key={item.code}>
-                <td>
-                  <strong className="text-slate-900">{item.code}</strong>
-                  <small className="block text-[10px] text-slate-400">Tạo: {item.createdAt}</small>
-                </td>
-                <td>
-                  <span className="font-semibold text-slate-900">{item.procedureName}</span>
-                  <small className="block text-[11px] text-slate-500">Lĩnh vực: {item.field}</small>
-                </td>
-                <td>{item.updatedAt}</td>
-                <td>
-                  <span className={`admin-status-badge ${getStatusBadgeClass(item.status)}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="max-w-[320px]">
-                  <p className="text-xs text-slate-700 leading-relaxed line-clamp-2" title={item.officerNote}>
-                    {item.officerNote || '—'}
-                  </p>
-                  {item.officerName && (
-                    <small className="block text-[10px] text-slate-400 mt-0.5 truncate">Cán bộ: {item.officerName}</small>
-                  )}
-                </td>
-                <td className="whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {/* Nút Xem chi tiết hồ sơ */}
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-red-900 active:scale-95"
-                      onClick={() => onOpenDossierDetail(item)}
-                      title="Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị"
-                    >
-                      <Eye size={14} weight="bold" />
-                      <span>Chi tiết</span>
-                    </button>
-
-                    {item.status === 'Cần chỉnh sửa' && (
+            {isLoading ? (
+              <TableSkeletonRows columns={6} rows={6} />
+            ) : (
+              filteredDossiers.map((item) => (
+                <tr key={item.code}>
+                  <td>
+                    <strong className="text-slate-900">{item.code}</strong>
+                    <small className="block text-[10px] text-slate-400">Tạo: {item.createdAt}</small>
+                  </td>
+                  <td>
+                    <span className="font-semibold text-slate-900">{item.procedureName}</span>
+                    <small className="block text-[11px] text-slate-500">Lĩnh vực: {item.field}</small>
+                  </td>
+                  <td>{item.updatedAt}</td>
+                  <td>
+                    <span className={`admin-status-badge ${getStatusBadgeClass(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="max-w-[320px]">
+                    <p className="text-xs text-slate-700 leading-relaxed line-clamp-2" title={item.officerNote}>
+                      {item.officerNote || '—'}
+                    </p>
+                    {item.officerName && (
+                      <small className="block text-[10px] text-slate-400 mt-0.5 truncate">Cán bộ: {item.officerName}</small>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {/* Nút Xem chi tiết hồ sơ */}
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-red-900 active:scale-95"
                         onClick={() => onOpenDossierDetail(item)}
-                        title="Bổ sung / Chỉnh sửa hồ sơ"
+                        title="Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị"
                       >
-                        <NotePencil size={14} weight="bold" />
-                        <span>Chỉnh sửa</span>
+                        <Eye size={14} weight="bold" />
+                        <span>Chi tiết</span>
                       </button>
-                    )}
 
-                    {item.status === 'Đã hoàn thành' && (
+                      {item.status === 'Cần chỉnh sửa' && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
+                          onClick={() => onOpenDossierDetail(item)}
+                          title="Bổ sung / Chỉnh sửa hồ sơ"
+                        >
+                          <NotePencil size={14} weight="bold" />
+                          <span>Chỉnh sửa</span>
+                        </button>
+                      )}
+
+                      {item.status === 'Đã hoàn thành' && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
+                          onClick={() => onOpenFeedback(item.procedureName, item.code)}
+                          title="Đánh giá dịch vụ"
+                        >
+                          <Star size={14} weight="bold" />
+                          <span>Đánh giá</span>
+                        </button>
+                      )}
+
+                      {/* Nút Xem mã QR */}
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
-                        onClick={() => onOpenFeedback(item.procedureName, item.code)}
-                        title="Đánh giá dịch vụ"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-800 active:scale-95"
+                        onClick={() => onSelectSection('qr_code')}
+                        title="Xem mã QR hồ sơ"
                       >
-                        <Star size={14} weight="bold" />
-                        <span>Đánh giá</span>
+                        <QrCode size={14} weight="bold" />
+                        <span>Mã QR</span>
                       </button>
-                    )}
-
-                    {/* Nút Xem mã QR */}
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-800 active:scale-95"
-                      onClick={() => onSelectSection('qr_code')}
-                      title="Xem mã QR hồ sơ"
-                    >
-                      <QrCode size={14} weight="bold" />
-                      <span>Mã QR</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {filteredDossiers.length === 0 && (
+      {!isLoading && filteredDossiers.length === 0 && (
         <p className="admin-empty">
           {targetStatus === 'ALL'
             ? 'Bạn chưa có hồ sơ nào trong mục này.'

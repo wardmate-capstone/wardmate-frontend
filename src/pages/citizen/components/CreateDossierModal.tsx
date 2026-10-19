@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, Skeleton } from '@/components/ui';
 import { workflowError } from '@/lib/api/workflow';
 
 const schema = z.object({ procedureId: z.string().uuid('Chọn thủ tục hợp lệ.'), wardCode: z.string().trim().min(1, 'Chọn phường/xã tiếp nhận.').max(50), caseCode: z.string().max(100, 'Mã trường hợp tối đa 100 ký tự.') });
@@ -39,7 +39,12 @@ export function CreateDossierModal({ open, onClose, initial, procedures, wards, 
       if (cases.length && !cases.some(x => x.caseCode === values.caseCode)) { form.setError('caseCode', { message: 'Chọn trường hợp thực hiện thủ tục.' }); return; }
       lock.current = true; setError(''); try { await onSubmit(values); } catch (err) { setError(workflowError(err)); } finally { lock.current = false; }
     })}>
-      {loading && <p role="status">Đang tải danh mục…</p>}
+      {loading && (
+        <div role="status" aria-label="Đang tải danh mục" className="space-y-3 py-1">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+        </div>
+      )}
       {unavailable && <div role="alert" className="space-y-2"><p>Chưa tải được danh mục cần thiết để tạo hồ sơ.</p><Button variant="outline" onClick={onRetry}>Thử tải lại danh mục</Button></div>}
       <label htmlFor="create-procedure" className="grid gap-2 text-sm font-semibold">Thủ tục hành chính<select id="create-procedure" disabled={busy || loading} className="min-h-12 rounded-xl border p-3" {...form.register('procedureId', { onChange: e => onProcedureChange(e.target.value) })} aria-invalid={Boolean(form.formState.errors.procedureId)} aria-describedby="create-procedure-error"><option value="">Chọn thủ tục</option>{procedures.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label><p id="create-procedure-error" role="alert" className="text-sm text-red-800">{form.formState.errors.procedureId?.message}</p>
       {!!cases.length && <><label htmlFor="create-case" className="grid gap-2 text-sm font-semibold">Trường hợp thực hiện<select id="create-case" disabled={busy || loading} className="min-h-12 rounded-xl border p-3" {...form.register('caseCode')} aria-invalid={Boolean(form.formState.errors.caseCode)} aria-describedby="create-case-error"><option value="">Chọn trường hợp</option>{cases.map(x => <option key={x.caseCode} value={x.caseCode}>{x.caseName}</option>)}</select></label><p id="create-case-error" role="alert" className="text-sm text-red-800">{form.formState.errors.caseCode?.message}</p></>}

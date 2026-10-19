@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Button, toast } from '@/components/ui';
+import { Button, ListSkeleton, toast } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useGeneratedDocuments } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, type GeneratedDocumentDto } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
@@ -21,7 +21,7 @@ export function GeneratedDocumentsPanel({ applicationId }: { applicationId: stri
   return <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
     <h3 className="font-bold text-slate-900">Bản PDF sau tiền kiểm</h3>
     <p className="text-sm text-slate-600">PDF được tạo từ bản khai đã lưu và được xác nhận sẵn sàng. Không thay thế việc tiếp nhận hồ sơ chính thức.</p>
-    {(contents.isPending || generated.isPending) && <p role="status">Đang tải tài liệu…</p>}
+    {(contents.isPending || generated.isPending) && <ListSkeleton rows={2} />}
     {(contents.isError || generated.isError) && <div role="alert"><p>{documentFormError(contents.error || generated.error)}</p><Button variant="outline" onClick={() => { void contents.refetch(); void generated.refetch(); }}>Thử lại</Button></div>}
     {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
     {approved.map(item => <div key={item.id} className="space-y-3 rounded-xl border p-4"><h4 className="break-all font-semibold">{item.fileName}</h4><Button size="small" disabled={!item.fileExists || mutations.generatePdf.isPending} loading={mutations.generatePdf.isPending && mutations.generatePdf.variables?.submissionId === item.id} onClick={async () => {
