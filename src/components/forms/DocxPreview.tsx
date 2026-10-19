@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 
 const frameHtml = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:;"><style>html,body{margin:0;background:#e2e8f0}body{overflow:auto}.docx-wrapper{width:max-content;min-width:100%;box-sizing:border-box;padding:20px!important}section.docx{margin-bottom:20px!important}a{pointer-events:none}</style></head><body><div id="styles"></div><div id="document"></div></body></html>`;
 
@@ -57,7 +57,18 @@ export function DocxPreview({ blob }: { blob: Blob }) {
         <Button size="small" variant="ghost" disabled={status !== 'ready'} aria-label="Phóng to" onClick={() => setZoom(Math.min(200, Math.round(effectiveZoom.current * 100 + 10)))}>+</Button>
       </div>
     </div>
-    {status === 'loading' && <p role="status" className="rounded-lg bg-slate-100 p-4 text-sm">Đang dựng bản xem trước…</p>}
+    {status === 'loading' && (
+      <div role="status" aria-label="Đang dựng bản xem trước" className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-4/6" />
+        <div className="pt-4 space-y-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </div>
+    )}
     {status === 'error' && <div role="alert" className="space-y-3 rounded-lg bg-red-50 p-4 text-sm text-red-800"><p>Không thể xem trước tệp Word này. Bạn vẫn có thể tải mẫu về để mở bằng Word.</p><Button size="small" variant="outline" onClick={() => void render()}>Thử dựng lại</Button></div>}
     <iframe ref={frame} title="Nội dung biểu mẫu Word" sandbox="allow-same-origin" referrerPolicy="no-referrer" srcDoc={frameHtml} onLoad={() => void render()} className={`h-[55dvh] min-h-72 w-full rounded-xl border border-slate-200 bg-slate-200 ${status === 'error' ? 'hidden' : status === 'loading' ? 'invisible' : ''}`} />
   </div>;

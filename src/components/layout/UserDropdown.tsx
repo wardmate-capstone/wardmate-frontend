@@ -8,6 +8,7 @@ import {
 import { useLogout } from '@/hooks/useLogout';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
+import { Skeleton } from '@/components/ui';
 
 const workspaces = [
   { path: '/citizen', alias: '/cong-dan', label: 'Cổng dịch vụ công dân', roles: ['REGISTERED_CITIZEN'] },
@@ -89,12 +90,21 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
             {initials}
           </span>
           <div className="min-w-0 flex-1">
-            <strong className="block text-sm font-bold text-slate-900 truncate">
-              {loading ? 'Đang tải...' : displayName}
-            </strong>
-            <small className="block text-xs text-slate-500 truncate">
-              {displayContact}
-            </small>
+            {loading ? (
+              <div className="space-y-1.5 py-0.5">
+                <Skeleton className="h-4 w-28 rounded" />
+                <Skeleton className="h-3 w-36 rounded" />
+              </div>
+            ) : (
+              <>
+                <strong className="block text-sm font-bold text-slate-900 truncate">
+                  {displayName}
+                </strong>
+                <small className="block text-xs text-slate-500 truncate">
+                  {displayContact}
+                </small>
+              </>
+            )}
           </div>
         </div>
 
@@ -137,12 +147,21 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
           {initials}
         </span>
         <div className="hidden sm:block">
-          <strong className="block text-xs font-bold text-slate-900 leading-tight">
-            {loading ? 'Đang tải...' : displayName}
-          </strong>
-          <small className="block text-[10px] text-slate-500 leading-tight">
-            Tài khoản WardMate
-          </small>
+          {loading ? (
+            <div className="space-y-1 py-0.5">
+              <Skeleton className="h-3.5 w-24 rounded" />
+              <Skeleton className="h-2.5 w-16 rounded" />
+            </div>
+          ) : (
+            <>
+              <strong className="block text-xs font-bold text-slate-900 leading-tight">
+                {displayName}
+              </strong>
+              <small className="block text-[10px] text-slate-500 leading-tight">
+                Tài khoản WardMate
+              </small>
+            </>
+          )}
         </div>
         <CaretDown
           size={14}
@@ -158,12 +177,21 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
         >
           {/* Header user info */}
           <div className="border-b border-slate-100 px-3.5 py-3 mb-1.5">
-            <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
-              {loading ? 'Đang tải thông tin...' : displayName}
-            </strong>
-            <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
-              {displayContact}
-            </span>
+            {loading ? (
+              <div className="space-y-1.5 py-0.5">
+                <Skeleton className="h-4 w-32 rounded" />
+                <Skeleton className="h-3 w-44 rounded" />
+              </div>
+            ) : (
+              <>
+                <strong className="block text-sm font-bold text-slate-900 leading-snug truncate">
+                  {displayName}
+                </strong>
+                <span className="block mt-0.5 text-xs text-slate-500 font-normal leading-normal truncate">
+                  {displayContact}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Menu links */}

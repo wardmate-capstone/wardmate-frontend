@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { DocxPreview } from '@/components/forms/DocxPreview';
 import { documentFormError, downloadBlob } from '@/lib/api/documentForms';
 
@@ -12,7 +12,12 @@ export function DocumentFilePreview({ fileId, fileName, load, revision = '' }: {
   const userId = useAuthStore(s => s.user?.id);
   const binary = useQuery({ queryKey: ['document-binary', userId, fileId, revision], queryFn: ({ signal }) => load(signal), enabled: Boolean(userId), gcTime: 0 });
   return <div className="space-y-3">
-    {binary.isPending && <p role="status">Đang tải tệp…</p>}
+    {binary.isPending && (
+      <div role="status" aria-label="Đang tải tệp" className="space-y-3 py-2">
+        <Skeleton className="h-9 w-36 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    )}
     {binary.isError && <div role="alert"><p>{documentFormError(binary.error)}</p><Button variant="outline" onClick={() => void binary.refetch()}>Thử tải lại tệp</Button></div>}
     {binary.data && <><Button size="small" variant="outline" onClick={() => downloadBlob(binary.data.blob, binary.data.fileName === 'tai-lieu' ? fileName : binary.data.fileName)}>Tải xuống {fileName}</Button><BinaryPreview key={`${fileId}-${revision}`} blob={binary.data.blob} fileName={fileName} /></>}
   </div>;

@@ -54,5 +54,16 @@ export function PermissionFeatureContent({ feature }: { feature: PermissionFeatu
         : feature.id === 'procedure-categories' ? <EmbeddedProcedureManager embedded initialSection="categories" />
           : feature.id === 'procedure-drafts' ? <EmbeddedProcedureManager embedded initialSection="drafts" />
             : null;
-  return <Suspense fallback={<p role="status" className="p-8 text-center text-sm">Đang tải chức năng...</p>}>{content}</Suspense>;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] flex-col items-center justify-center p-8 text-center" role="status" aria-label="Đang tải chức năng">
+          <div className="size-8 animate-spin rounded-full border-3 border-red-200 border-t-red-800" />
+          <p className="mt-3 text-xs font-semibold text-slate-500">Đang tải chức năng...</p>
+        </div>
+      }
+    >
+      {content}
+    </Suspense>
+  );
 }
