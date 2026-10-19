@@ -245,7 +245,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           </thead>
           <tbody>
             {isLoading && filteredProfiles.length === 0 ? (
-              <TableSkeletonRows columns={5} />
+              <TableSkeletonRows columns={4} rows={5} />
             ) : filteredProfiles.map((item) => (
               <tr key={item.userId || item.identityNumber}>
                 <td>

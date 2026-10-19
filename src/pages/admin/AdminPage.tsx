@@ -28,7 +28,7 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
 // Recharts đã được gỡ bỏ do mock chart đã xóa
-import { Modal } from "@/components/ui/Modal";
+import { Modal, Skeleton, TableSkeletonRows } from "@/components/ui";
 import {
   getAdminUsers,
   getAccount,
@@ -363,9 +363,28 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           {activeSection === "users" && (
             selectedUser ? (
               detailLoading ? (
-                <div className="admin-card p-12 text-center space-y-3">
-                  <ArrowsClockwise size={32} className="animate-spin text-red-800 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-700">Đang tải thông tin định danh & hồ sơ chi tiết...</p>
+                <div className="space-y-6" role="status" aria-label="Đang tải thông tin chi tiết người dùng">
+                  <div className="admin-card p-6 border-l-4 border-l-red-800 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="size-16 rounded-2xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="admin-card p-6 space-y-4">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </div>
+                    <div className="admin-card p-6 space-y-4">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <ManagerProfileDetailView
@@ -1190,39 +1209,43 @@ function WardsView({
             </tr>
           </thead>
           <tbody>
-            {filteredWards.map((w) => {
-              const count = users.filter((u) => u.wardId === w.id).length;
-              return (
-                <tr key={w.id}>
-                  <td>
-                    <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200">
-                      {w.code}
-                    </span>
-                  </td>
-                  <td>
-                    <strong className="text-slate-900 text-xs">{w.name}</strong>
-                  </td>
-                  <td>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
-                      <span className="font-bold text-red-900">{count}</span> nhân sự trực thuộc
-                    </span>
-                  </td>
-                  <td>
-                    <span className="font-mono text-[11px] text-slate-500">{w.id}</span>
-                  </td>
-                  <td>
-                    <span className="admin-status-badge is-success">
-                      Hoạt động
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+            {loading ? (
+              <TableSkeletonRows columns={5} rows={5} />
+            ) : (
+              filteredWards.map((w) => {
+                const count = users.filter((u) => u.wardId === w.id).length;
+                return (
+                  <tr key={w.id}>
+                    <td>
+                      <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200">
+                        {w.code}
+                      </span>
+                    </td>
+                    <td>
+                      <strong className="text-slate-900 text-xs">{w.name}</strong>
+                    </td>
+                    <td>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+                        <span className="font-bold text-red-900">{count}</span> nhân sự trực thuộc
+                      </span>
+                    </td>
+                    <td>
+                      <span className="font-mono text-[11px] text-slate-500">{w.id}</span>
+                    </td>
+                    <td>
+                      <span className="admin-status-badge is-success">
+                        Hoạt động
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
-      {filteredWards.length === 0 && (
+      {!loading && filteredWards.length === 0 && (
         <p className="admin-empty p-8 text-center text-xs text-slate-500">
           {query ? 'Không tìm thấy phường / xã phù hợp.' : 'Chưa có đơn vị phường / xã nào được khởi tạo.'}
         </p>

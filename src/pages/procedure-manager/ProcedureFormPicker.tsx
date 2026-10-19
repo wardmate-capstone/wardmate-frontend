@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Plus, X } from '@phosphor-icons/react';
-import { Button, Input, Badge } from '@/components/ui';
+import { Button, Input, Badge, ListSkeleton } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { formTemplateErrorMessage, getFormTemplates, type FormTemplateDto } from '@/lib/api/formTemplates';
 import { useAuthStore } from '@/stores/authStore';
@@ -96,7 +96,7 @@ export function ProcedureFormPicker({ value, change, disabled, onEdit, cases = [
           <Input label="Tìm biểu mẫu theo mã" placeholder="Nhập mã đơn, ví dụ: DON_01" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} />
           <p className="text-xs text-slate-500">Để trống để duyệt kho. Mẫu chưa có tệp Word chưa thể chọn.</p>
         </div>
-        {query.isPending ? <p role="status" className="p-4 text-sm text-slate-600">Đang tải kho biểu mẫu…</p> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{formTemplateErrorMessage(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
+        {query.isPending ? <div className="p-4"><ListSkeleton rows={3} /></div> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{formTemplateErrorMessage(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
           <div className="divide-y divide-slate-100">
             {query.data.items.length === 0 && <p className="p-4 text-sm text-slate-500">Không tìm thấy mẫu phù hợp. Hãy thử mã khác.</p>}
             {query.data.items.map(template => {

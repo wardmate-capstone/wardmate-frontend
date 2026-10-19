@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowsClockwise, UploadSimple } from '@phosphor-icons/react';
-import { Button, Input, Modal, Badge } from '@/components/ui';
+import { Button, Input, Modal, Badge, TableSkeleton } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { useAuthStore } from '@/stores/authStore';
@@ -83,7 +83,7 @@ export function FormsView() {
         </form>
         <label className="grid gap-2 text-sm font-semibold">Trạng thái<select className="min-h-12 rounded-xl border border-slate-300 bg-white px-4" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}><option value="ALL">Tất cả</option><option value="ACTIVE">Đang hoạt động</option><option value="INACTIVE">Tạm dừng</option></select></label>
       </div>
-      {list.isPending ? <p role="status">Đang tải danh sách biểu mẫu…</p> : list.isError ? <div role="alert" className="space-y-3 text-red-800"><p>{formTemplateErrorMessage(list.error)}</p><Button variant="outline" onClick={() => void list.refetch()}>Thử lại</Button></div> : <>
+      {list.isPending ? <TableSkeleton columns={4} rows={5} /> : list.isError ? <div role="alert" className="space-y-3 text-red-800"><p>{formTemplateErrorMessage(list.error)}</p><Button variant="outline" onClick={() => void list.refetch()}>Thử lại</Button></div> : <>
         <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><caption className="sr-only">Danh sách phôi biểu mẫu Word</caption><thead><tr className="border-b bg-slate-50">{['Mã / Tên biểu mẫu', 'Tệp Word', 'Trạng thái', 'Thao tác'].map(label => <th key={label} scope="col" className="p-3">{label}</th>)}</tr></thead><tbody>
           {list.data.items.map(item => <tr key={item.id} className="border-b border-slate-100">
             <td className="min-w-44 p-3"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
