@@ -1,8 +1,50 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 18/10/2026.
+Cập nhật: 19/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Nâng cấp Trải nghiệm Loading & Chuẩn hóa Skeleton UI Toàn diện — 19/10/2026
+
+- **Yêu cầu người dùng:** Kiểm tra và rà soát toàn bộ hệ thống giao diện web về trạng thái tải dữ liệu (loading states). Người dùng cung cấp ảnh chụp thực tế tại mục "Hồ sơ của tôi > Bản nháp", trong đó giao diện bị thô xấu: dòng chữ trần `Đang tải hồ sơ của bạn…` hiển thị phía trên tiêu đề, và toàn bộ phần thân trang trắng tinh/trống rỗng do thiếu Skeleton loading.
+- **Phân tích nguyên nhân:**
+  1. `CitizenPage.tsx`: Khi `citizenAppsQuery.isPending`, thẻ `<p role="status">Đang tải hồ sơ của bạn…</p>` được đặt trước tiêu đề `<div className="admin-page-heading">`, và view `<CitizenDossiersView>` chỉ được render khi `citizenAppsQuery.isSuccess` là true. Do đó khi đang fetch, toàn bộ phần nội dung bảng không xuất hiện, gây giật giao diện và trang trắng.
+  2. Toàn bộ các view khác (`CitizenDashboardView`, `CitizenSubmissionsView`, `CitizenQrCodeView`, `CitizenDossierDetailView`, `DossierChecklistView`, `GeneratedDocumentsPanel`, `OfficerApplicationListView`, `OfficerDocumentsPanel`, `OfficerReviewWorkspaceView`, `FormsView`, `ProcedureFormPicker`, `ProcedureFeedback`) đều đang dùng các thẻ `<p role="status">Đang tải...</p>` dạng text trần thay vì Skeleton placeholder.
+- **Các cải tiến đã triển khai:**
+  1. **Bổ sung component Skeleton trong `@/components/ui/Skeleton.tsx`:**
+     - Thêm `StatGridSkeleton`: Skeleton mô phỏng 4 thẻ chỉ số thống kê (`.admin-stat-grid`).
+     - Thêm `ChecklistSkeleton`: Skeleton mô phỏng danh sách các mục giấy tờ / tờ khai.
+  2. **Chuẩn hóa luồng nạp Danh sách Hồ sơ Công dân (`CitizenPage.tsx` & `CitizenDossiersView.tsx`):**
+     - Xóa bỏ hoàn toàn dòng text thô `<p>Đang tải hồ sơ của bạn…</p>` phía trên tiêu đề.
+     - Luôn render khung bảng `CitizenDossiersView` kèm `isLoading={citizenAppsQuery.isPending}`.
+     - Khi `isLoading` là true: Bảng hiển thị `TableSkeletonRows` gồm 6 cột x 6 hàng pulsing mượt mà, huy hiệu hiển thị "Đang tải…", và không bị nhấp nháy thông báo trống "Bạn chưa có hồ sơ nào".
+  3. **Nâng cấp Skeleton toàn diện trên các phân hệ:**
+     - `CitizenDashboardView.tsx`: Giữ nguyên cấu trúc 4 thẻ chỉ số, giữ nguyên icon và nhãn tiếng Việt ("Hồ sơ đang xử lý", "Cần bổ sung gấp", "Giấy tờ sẵn sàng", "Đã hoàn tất thủ tục"); chỉ tải skeleton cho riêng giá trị số (`<strong>`), loại bỏ hoàn toàn ô xám che icon. Đồng thời dùng `ListSkeleton` cho "Hồ sơ gần đây của bạn".
+     - `CitizenSubmissionsView.tsx`: Thay `<p>Đang tải bản khai…</p>` bằng `ListSkeleton`.
+     - `CitizenQrCodeView.tsx`: Thay `<p>Đang tải thông tin mã QR…</p>` bằng khung card placeholder chứa ảnh QR skeleton.
+     - `CitizenDossierDetailView.tsx`: Thay `<p>Đang tải ý kiến cán bộ…</p>` bằng khung skeleton nhận xét màu vàng nhạt.
+     - `DossierChecklistView.tsx`: Thay `<p>Đang tải giấy tờ đã lưu…</p>` bằng `ChecklistSkeleton`.
+     - `GeneratedDocumentsPanel.tsx`: Thay text bằng `ListSkeleton`.
+     - `OfficerApplicationListView.tsx`: Hỗ trợ `isLoading={queue.isPending}`, hiển thị `TableSkeletonRows` 7 cột x 6 hàng thay vì hiện text rỗng.
+     - `OfficerDocumentsPanel.tsx`: Dùng `ListSkeleton` cho danh sách tài liệu thẩm định.
+     - `OfficerReviewWorkspaceView.tsx`: Dùng `Skeleton` cho nhận xét và danh sách bản khai.
+     - `FormsView.tsx`: Dùng `TableSkeleton` 4 cột cho phôi biểu mẫu Word.
+     - `ProcedureFormPicker.tsx`: Dùng `ListSkeleton` cho kho mẫu thủ tục.
+     - `ProcedureFeedback.tsx`: Thay thế toàn bộ đoạn text đơn điệu trong trang Chi tiết thủ tục (`ProcedureDetailPage`) bằng khung Skeleton hoàn chỉnh mô phỏng header, chỉ số và card nội dung.
+     - `DocumentFilePreview.tsx`: Dùng `Skeleton` cho khung xem trước tệp tài liệu.
+     - `DocxPreview.tsx`: Dùng `Skeleton` mô phỏng trang văn bản khi đang nạp iframe preview biểu mẫu.
+     - `OfficerReviewWorkspaceView.tsx`: Dùng `Skeleton` cho so sánh phiên bản (`diff.isPending`) thay thế text thô.
+     - `AdminPage.tsx`: Dùng `Skeleton` bố cục hồ sơ chi tiết khi quản trị viên xem tài khoản người dùng (`detailLoading`).
+     - `CitizenDossierDetailView.tsx`: Dùng `Skeleton` cho tiến độ giấy tờ bắt buộc và hộp thoại xác nhận tiền kiểm.
+     - `UnifiedSelfProfileView.tsx` & `CitizenProfileView.tsx`: Thay toàn bộ text "Đang tải..." và tình trạng nhấp nháy "Chưa cập nhật" bằng `Skeleton` cho từng trường dữ liệu cá nhân (CCCD, Họ tên, Ngày sinh, Giới tính, SĐT, Địa chỉ).
+     - `UserDropdown.tsx`: Dùng `Skeleton` nhẹ trên thanh topbar, menu thả xuống và menu mobile khi đang fetch profile.
+     - `PermissionFeatures.tsx`: Dùng spinner fallback đồng bộ cho các phân hệ nhúng.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production hoàn tất thành công trong 31.94s (7.366 modules)**.
+  - Playwright test: **12/12 tests ĐẠT 100%** (`citizen-dossier-ui`, `procedure-detail`, `officer`, `citizen-application-wizard`).
+- **Giới hạn & Chưa thực hiện:** Giữ nguyên trạng thái chưa commit theo nguyên tắc an toàn Git, sẵn sàng báo cáo người dùng.
 
 ## Rà soát & Dọn dẹp Mã nguồn và File Không Còn Sử dụng — 18/10/2026
 
