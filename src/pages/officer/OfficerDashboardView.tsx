@@ -2,6 +2,7 @@ import React from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
+import { ListSkeleton } from '@/components/ui';
 import {
   FileText,
   ArrowRight,
@@ -19,6 +20,7 @@ interface OfficerDashboardViewProps {
   onSelectSection: (section: OfficerSection) => void;
   onOpenApplicationReview: (app: OfficerApplication) => void;
   onQuickPreview: (app: OfficerApplication) => void;
+  isLoading?: boolean;
 }
 
 export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
@@ -26,6 +28,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   onSelectSection,
   onOpenApplicationReview,
   onQuickPreview,
+  isLoading = false,
 }) => {
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
@@ -101,7 +104,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               </button>
             </div>
 
-            {priorityResubmittedApps.length === 0 ? (
+            {isLoading ? (
+              <div className="py-2">
+                <ListSkeleton rows={2} />
+              </div>
+            ) : priorityResubmittedApps.length === 0 ? (
               <p className="py-4 text-center text-xs text-slate-500">Không có hồ sơ nào cần xử lý gấp.</p>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -169,7 +176,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 </h3>
               </div>
               <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-teal-100 text-teal-900 border border-teal-200">
-                {readySubmitApps.length} chờ tiếp nhận
+                {isLoading ? '…' : readySubmitApps.length} chờ tiếp nhận
               </span>
             </div>
             <button

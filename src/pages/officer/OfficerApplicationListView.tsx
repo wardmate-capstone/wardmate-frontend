@@ -13,7 +13,7 @@ import {
   FilePdf,
   CaretDown,
 } from '@phosphor-icons/react';
-import { Button } from '@/components/ui';
+import { Button, TableSkeletonRows } from '@/components/ui';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
 
 export interface PaginationConfig {
@@ -34,6 +34,7 @@ interface OfficerApplicationListViewProps {
   onQuickPreview: (app: OfficerApplication) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isLoading?: boolean;
   pagination?: PaginationConfig;
 }
 
@@ -45,6 +46,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   onQuickPreview,
   onRefresh,
   isRefreshing = false,
+  isLoading = false,
   pagination,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -299,19 +301,19 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-700">Hàng đợi hồ sơ tiếp nhận</span>
             <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {filteredApps.length} hồ sơ
+              {isLoading ? 'Đang tải…' : `${filteredApps.length} hồ sơ`}
             </span>
           </div>
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isLoading}
               title="Làm mới danh sách hồ sơ từ máy chủ (không cần F5)"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
             >
-              <ArrowCounterClockwise size={14} className={isRefreshing ? 'animate-spin text-red-700' : 'text-slate-500'} />
-              <span>{isRefreshing ? 'Đang tải…' : 'Làm mới'}</span>
+              <ArrowCounterClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
+              <span>{isRefreshing || isLoading ? 'Đang tải…' : 'Làm mới'}</span>
             </button>
           )}
         </div>
@@ -329,7 +331,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredApps.length === 0 ? (
+              {isLoading ? (
+                <TableSkeletonRows columns={7} rows={6} />
+              ) : filteredApps.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
                     <Funnel size={32} className="mx-auto text-slate-300 mb-2" aria-hidden="true" />

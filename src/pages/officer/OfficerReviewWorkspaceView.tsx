@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, Input, Modal, toast } from '@/components/ui';
+import { Badge, Button, Input, Modal, Skeleton, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useAddCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions } from '@/hooks/useWorkflow';
@@ -512,7 +512,12 @@ export function OfficerReviewWorkspaceView({
                 </Badge>
               </div>
 
-              {comments.isPending && <p role="status" className="mt-4 text-sm text-slate-500">Đang tải nhận xét…</p>}
+              {comments.isPending && (
+                <div role="status" aria-label="Đang tải nhận xét" className="mt-4 space-y-2">
+                  <Skeleton className="h-14 w-full rounded-xl" />
+                  <Skeleton className="h-14 w-full rounded-xl" />
+                </div>
+              )}
               {comments.isError && (
                 <div role="alert" className="mt-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                   <p>{workflowError(comments.error)}</p>
@@ -720,7 +725,10 @@ export function OfficerReviewWorkspaceView({
                 Chọn phiên bản đích lớn hơn phiên bản nguồn để so sánh.
               </p>
             ) : diff.isPending ? (
-              <p role="status" className="text-sm text-slate-500">Đang so sánh…</p>
+              <div role="status" aria-label="Đang so sánh phiên bản" className="space-y-3 py-1">
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
             ) : diff.isError ? (
               <p role="alert" className="text-sm text-red-700">{workflowError(diff.error)}</p>
             ) : (
@@ -836,7 +844,11 @@ export function OfficerReviewWorkspaceView({
             </div>
           )}
 
-          {submissions.isPending && <p role="status" className="text-sm text-slate-500">Đang tải bản khai…</p>}
+          {submissions.isPending && (
+            <div role="status" aria-label="Đang tải bản khai" className="space-y-2 py-2">
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          )}
           {submissions.isError && (
             <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <p>{documentFormError(submissions.error)}</p>

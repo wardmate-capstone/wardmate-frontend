@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useState } from 'react';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ListSkeleton } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
@@ -51,7 +51,7 @@ export function OfficerDocumentsPanel({
   return <section className="space-y-4">
     <h3 className="font-bold">Bản khai và giấy tờ đã lưu</h3>
     <p className="text-sm text-slate-600">{editable ? 'Có thể chỉnh sửa DOCX trực tuyến.' : 'Hồ sơ hiện chỉ được xem và tải xuống.'} Để thêm hoặc đọc đầy đủ bình luận Word, tải bản khai và mở bằng Word rồi tải lại. Bình luận Word chưa phải nhận xét yêu cầu bổ sung của hồ sơ.</p>
-    {(contents.isPending || submissions.isPending) && <p role="status">Đang tải danh sách tài liệu…</p>}
+    {(contents.isPending || submissions.isPending) && <ListSkeleton rows={3} />}
     {(contents.isError || submissions.isError) && <div role="alert"><p>{documentFormError(contents.error || submissions.error)}</p><Button variant="outline" onClick={() => { void contents.refetch(); void submissions.refetch(); }}>Thử tải lại danh sách</Button></div>}
     {submissions.data?.map(item => {
       const evidence = contents.data?.submissions.find(x => x.id === item.id);

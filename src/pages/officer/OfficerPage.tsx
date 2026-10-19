@@ -283,6 +283,7 @@ export const OfficerPage: React.FC = () => {
               {activeSection === 'dashboard' && (
                 <OfficerDashboardView
                   applications={applications}
+                  isLoading={queue.isPending}
                   onSelectSection={(sec) => setActiveSection(sec)}
                   onOpenApplicationReview={handleOpenReview}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
@@ -306,6 +307,7 @@ export const OfficerPage: React.FC = () => {
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
                   onRefresh={() => void queue.refetch()}
                   isRefreshing={queue.isFetching}
+                  isLoading={queue.isPending}
                   pagination={{
                     currentPage: queuePage,
                     totalItems: pendingData?.total ?? applications.length,
