@@ -422,49 +422,65 @@
   .faq-next-step > div > span { @apply mt-3 block max-w-2xl text-sm leading-7 text-red-100/70; }
   .faq-next-step > a { @apply inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gold-400 px-6 text-sm font-bold text-red-950 hover:bg-gold-300; }
 
-  .procedures-page { @apply bg-slate-50; }
-  .procedures-hero { @apply relative isolate overflow-hidden bg-red-900 px-5 py-10 text-white sm:px-8 sm:py-12; }
-  .procedures-hero-pattern { @apply pointer-events-none absolute inset-0 -z-10 opacity-30; background-image: linear-gradient(90deg, rgba(121,27,23,.88), rgba(121,27,23,.4)), url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; }
-  .procedures-hero-inner { @apply mx-auto max-w-[1120px]; }
-  .procedures-breadcrumb { @apply flex min-h-11 items-center gap-2 text-xs font-semibold text-red-100/70; }
-  .procedures-breadcrumb a { @apply inline-flex min-h-11 items-center gap-1.5 hover:text-white; }
-  .procedures-breadcrumb span { @apply text-white; }
-  .procedures-hero-copy { @apply mt-3; }
-  .procedures-hero-copy > p { @apply text-xs font-bold uppercase tracking-[.16em] text-gold-300; }
-  .procedures-hero-copy h1 { @apply mt-2 text-3xl font-bold tracking-[-.025em] sm:text-4xl; }
-  .procedures-hero-copy > span { @apply mt-2 block max-w-2xl text-sm leading-6 text-red-50/75 sm:text-base; }
-  .procedures-search { @apply mt-5 grid gap-3 rounded-xl bg-white p-4 text-slate-900 shadow-[0_18px_45px_rgba(44,7,12,.2)] lg:grid-cols-[1fr_auto] lg:items-end; }
-  .procedures-search label { @apply mb-2 block text-sm font-bold text-slate-800 lg:col-span-2; }
+  .procedures-page { @apply min-w-0 bg-slate-50 px-4 py-5 sm:px-7 sm:py-7; }
+  .admin-main .procedures-page { @apply p-0; }
+  .procedures-hero { @apply mx-auto max-w-[1280px] rounded-2xl border border-slate-200 border-t-[3px] border-t-red-800 bg-white px-5 pb-5 pt-2 sm:px-7 sm:pb-6; }
+  .procedures-breadcrumb { @apply flex min-h-11 flex-wrap items-center gap-2 text-xs font-medium text-slate-500; }
+  .procedures-breadcrumb a { @apply inline-flex min-h-11 items-center gap-1.5 hover:text-red-800; }
+  .procedures-breadcrumb span { @apply text-slate-700; }
+  .procedures-hero-copy { @apply mt-2; }
+  .procedures-hero-copy > p { @apply flex items-center gap-2 text-xs font-semibold text-red-800; }
+  .procedures-hero-copy h1 { @apply mt-2 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl; }
+  .procedures-hero-copy > span { @apply mt-2 block text-sm leading-6 text-slate-600; }
+  .procedures-search { @apply mt-5 grid gap-3 text-slate-900 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end; }
+  .procedures-hero-embedded { @apply pt-5 sm:pt-6; }
+  .procedures-hero-embedded .procedures-search { @apply mt-0; }
+  .procedures-search label { @apply block text-sm font-semibold text-slate-800 sm:col-span-2; }
   .procedures-search > div { @apply relative; }
-  .procedures-search > div > svg { @apply absolute left-4 top-1/2 -translate-y-1/2 text-slate-400; }
-  .procedures-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .procedures-search > div > svg { @apply pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-400; }
+  .procedures-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-slate-50/50 py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-500 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .procedures-search input::-webkit-search-cancel-button { display: none; }
   .procedures-search > div > button { @apply absolute right-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
-  .procedures-search > button { @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-red-800 px-7 text-base font-bold text-white hover:bg-red-900; }
-  .procedures-directory { @apply mx-auto grid max-w-[1120px] scroll-mt-36 items-start gap-6 px-5 py-10 sm:px-8 sm:py-12 lg:grid-cols-[260px_1fr]; }
-  .procedures-filter { @apply rounded-xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,.04)] lg:sticky lg:top-[150px]; }
-  .procedures-filter-heading { @apply flex items-center justify-between border-b border-slate-100 pb-3; }
-  .procedures-filter-heading h2 { @apply text-sm font-bold text-slate-950; }
-  .procedures-filter-heading span { @apply text-xs font-semibold text-slate-400; }
-  .procedures-filter-list { @apply mt-2; }
-  .procedures-filter-list button { @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-600 hover:bg-red-50 hover:text-red-800; }
-  .procedures-filter-list button.is-selected { @apply bg-red-800 text-white; }
-  .procedures-filter-list small { @apply grid min-w-7 place-items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500; }
-  .procedures-filter-list button.is-selected small { @apply bg-white/15 text-white; }
+  .procedures-search > button { @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 text-sm font-bold text-white hover:bg-red-900; }
+  .procedures-search-hint { @apply mt-3 flex items-start gap-2 text-xs leading-5 text-slate-500; }
+  .procedures-search-hint svg { @apply mt-0.5 shrink-0; }
+  .procedures-directory { @apply mx-auto grid max-w-[1280px] scroll-mt-36 items-start gap-6 pt-6 lg:grid-cols-[240px_minmax(0,1fr)]; }
+  .procedures-filter { @apply min-w-0 rounded-2xl border border-slate-200 bg-white p-4 lg:sticky lg:top-[110px]; }
+  .procedures-filter-heading { @apply flex items-center justify-between gap-2; }
+  .procedures-filter-heading h2 { @apply flex items-center gap-2 text-sm font-bold text-slate-950; }
+  .procedures-filter-heading span { @apply rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600; }
+  .procedures-filter-description { @apply mt-2 text-xs leading-5 text-slate-500; }
+  .procedures-filter-list { @apply mt-3 grid grid-cols-2 gap-1 lg:grid-cols-1; }
+  .procedures-filter-list button { @apply flex min-h-12 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-red-800; overflow-wrap: anywhere; }
+  .procedures-filter-list button svg { @apply shrink-0; }
+  .procedures-filter-list button.is-selected { @apply border-red-100 bg-red-50 font-semibold text-red-800; }
+  .procedures-filter-help { @apply mt-5 hidden items-start gap-2 border-t border-slate-100 pt-5 text-slate-500 lg:flex; }
+  .procedures-filter-help > svg { @apply shrink-0 text-red-800; }
+  .procedures-filter-help strong { @apply block text-sm font-semibold text-slate-800; }
+  .procedures-filter-help p { @apply mt-2 text-xs leading-6; }
+  .procedures-filter-help a { @apply mt-2 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-red-800; }
   .procedures-results { @apply min-w-0; }
-  .procedures-results-heading { @apply flex flex-col justify-between gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end; }
-  .procedures-results-heading p { @apply text-[10px] font-bold uppercase tracking-[.14em] text-red-700; }
-  .procedures-results-heading h2 { @apply mt-1 text-xl font-bold text-slate-950 sm:text-2xl; }
-  .procedures-results-heading button { @apply min-h-11 self-start text-sm font-bold text-red-800 underline decoration-red-200 underline-offset-4 sm:self-auto; }
-  .procedures-list { @apply mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white; }
-  .procedures-list li { @apply border-b border-slate-200 last:border-b-0; }
-  .procedure-result-row { @apply grid min-h-[88px] w-full min-w-0 grid-cols-[40px_1fr_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-red-50/60 sm:gap-4 sm:px-5; }
-  .procedure-result-number { @apply text-xs font-bold tabular-nums text-slate-400; }
-  .procedure-result-copy { @apply min-w-0; }
-  .procedure-result-copy small { @apply block text-[10px] font-bold uppercase tracking-[.13em] text-red-600; }
-  .procedure-result-copy strong { @apply mt-1 block text-sm font-bold leading-6 text-slate-950 sm:text-base; }
-  .procedure-result-action { @apply inline-flex min-h-11 items-center gap-2 text-xs font-bold text-red-800 sm:text-sm; }
-  .procedure-result-action svg { @apply transition-transform; }
-  .procedure-result-row:hover .procedure-result-action svg { @apply translate-x-1; }
+  .procedures-results-heading { @apply flex flex-wrap items-center justify-between gap-x-4 gap-y-1; }
+  .procedures-results-heading p { @apply text-xs font-medium text-slate-500; }
+  .procedures-results-heading h2 { @apply mt-1 text-xl font-bold leading-8 text-slate-950; }
+  .procedures-results-heading button { @apply min-h-11 text-sm font-semibold text-red-800 underline decoration-red-200 underline-offset-4; }
+  .procedures-list { @apply mt-4 grid gap-3; }
+  .procedures-list li { @apply min-w-0; }
+  .procedure-result-row { @apply flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:border-red-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700 sm:p-6; }
+  .procedure-result-copy { @apply block min-w-0; overflow-wrap: anywhere; }
+  .procedure-result-labels { @apply flex flex-wrap items-center gap-x-3 gap-y-2; }
+  .procedure-result-labels small { @apply rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-800; }
+  .procedure-result-labels > span { @apply text-xs text-slate-500; }
+  .procedure-result-copy strong { @apply mt-3 block text-base font-semibold leading-7 text-slate-950 sm:text-lg; }
+  .procedure-result-meta { @apply mt-3 flex flex-col gap-x-7 gap-y-2 text-sm leading-6 text-slate-500 sm:flex-row sm:flex-wrap; }
+  .procedure-result-meta > span { @apply flex min-w-0 items-start gap-2; }
+  .procedure-result-meta svg { @apply mt-0.5 shrink-0 text-slate-400; }
+  .procedure-result-meta b { @apply font-medium text-slate-700; }
+  .procedure-result-action { @apply flex min-h-11 items-center justify-end gap-2 border-t border-slate-100 pt-3 text-sm font-semibold text-red-800; }
+  .procedure-result-action svg { @apply transition-transform motion-reduce:transition-none; }
+  .procedure-result-row:hover .procedure-result-action svg { @apply translate-x-1 motion-reduce:translate-x-0; }
+  .procedures-pagination { @apply mt-5 flex flex-wrap items-center justify-between gap-4; }
+  .procedures-pagination > p { @apply text-xs leading-6 text-slate-500; }
   .procedures-empty { @apply mt-4 rounded-xl border border-dashed border-red-200 bg-white px-5 py-14 text-center; }
   .procedures-empty > span { @apply mx-auto grid size-14 place-items-center rounded-full bg-red-50 text-red-700; }
   .procedures-empty h2 { @apply mt-5 text-xl font-bold text-slate-950; }
