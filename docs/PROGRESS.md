@@ -1,8 +1,23 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 19/10/2026.
+Cập nhật: 21/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Thiết kế lại UI/UX tra cứu thủ tục — 21/10/2026
+
+- Sửa theo phản hồi trùng/lặp: `ProceduresPage` nhận prop `embedded`; `CitizenPage` truyền prop này để bỏ breadcrumb Trang chủ, nhãn giới thiệu, tiêu đề “Thủ tục hành chính” và mô tả trong khung tìm kiếm. Chỉ giữ tiêu đề “Tra cứu thủ tục” của workspace và breadcrumb topbar; bỏ câu “Không cần đăng nhập” khi nhúng, thu gọn khoảng cách. Trang công khai giữ phần đầu trang. Section tìm kiếm vẫn có accessible name.
+- Kiểm tra lại cho lần sửa trùng/lặp: typecheck, lint, build và `git diff --check` đạt; 2/2 ca `procedures-ui.spec.ts` với API mock đạt, bổ sung xác nhận chỉ có một h1 và không có breadcrumb/hero-copy lặp trong cổng công dân. Đã xem lại ảnh desktop/mobile và kiểm tra responsive 360–1440px. Chưa kiểm tra backend thật. Build vẫn có cảnh báo Zod/chunk lớn.
+- Đã sửa `src/pages/public/ProceduresPage.tsx` và nhóm CSS `procedures-*` trong `src/styles/globals.css`, áp dụng cho `/thu-tuc` và mục tra cứu trong `/citizen?section=procedures`.
+- Thay banner đỏ lớn bằng khung tìm kiếm trắng có điểm nhấn đỏ, mô tả ngắn và hướng dẫn nhập có/không dấu. Mở rộng nội dung tối đa 1280px; bỏ padding lồng nhau khi nhúng trong workspace.
+- Bộ lọc có dấu chọn, nền đỏ nhạt; chia hai cột trên mobile, một cột ở sidebar desktop. Có hướng dẫn bắt đầu và liên kết hỏi đáp trên desktop.
+- Kết quả dùng thẻ riêng: lĩnh vực, mã thủ tục từ API, tên, nhãn thời gian/lệ phí và hành động “Xem hướng dẫn”. Giữ URL, bộ lọc đang áp dụng, liên kết chi tiết và phân trang phía dưới.
+- Nhấn Enter/nút Tìm kiếm áp dụng từ khóa ngay vào URL; xóa bộ lọc đồng thời xóa nội dung đang nhập. Giữ tiêu đề kết quả trong DOM để focus không mất khi tải/phân trang; skeleton tương ứng thẻ kết quả và lĩnh vực. Không hiển thị số kết quả bằng 0 khi đang tải hoặc khi lỗi.
+- Validation: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` đạt. Build có cảnh báo chú thích thư viện Zod và chunk lớn (editor DOCX).
+- Playwright Edge với API mock: 17/17 ca trong `landing.spec.ts` và `procedure-detail.spec.ts`; 3/3 ca công khai được chọn trong `procedure-manager.spec.ts` (query/phân trang, loading, lỗi/thử lại); 2/2 ca mới trong `procedures-ui.spec.ts` (public/citizen responsive và tìm kiếm/xóa lọc/focus). Tổng 22 ca riêng biệt đạt. Đã xem ảnh desktop/mobile; kiểm tra không tràn ngang ở 1440/768/390/360px. Test chờ chuyển động sidebar kết thúc trước khi chụp.
+- Lần lint đầu vướng thư mục `test-results` đang được Playwright tạo lại; chạy lại thành công. Playwright mặc định đã báo đủ 17 ca đạt nhưng giữ tiến trình Vite khi teardown trên Windows; các ca bổ sung dùng cấu hình tạm tái sử dụng đúng server mock, sau đó đóng server đã tạo và xóa cấu hình tạm.
+- Git theo yêu cầu người dùng: chia 3 commit trên `main`: `e71ba6d` (giao diện tra cứu và chế độ nhúng), `0ea60b8` (áp dụng chế độ nhúng trong cổng công dân và kiểm thử hồi quy), cùng commit tài liệu bàn giao này. Remote: `origin` → `https://github.com/wardmate-capstone/wardmate-frontend.git`; đối chiếu `origin/main` để xác định trạng thái đồng bộ thực tế. Phiên chia commit không thay đổi code đã kiểm thử; chỉ kiểm tra lại diff và Git, không chạy lại test/build.
+- Giới hạn: dùng luồng Catalog hiện có, chưa xác minh lại backend thật trong phiên này; chưa kiểm tra screen reader hoặc zoom 200%. Bước tiếp theo: người dùng xem giao diện với danh mục môi trường thật.
 
 ## Nâng cấp Trải nghiệm Loading & Chuẩn hóa Skeleton UI Toàn diện — 19/10/2026
 
