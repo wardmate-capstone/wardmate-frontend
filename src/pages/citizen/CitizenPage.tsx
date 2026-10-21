@@ -487,7 +487,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           )}
 
           {activeSection === 'procedures' && (
-            <ProceduresPage />
+            <ProceduresPage embedded />
           )}
 
           {isDossierSection && (
