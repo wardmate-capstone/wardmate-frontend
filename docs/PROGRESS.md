@@ -1,8 +1,159 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 21/10/2026.
+Cập nhật: 22/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Hoàn thiện Cổng công dân, Menu tài khoản & Khắc phục hiển thị Phường trong Quản trị — 22/10/2026
+
+- **Các hạng mục hoàn thành:**
+  1. **Chuẩn hóa danh mục hồ sơ công dân (`CitizenPage.tsx`, `types.ts`, `CitizenDossiersView.tsx`):**
+     - Loại bỏ hoàn toàn mục "Đã hoàn thành" (`dossiers_completed`) khỏi sidebar và bộ lọc danh sách hồ sơ công dân.
+     - Lý do: WardMate là hệ thống hỗ trợ chuẩn bị và tiền kiểm hồ sơ cấp xã/phường. Vòng đời tiền kiểm kết thúc tại trạng thái "Giấy tờ sẵn sàng" (`DOCUMENTS_READY`), kèm mã QR đối soát để người dân mang tới nộp trực tiếp tại Bộ phận một cửa UBND.
+  2. **Gỡ bỏ Đổi mật khẩu khỏi dropdown người dùng (`UserDropdown.tsx`):**
+     - Loại bỏ nút "Đổi mật khẩu" khỏi dropdown tài khoản người dùng ở cả desktop và mobile drawer. Toàn bộ thao tác đổi mật khẩu đã được chuyển vào tab chuyên dụng trong trang Hồ sơ cá nhân (`/citizen` hoặc `/admin`).
+  3. **Khắc phục hiển thị phường công tác trong Quản trị người dùng (`AdminPage.tsx`):**
+     - Sửa lỗi dropdown phân công phường luôn hiển thị `(Chưa gán phường)` mặc dù API `GET /api/v1/admin/users` đã trả về `wardCode`.
+     - Bổ sung cơ chế tự động ánh xạ `wardCode` sang `wardId` dựa trên danh mục phường `wards`, hỗ trợ so khớp không phân biệt hoa thường (`.trim().toUpperCase()`) và lưu cache tức thời qua `wardsRef`.
+     - Bổ sung fallback kiểm tra trực tiếp trong thẻ `<select value={assignedWardId}>`, đảm bảo dropdown lập tức hiển thị chính xác phường công tác của từng cán bộ/lãnh đạo.
+     - Đồng bộ công thức đếm nhân sự trực thuộc tại bảng "Quản lý đơn vị Phường / Xã" cho kết quả chính xác 100%.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run build`: **Build production bundle thành công trong 19.07s**.
+
+## Tự động trích xuất và hiển thị tên Người dân trên bảng hàng đợi cán bộ — 22/10/2026
+
+- **Vấn đề phát hiện:** Ở cột **Người dân** trên bảng danh sách hồ sơ cán bộ Một cửa (`OfficerApplicationListView`), hệ thống hiển thị giá trị mặc định là `"Công dân"` và `"—"` thay vì họ tên và số CCCD của người nộp.
+- **Nguyên nhân:**
+  - API danh sách hồ sơ phường trên backend (`GET /api/v1/officer/applications` hoặc `/pending`) trả về `ApplicationSummaryDto`.
+  - DTO tóm tắt này hiện chỉ lưu các trường cấp hồ sơ (`applicationCode`, `procedureTitle`, `status`, `submittedAt`, `assignedOfficerId`...) mà chưa bao gồm thông tin công dân (`applicantName`, `citizenId`).
+  - Toàn bộ thông tin định danh của người dân thực chất được lưu trữ đầy đủ trong trường `formData` (JSON) của hồ sơ.
+- **Giải pháp triển khai:**
+  1. **Nâng cấp `workflowAdapters.ts`:**
+     - Bổ sung hàm `extractCitizenInfoFromFormData(formData)` quét và chuẩn hóa thông tin người nộp theo nhiều biến thể trường phổ biến (`applicantName`, `fullName`, `hoTen`, `hoVaTen`, `hoTenNguoiKhai`, `identityNumber`, `citizenId`, `cccd`, `soCCCD`...).
+     - Export `parseFormData` và tích hợp `extractCitizenInfoFromFormData` vào mapper `mapApplicationDtoToOfficerApplication`.
+     - Cập nhật `mapSummaryDtoToOfficerApplication` hỗ trợ map `summary.applicantName` và `summary.citizenId`.
+  2. **Cập nhật `workflow.ts`:** Bổ sung `citizenId: z.string().nullish()` vào `applicationSummaryDtoSchema`.
+  3. **Cơ chế Auto-Enrichment trên `OfficerPage.tsx`:**
+     - Thiết lập state cache `citizenInfoMap` lưu thông tin người dân theo `applicationId`.
+     - Với các hồ sơ trên bảng chưa có thông tin công dân từ summary, hệ thống tự động gọi ngầm `workflowApi.getOfficerApplication(id)` để trích xuất ngay họ tên thật và số CCCD/SĐT, sau đó cập nhật trực tiếp lên bảng mà không cần người dùng thao tác.
+     - Khi cán bộ chuyển trang/lọc hoặc nạp lại, thông tin đã cache hiển thị ngay tức thì, không gây giật lag hay phụ thuộc vào việc deploy backend mới.
+  4. **Tối ưu UI danh sách hồ sơ (`OfficerApplicationListView.tsx`):**
+     - Loại bỏ thanh tiêu đề phụ dư thừa *"Hàng đợi hồ sơ tiếp nhận / X hồ sơ"* phía trên bảng.
+     - Chuyển nút *"Làm mới"* lên thẳng thanh công cụ bộ lọc (cùng hàng với kết quả tìm kiếm), giúp bảng hồ sơ gọn gàng, thoáng đãng và hiển thị trực tiếp hàng tiêu đề cột.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi (exit code 0)**.
+
+## Hoàn thiện UI Nội dung Đổi mật khẩu & Chuẩn hóa Thanh Tab — 22/10/2026
+
+- **Yêu cầu & Tinh chỉnh từ người dùng:**
+  1. Trả thanh Tab điều hướng về kiểu thanh gạch chân (Underline Tabs) tinh tế, chuẩn mực, không dùng hiệu ứng gradient hay badge nổi trội chói mắt.
+  2. Gỡ bỏ hoàn toàn khối card "Mật khẩu tài khoản" dư thừa ở chân trang tab Thông tin cá nhân.
+  3. **Tối ưu heading và nội dung đổi mật khẩu (`AccountSecuritySection.tsx`):**
+     - Đơn giản hóa phần Heading: Bỏ gradient nền rườm rà, dùng layout ngang gọn gàng, tiêu đề súc tích *"Đổi mật khẩu"* và phụ đề ngắn gọn, ý nghĩa: *"Bảo vệ an toàn cho tài khoản của bạn"*.
+     - Rút gọn toàn bộ các placeholder ô nhập ("Nhập mật khẩu hiện tại", "Nhập mật khẩu mới", "Nhập lại mật khẩu mới") giảm tải chữ, tạo cảm giác thoáng đãng và dễ thao tác.
+     - **Thanh đo độ mạnh 4 nấc real-time (Strength Meter):** Phản hồi màu sắc sinh động (Yếu, Trung bình, Khá tốt, Rất mạnh).
+     - **Checklist 4 tiêu chí dạng thẻ pill tương tác:** Tự động chuyển từ xám sang nền xanh `emerald-50` kèm dấu tick `Check` khi đạt tiêu chí.
+     - **Chỉ báo khớp mật khẩu xác nhận real-time:** Báo tick xanh khi trùng khớp, báo cảnh báo đỏ khi chưa khớp trước khi bấm gửi.
+     - Footer thanh lịch với ghi chú bảo mật và nút *"Lưu mật khẩu mới"* chuẩn phong cách WardMate.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production thành công 100% trong 19.48s**.
+
+## Nâng cấp Trợ lý AI và Gợi ý lý do bổ sung hồ sơ (Ứng dụng kỹ thuật prompts.chat) — 22/10/2026
+
+- **Phạm vi triển khai:** Frontend React/TypeScript (100% độc lập, không thay đổi backend, tận dụng toàn bộ API AI hiện có `POST /api/v1/ai/chat/completions`).
+- **Nội dung đã hoàn thành:**
+  1. **Nâng cấp Trợ lý ảo AI (`AiChatWidget.tsx`):**
+     - Xây dựng **Kho câu hỏi mẫu hành chính công (Prompt Library Drawer)** phân theo 5 danh mục: Tất cả, Hộ tịch (Khai sinh, Khai tử), Hôn nhân & Kết hôn, Chứng thực & Sao y, và Quy trình tiền kiểm.
+     - Cho phép công dân lọc danh mục, bấm chọn câu hỏi mẫu gửi ngay hoặc nạp vào ô nhập liệu.
+     - Bổ sung nút **Sao chép 1-click (1-Click Copy)** trên câu trả lời của AI với hiệu ứng phản hồi trực quan.
+     - Nút bật/tắt ngăn câu hỏi mẫu (`Gợi ý / Ẩn mẫu`) tiện lợi mọi lúc trong phiên trò chuyện.
+  2. **Gợi ý nhận xét AI cho Cán bộ Một cửa (`OfficerReviewWorkspaceView.tsx`):**
+     - Trong modal quyết định "Yêu cầu bổ sung hồ sơ" (`NEED_REVISION`), bổ sung nút **"✨ AI gợi ý lý do"**: tự động tổng hợp danh sách các giấy tờ bắt buộc chưa đạt hoặc thiếu kèm nhận xét sai sót từ checklist, gọi AI để sinh văn bản lý do ngắn gọn (< 120 từ), chuẩn văn phong hành chính nhà nước.
+     - Bổ sung 3 mẫu văn bản nhanh (Quick Revision Templates) cho cán bộ bấm chọn tức thì (ảnh chụp mờ lóa, thiếu chữ ký, thiếu giấy tờ bắt buộc).
+     - Nâng cấp ô nhập lý do từ input 1 dòng sang textarea nhiều dòng hỗ trợ tối đa 4.000 ký tự.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production thành công 100% trong 18.75s**.
+
+## Sửa lỗi hiển thị mã ID rút gọn thay vì tên cán bộ — 22/10/2026
+
+- **Vấn đề:** Trên giao diện danh sách hồ sơ cán bộ Một cửa (`/can-bo`), cột "Cán bộ" hiển thị mã ID rút gọn dạng `Cán bộ (cd57fbe0)` thay vì họ tên đầy đủ của cán bộ phụ trách. Đồng thời bộ lọc cán bộ phụ trách bị hardcode lựa chọn mock "Cán bộ Lê Thu Hà".
+- **Nguyên nhân:** Backend `ApplicationWorkflow` theo chuẩn Microservices/database-per-service chỉ lưu trữ `assignedOfficerId` (GUID) mà không giữ thông tin họ tên cán bộ thuộc IAM. Khi chuyển đổi DTO sang ViewModel, các adapter `mapSummaryDtoToOfficerApplication` và `mapApplicationDtoToOfficerApplication` fallback hiển thị mã GUID cắt ngắn 8 ký tự do chưa nhận ngữ cảnh phiên đăng nhập hay danh bạ cán bộ.
+- **Giải pháp triển khai:**
+  1. Xây dựng module phân giải tên cán bộ `OfficerLookup` và hàm chuẩn hóa `resolveOfficerDisplayName(assignedOfficerId, assignedOfficerName, lookup)` trong `src/lib/api/workflowAdapters.ts`:
+     - Ưu tiên 1: Lấy `assignedOfficerName` nếu backend cung cấp.
+     - Ưu tiên 2: Đối chiếu `assignedOfficerId` với tài khoản cán bộ đang đăng nhập (`user.id`), tự động lấy họ tên từ hồ sơ cá nhân `profile.fullName` hoặc `username`.
+     - Ưu tiên 3: Tra cứu trong danh bạ cán bộ phường `officerDirectory` (nếu đã nạp).
+     - Ưu tiên 4: Fallback hiển thị mã rút gọn nếu chưa rõ danh tính.
+  2. Cập nhật `src/pages/officer/OfficerPage.tsx`:
+     - Tạo `officerLookup` tổng hợp thông tin tài khoản hiện hành và danh bạ cán bộ.
+     - Tự động gọi API `getManagerOfficers` nạp danh bạ cán bộ cùng phường (với tài khoản có quyền).
+     - Truyền `officerLookup` vào các mapper `mapSummaryDtoToOfficerApplication` và `mapApplicationDtoToOfficerApplication`.
+  3. Cập nhật `src/pages/officer/OfficerApplicationListView.tsx`:
+     - Xóa bỏ mock tĩnh "Cán bộ Lê Thu Hà" trong select box lọc cán bộ.
+     - Tự động sinh danh sách lựa chọn cán bộ phụ trách `officerOptions` từ các cán bộ thực tế trong danh sách hồ sơ.
+  4. Cập nhật `src/pages/officer/OfficerDashboardView.tsx`: Thay fallback 'Lê Thu Hà' thành 'Cán bộ Một cửa'.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production thành công 100% trong 18.66s**.
+
+## Tích hợp toàn diện các API Backend mới triển khai (P0, P1, P2) — 22/10/2026
+
+- **Phạm vi công việc:** Triển khai phía Frontend (React/Vite/TypeScript) tương thích 100% với toàn bộ các endpoint backend đã được deploy (từ commit backend `1bcfc59`, `70b3984`, `dc4b101`, `8072c28`), loại trừ phân hệ Analytics & System theo chỉ đạo của người dùng.
+- **Quyết định chuẩn hóa ranh giới nghiệp vụ (Phương án 1 — 22/10/2026):**
+  - Thực hiện chuẩn hóa theo yêu cầu và bản chất cốt lõi của WardMate: Đây là hệ thống **hỗ trợ chuẩn bị và tiền kiểm hồ sơ**, không thay thế Cổng Dịch vụ công Quốc gia hay Hệ thống Một cửa điện tử chính thức của Nhà nước.
+  - Điểm kết thúc vòng đời hồ sơ trên WardMate dừng chuẩn tại trạng thái **`DOCUMENTS_READY` ("Giấy tờ sẵn sàng")**: Khi hồ sơ được duyệt tiền kiểm, hệ thống sinh mã QR tiền kiểm và công dân tải toàn bộ bản in PDF tờ khai cùng tài liệu hợp lệ để mang đến nộp trực tiếp tại Bộ phận Một cửa UBND cấp Xã/Phường.
+  - Lược bỏ hoàn toàn phân hệ mô phỏng tiếp nhận chính thức và cấp giấy hẹn tại quầy (`OfficerReceiptWorkspaceView`, menu `receipt-waiting`, `receipt-received`, `apps-ready-submit`). Thao tác thụ lý chính thức và ký giấy hẹn là thẩm quyền của Hệ thống Một cửa Nhà nước.
+  - Trên giao diện cán bộ: Thay thế thẻ ca trực quầy bằng phân hệ theo dõi "Giấy tờ sẵn sàng nộp UBND" (`apps-approved`), cho phép cán bộ Một cửa quản lý các hồ sơ đã duyệt tiền kiểm và hỗ trợ đối soát mã QR công dân mang tới.
+- **Các tính năng và luồng nghiệp vụ đã hoàn thiện:**
+  1. **Công dân hủy hồ sơ tiền kiểm (`POST /api/v1/applications/{id}/cancel`):**
+     - Thêm mutation `useCancelApplicationMutation` trong `src/hooks/useWorkflow.ts`.
+     - Bổ sung nút "Hủy hồ sơ" kèm modal cảnh báo xác nhận trong `CitizenDossierDetailView.tsx` khi hồ sơ ở trạng thái `Bản nháp` hoặc `Cần chỉnh sửa`.
+     - Adapter cập nhật trạng thái `'Đã hủy'` (`CANCELLED`).
+  3. **Đổi mật khẩu tài khoản (`POST /api/v1/users/me/change-password`):**
+     - Bổ sung API `changePassword` trong `src/lib/api/index.ts`.
+     - Xây dựng component `ChangePasswordModal.tsx` với checklist độ mạnh mật khẩu (>=8 ký tự, hoa, thường, số, ký tự đặc biệt), ẩn/hiện mật khẩu, kiểm tra trùng khớp.
+     - Tự động thu hồi phiên đăng nhập và điều hướng an toàn về `/dang-nhap` khi đổi mật khẩu thành công (do backend thu hồi toàn bộ refresh token).
+     - Tích hợp nút mở đổi mật khẩu tại:
+       + Menu tài khoản `UserDropdown.tsx` (cả giao diện desktop và mobile drawer).
+       + Trang hồ sơ cá nhân cán bộ/quản lý `UnifiedSelfProfileView.tsx`.
+       + Trang hồ sơ công dân `CitizenProfileView.tsx`.
+  4. **Xem trước trực tiếp tài liệu đính kèm (`GET /api/v1/supporting-documents/{documentId}/preview`):**
+     - Bổ sung `previewSupportingDocument` trong `src/lib/api/documentForms.ts`.
+     - Cập nhật `OfficerDocumentsPanel.tsx` và `DossierChecklistView.tsx` để xem trước trực tiếp (inline stream) đối với định dạng PDF, PNG, JPG/JPEG kèm cơ chế tự động fallback về download nếu là Word hoặc định dạng không hỗ trợ.
+  5. **Thủ tục hành chính nổi bật (`GET /api/v1/procedures/featured`):**
+     - Bổ sung `procedureApi.featured` và hook `useFeaturedProcedures()`.
+     - Hiển thị danh sách thủ tục nổi bật có gắn huy hiệu "Nổi bật" tại trang chủ `HomePage.tsx` khi chưa nhập từ khóa tìm kiếm.
+  6. **Nộp bản Word đã điền offline (`POST /api/v1/citizen/submissions/upload-filled-docx`):**
+     - Bổ sung `uploadFilledDocx` trong `documentFormApi` và `useDocumentMutations`.
+     - Kết nối luồng upload bản Word tải về từ biểu mẫu trong `DossierChecklistView.tsx`.
+  7. **Bóc tách thông tin thẻ CCCD bằng AI OCR (`POST /api/v1/ai-ocr/cccd/extract`):**
+     - Tạo client `src/lib/api/aiOcr.ts` với Zod schema xác thực dữ liệu trích xuất.
+     - Xây dựng component `CccdOcrScanModal.tsx` cho phép tải ảnh mặt trước (bắt buộc) và mặt sau (tùy chọn) thẻ CCCD, kiểm tra dung lượng (tối đa 8MB/ảnh).
+     - Hiển thị kết quả bóc tách (Số CCCD, Họ tên, Ngày sinh, Giới tính, Quê quán, Thường trú) cùng độ tin cậy AI, hỗ trợ người dùng áp dụng trực tiếp vào biểu mẫu hồ sơ công dân (`CitizenProfileView.tsx`).
+     - Bổ sung cảnh báo an toàn bảo mật dữ liệu công dân (không lưu trữ ảnh vào cơ sở dữ liệu).
+  8. **Trợ lý ảo AI hỏi đáp quy trình thủ tục (`POST /api/v1/ai/chat/completions`):**
+     - Xây dựng component `AiChatWidget.tsx` dạng cửa sổ nổi tương tác trực quan (Floating Widget) góc dưới bên phải màn hình tại `CitizenPage.tsx` và `HomePage.tsx`.
+     - Hỗ trợ câu hỏi nhanh gợi ý, duy trì mã phiên hội thoại `conversationId`, hiển thị câu trả lời dạng văn bản an toàn kèm lưu ý pháp lý.
+  9. **Cấu hình Gateway / Proxy (`vite.config.ts` & `serviceUrls.ts`):**
+     - Bổ sung định tuyến proxy cho `/api/v1/ai-ocr` và `/api/v1/ai/chat`.
+  10. **Theo dõi Hạn xử lý tiền kiểm (Review Deadline - SLA 45 giờ làm việc):**
+      - Bổ sung trường `dueAtUtc` và `deadlineStatus` trong `OfficerApplication` và `CitizenDossier`.
+      - Cập nhật adapter `workflowAdapters.ts` tự động tính toán trạng thái quá hạn (`urgency: 'overdue'`).
+      - Hiển thị nhãn hạn xử lý và cảnh báo quá hạn trong danh sách hồ sơ cán bộ Một cửa (`OfficerApplicationListView.tsx`).
+      - Hiển thị thông tin hạn tiền kiểm (45 giờ làm việc của UBND) tại khối trạng thái chi tiết hồ sơ công dân (`CitizenDossierDetailView.tsx`).
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production thành công 100% trong 51.67s**.
+- **Bước tiếp theo:** Người dùng kiểm tra trải nghiệm các tính năng mới trên môi trường dev/staging.
+
 
 ## Thiết kế lại UI/UX tra cứu thủ tục — 21/10/2026
 
