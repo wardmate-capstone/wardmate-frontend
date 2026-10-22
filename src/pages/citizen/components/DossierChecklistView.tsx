@@ -64,7 +64,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     await perform(item, async () => {
       const existing = contents.data?.submissions.find(x => x.checklistId === item.checklistId);
       if (existing) await mutations.updateDraft.mutateAsync({ submissionId: existing.id, applicationId, applicantId: user.id, file });
-      else await mutations.createDraft.mutateAsync({ templateId: item.formTemplateId!, applicationId, checklistId: item.checklistId, applicantId: user.id, file });
+      else await mutations.uploadFilledDocx.mutateAsync({ templateId: item.formTemplateId!, applicationId, checklistId: item.checklistId, applicantId: user.id, file });
       toast.success('Đã lưu bản nháp. Hãy kiểm tra nội dung và xác nhận bản khai.');
       await syncChecklist(item);
     }, rethrow);
@@ -301,7 +301,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       })} noValidate><p className="break-all text-sm">{upload?.file.name}</p><Input label="Số bản thực tế" type="number" min={1} max={2147483647} required disabled={busy} {...quantityForm.register('quantity')} error={quantityForm.formState.errors.quantity?.message} />{upload && errors[upload.item.checklistId] && <p role="alert" className="text-sm text-red-800">{errors[upload.item.checklistId]}</p>}<Button type="submit" loading={busy}>Lưu giấy tờ</Button></form>
     </Modal>
     <Modal open={Boolean(removing)} onOpenChange={open => { if (!open && !busy) setRemoving(undefined); }} title="Xóa giấy tờ khỏi hồ sơ" description="Sau khi xóa, bạn có thể cần đính kèm lại để hồ sơ đủ giấy tờ."><p className="mb-4 break-all">{removing?.name}</p>{removing && errors[removing.item.checklistId] && <p role="alert" className="mb-4 text-sm text-red-800">{errors[removing.item.checklistId]}</p>}<Button loading={busy} onClick={() => { if (!removing || !applicationId) return; const selected = removing; void perform(selected.item, async () => { await mutations.deleteSupporting.mutateAsync({ documentId: selected.id, applicationId }); setRemoving(undefined); await syncChecklist(selected.item); toast.success('Đã xóa giấy tờ.'); }); }}>Xác nhận xóa</Button></Modal>
-    <Modal open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(undefined); }} title="Xem giấy tờ đã lưu" className="sm:max-w-4xl">{preview && <DocumentFilePreview key={preview.id} fileId={preview.id} fileName={preview.name} load={signal => documentFormApi.downloadSupportingDocument(preview.id, signal)} />}</Modal>
+    <Modal open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(undefined); }} title="Xem giấy tờ đã lưu" className="sm:max-w-4xl">{preview && <DocumentFilePreview key={preview.id} fileId={preview.id} fileName={preview.name} load={signal => /\.(pdf|png|jpe?g)$/i.test(preview.name) ? documentFormApi.previewSupportingDocument(preview.id, signal).catch(() => documentFormApi.downloadSupportingDocument(preview.id, signal)) : documentFormApi.downloadSupportingDocument(preview.id, signal)} />}</Modal>
     {editing && user && (
       <Suspense
         fallback={

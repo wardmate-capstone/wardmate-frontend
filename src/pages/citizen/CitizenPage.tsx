@@ -22,6 +22,7 @@ import { documentFormApi } from '@/lib/api/documentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { CreateDossierModal, type CreateDossierValues } from './components/CreateDossierModal';
 import { mapSummaryDtoToCitizenDossier, mapApplicationDtoToCitizenDossier } from '@/lib/api/workflowAdapters';
+import { AiChatWidget } from '@/components/ai/AiChatWidget';
 
 // Icons
 import {
@@ -65,7 +66,6 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa' },
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
-  dossiers_completed: { title: 'Hồ sơ đã hoàn thành' },
   dossier_detail: { title: 'Chi tiết hồ sơ' },
   submissions: { title: 'Bản khai của tôi' },
   notifications: { title: 'Thông báo & Cập nhật' },
@@ -380,7 +380,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, permissions: ['document.submissions.write'] },
         { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, permissions: ['document.submissions.read'] },
         { id: 'dossiers_approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, permissions: ['document.submissions.read'] },
-        { id: 'dossiers_completed', label: 'Đã hoàn thành', icon: FileText, permissions: ['document.submissions.read'] },
       ] },
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
@@ -567,6 +566,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       />
 
       <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
+
+      {/* Trợ lý ảo AI hỏi đáp thủ tục */}
+      <AiChatWidget />
     </div>
   );
 }

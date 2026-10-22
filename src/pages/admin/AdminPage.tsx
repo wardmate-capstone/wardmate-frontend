@@ -1,7 +1,7 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { getGreeting } from "@/lib/utils";
@@ -142,32 +142,50 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   const [userError, setUserError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [wards, setWards] = useState<WardDto[]>([]);
+  const wardsRef = useRef<WardDto[]>([]);
 
-  const fetchUsers = useCallback(async (page: number) => {
+  const fetchUsers = useCallback(async (page: number, wardList?: WardDto[]) => {
     setUserLoading(true);
     setUserError(null);
     try {
+      let activeWards: WardDto[] = wardList ?? wardsRef.current;
+      if (activeWards.length === 0) {
+        try {
+          activeWards = await getWards();
+          wardsRef.current = activeWards;
+          setWards(activeWards);
+        } catch {
+          // Softly fallback
+        }
+      }
+
       const data = await getAdminUsers({
         page,
         pageSize: 20,
         search: query.trim() || undefined,
       });
+
       setUserData({
         ...data,
-        items: data.items.map((item) => ({
-          id: item.id,
-          username: item.username,
-          email: item.email,
-          isActive: item.isActive,
-          wardCode: item.wardCode,
-          wardId: null,
-          wardName: item.wardCode ?? null,
-          profile: item.fullName ? {
-            fullName: item.fullName,
-            identityNumber: item.identityNumber ?? null,
-          } : null,
-          roles: item.roles.map((roleName, index) => ({ id: index + 1, roleName })),
-        })),
+        items: data.items.map((item) => {
+          const matchedWard = item.wardCode
+            ? activeWards.find((w) => w.code.trim().toUpperCase() === item.wardCode?.trim().toUpperCase())
+            : null;
+          return {
+            id: item.id,
+            username: item.username,
+            email: item.email,
+            isActive: item.isActive,
+            wardCode: item.wardCode,
+            wardId: matchedWard?.id ?? null,
+            wardName: matchedWard?.name ?? item.wardCode ?? null,
+            profile: item.fullName ? {
+              fullName: item.fullName,
+              identityNumber: item.identityNumber ?? null,
+            } : null,
+            roles: item.roles.map((roleName, index) => ({ id: index + 1, roleName })),
+          };
+        }),
       });
     } catch (err) {
       setUserError(authErrorMessage(err));
@@ -179,17 +197,24 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   const fetchWards = useCallback(async () => {
     try {
       const data = await getWards();
+      wardsRef.current = data;
       setWards(data);
       setUserData((current) => current && ({
         ...current,
-        items: current.items.map((item) => ({
-          ...item,
-          wardId: data.find((ward) => ward.code === item.wardCode)?.id ?? null,
-          wardName: data.find((ward) => ward.code === item.wardCode)?.name ?? item.wardCode ?? null,
-        })),
+        items: current.items.map((item) => {
+          const matched = item.wardCode
+            ? data.find((ward) => ward.code.trim().toUpperCase() === item.wardCode?.trim().toUpperCase())
+            : null;
+          return {
+            ...item,
+            wardId: matched?.id ?? item.wardId ?? null,
+            wardName: matched?.name ?? item.wardName ?? item.wardCode ?? null,
+          };
+        }),
       }));
+      return data;
     } catch {
-      // Ignored or handled softly
+      return [];
     }
   }, []);
 
@@ -249,7 +274,12 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           ...prev,
           items: prev.items.map((u) =>
             u.id === userId
-              ? { ...u, wardId, wardName: chosenWard ? chosenWard.name : null }
+              ? {
+                  ...u,
+                  wardId,
+                  wardCode: chosenWard ? chosenWard.code : null,
+                  wardName: chosenWard ? chosenWard.name : null,
+                }
               : u
           ),
         };
@@ -1014,19 +1044,33 @@ function UsersView({
                         {isStaff && (
                           <div className="flex items-center gap-1.5">
                             <Buildings size={14} className="text-slate-400 shrink-0" />
-                            <select
-                              value={item.wardId || ''}
-                              onChange={(e) => onAssignWard(item.id, e.target.value || null)}
-                              className="text-[11px] bg-slate-50 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-800"
-                              title="Gán đơn vị phường công tác cho cán bộ"
-                            >
-                              <option value="">(Chưa gán phường)</option>
-                              {wards.map((w) => (
-                                <option key={w.id} value={w.id}>
-                                  {w.name}
-                                </option>
-                              ))}
-                            </select>
+                            {(() => {
+                              const assignedWardId =
+                                item.wardId ||
+                                (item.wardCode
+                                  ? wards.find(
+                                      (w) =>
+                                        w.code.trim().toUpperCase() ===
+                                        item.wardCode?.trim().toUpperCase()
+                                    )?.id
+                                  : '') ||
+                                '';
+                              return (
+                                <select
+                                  value={assignedWardId}
+                                  onChange={(e) => onAssignWard(item.id, e.target.value || null)}
+                                  className="text-[11px] bg-slate-50 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-800"
+                                  title="Gán đơn vị phường công tác cho cán bộ"
+                                >
+                                  <option value="">(Chưa gán phường)</option>
+                                  {wards.map((w) => (
+                                    <option key={w.id} value={w.id}>
+                                      {w.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -1213,7 +1257,11 @@ function WardsView({
               <TableSkeletonRows columns={5} rows={5} />
             ) : (
               filteredWards.map((w) => {
-                const count = users.filter((u) => u.wardId === w.id).length;
+                const count = users.filter(
+                  (u) =>
+                    (u.wardId && u.wardId === w.id) ||
+                    (u.wardCode && u.wardCode.trim().toUpperCase() === w.code.trim().toUpperCase())
+                ).length;
                 return (
                   <tr key={w.id}>
                     <td>

@@ -10,7 +10,6 @@ export type CitizenSectionId =
   | 'dossiers_need_revision'
   | 'dossiers_resubmitted'
   | 'dossiers_approved'
-  | 'dossiers_completed'
   | 'dossier_detail'
   | 'submissions'
   // Tiện ích
@@ -37,7 +36,9 @@ export interface CitizenDossier {
     | 'Giấy tờ sẵn sàng'
     | 'Đã duyệt'
     | 'Đã hoàn thành'
-    | 'Đã từ chối';
+    | 'Đã từ chối'
+    | 'Đã hủy'
+    | 'Đã tiếp nhận tại quầy';
   officerNote?: string;
   officerName?: string;
   cases?: ProcedureCase[];
@@ -45,6 +46,8 @@ export interface CitizenDossier {
   currentVersion?: number;
   wardCode?: string;
   formData?: Record<string, unknown>;
+  dueAtUtc?: string | null;
+  deadlineStatus?: string | null;
 }
 
 
@@ -70,6 +73,7 @@ export const citizenNotifications: CitizenNotification[] = [
 export function getStatusBadgeClass(status: CitizenDossier['status']): string {
   switch (status) {
     case 'Đã hoàn thành':
+    case 'Đã tiếp nhận tại quầy':
       return 'is-success';
     case 'Giấy tờ sẵn sàng':
     case 'Đã duyệt':
@@ -81,6 +85,7 @@ export function getStatusBadgeClass(status: CitizenDossier['status']): string {
     case 'Đã gửi lại':
       return 'is-info';
     case 'Đã từ chối':
+    case 'Đã hủy':
       return 'is-danger';
     case 'Bản nháp':
     default:

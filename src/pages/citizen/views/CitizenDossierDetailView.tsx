@@ -4,11 +4,12 @@ import { Badge, Button, Modal, Skeleton } from '@/components/ui';
 import { useApplicationContents } from '@/hooks/useDocumentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { workflowError } from '@/lib/api/workflow';
-import { ArrowLeft, ArrowRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, ShieldCheck } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, ShieldCheck, Trash } from '@phosphor-icons/react';
 import { DossierChecklistView } from '../components/DossierChecklistView';
 import { GeneratedDocumentsPanel } from '../components/GeneratedDocumentsPanel';
 import type { CitizenDossier } from '../types';
-import { useApplicationComments } from '@/hooks/useWorkflow';
+import { useApplicationComments, useCancelApplicationMutation } from '@/hooks/useWorkflow';
+import { toast } from '@/components/ui/Toast';
 
 interface Props {
   dossier: CitizenDossier; wardName?: string; onBack: () => void;
@@ -24,8 +25,10 @@ function goToPaper(id?: string | null) {
 
 export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPrecheck, onResubmitPrecheck, onUpdateChecklistItem, submitting = false }: Props) {
   const commentsQuery = useApplicationComments(dossier.id, dossier.currentVersion);
+  const cancelMutation = useCancelApplicationMutation();
   const comments = commentsQuery.data ?? [];
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [documentBusy, setDocumentBusy] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -199,6 +202,14 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
           <div className="border-b border-slate-100 px-5 py-4">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{preparing ? 'Tiến độ hoàn thiện' : 'Trạng thái hồ sơ'}</p>
             <h3 className="mt-1 text-base font-bold text-slate-900">{preparing ? 'Hoàn thiện hồ sơ' : statusLabel}</h3>
+            {dossier.dueAtUtc && dossier.status !== 'Giấy tờ sẵn sàng' && dossier.status !== 'Đã tiếp nhận tại quầy' && (
+              <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs">
+                <span className="block text-[11px] font-semibold text-slate-500">Hạn tiền kiểm (45h làm việc):</span>
+                <strong className="text-slate-900 block mt-0.5">
+                  {new Date(dossier.dueAtUtc).toLocaleString('vi-VN')}
+                </strong>
+              </div>
+            )}
           </div>
           <div className="space-y-4 p-5">
             {contents.isPending ? (
@@ -266,6 +277,15 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   <PaperPlaneTilt size={16} aria-hidden />
                   <span>{revising ? 'Gửi lại hồ sơ đã sửa' : 'Gửi hồ sơ tiền kiểm'}</span>
                 </Button>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                  disabled={submitting || mutating || cancelMutation.isPending}
+                  onClick={() => setCancelModalOpen(true)}
+                >
+                  <Trash size={16} aria-hidden />
+                  <span>Hủy hồ sơ tiền kiểm</span>
+                </Button>
                 <p className="text-[11px] text-center text-slate-400">
                   {documentBusy ? 'Lưu bản khai đang mở trước khi gửi.' : missing.length ? 'Cần đủ giấy tờ để gửi kiểm tra.' : 'Gửi để cán bộ rà soát hồ sơ.'}
                 </p>
@@ -277,6 +297,47 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
     </div>
     <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={revising ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa.">
       <div className="space-y-4">{contents.isPending && <Skeleton className="h-4 w-48" role="status" aria-label="Đang kiểm tra giấy tờ" />}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
+    </Modal>
+    <Modal
+      open={cancelModalOpen}
+      onOpenChange={open => { if (!cancelMutation.isPending) setCancelModalOpen(open); }}
+      title="Xác nhận hủy hồ sơ tiền kiểm"
+      description="Hành động này sẽ hủy yêu cầu tiền kiểm của hồ sơ. Hồ sơ đã hủy sẽ được lưu trữ và không thể gửi đi tiếp."
+    >
+      <div className="space-y-4 text-xs">
+        <p className="text-slate-600 leading-relaxed">
+          Bạn có chắc chắn muốn hủy hồ sơ <strong>{dossier.code}</strong> ({dossier.procedureName}) không?
+        </p>
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <Button
+            variant="outline"
+            size="small"
+            disabled={cancelMutation.isPending}
+            onClick={() => setCancelModalOpen(false)}
+          >
+            Quay lại
+          </Button>
+          <Button
+            variant="outline"
+            size="small"
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
+            loading={cancelMutation.isPending}
+            onClick={async () => {
+              if (!dossier.id) return;
+              try {
+                await cancelMutation.mutateAsync(dossier.id);
+                toast.success('Đã hủy hồ sơ tiền kiểm thành công.');
+                setCancelModalOpen(false);
+                onBack();
+              } catch (err) {
+                toast.error(workflowError(err));
+              }
+            }}
+          >
+            Đồng ý hủy hồ sơ
+          </Button>
+        </div>
+      </div>
     </Modal>
   </div>;
 }
