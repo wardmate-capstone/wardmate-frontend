@@ -7,6 +7,8 @@ import {
   Printer,
   Copy,
   MapPin,
+  Lock,
+  Scan,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
 import { Skeleton } from '@/components/ui';
@@ -14,6 +16,10 @@ import axios from 'axios';
 import { updateMyProfile, authErrorMessage } from '@/lib/api';
 import type { UserProfileDto } from '@/types/profile';
 import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
+import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
+import { CccdOcrScanModal } from '@/components/citizen/CccdOcrScanModal';
+import type { CccdExtractionDto } from '@/lib/api/aiOcr';
 
 interface CitizenProfileViewProps {
   initialProfile: UserProfileDto | null;
@@ -64,7 +70,10 @@ export function CitizenProfileView({
   });
 
   const [errors, setErrors] = useState<ProfileFieldErrors>({});
+  const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isPristine =
@@ -183,6 +192,18 @@ export function CitizenProfileView({
     }
   }
 
+  const handleApplyExtractedCccd = (data: CccdExtractionDto) => {
+    setIsEditing(true);
+    setFormData((prev) => ({
+      ...prev,
+      fullName: data.fullName || prev.fullName,
+      identityNumber: data.citizenId || prev.identityNumber,
+      dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+      gender: data.gender || prev.gender,
+      permanentAddress: data.placeOfResidence || prev.permanentAddress,
+    }));
+  };
+
   const initials = formData.fullName.trim()
     ? formData.fullName.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase()
     : 'CD';
@@ -222,50 +243,93 @@ export function CitizenProfileView({
           </div>
 
           {/* Action buttons đặt gọn gàng ở góc banner */}
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {activeTab === 'personal' ? (
               <>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-900 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors shadow-2xs"
+                  onClick={() => setIsOcrModalOpen(true)}
                 >
-                  <Printer size={16} /> In phiếu thông tin
+                  <Scan size={16} weight="bold" />
+                  <span>Quét CCCD (AI OCR)</span>
                 </button>
-                <button
-                  type="button"
-                  className="admin-primary-action text-xs"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <PencilSimple size={16} /> Chỉnh sửa hồ sơ
-                </button>
+                {!isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      onClick={() => window.print()}
+                    >
+                      <Printer size={16} /> In phiếu thông tin
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-primary-action text-xs"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <PencilSimple size={16} /> Chỉnh sửa hồ sơ
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={handleCancel}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving || isPristine}
+                      onClick={() => void handleSaveProfile()}
+                      title={isPristine ? "Chưa có thông tin nào được thay đổi" : "Lưu các thay đổi hồ sơ"}
+                      className="admin-primary-action text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </button>
+                  </>
+                )}
               </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleCancel}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  disabled={saving || isPristine}
-                  onClick={() => void handleSaveProfile()}
-                  title={isPristine ? "Chưa có thông tin nào được thay đổi" : "Lưu các thay đổi hồ sơ"}
-                  className="admin-primary-action text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-              </>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Banner thông báo trạng thái chỉnh sửa */}
+      {/* Tab chuyển đổi phân hệ hồ sơ */}
+      <div className="flex items-center gap-6 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('personal')}
+          className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
+            activeTab === 'personal'
+              ? 'border-red-800 text-red-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <IdentificationCard size={18} weight={activeTab === 'personal' ? 'bold' : 'regular'} />
+          <span>Thông tin cá nhân</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('security')}
+          className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
+            activeTab === 'security'
+              ? 'border-red-800 text-red-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <Lock size={18} weight={activeTab === 'security' ? 'bold' : 'regular'} />
+          <span>Đổi mật khẩu</span>
+        </button>
+      </div>
+
+      {/* Phân hệ 1: Thông tin cá nhân & Định danh */}
+      {activeTab === 'personal' && (
+        <>
+          {/* Banner thông báo trạng thái chỉnh sửa */}
       {isEditing && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
           <div className="flex items-center gap-3">
@@ -595,7 +659,22 @@ export function CitizenProfileView({
             </div>
           </div>
         </section>
+
       </div>
+    </>
+  )}
+
+  {/* Phân hệ 2: Đổi mật khẩu */}
+  {activeTab === 'security' && (
+    <AccountSecuritySection />
+  )}
+
+      <ChangePasswordModal open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
+      <CccdOcrScanModal
+        open={isOcrModalOpen}
+        onOpenChange={setIsOcrModalOpen}
+        onApplyExtractedData={handleApplyExtractedCccd}
+      />
     </div>
   );
 }

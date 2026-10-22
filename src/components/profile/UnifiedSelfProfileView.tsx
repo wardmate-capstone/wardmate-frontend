@@ -11,12 +11,15 @@ import {
   UserCircle,
   Buildings,
   Key,
+  Lock,
 } from '@phosphor-icons/react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import { Skeleton } from '@/components/ui';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
+import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
 
 function formatDate(value?: string | null): string {
   if (!value) return 'Chưa được cập nhật';
@@ -81,7 +84,9 @@ export const UnifiedSelfProfileView: React.FC = () => {
   }, [user?.wardId, wards]);
 
   // Inline edit state
+  const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -169,43 +174,45 @@ export const UnifiedSelfProfileView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {!isEditing ? (
-            <>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                onClick={() => window.print()}
-              >
-                <Printer size={16} /> In phiếu thông tin
-              </button>
-              <button
-                type="button"
-                className="admin-primary-action text-xs"
-                onClick={handleStartEdit}
-              >
-                <PencilSimple size={16} /> Chỉnh sửa hồ sơ
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={handleCancelEdit}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={() => void handleSaveProfile()}
-                className="admin-primary-action text-xs disabled:opacity-50"
-              >
-                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-            </>
-          )}
+          {activeTab === 'personal' ? (
+            !isEditing ? (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={16} /> In phiếu thông tin
+                </button>
+                <button
+                  type="button"
+                  className="admin-primary-action text-xs"
+                  onClick={handleStartEdit}
+                >
+                  <PencilSimple size={16} /> Chỉnh sửa hồ sơ
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleCancelEdit}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => void handleSaveProfile()}
+                  className="admin-primary-action text-xs disabled:opacity-50"
+                >
+                  {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              </>
+            )
+          ) : null}
         </div>
       </div>
 
@@ -254,7 +261,38 @@ export const UnifiedSelfProfileView: React.FC = () => {
         </div>
       </div>
 
-      {/* Banner thông báo trạng thái chỉnh sửa */}
+      {/* Tab chuyển đổi phân hệ hồ sơ */}
+      <div className="flex items-center gap-6 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('personal')}
+          className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
+            activeTab === 'personal'
+              ? 'border-red-800 text-red-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <IdentificationCard size={18} weight={activeTab === 'personal' ? 'bold' : 'regular'} />
+          <span>Thông tin cán bộ</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('security')}
+          className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
+            activeTab === 'security'
+              ? 'border-red-800 text-red-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <Lock size={18} weight={activeTab === 'security' ? 'bold' : 'regular'} />
+          <span>Đổi mật khẩu</span>
+        </button>
+      </div>
+
+      {/* Phân hệ 1: Thông tin cán bộ & Đơn vị */}
+      {activeTab === 'personal' && (
+        <>
+          {/* Banner thông báo trạng thái chỉnh sửa */}
       {isEditing && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
           <div className="flex items-center gap-3">
@@ -521,10 +559,12 @@ export const UnifiedSelfProfileView: React.FC = () => {
 
         {/* Khối 3: Thông tin Tài khoản & Quyền truy cập */}
         <section className="admin-card p-5 space-y-4 md:col-span-2">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Key size={18} className="text-red-800" />
-            Thông tin Tài khoản & Quyền truy cập
-          </h2>
+          <div className="border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Key size={18} className="text-red-800" />
+              Thông tin Tài khoản &amp; Quyền truy cập
+            </h2>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div>
@@ -582,6 +622,15 @@ export const UnifiedSelfProfileView: React.FC = () => {
           </div>
         </section>
       </div>
+    </>
+  )}
+
+  {/* Phân hệ 2: Đổi mật khẩu & Bảo mật tài khoản (TC-02) */}
+  {activeTab === 'security' && (
+    <AccountSecuritySection />
+  )}
+
+      <ChangePasswordModal open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
     </div>
   );
 };
