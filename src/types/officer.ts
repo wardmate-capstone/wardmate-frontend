@@ -6,9 +6,6 @@ export type OfficerSection =
   | 'apps-need-revision'
   | 'apps-resubmitted'
   | 'apps-approved'
-  | 'apps-ready-submit'
-  | 'receipt-waiting'
-  | 'receipt-received'
   | 'audit-log'
   | 'notifications'
   | 'profile';
@@ -18,11 +15,11 @@ export type ApplicationStatus =
   | 'UNDER_REVIEW'         // Đang kiểm tra
   | 'NEED_REVISION'        // Cần bổ sung
   | 'RESUBMITTED'          // Đã gửi lại
-  | 'DOCUMENTS_READY'      // Giấy tờ sẵn sàng, có thể tải PDF
+  | 'DOCUMENTS_READY'      // Giấy tờ sẵn sàng (Hoàn thành tiền kiểm trực tuyến)
   | 'APPROVED'             // Trạng thái lịch sử, không mở khóa PDF
   | 'REJECTED'             // Từ chối tiền kiểm
-  | 'READY_TO_SUBMIT'      // Chờ tiếp nhận chính thức
-  | 'OFFICIALLY_RECEIVED'; // Đã tiếp nhận tại UBND
+  | 'READY_TO_SUBMIT'      // Trạng thái tương thích cũ
+  | 'OFFICIALLY_RECEIVED'; // Trạng thái ngoài hệ thống Một cửa điện tử Nhà nước
 
 export interface CitizenInfo {
   fullName: string;
@@ -159,6 +156,8 @@ export interface OfficerApplication {
   currentVersion: number;
   officialPaperChecklist?: OfficialPaperCheckItem[];
   officialReceipt?: OfficialReceiptData;
+  dueAtUtc?: string | null;
+  deadlineStatus?: string | null;
 }
 
 export interface OfficerAuditLog {

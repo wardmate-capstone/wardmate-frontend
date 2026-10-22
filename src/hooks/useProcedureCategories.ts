@@ -44,3 +44,11 @@ export function usePublicProcedureDetail(id?: string) {
     enabled: Boolean(id),
   });
 }
+
+export function useFeaturedProcedures() {
+  return useQuery({
+    queryKey: ['procedures', 'public', 'featured'],
+    queryFn: ({ signal }) => procedureApi.featured(signal),
+    staleTime: 5 * 60_000,
+  });
+}

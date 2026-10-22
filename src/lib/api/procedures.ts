@@ -63,6 +63,7 @@ function toDateOnlyString(value: string): string {
 
 export const procedureApi = {
   categories: async (signal?: AbortSignal) => z.array(categorySchema).parse((await api.get(catalogPath('/api/v1/procedures/categories'), { skipAuth: true, signal })).data),
+  featured: async (signal?: AbortSignal) => z.array(summarySchema).parse((await api.get(catalogPath('/api/v1/procedures/featured'), { skipAuth: true, signal })).data),
   list: async (query: ProcedureQuery, managed = false, signal?: AbortSignal) => pagedSchema.parse((await api.get(managed ? manager : catalogPath('/api/v1/procedures'), { params: query, skipAuth: !managed, signal })).data),
   detail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(catalogPath(`/api/v1/procedures/${encodeURIComponent(id)}`), { skipAuth: true, signal })).data),
   managerDetail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`${manager}/${encodeURIComponent(id)}`, { signal })).data),

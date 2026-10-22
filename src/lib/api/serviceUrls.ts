@@ -10,6 +10,7 @@ export const serviceUrls = {
   catalog: useApiProxy ? '' : normalize(env.VITE_CATALOG_API_URL),
   workflow: useApiProxy ? '' : normalize(env.VITE_WORKFLOW_API_URL),
   documentForm: useApiProxy ? '' : normalize(env.VITE_DOCUMENT_FORM_API_URL),
+  aiOcr: useApiProxy ? '' : normalize(env.VITE_AI_OCR_API_URL || env.VITE_DOCUMENT_FORM_API_URL),
 };
 
 export function servicePath(baseUrl: string, path: string) {

@@ -65,6 +65,11 @@ export const applicationDtoSchema = z.object({
   approvedAt: z.string().nullish(),
   documentsReadyAt: z.string().nullish(),
   wardCode: z.string().nullish(),
+  dueAtUtc: z.string().nullish(),
+  deadlineStatus: z.string().nullish(),
+  receiptNumber: z.string().nullish(),
+  receivedAt: z.string().nullish(),
+  appointmentDate: z.string().nullish(),
 });
 
 export const applicationSummaryDtoSchema = z.object({
@@ -76,6 +81,15 @@ export const applicationSummaryDtoSchema = z.object({
   createdAt: z.string(),
   submittedAt: z.string().nullish(),
   wardCode: z.string().nullish(),
+  assignedOfficerId: z.string().nullish(),
+  assignedOfficerName: z.string().nullish(),
+  applicantName: z.string().nullish(),
+  citizenId: z.string().nullish(),
+  dueAtUtc: z.string().nullish(),
+  deadlineStatus: z.string().nullish(),
+  receiptNumber: z.string().nullish(),
+  receivedAt: z.string().nullish(),
+  appointmentDate: z.string().nullish(),
 });
 
 export const applicationPageSchema = z.object({
@@ -184,6 +198,33 @@ export type OfficerPendingInput = {
   pageSize?: number;
 };
 
+export type OfficerListInput = {
+  status?: string;
+  procedureId?: string;
+  applicationCode?: string;
+  submittedFrom?: string;
+  submittedTo?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export const officialReceiptInputSchema = z.object({
+  paperDossierVerified: z.literal(true),
+  notes: z.string().max(4000).nullish(),
+  appointmentDate: z.string().nullish(),
+});
+export type OfficialReceiptInput = z.infer<typeof officialReceiptInputSchema>;
+
+export const officialReceiptDtoSchema = z.object({
+  applicationId: z.string(),
+  status: z.string(),
+  receiptNumber: z.string().nullish(),
+  receivedAt: z.string().nullish(),
+  appointmentDate: z.string().nullish(),
+  message: z.string().nullish(),
+});
+export type OfficialReceiptDto = z.infer<typeof officialReceiptDtoSchema>;
+
 // ----------------------------------------------------
 // API Client Methods
 // ----------------------------------------------------
@@ -201,6 +242,21 @@ export const workflowApi = {
     if (input.submittedTo) params.SubmittedTo = input.submittedTo;
 
     const res = await api.get(workflowPath('/api/v1/officer/applications/pending'), { params, signal });
+    return applicationPageSchema.parse(res.data);
+  },
+
+  listOfficerApplications: async (input: OfficerListInput = {}, signal?: AbortSignal) => {
+    const params: Record<string, unknown> = {
+      Page: input.page ?? 1,
+      PageSize: input.pageSize ?? 20,
+    };
+    if (input.status && input.status !== 'ALL') params.Status = input.status;
+    if (input.procedureId) params.ProcedureId = input.procedureId;
+    if (input.applicationCode) params.ApplicationCode = input.applicationCode;
+    if (input.submittedFrom) params.SubmittedFrom = input.submittedFrom;
+    if (input.submittedTo) params.SubmittedTo = input.submittedTo;
+
+    const res = await api.get(workflowPath('/api/v1/officer/applications'), { params, signal });
     return applicationPageSchema.parse(res.data);
   },
 
@@ -230,6 +286,11 @@ export const workflowApi = {
       }
       throw error;
     }
+  },
+
+  officiallyReceiveApplication: async (id: string, input: OfficialReceiptInput) => {
+    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/officially-received`), input);
+    return officialReceiptDtoSchema.parse(res.data);
   },
 
   getOfficerApplication: async (id: string, signal?: AbortSignal) => {
@@ -265,6 +326,11 @@ export const workflowApi = {
 
   submitApplication: async (id: string) => {
     const res = await api.post(workflowPath(`/api/v1/applications/${id}/submit`));
+    return applicationDtoSchema.parse(res.data);
+  },
+
+  cancelApplication: async (id: string) => {
+    const res = await api.post(workflowPath(`/api/v1/applications/${id}/cancel`));
     return applicationDtoSchema.parse(res.data);
   },
 

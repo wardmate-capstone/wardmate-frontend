@@ -173,6 +173,19 @@ export async function deleteMyProfile(): Promise<void> {
   if (owner && useAuthStore.getState().user === owner) useAuthStore.setState({ user: { ...owner, profile: null } });
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+export async function changePassword(payload: ChangePasswordRequest): Promise<{ message: string }> {
+  const response = await api.post<{ message: string }>('/api/v1/users/me/change-password', payload, cookieConfig);
+  clearSession();
+  channel?.postMessage('logout');
+  return response.data;
+}
+
 // -----------------------------------------------------------
 // ADMIN — Accounts API
 // -----------------------------------------------------------

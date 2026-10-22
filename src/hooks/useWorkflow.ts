@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   workflowApi,
   type OfficerPendingInput,
+  type OfficerListInput,
+  type OfficialReceiptInput,
   type AddCommentInput,
   type RequestRevisionInput,
   type CreateApplicationInput,
@@ -17,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 export const workflowQueryKeys = {
   officerPending: (filters?: OfficerPendingInput) => ['workflow', 'officer', 'pending', filters] as const,
+  officerApplications: (filters?: OfficerListInput) => ['workflow', 'officer', 'applications', filters] as const,
   citizenApplications: () => ['workflow', 'citizen', 'applications'] as const,
   applicationDetail: (id?: string) => ['workflow', 'application', id] as const,
   applicationComments: (id?: string, versionNumber?: number, status?: string) => ['workflow', 'application', id, 'comments', { versionNumber, status }] as const,
@@ -39,12 +42,23 @@ export function useOfficerPendingApplications(filters: OfficerPendingInput = {})
   });
 }
 
+export function useOfficerApplications(filters: OfficerListInput = {}) {
+  const userId = useAuthStore((state) => state.user?.id);
+  return useQuery({
+    queryKey: ['workflow', 'officer', 'applications', userId, filters],
+    queryFn: ({ signal }) => workflowApi.listOfficerApplications(filters, signal),
+    enabled: Boolean(userId),
+    refetchInterval: false,
+  });
+}
+
 export function useAssignOfficerMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => workflowApi.assignOfficer(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
       queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
@@ -71,6 +85,7 @@ export function useRequestRevisionMutation() {
       { await (submissionId ? documentFormApi.officerRequestRevision(submissionId, input.reason) : workflowApi.requestRevision(id, input)); },
     onSettled: (_, _error, { id }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
       queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] }),
     ]).then(() => undefined),
@@ -84,9 +99,24 @@ export function useConfirmReadinessMutation() {
       { await (submissionId ? documentFormApi.officerConfirmReadiness(submissionId) : workflowApi.confirmReadiness(id)); },
     onSettled: (_, _error, { id }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
       queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] }),
     ]).then(() => undefined),
+  });
+}
+
+export function useOfficiallyReceiveMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: OfficialReceiptInput }) =>
+      workflowApi.officiallyReceiveApplication(id, input),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
+    },
   });
 }
 
@@ -190,6 +220,18 @@ export function useResubmitApplicationMutation() {
       queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'versions'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'comments'] });
+    },
+  });
+}
+
+export function useCancelApplicationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => workflowApi.cancelApplication(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'citizen', 'applications'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
     },
   });
 }

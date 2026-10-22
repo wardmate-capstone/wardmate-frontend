@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => {
     proxy['/api/v1/generated-documents'] = documentForm;
     proxy['^/api/v1/applications/[^/]+/(contents|supporting-documents|generate-pdf|generated-documents|approved-qr(?:/image)?)(?:\\?.*)?$'] = documentForm;
     proxy['/api/v1/form-templates'] = documentForm;
+    proxy['/api/v1/ai-ocr'] = documentForm;
+    proxy['/api/v1/ai/chat'] = documentForm;
   }
   if (catalog) {
     proxy['/api/v1/procedures'] = catalog;

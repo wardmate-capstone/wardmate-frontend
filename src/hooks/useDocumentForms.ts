@@ -41,6 +41,7 @@ export function useDocumentMutations() {
   };
   return {
     createDraft: useMutation({ mutationFn: documentFormApi.createDraft, onSuccess: (_, input) => refresh(input.applicationId, input.applicantId) }),
+    uploadFilledDocx: useMutation({ mutationFn: documentFormApi.uploadFilledDocx, onSuccess: (_, input) => refresh(input.applicationId, input.applicantId) }),
     updateDraft: useMutation({ mutationFn: (input: { submissionId: string; applicationId: string; applicantId: string; file: File }) => documentFormApi.updateDraft(input.submissionId, input.applicantId, input.file), onSuccess: (_, input) => refresh(input.applicationId, input.applicantId) }),
     submitDraft: useMutation({ mutationFn: (input: { submissionId: string; applicationId: string; applicantId: string }) => documentFormApi.submitDraft(input.submissionId, input.applicantId), onSuccess: (_, input) => refresh(input.applicationId, input.applicantId) }),
     uploadSupporting: useMutation({ mutationFn: documentFormApi.uploadSupportingDocument, onSuccess: (_, input) => refresh(input.applicationId) }),

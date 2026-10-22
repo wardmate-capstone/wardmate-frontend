@@ -156,6 +156,16 @@ export const documentFormApi = {
     const response = await api.post(documentPath('/api/v1/citizen/submissions/draft'), data, { headers: { 'Content-Type': undefined } });
     return saveSubmissionResultSchema.parse(response.data);
   },
+  uploadFilledDocx: async (input: { templateId: string; applicationId: string; checklistId: string; applicantId: string; file: File }) => {
+    const data = new FormData();
+    data.append('TemplateId', input.templateId);
+    data.append('ApplicationId', input.applicationId);
+    data.append('ChecklistId', input.checklistId);
+    data.append('ApplicantId', input.applicantId);
+    appendFile(data, input.file);
+    const response = await api.post(documentPath('/api/v1/citizen/submissions/upload-filled-docx'), data, { headers: { 'Content-Type': undefined } });
+    return saveSubmissionResultSchema.parse(response.data);
+  },
   updateDraft: async (submissionId: string, applicantId: string, file: File) => {
     const data = new FormData(); data.append('ApplicantId', applicantId); appendFile(data, file);
     const response = await api.put(documentPath(`/api/v1/citizen/submissions/${submissionId}/draft`), data, { headers: { 'Content-Type': undefined } });
@@ -183,6 +193,7 @@ export const documentFormApi = {
   },
   deleteSupportingDocument: (documentId: string) => api.delete(documentPath(`/api/v1/supporting-documents/${documentId}`)),
   downloadSupportingDocument: (documentId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/supporting-documents/${documentId}/download`, signal),
+  previewSupportingDocument: (documentId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/supporting-documents/${documentId}/preview`, signal),
   generatePdf: async (applicationId: string, submissionId: string, documentType = 'ORIGINAL_SUBMISSION') => {
     const data = new FormData(); data.append('SubmissionId', submissionId); data.append('DocumentType', documentType);
     const response = await api.post(documentPath(`/api/v1/applications/${applicationId}/generate-pdf`), data, { headers: { 'Content-Type': undefined } });
