@@ -14,6 +14,7 @@ import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
 import { GeneratedDocumentsPanel } from '@/pages/citizen/components/GeneratedDocumentsPanel';
 import { useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormError } from '@/lib/api/documentForms';
+import { aiOcrApi } from '@/lib/api/aiOcr';
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
 import {
   ArrowLeft,
@@ -55,6 +56,12 @@ const QUICK_COMMENT_TEMPLATES = [
   'Vui lòng tải lại bản chính hoặc bản sao có chứng thực theo đúng quy định.',
 ];
 
+const QUICK_REVISION_TEMPLATES = [
+  'Ảnh chụp/bản scan giấy tờ bị mờ, lóa hoặc mất góc, không đối soát được thông tin.',
+  'Tờ khai còn thiếu chữ ký hoặc thông tin chưa trùng khớp với giấy tờ tùy thân.',
+  'Thiếu thành phần hồ sơ bắt buộc theo quy định, vui lòng bổ sung đầy đủ.',
+];
+
 export function OfficerReviewWorkspaceView({
   application,
   onBack,
@@ -87,6 +94,7 @@ export function OfficerReviewWorkspaceView({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
+  const [isGeneratingAiReason, setIsGeneratingAiReason] = useState(false);
   const decisionLock = useRef(false);
   const commentLock = useRef(false);
   const submissionSelect = useRef<HTMLSelectElement>(null);
@@ -148,6 +156,55 @@ export function OfficerReviewWorkspaceView({
     setDecisionContext({ version, hadSubmissions: Boolean(submissions.data?.length) });
     reasonForm.reset({ reason: '' });
     setDecision(next);
+  }
+
+  async function handleGenerateAiReason() {
+    if (isGeneratingAiReason || busy) return;
+    setIsGeneratingAiReason(true);
+    try {
+      const missingDocs = mandatoryChecklists
+        .filter((c) => c.status !== 'COMPLETED')
+        .map((c) => c.title || c.code);
+
+      const commentsList = openComments.map((c) => `${c.fieldLabel}: ${c.commentText}`);
+
+      const issues: string[] = [];
+      if (missingDocs.length > 0) {
+        issues.push(`Giấy tờ bắt buộc chưa đạt hoặc thiếu: ${missingDocs.join(', ')}`);
+      }
+      if (commentsList.length > 0) {
+        issues.push(`Chi tiết sai sót: ${commentsList.join('; ')}`);
+      }
+      if (issues.length === 0) {
+        issues.push('Hồ sơ cần rà soát lại thông tin theo quy định thủ tục hành chính');
+      }
+
+      const prompt = `Bạn đóng vai Cán bộ Một cửa tiếp nhận hồ sơ hành chính cấp Xã/Phường.
+Thủ tục: "${application.procedureName}".
+Hồ sơ của công dân có các điểm chưa đạt yêu cầu sau:
+${issues.map((it, idx) => `${idx + 1}. ${it}`).join('\n')}
+
+Hãy soạn 1 đoạn ngắn (dưới 120 từ), văn phong hành chính trang trọng, lịch sự, nêu rõ lý do từ chối tạm thời và hướng dẫn công dân bổ sung hoặc tải lên lại đúng giấy tờ để được tiền kiểm lại.
+Chỉ trả về nội dung lý do để gửi cho người dân, không thêm lời chào/kết thừa.`;
+
+      const res = await aiOcrApi.chat({
+        message: prompt,
+        wardCode: detail.data?.wardCode || 'WARD_001',
+      });
+
+      if (res.answer) {
+        reasonForm.setValue('reason', res.answer.trim(), {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        toast.success('Đã tạo gợi ý lý do bổ sung từ AI!');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể kết nối AI. Vui lòng nhập lý do thủ công.';
+      toast.error(msg);
+    } finally {
+      setIsGeneratingAiReason(false);
+    }
   }
 
   async function confirmDecision() {
@@ -896,14 +953,54 @@ export function OfficerReviewWorkspaceView({
           )}
 
           {decision === 'revision' && (
-            <Input
-              label="Lý do"
-              required
-              maxLength={4000}
-              disabled={busy}
-              {...reasonForm.register('reason')}
-              error={reasonForm.formState.errors.reason?.message}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-800" htmlFor="decision-revision-reason">
+                  Lý do yêu cầu bổ sung <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  disabled={isGeneratingAiReason || busy}
+                  onClick={() => void handleGenerateAiReason()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors disabled:opacity-50"
+                  title="Dùng AI tổng hợp lỗi checklist thành văn bản hành chính lịch sự"
+                >
+                  <Sparkles className={`size-3.5 ${isGeneratingAiReason ? 'animate-spin text-purple-600' : ''}`} />
+                  <span>{isGeneratingAiReason ? 'Đang tạo văn bản...' : 'AI gợi ý lý do'}</span>
+                </button>
+              </div>
+
+              {/* Mẫu nhanh hành chính */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-slate-400">Mẫu nhanh:</span>
+                {QUICK_REVISION_TEMPLATES.map((tpl, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => reasonForm.setValue('reason', tpl, { shouldValidate: true, shouldDirty: true })}
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-left truncate max-w-[220px]"
+                    title={tpl}
+                  >
+                    {tpl}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                id="decision-revision-reason"
+                rows={4}
+                maxLength={4000}
+                disabled={busy}
+                placeholder="Nhập chi tiết các nội dung công dân cần chỉnh sửa, bổ sung..."
+                {...reasonForm.register('reason')}
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100 disabled:opacity-50"
+              />
+              {reasonForm.formState.errors.reason?.message && (
+                <span role="alert" className="text-xs text-red-600 font-medium">
+                  {reasonForm.formState.errors.reason.message}
+                </span>
+              )}
+            </div>
           )}
 
           {actionError && (
