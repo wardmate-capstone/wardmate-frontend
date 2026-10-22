@@ -4,7 +4,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
 import { ListSkeleton } from '@/components/ui';
 import {
-  FileText,
   ArrowRight,
   CaretRight,
   TrendUp,
@@ -12,6 +11,7 @@ import {
   ChartBar,
   Lightning,
   Check,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
 
@@ -32,11 +32,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 }) => {
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
-  const officerName = profile?.fullName?.trim() || user?.username || 'Lê Thu Hà';
+  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
-  // Hồ sơ gửi lại cần ưu tiên & hồ sơ chờ tiếp nhận
+  // Hồ sơ gửi lại cần ưu tiên & hồ sơ có giấy tờ sẵn sàng
   const resubmittedApps = applications.filter((a) => a.status === 'RESUBMITTED');
-  const readySubmitApps = applications.filter((a) => a.status === 'READY_TO_SUBMIT');
+  const documentsReadyApps = applications.filter((a) => a.status === 'DOCUMENTS_READY');
 
   // Top hồ sơ gửi lại cần ưu tiên xem ngay (tối đa 2 hồ sơ để tổng quan không bị dài)
   const priorityResubmittedApps = resubmittedApps.slice(0, 2);
@@ -161,30 +161,33 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 
         {/* Cột 3 (1/3 width): Tổng quan các chức năng chính & Ca trực */}
         <div className="space-y-6">
-          {/* Card Tiếp nhận tại quầy (Chức năng cốt lõi của Officer) */}
+          {/* Card Hồ sơ giấy tờ sẵn sàng nộp UBND */}
           <section
             aria-labelledby="desk-action-heading"
-            className="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/70 to-emerald-50/40 p-5 shadow-2xs space-y-3"
+            className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-5 shadow-2xs space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="grid size-8 place-items-center rounded-lg bg-teal-100 text-teal-800">
-                  <FileText size={18} weight="bold" />
+                <span className="grid size-8 place-items-center rounded-lg bg-emerald-100 text-emerald-800">
+                  <CheckCircle size={18} weight="bold" />
                 </span>
-                <h3 id="desk-action-heading" className="text-sm font-bold text-teal-950">
-                  Tiếp nhận hồ sơ tại quầy
+                <h3 id="desk-action-heading" className="text-sm font-bold text-emerald-950">
+                  Giấy tờ sẵn sàng nộp UBND
                 </h3>
               </div>
-              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-teal-100 text-teal-900 border border-teal-200">
-                {isLoading ? '…' : readySubmitApps.length} chờ tiếp nhận
+              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
+                {isLoading ? '…' : documentsReadyApps.length} hồ sơ đã duyệt
               </span>
             </div>
+            <p className="text-xs text-slate-600">
+              Hồ sơ đã hoàn thành tiền kiểm. Công dân đã nhận mã QR và bản PDF tờ khai để mang đến nộp tại bộ phận Một cửa.
+            </p>
             <button
               type="button"
-              onClick={() => onSelectSection('receipt-waiting')}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-900 transition-colors shadow-2xs"
+              onClick={() => onSelectSection('apps-approved')}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 transition-colors shadow-2xs"
             >
-              <span>Tiếp nhận tại quầy</span>
+              <span>Xem danh sách hồ sơ sẵn sàng</span>
               <ArrowRight size={14} aria-hidden="true" />
             </button>
           </section>

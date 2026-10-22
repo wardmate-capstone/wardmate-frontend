@@ -15,8 +15,9 @@ import { preparationSteps } from '@/data/landing';
 
 import { useNavigate } from 'react-router-dom';
 import { procedureError } from '@/lib/api/procedures';
-import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
+import { useProcedureCategories, usePublicProcedureList, useFeaturedProcedures } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
+import { AiChatWidget } from '@/components/ai/AiChatWidget';
 
 const reveal = {
   initial: { opacity: 0, y: 18 },
@@ -31,8 +32,10 @@ export function HomePage() {
 
   const navigate = useNavigate();
   const categories = useProcedureCategories();
+  const featured = useFeaturedProcedures();
   const procedures = usePublicProcedureList({ keyword: submittedQuery || undefined, pageSize: 5 });
   const searchResults = procedures.data?.items ?? [];
+  const featuredList = featured.data ?? [];
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,24 +103,55 @@ export function HomePage() {
 
         <div id="ket-qua-tra-cuu" className="mt-14 scroll-mt-52 border-t border-slate-200 pt-10">
           <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div><p className="section-label">Danh mục công khai</p><h2 className="mt-2 text-3xl font-bold text-slate-950">Thủ tục hành chính</h2></div>
+            <div>
+              <p className="section-label">{submittedQuery ? 'Kết quả tra cứu' : 'Thủ tục nổi bật'}</p>
+              <h2 className="mt-2 text-3xl font-bold text-slate-950">
+                {submittedQuery ? `Thủ tục khớp với “${submittedQuery}”` : 'Thủ tục hành chính được quan tâm'}
+              </h2>
+            </div>
             {submittedQuery && <button type="button" onClick={() => { setQuery(''); setSubmittedQuery(''); }} className="min-h-11 self-start text-sm font-bold text-red-800 underline decoration-red-200 underline-offset-4 sm:self-auto">Xóa từ khóa “{submittedQuery}”</button>}
           </div>
-          <ProcedureFeedback error={procedures.isError ? procedureError(procedures.error) : ''} retry={() => { void procedures.refetch(); }} />
-          {procedures.isPending && <div className="mt-7"><ListSkeleton /></div>}
-          {searchResults.length > 0 ? (
-            <div className="procedure-list relative z-10">
-              {searchResults.map((procedure, index) => (
-                <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
-                  <span className="procedure-index">{String(index + 1).padStart(2, '0')}</span>
-                  <span className="procedure-content"><span>{procedure.categoryName}</span><strong>{procedure.title}</strong></span>
-                  <span className="procedure-link"><span>Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
-                </button>
-              ))}
-            </div>
-          ) : !procedures.isPending && !procedures.isError ? (
-            <div className="mt-7 border border-dashed border-red-200 bg-red-50/50 px-5 py-12 text-center"><FileSearch className="mx-auto text-red-400" size={34} aria-hidden="true" /><h3 className="mt-4 text-lg font-bold text-slate-950">Chưa tìm thấy thủ tục phù hợp</h3><p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-600">Thử dùng từ khóa ngắn hơn như “khai sinh”, “kết hôn” hoặc chọn một lĩnh vực phía trên.</p></div>
-          ) : null}
+          {submittedQuery ? (
+            <>
+              <ProcedureFeedback error={procedures.isError ? procedureError(procedures.error) : ''} retry={() => { void procedures.refetch(); }} />
+              {procedures.isPending && <div className="mt-7"><ListSkeleton /></div>}
+              {searchResults.length > 0 ? (
+                <div className="procedure-list relative z-10">
+                  {searchResults.map((procedure, index) => (
+                    <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
+                      <span className="procedure-index">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="procedure-content"><span>{procedure.categoryName}</span><strong>{procedure.title}</strong></span>
+                      <span className="procedure-link"><span>Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
+                    </button>
+                  ))}
+                </div>
+              ) : !procedures.isPending && !procedures.isError ? (
+                <div className="mt-7 border border-dashed border-red-200 bg-red-50/50 px-5 py-12 text-center"><FileSearch className="mx-auto text-red-400" size={34} aria-hidden="true" /><h3 className="mt-4 text-lg font-bold text-slate-950">Chưa tìm thấy thủ tục phù hợp</h3><p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-600">Thử dùng từ khóa ngắn hơn như “khai sinh”, “kết hôn” hoặc chọn một lĩnh vực phía trên.</p></div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <ProcedureFeedback error={featured.isError ? procedureError(featured.error) : ''} retry={() => { void featured.refetch(); }} />
+              {featured.isPending && <div className="mt-7"><ListSkeleton /></div>}
+              {featuredList.length > 0 ? (
+                <div className="procedure-list relative z-10">
+                  {featuredList.map((procedure, index) => (
+                    <button key={procedure.id} type="button" onClick={() => navigate('/thu-tuc/' + procedure.id)} className="procedure-row group" aria-label={`Xem hướng dẫn ${procedure.title}`}>
+                      <span className="procedure-index">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="procedure-content">
+                        <span className="flex items-center gap-2">
+                          <span>{procedure.categoryName}</span>
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">Nổi bật</span>
+                        </span>
+                        <strong>{procedure.title}</strong>
+                      </span>
+                      <span className="procedure-link"><span>Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" /></span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       </section>
 
@@ -144,6 +178,9 @@ export function HomePage() {
           <a href="#trang-chu" className="relative z-10 mt-7 inline-flex min-h-14 shrink-0 items-center gap-2 bg-gold-400 px-7 text-base font-bold text-red-950 hover:bg-gold-300 lg:mt-0">Tra cứu thủ tục <ArrowRight size={18} aria-hidden="true" /></a>
         </div>
       </section>
+
+      {/* Trợ lý ảo AI hỏi đáp */}
+      <AiChatWidget />
     </>
   );
 }

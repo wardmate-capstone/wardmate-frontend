@@ -67,8 +67,6 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         return 'RESUBMITTED';
       case 'apps-approved':
         return 'DOCUMENTS_READY';
-      case 'apps-ready-submit':
-        return 'READY_TO_SUBMIT';
       default:
         return 'ALL';
     }
@@ -78,6 +76,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   const procedureOptions = useMemo(() => {
     const set = new Set<string>();
     applications.forEach((a) => set.add(a.procedureName));
+    return Array.from(set);
+  }, [applications]);
+
+  // Unique assigned officers list
+  const officerOptions = useMemo(() => {
+    const set = new Set<string>();
+    applications.forEach((a) => {
+      if (a.assignedOfficer && a.assignedOfficer !== 'Chưa phân công') {
+        set.add(a.assignedOfficer);
+      }
+    });
     return Array.from(set);
   }, [applications]);
 
@@ -247,7 +256,11 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               >
                 <option value="ALL">Mọi cán bộ</option>
-                <option value="Lê Thu Hà">Cán bộ Lê Thu Hà</option>
+                {officerOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
                 <option value="Chưa phân công">Chưa phân công</option>
               </select>
               <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -274,36 +287,27 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
         </div>
 
-        {/* Results summary & clear */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-          <span>
-            Tìm thấy <strong className="font-bold text-slate-900">{filteredApps.length}</strong> hồ sơ phù hợp
-          </span>
-          {(searchQuery || selectedProcedure !== 'ALL' || selectedOfficer !== 'ALL') && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedProcedure('ALL');
-                setSelectedOfficer('ALL');
-              }}
-              className="text-red-700 font-semibold hover:underline"
-            >
-              Xóa bộ lọc
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Semantic Application Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-5 py-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-700">Hàng đợi hồ sơ tiếp nhận</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {isLoading ? 'Đang tải…' : `${filteredApps.length} hồ sơ`}
+        {/* Results summary, clear & refresh */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 pt-1">
+          <div className="flex items-center gap-3">
+            <span>
+              Tìm thấy <strong className="font-bold text-slate-900">{filteredApps.length}</strong> hồ sơ phù hợp
             </span>
+            {(searchQuery || selectedProcedure !== 'ALL' || selectedOfficer !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedProcedure('ALL');
+                  setSelectedOfficer('ALL');
+                }}
+                className="text-red-700 font-semibold hover:underline"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
           </div>
+
           {onRefresh && (
             <button
               type="button"
@@ -317,6 +321,10 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             </button>
           )}
         </div>
+      </div>
+
+      {/* Semantic Application Table */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
@@ -375,7 +383,20 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
                     {/* Ngày gửi */}
                     <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                      {app.submittedAt}
+                      <div>{app.submittedAt}</div>
+                      {app.dueAtUtc && app.status !== 'DOCUMENTS_READY' && app.status !== 'OFFICIALLY_RECEIVED' && app.status !== 'REJECTED' && (
+                        <div className="mt-1">
+                          {app.urgency === 'overdue' ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                              Quá hạn
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              Hạn: {new Date(app.dueAtUtc).toLocaleDateString('vi-VN')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     {/* Cán bộ */}

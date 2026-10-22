@@ -25,7 +25,7 @@ export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenM
   return <WorkspaceSidebar workspace="manager" subtitle="Quản lý điều hành" activeSection={currentSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpenMobile} onClose={onCloseMobile} isCompact={isCollapsedDesktop} />;
 }
 
-export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, onClose, isCompact }: { activeSection: OfficerSection; onSelectSection: (section: OfficerSection) => void; isOpen: boolean; onClose: () => void; isCompact: boolean; badgeCounts?: { pending: number; reviewing: number; needRevision: number; resubmitted: number; approved: number; readySubmit: number; receivedToday: number; unreadNotifs: number } }) {
+export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, onClose, isCompact }: { activeSection: OfficerSection; onSelectSection: (section: OfficerSection) => void; isOpen: boolean; onClose: () => void; isCompact: boolean; badgeCounts?: { pending: number; reviewing: number; needRevision: number; resubmitted: number; approved: number; unreadNotifs: number } }) {
   const role = ['FRONT_DESK_OFFICER'];
   const groups: WorkspaceNavGroup<OfficerSection>[] = [
     { title: 'Tổng quan', items: [{ id: 'dashboard', label: 'Tổng quan', icon: House, fallbackRoles: role }] },
@@ -33,7 +33,6 @@ export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, 
       { id: 'apps-all', label: 'Tất cả hồ sơ', icon: Files, fallbackRoles: role }, { id: 'apps-pending', label: 'Chờ tiền kiểm', icon: Hourglass, fallbackRoles: role },
       { id: 'apps-reviewing', label: 'Đang kiểm tra', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'apps-need-revision', label: 'Cần bổ sung', icon: WarningCircle, fallbackRoles: role },
       { id: 'apps-resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, fallbackRoles: role }, { id: 'apps-approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, fallbackRoles: role },
-      { id: 'apps-ready-submit', label: 'Chờ tiếp nhận chính thức', icon: FileText, fallbackRoles: role },
     ] }] },
     { title: 'Hệ thống & Ca trực', items: [{ id: 'audit-log', label: 'Lịch sử xử lý', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];

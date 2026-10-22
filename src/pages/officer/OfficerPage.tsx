@@ -14,7 +14,6 @@ import { OfficerHeader } from './OfficerHeader';
 import { OfficerDashboardView } from './OfficerDashboardView';
 import { OfficerApplicationListView } from './OfficerApplicationListView';
 import { OfficerReviewWorkspaceView } from './OfficerReviewWorkspaceView';
-import { OfficerReceiptWorkspaceView } from './OfficerReceiptWorkspaceView';
 import { OfficerAuditLogView } from './OfficerAuditLogView';
 import { OfficerNotificationView } from './OfficerNotificationView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
@@ -22,7 +21,7 @@ import { X, Eye, ArrowRight } from '@phosphor-icons/react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import {
-  useOfficerPendingApplications,
+  useOfficerApplications,
   useAssignOfficerMutation,
   useRequestRevisionMutation,
   useConfirmReadinessMutation,
@@ -30,7 +29,11 @@ import {
 import {
   mapSummaryDtoToOfficerApplication,
   mapApplicationDtoToOfficerApplication,
+  parseFormData,
+  extractCitizenInfoFromFormData,
+  type OfficerLookup,
 } from '@/lib/api/workflowAdapters';
+import { getManagerOfficers } from '@/lib/api';
 import { workflowError, workflowApi } from '@/lib/api/workflow';
 import { Button } from '@/components/ui';
 
@@ -41,33 +44,126 @@ export const OfficerPage: React.FC = () => {
 
   // TanStack Query & Mutations từ Workflow API
   const [queuePage, setQueuePage] = useState(1);
-  const queue = useOfficerPendingApplications({ page: queuePage, pageSize: 50 });
-  const pendingData = queue.data;
+  const officerApplicationsQuery = useOfficerApplications({ page: queuePage, pageSize: 50 });
+
+  const activeQuery = officerApplicationsQuery;
+  const activeData = activeQuery.data;
   const assignMutation = useAssignOfficerMutation();
   const assignLock = useRef(false);
   const requestRevisionMutation = useRequestRevisionMutation();
   const readinessMutation = useConfirmReadinessMutation();
 
+  const refetchAll = async () => {
+    await officerApplicationsQuery.refetch();
+  };
+
   // Hồ sơ cán bộ — đồng bộ với dữ liệu backend
   const [applications, setApplications] = useState<OfficerApplication[]>([]);
+  // Danh bạ tên cán bộ trong phường
+  const [officerDirectory, setOfficerDirectory] = useState<Record<string, string>>({});
   // Nhật ký hoạt động
   const [auditLogs, setAuditLogs] = useState<OfficerAuditLog[]>([]);
   // Thông báo
   const [notifications, setNotifications] = useState<OfficerNotification[]>([]);
 
-  // Cập nhật applications khi có dữ liệu từ pending queue backend
+  // Tải danh bạ cán bộ trong phường nếu có quyền (vd: Manager hoặc tài khoản có quyền)
   useEffect(() => {
-    if (pendingData?.items) {
-      const mapped = pendingData.items.map(mapSummaryDtoToOfficerApplication);
+    let active = true;
+    getManagerOfficers({ pageSize: 100 })
+      .then((res) => {
+        if (!active || !res?.items) return;
+        const dir: Record<string, string> = {};
+        res.items.forEach((o) => {
+          if (o.id) {
+            dir[o.id.toLowerCase()] = o.fullName?.trim() || o.username;
+          }
+        });
+        setOfficerDirectory((prev) => ({ ...prev, ...dir }));
+      })
+      .catch(() => {
+        // Cán bộ thường không có quyền iam.accounts.read, bỏ qua lỗi 403
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const officerLookup = useMemo<OfficerLookup>(() => {
+    const dir: Record<string, string> = { ...officerDirectory };
+    if (user?.id) {
+      dir[user.id.toLowerCase()] = officerName;
+    }
+    return {
+      currentOfficer: user?.id ? { id: user.id, name: officerName } : undefined,
+      directory: dir,
+    };
+  }, [user?.id, officerName, officerDirectory]);
+
+  // Cache thông tin công dân theo id hồ sơ để hiển thị ngay trên bảng
+  const [citizenInfoMap, setCitizenInfoMap] = useState<Record<string, { fullName: string; citizenId: string }>>({});
+
+  // Tự động nạp ngầm (auto-enrich) thông tin công dân cho danh sách hồ sơ khi summary chưa có applicantName
+  useEffect(() => {
+    if (!activeData?.items || activeData.items.length === 0) return;
+
+    // Lọc ra các hồ sơ chưa có tên người dân và chưa được cache
+    const needEnrich = activeData.items.filter(
+      (item) => (!item.applicantName || item.applicantName.trim() === '') && !citizenInfoMap[item.id]
+    );
+
+    if (needEnrich.length === 0) return;
+
+    let isMounted = true;
+    Promise.allSettled(
+      needEnrich.map(async (item) => {
+        const detail = await workflowApi.getOfficerApplication(item.id);
+        const parsed = parseFormData(detail.formData);
+        const info = extractCitizenInfoFromFormData(parsed);
+        return { id: item.id, fullName: info.fullName, citizenId: info.citizenId };
+      })
+    ).then((results) => {
+      if (!isMounted) return;
+      const updates: Record<string, { fullName: string; citizenId: string }> = {};
+      results.forEach((res) => {
+        if (res.status === 'fulfilled' && res.value.fullName && res.value.fullName !== 'Công dân') {
+          updates[res.value.id] = {
+            fullName: res.value.fullName,
+            citizenId: res.value.citizenId,
+          };
+        }
+      });
+      if (Object.keys(updates).length > 0) {
+        setCitizenInfoMap((prev) => ({ ...prev, ...updates }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeData?.items, citizenInfoMap]);
+
+  // Cập nhật applications khi có dữ liệu từ backend (kết hợp với citizenInfoMap)
+  useEffect(() => {
+    if (activeData?.items) {
+      const mapped = activeData.items.map((item) => {
+        const base = mapSummaryDtoToOfficerApplication(item, officerLookup);
+        const cached = citizenInfoMap[item.id];
+        if (cached) {
+          base.citizen.fullName = cached.fullName;
+          if (cached.citizenId && cached.citizenId !== '—') {
+            base.citizen.citizenId = cached.citizenId;
+          }
+        }
+        return base;
+      });
       setApplications(mapped);
     }
-  }, [pendingData]);
+  }, [activeData, officerLookup, citizenInfoMap]);
 
   // Navigation States
   const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
   const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
   const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
-  const [receiptSubTab, setReceiptSubTab] = useState<'waiting' | 'received'>('waiting');
 
   // Sidebar Layout States
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -81,8 +177,6 @@ export const OfficerPage: React.FC = () => {
       needRevision: applications.filter((a) => a.status === 'NEED_REVISION').length,
       resubmitted: applications.filter((a) => a.status === 'RESUBMITTED').length,
       approved: applications.filter((a) => a.status === 'DOCUMENTS_READY').length,
-      readySubmit: applications.filter((a) => a.status === 'READY_TO_SUBMIT' || a.status === 'DOCUMENTS_READY').length,
-      receivedToday: applications.filter((a) => a.status === 'OFFICIALLY_RECEIVED').length,
       unreadNotifs: notifications.filter((n) => !n.isRead).length,
     };
   }, [applications, notifications]);
@@ -100,7 +194,7 @@ export const OfficerPage: React.FC = () => {
       // Tải chi tiết hồ sơ đầy đủ từ backend để mở workspace
       const fullDto = await workflowApi.getOfficerApplication(appId);
       const comments = await workflowApi.getComments(appId).catch(() => []);
-      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
+      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments, officerLookup);
 
       // Thêm audit log
       const newLog: OfficerAuditLog = {
@@ -117,7 +211,7 @@ export const OfficerPage: React.FC = () => {
       setReviewingApp(mappedApp);
     } catch (err) {
       toast.error(workflowError(err));
-      await queue.refetch();
+      await refetchAll();
     } finally { assignLock.current = false; }
   };
 
@@ -192,7 +286,7 @@ export const OfficerPage: React.FC = () => {
     try {
       const fullDto = await workflowApi.getOfficerApplication(app.id);
       const comments = await workflowApi.getComments(app.id).catch(() => []);
-      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments);
+      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments, officerLookup);
       setReviewingApp(mappedApp);
     } catch (err) {
       toast.error(workflowError(err));
@@ -231,11 +325,6 @@ export const OfficerPage: React.FC = () => {
         activeSection={activeSection}
         onSelectSection={(sec) => {
           setReviewingApp(null);
-          if (sec === 'receipt-waiting') {
-            setReceiptSubTab('waiting');
-          } else if (sec === 'receipt-received') {
-            setReceiptSubTab('received');
-          }
           setActiveSection(sec);
         }}
         isOpen={isSidebarOpen}
@@ -266,7 +355,7 @@ export const OfficerPage: React.FC = () => {
 
         {/* Semantic Main Content */}
         <main id="officer-main" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabIndex={-1}>
-          {queue.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(queue.error)}</p><Button variant="outline" onClick={() => void queue.refetch()}>Thử tải lại hàng đợi</Button></div>}
+          {activeQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(activeQuery.error)}</p><Button variant="outline" onClick={() => void refetchAll()}>Thử tải lại hàng đợi</Button></div>}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView
@@ -283,21 +372,20 @@ export const OfficerPage: React.FC = () => {
               {activeSection === 'dashboard' && (
                 <OfficerDashboardView
                   applications={applications}
-                  isLoading={queue.isPending}
+                  isLoading={activeQuery.isPending}
                   onSelectSection={(sec) => setActiveSection(sec)}
                   onOpenApplicationReview={handleOpenReview}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
                 />
               )}
 
-              {/* SECTION 2: QUẢN LÝ HỒ SƠ (ALL, PENDING, REVIEWING, NEED REVISION, RESUBMITTED, APPROVED, READY TO SUBMIT) */}
+              {/* SECTION 2: QUẢN LÝ HỒ SƠ TIỀN KIỂM */}
               {(activeSection === 'apps-all' ||
                 activeSection === 'apps-pending' ||
                 activeSection === 'apps-reviewing' ||
                 activeSection === 'apps-need-revision' ||
                 activeSection === 'apps-resubmitted' ||
-                activeSection === 'apps-approved' ||
-                activeSection === 'apps-ready-submit') && (
+                activeSection === 'apps-approved') && (
                 <OfficerApplicationListView
                   applications={applications}
                   activeSection={activeSection}
@@ -305,27 +393,17 @@ export const OfficerPage: React.FC = () => {
                   onOpenReviewWorkspace={handleOpenReview}
                   onTakeApplication={handleTakeApplication}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
-                  onRefresh={() => void queue.refetch()}
-                  isRefreshing={queue.isFetching}
-                  isLoading={queue.isPending}
+                  onRefresh={() => void refetchAll()}
+                  isRefreshing={activeQuery.isFetching}
+                  isLoading={activeQuery.isPending}
                   pagination={{
                     currentPage: queuePage,
-                    totalItems: pendingData?.total ?? applications.length,
+                    totalItems: activeData?.total ?? applications.length,
                     pageSize: 50,
                     onPrevPage: () => setQueuePage((p) => Math.max(1, p - 1)),
                     onNextPage: () => setQueuePage((p) => p + 1),
-                    isFetching: queue.isFetching,
+                    isFetching: activeQuery.isFetching,
                   }}
-                />
-              )}
-
-              {/* SECTION 3: TIẾP NHẬN HỒ SƠ CHÍNH THỨC */}
-              {(activeSection === 'receipt-waiting' || activeSection === 'receipt-received') && (
-                <OfficerReceiptWorkspaceView
-                  applications={applications}
-                  activeSubTab={receiptSubTab}
-                  onSelectSubTab={(tab) => setReceiptSubTab(tab)}
-                  onViewApplication={handleOpenReview}
                 />
               )}
 
