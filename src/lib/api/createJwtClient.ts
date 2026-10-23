@@ -4,6 +4,8 @@ declare module 'axios' {
   interface AxiosRequestConfig {
     /** Public/login requests never attach a JWT or trigger refresh. */
     skipAuth?: boolean;
+    /** If true, failing or persistent 401 on this request will NOT invalidate user session or trigger logout. */
+    suppressSessionExpiry?: boolean;
     /** Internal metadata. Do not set these fields in application code. */
     _jwt?: { session: number; tokenVersion: number; retried: boolean };
   }
@@ -90,12 +92,14 @@ export function createJwtClient(options: JwtClientOptions) {
     const sent = request._jwt;
     if (!sent || sent.session !== session || request.signal?.aborted) throw error;
     if (sent.retried) {
-      expire(sent.session);
+      if (!request.suppressSessionExpiry) {
+        expire(sent.session);
+      }
       throw error;
     }
     if (!options.refreshAccessToken) {
       // No backend contract yet: never invent a refresh endpoint.
-      if (token) expire(sent.session);
+      if (token && !request.suppressSessionExpiry) expire(sent.session);
       throw error;
     }
     request._jwt = { ...sent, retried: true };
@@ -108,6 +112,7 @@ export function createJwtClient(options: JwtClientOptions) {
   return {
     api,
     hasAccessToken: () => token !== null,
+    getAccessToken: () => token,
     setAccessToken,
     clearSession: () => setAccessToken(null),
     restoreSession: () => token ? Promise.resolve() : options.refreshAccessToken

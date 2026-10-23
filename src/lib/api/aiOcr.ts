@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { z } from 'zod';
 import { api } from './index';
 import { servicePath, serviceUrls } from './serviceUrls';
@@ -40,25 +41,52 @@ export const aiOcrApi = {
       data.append('backImage', backImage);
     }
 
-    const response = await api.post(aiPath('/api/v1/ai-ocr/cccd/extract'), data, {
-      signal,
-      headers: { 'Content-Type': undefined },
-    });
+    try {
+      const response = await api.post(aiPath('/api/v1/ai-ocr/cccd/extract'), data, {
+        signal,
+        suppressSessionExpiry: true,
+        headers: { 'Content-Type': undefined },
+      });
 
-    return cccdExtractionSchema.parse(response.data);
+      return cccdExtractionSchema.parse(response.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 401) {
+          throw new Error('Dịch vụ AI OCR chưa được ủy quyền hoặc cấu hình xác thực trên server chưa sẵn sàng (HTTP 401). Phiên đăng nhập của bạn vẫn an toàn; vui lòng thử lại sau hoặc nhập thông tin thủ công.');
+        }
+        if (status === 404 || status === 502 || status === 503) {
+          throw new Error(`Dịch vụ AI OCR tạm thời chưa sẵn sàng (HTTP ${status}). Vui lòng nhập thông tin vào biểu mẫu hoặc thử lại sau.`);
+        }
+        const serverMsg = (err.response?.data as { title?: string; detail?: string })?.title ||
+                          (err.response?.data as { message?: string })?.message;
+        if (serverMsg) throw new Error(serverMsg);
+      }
+      throw err;
+    }
   },
 
   chat: async (input: ChatMessageInput, signal?: AbortSignal): Promise<ChatCompletionDto> => {
-    const response = await api.post(
-      aiPath('/api/v1/ai/chat/completions'),
-      {
-        message: input.message.trim(),
-        conversationId: input.conversationId || null,
-        wardCode: input.wardCode || 'WARD_001',
-      },
-      { signal },
-    );
+    try {
+      const response = await api.post(
+        aiPath('/api/v1/ai/chat/completions'),
+        {
+          message: input.message.trim(),
+          conversationId: input.conversationId || null,
+          wardCode: input.wardCode || 'WARD_001',
+        },
+        { signal, suppressSessionExpiry: true },
+      );
 
-    return chatCompletionSchema.parse(response.data);
+      return chatCompletionSchema.parse(response.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 401) {
+          throw new Error('Trợ lý AI chưa được xác thực (HTTP 401). Vui lòng thử lại sau.');
+        }
+      }
+      throw err;
+    }
   },
 };

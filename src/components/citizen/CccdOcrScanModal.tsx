@@ -160,11 +160,11 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                   onChange={handleFrontChange}
                 />
                 {frontPreview ? (
-                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+                  <div className="relative rounded-xl border border-slate-200 bg-slate-900/5 aspect-[1.58/1] w-full flex items-center justify-center overflow-hidden p-2 group shadow-2xs">
                     <img
                       src={frontPreview}
                       alt="CCCD Mặt trước"
-                      className="h-40 w-full object-cover"
+                      className="h-full w-full object-contain rounded-lg"
                     />
                     <button
                       type="button"
@@ -172,16 +172,20 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                         setFrontFile(null);
                         setFrontPreview(null);
                       }}
-                      className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/70 text-white flex items-center justify-center hover:bg-slate-900"
+                      className="absolute top-2.5 right-2.5 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900 transition-colors shadow-sm"
+                      title="Xóa ảnh và chọn lại"
                     >
-                      <X size={14} />
+                      <X size={14} weight="bold" />
                     </button>
+                    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs">
+                      Mặt trước
+                    </span>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => frontInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-2 h-40 w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-red-50/30 hover:border-red-400 transition-colors p-4 text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2 aspect-[1.58/1] w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-red-50/30 hover:border-red-400 transition-colors p-4 text-center cursor-pointer"
                   >
                     <div className="grid size-10 place-items-center rounded-full bg-red-100 text-red-700">
                       <UploadSimple size={20} weight="bold" />
@@ -207,11 +211,11 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                   onChange={handleBackChange}
                 />
                 {backPreview ? (
-                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+                  <div className="relative rounded-xl border border-slate-200 bg-slate-900/5 aspect-[1.58/1] w-full flex items-center justify-center overflow-hidden p-2 group shadow-2xs">
                     <img
                       src={backPreview}
                       alt="CCCD Mặt sau"
-                      className="h-40 w-full object-cover"
+                      className="h-full w-full object-contain rounded-lg"
                     />
                     <button
                       type="button"
@@ -219,16 +223,20 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                         setBackFile(null);
                         setBackPreview(null);
                       }}
-                      className="absolute top-2 right-2 size-7 rounded-full bg-slate-900/70 text-white flex items-center justify-center hover:bg-slate-900"
+                      className="absolute top-2.5 right-2.5 size-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900 transition-colors shadow-sm"
+                      title="Xóa ảnh và chọn lại"
                     >
-                      <X size={14} />
+                      <X size={14} weight="bold" />
                     </button>
+                    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs">
+                      Mặt sau
+                    </span>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => backInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-2 h-40 w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-red-50/30 hover:border-red-400 transition-colors p-4 text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2 aspect-[1.58/1] w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-red-50/30 hover:border-red-400 transition-colors p-4 text-center cursor-pointer"
                   >
                     <div className="grid size-10 place-items-center rounded-full bg-slate-100 text-slate-600">
                       <UploadSimple size={20} weight="bold" />
