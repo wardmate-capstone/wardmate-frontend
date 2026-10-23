@@ -10,16 +10,17 @@ import {
 import { ManagerSectionId } from './types';
 
 export const managerSectionTitles: Record<ManagerSectionId, { title: string; subtitle?: string }> = {
-  'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Phân tích số lượng tiếp nhận, giải quyết đúng hạn và tồn đọng' },
+  overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
+  'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
   'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
   'stats-searches': { title: 'Thống kê Lượt tra cứu', subtitle: 'Lưu lượng tìm kiếm và quan tâm của người dân qua cổng trực tuyến' },
   'stats-forms': { title: 'Thống kê Biểu mẫu & E-Form', subtitle: 'Tình hình sử dụng, tải mẫu đơn và kê khai trực tuyến' },
   profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
-  'perf-processing-time': { title: 'Hiệu suất Thời gian Xử lý', subtitle: 'So sánh thời gian giải quyết thực tế so với quy định pháp luật' },
-  'perf-completion-rate': { title: 'Tỷ lệ Hoàn thành Hồ sơ', subtitle: 'Tỷ lệ giải quyết trước hạn, đúng hạn và trả kết quả thành công' },
-  'perf-supplement-rate': { title: 'Tỷ lệ Cần bổ sung Hồ sơ', subtitle: 'Thống kê hồ sơ chưa đạt chuẩn và phân tích nguyên nhân lỗi' },
-  'perf-officers': { title: 'Đánh giá Hiệu suất Cán bộ', subtitle: 'Năng suất tiếp nhận, giải quyết hồ sơ và điểm hài lòng của cán bộ Một cửa' },
-  'feedback-reports': { title: 'Báo cáo Phản hồi Người dân', subtitle: 'Tiếp nhận và xử lý góp ý, phản ánh kiến nghị từ công dân' },
+  'perf-processing-time': { title: 'Hiệu suất Thời gian Xử lý', subtitle: 'Thời gian tiền kiểm trung bình và số mẫu theo cán bộ' },
+  'perf-completion-rate': { title: 'Tỷ lệ Đúng hạn Tiền kiểm', subtitle: 'Tỷ lệ đúng hạn theo các hồ sơ sẵn sàng có thời hạn xác định' },
+  'perf-supplement-rate': { title: 'Lượt Yêu cầu Bổ sung', subtitle: 'Số lượt yêu cầu bổ sung và gửi lại trong kỳ' },
+  'perf-officers': { title: 'Đánh giá Hiệu suất Cán bộ', subtitle: 'Số giấy tờ sẵn sàng, yêu cầu bổ sung và thời hạn tiền kiểm theo cán bộ' },
+  'feedback-reports': { title: 'Báo cáo Phản hồi Người dân', subtitle: 'Theo dõi đánh giá hỗ trợ tiền kiểm của người dân trong phường' },
   'satisfaction-level': { title: 'Đánh giá Mức độ Hài lòng', subtitle: 'Kết quả khảo sát chất lượng dịch vụ hành chính công của phường' },
   profile: { title: 'Hồ sơ Cá nhân', subtitle: 'Thông tin tài khoản quản trị và thiết lập bảo mật cá nhân' },
 };

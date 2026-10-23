@@ -6,6 +6,7 @@ import { ManagerProfileDetailView } from './views/ManagerProfileDetailView';
 import { ManagerSystemStatsView } from './views/ManagerSystemStatsView';
 import { ManagerPerformanceView } from './views/ManagerPerformanceView';
 import { ManagerFeedbackView } from './views/ManagerFeedbackView';
+import { ManagerOverviewView } from './views/ManagerOverviewView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
@@ -24,8 +25,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
 
 export const ManagerPage: React.FC = () => {
-  // Thay dashboard bằng trang thống kê hồ sơ làm mặc định
-  const [currentSection, setCurrentSection] = useState<ManagerSectionId>('stats-dossiers');
+  const [currentSection, setCurrentSection] = useState<ManagerSectionId>('overview');
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -278,7 +278,7 @@ export const ManagerPage: React.FC = () => {
             <div className="admin-page-heading mb-6">
               <div>
                 <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
-                {currentSection === 'stats-dossiers' && (
+                {currentSection === 'overview' && (
                   <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
                     {getGreeting()}, Lãnh đạo {managerName}
                   </p>
@@ -288,6 +288,10 @@ export const ManagerPage: React.FC = () => {
           )}
 
           {/* Dynamic Views */}
+          {currentSection === 'overview' && <ManagerOverviewView onSelectSection={section => {
+            setCurrentSection(section);
+            setSelectedProfile(null);
+          }} />}
           {currentSection === 'profiles' && (
             selectedProfile ? (
               <ManagerProfileDetailView

@@ -10,14 +10,15 @@ type CommonProps<Section extends string> = { currentSection: Section; onSelectSe
 export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenMobile, onCloseMobile, isCollapsedDesktop }: CommonProps<ManagerSectionId> & { profilesCount?: number; onToggleCollapseDesktop?: () => void }) {
   const role = ['MANAGER'];
   const groups: WorkspaceNavGroup<ManagerSectionId>[] = [
+    { title: 'Điều hành', items: [{ id: 'overview', label: 'Tổng quan', icon: House, fallbackRoles: role }] },
     { title: 'Thống kê hệ thống', items: [
       { id: 'stats-dossiers', label: 'Thống kê hồ sơ', icon: Files, fallbackRoles: role }, { id: 'stats-procedures', label: 'Thống kê thủ tục', icon: ClipboardText, fallbackRoles: role },
       { id: 'stats-searches', label: 'Thống kê lượt tra cứu', icon: MagnifyingGlass, fallbackRoles: role }, { id: 'stats-forms', label: 'Thống kê biểu mẫu', icon: FileText, fallbackRoles: role },
     ] },
     { title: 'Nhân sự Một cửa', items: [{ id: 'profiles', label: 'Cán bộ Một cửa', icon: IdentificationCard, fallbackRoles: role }] },
     { title: 'Hiệu suất xử lý', items: [
-      { id: 'perf-processing-time', label: 'Thời gian xử lý', icon: Clock, fallbackRoles: role }, { id: 'perf-completion-rate', label: 'Tỷ lệ hoàn thành', icon: CheckCircle, fallbackRoles: role },
-      { id: 'perf-supplement-rate', label: 'Tỷ lệ cần bổ sung', icon: WarningCircle, fallbackRoles: role }, { id: 'perf-officers', label: 'Hiệu suất cán bộ', icon: UsersThree, fallbackRoles: role },
+      { id: 'perf-processing-time', label: 'Thời gian xử lý', icon: Clock, fallbackRoles: role }, { id: 'perf-completion-rate', label: 'Đúng hạn tiền kiểm', icon: CheckCircle, fallbackRoles: role },
+      { id: 'perf-supplement-rate', label: 'Lượt yêu cầu bổ sung', icon: WarningCircle, fallbackRoles: role }, { id: 'perf-officers', label: 'Hiệu suất cán bộ', icon: UsersThree, fallbackRoles: role },
     ] },
     { title: 'Phản hồi người dân', items: [{ id: 'feedback-reports', label: 'Báo cáo phản hồi', icon: Bell, fallbackRoles: role }, { id: 'satisfaction-level', label: 'Mức độ hài lòng', icon: ThumbsUp, fallbackRoles: role }] },
     { title: 'Tài khoản', items: [{ id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
