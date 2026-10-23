@@ -12,7 +12,6 @@ import {
   CaretDown,
   ClipboardText,
   Database,
-  FileCode,
   House,
   Key,
   List,
@@ -48,13 +47,13 @@ import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileV
 import type { ManagerProfileItem } from '@/pages/manager/types';
 import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
-import { ProcedureManagerPage } from '@/pages/procedure-manager/ProcedureManagerPage';
-import { FormsView } from './FormsView';
+import { AdminProceduresView } from './AdminProceduresView';
+import { AnalyticsJobsView } from './AnalyticsJobsView';
 
 type SectionId =
+  | "analytics-jobs"
   | "overview"
   | "procedures"
-  | "forms"
   | "knowledge"
   | "users"
   | "wards"
@@ -79,7 +78,6 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
         permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'],
         fallbackRoles: ['IT_ADMIN'],
       },
-      { id: "forms", label: "Danh sách biểu mẫu", icon: FileCode, permissions: ['document.templates.read', 'document.templates.manage'] },
       {
         id: "knowledge",
         label: "Dữ liệu kiến thức AI",
@@ -99,6 +97,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
     title: "Vận hành hệ thống",
     items: [
+      { id: "analytics-jobs", label: "Job thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
       { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, permissions: ['iam.audit.read'] },
       { id: "backup", label: "Bảo mật & sao lưu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
@@ -112,9 +111,9 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 
 
 const sectionMeta: Record<SectionId, { title: string }> = {
+  'analytics-jobs': { title: 'Quản lý job thống kê' },
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
-  forms: { title: "Danh sách biểu mẫu" },
   knowledge: { title: "Dữ liệu kiến thức AI" },
   users: { title: "Người dùng hệ thống" },
   wards: { title: "Quản lý đơn vị Phường / Xã" },
@@ -383,9 +382,9 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <Overview onSelect={selectSection} />
           )}
           {activeSection === "procedures" && (
-            <ProcedureManagerPage embedded initialSection="procedures" />
+            <AdminProceduresView />
           )}
-          {activeSection === "forms" && <FormsView />}
+          {activeSection === "analytics-jobs" && <AnalyticsJobsView />}
           {activeSection === "knowledge" && (
             <KnowledgeView onAction={demoAction} />
           )}
@@ -601,7 +600,6 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
   const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> =
     [
       { id: "procedures", title: "Danh sách thủ tục", icon: ClipboardText },
-      { id: "forms", title: "Danh sách biểu mẫu", icon: FileCode },
       { id: "knowledge", title: "Dữ liệu kiến thức AI", icon: Books },
       { id: "users", title: "Người dùng", icon: Users },
       { id: "roles", title: "Phân quyền", icon: Key },

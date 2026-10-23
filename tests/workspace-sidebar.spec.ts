@@ -30,6 +30,8 @@ test('admin does not show duplicate or removed permission feature items', async 
 test('granted features without a role navigation entry stay hidden', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN'], ['document.templates.read', 'document.submissions.read']);
   await page.goto('/admin');
+  await expect(page.getByRole('button', { name: 'Danh sách biểu mẫu', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Kho biểu mẫu Word', exact: true })).toHaveCount(0);
   await expect(page.locator('aside').getByRole('button', { name: 'Biểu mẫu điện tử' })).toHaveCount(0);
   await expect(page.locator('aside').getByRole('button', { name: 'Đơn điện tử của tôi' })).toHaveCount(0);
 });

@@ -13,7 +13,7 @@ export function ProcedureApiList({
   revision = 0,
 }: {
   categories: Category[];
-  onSelect: (row: ProcedureSummary) => void;
+  onSelect?: (row: ProcedureSummary) => void;
   onViewVersions?: (row: ProcedureSummary) => void;
   revision?: number;
 }) {
@@ -204,7 +204,7 @@ export function ProcedureApiList({
       </div>
 
       <ProcedureFeedback error={result.error} retry={result.refresh} />
-      {result.loading && <TableSkeleton columns={6} />}
+      {result.loading && <TableSkeleton columns={onSelect ? 6 : 5} />}
 
       {/* Procedure Table */}
       {result.data && (
@@ -218,7 +218,7 @@ export function ProcedureApiList({
                   <th className="px-4 py-3.5">Lĩnh vực</th>
                   <th className="px-4 py-3.5">Trạng thái</th>
                   <th className="px-4 py-3.5 text-center">Bản lưu</th>
-                  <th className="px-4 py-3.5 text-right">Thao tác</th>
+                  {onSelect && <th className="px-4 py-3.5 text-right">Thao tác</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -252,7 +252,7 @@ export function ProcedureApiList({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                      <button
+                      {onViewVersions ? <button
                         type="button"
                         onClick={() => onViewVersions?.(row)}
                         className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
@@ -260,9 +260,9 @@ export function ProcedureApiList({
                       >
                         <ClockCounterClockwise size={14} className="text-slate-400" />
                         <span>{row.versionCount ?? 0}</span>
-                      </button>
+                      </button> : <span className="text-xs text-slate-600">{row.versionCount ?? 0}</span>}
                     </td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                    {onSelect && <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
                         <Button size="small" variant="outline" onClick={() => onSelect(row)}>
                           Chi tiết
@@ -279,7 +279,7 @@ export function ProcedureApiList({
                           </Link>
                         )}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

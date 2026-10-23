@@ -221,12 +221,12 @@ test('citizen downloads by linked ID; inactive and unlinked templates cannot dow
   await expect(page.getByRole('alert')).toContainText('tạm ngừng');
 });
 
-test('admin with procedure-manager role can upload an empty template', async ({ page }) => {
+test('dual-role user uploads an empty template in procedure-manager workspace', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN', 'PROCEDURE_MANAGER']);
   await mockCatalog(page);
   const state = await mockForms(page);
   state.item.fileDocxUrl = null;
-  await page.goto('/admin');
+  await page.goto('/procedure-manager');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'Tờ khai kiểm thử' });
   await expect(row.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true })).toBeDisabled();
@@ -238,10 +238,10 @@ test('admin with procedure-manager role can upload an empty template', async ({ 
   state.item.fileDocxUrl = original.fileDocxUrl;
   await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
   await expect(row.getByRole('button', { name: 'Thay đổi', exact: true })).toBeVisible();
-  await page.screenshot({ path: 'test-results/form-template-admin-actions.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/form-template-procedure-manager-actions.png', fullPage: true });
 });
 
-test('admin with procedure-manager role preserves server forbidden reason and trace', async ({ page }) => {
+test('dual-role user preserves forbidden reason in procedure-manager workspace', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN', 'PROCEDURE_MANAGER']);
   await mockCatalog(page);
   const state = await mockForms(page);
@@ -250,7 +250,7 @@ test('admin with procedure-manager role preserves server forbidden reason and tr
     expect(route.request().headers().authorization).toBe('Bearer ui-test-token');
     return authReply(route, { status: 403, json: { code: 'auth.forbidden', title: 'Bạn không có quyền thực hiện thao tác này.', traceId: 'mock-trace' } });
   });
-  await page.goto('/admin');
+  await page.goto('/procedure-manager');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   await page.getByRole('button', { name: 'Thêm đơn', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -266,7 +266,7 @@ test('IT_ADMIN without PROCEDURE_MANAGER reads templates without write controls'
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await mockCatalog(page);
   const state = await mockForms(page);
-  await page.goto('/admin');
+  await page.goto('/procedure-manager');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   await expect(page.getByText('Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
