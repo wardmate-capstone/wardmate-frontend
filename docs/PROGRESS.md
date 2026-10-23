@@ -4,6 +4,20 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chia 20 commit và bàn giao main — 23/10/2026
+
+- Người dùng yêu cầu chia toàn bộ thay đổi FE hiện có thành đúng **20 commit** và đẩy lên `main`. Nền `ce4321d`; đã fetch và xác minh HEAD trùng `origin/main` trước khi chia. Remote: `https://github.com/wardmate-capstone/wardmate-frontend.git`, nhánh `main`. Không sửa BE hoặc thêm tính năng trong lượt chia commit.
+- Phân nhóm: cấu hình API/proxy; client Analytics; query cache; bộ lọc; biểu đồ; báo cáo Manager; tích hợp các workspace; Tổng quan Manager; modal đánh giá; hồ sơ đánh giá công dân; job Admin; kiểm thử Analytics; kiểm thử feedback; bảo vệ thao tác thủ tục; Admin chỉ danh sách và bỏ menu biểu mẫu; lockfile; kế hoạch; audit; hướng dẫn FE; bàn giao này. Giữ và đưa các thay đổi lockfile đã có vào commit riêng. 19 commit đầu từ `b03d00d` đến `a795de3`; commit cuối mang tiêu đề `docs(handover): record integration validation and delivery`.
+- Kiểm tra mới trong lượt này: **82/82 Playwright Edge đạt** (`analytics`, `feedback`, `manager`, `form-templates`, `jwt-client`, `design-system`, `landing`); **16/16 route proxy đạt**. Ở task Admin ngay trước: typecheck/lint/build và **33/33 Edge đạt** (`admin-procedures-readonly`, `workspace-sidebar`, `procedure-manager`); không chạy lại ba bộ này hoặc build trong lượt chỉ chia commit. `git diff --check` đạt. Kiểm thử trình duyệt dùng mock, chưa xác minh tài khoản/API Azure thật; build vẫn có cảnh báo bundle lớn.
+- Mốc ghi nhận của mục này là **trước push**: sau commit tài liệu sẽ đối chiếu đủ 20 commit, kiểm tra lại remote/nhánh rồi push thường, không force. Kết quả push và SHA remote được xác minh trong phản hồi bàn giao cuối; tài liệu không khẳng định đã deploy. Các dòng chưa commit/push ở mục cũ là trạng thái tại thời điểm task đó, không phải trạng thái hiện tại.
+- Kết quả thực tế: đã xác minh đúng **20 commit**, cây làm việc sạch và `main` đi trước `origin/main` 20 commit. **Chưa push**: automatic approval review từ chối `git push origin main` vì mã nguồn riêng tư sẽ được gửi lên GitHub nhưng người dùng chưa trực tiếp xác nhận URL đích. Chờ xác nhận push tới `https://github.com/wardmate-capstone/wardmate-frontend.git`; không đổi remote hoặc dùng cách gửi khác để vượt chặn. Chỉ amend commit tài liệu thứ 20 còn local để ghi nhận kết quả này, không tạo commit thứ 21.
+
+## Admin chỉ xem danh sách thủ tục — 23/10/2026
+
+- Theo yêu cầu mới nhất, Admin không cần chi tiết thủ tục. `AdminPage.tsx` dùng `AdminProceduresView.tsx` riêng, tái sử dụng `ProcedureApiList` không có callback mở chi tiết/lịch sử. Bỏ cột thao tác, nút Chi tiết và liên kết công khai; số bản lưu chỉ hiển thị tĩnh. Giữ tìm kiếm, bộ lọc, sắp xếp, phân trang và báo lỗi/thử lại.
+- Admin chỉ tải danh mục và danh sách quản lý, không mount workspace quản lý hoặc xử lý query bản nháp; áp dụng cả tài khoản Admin kiêm Quản lý thủ tục. Workspace Quản lý thủ tục độc lập giữ hành vi theo quyền hiện có. Không sửa IAM/BE.
+- Kiểm tra: `npm run typecheck`, `npm run lint`, `npm run build` và `git diff --check` đạt; build còn cảnh báo kích thước bundle. Playwright Edge: **33/33 đạt** trong `admin-procedures-readonly.spec.ts`, `workspace-sidebar.spec.ts`, `procedure-manager.spec.ts` (tìm kiếm/bộ lọc, không có đường mở chi tiết/lịch sử, URL bản nháp không mở workspace ghi, hồi quy quản lý thủ tục). Kiểm thử trình duyệt dùng API mock, chưa xác minh phiên đăng nhập/API thật. Trạng thái commit xem mục bàn giao 23/10 ở đầu file.
+
 ## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
 
 - **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
@@ -39,134 +53,45 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 ## Tinh gọn Giao diện Trợ lý Chat & Đồng bộ Logo User — 23/10/2026
 
-- **Yêu cầu người dùng:** Tinh gọn toàn bộ giao diện Chatbot đang bị rườm rà, loại bỏ các khối chiếm diện tích và thay toàn bộ logo chatbot thành logo User.
-- **Các cải tiến đã triển khai (`AiChatWidget.tsx`):**
-  1. **Đồng bộ Logo User:**
-     - Thay thế toàn bộ biểu tượng ngôi sao lấp lánh `Sparkle` ở nút nổi ngoài màn hình, header cửa sổ chat và avatar của trợ lý trong bong bóng tin nhắn thành biểu tượng **`User`** chuẩn mực, thân thiện.
-  2. **Gỡ bỏ các thành phần rườm rà:**
-     - Xóa bỏ hoàn toàn thanh cảnh báo vàng chèn ngang đầu trang.
-     - Xóa bỏ drawer kho câu hỏi mẫu cồng kềnh với các tab lọc phức tạp chiếm gần 50% chiều cao khung chat.
-     - Thay bằng **4 chip gợi ý nhanh (Quick Suggestions)** tinh tế đặt trực tiếp dưới tin nhắn chào đầu tiên: *Đăng ký kết hôn, Khai sinh cho con, Sao y chứng thực CCCD, Quy trình tiền kiểm hồ sơ*. Khi người dùng gửi câu hỏi, các chip tự động ẩn đi để nhường toàn bộ không gian cho nội dung chat.
-  3. **Header & Footer tối giản:**
-     - Header tinh gọn: Icon User kèm chấm xanh trực tuyến + Tiêu đề *"Trợ lý Một cửa"* + Nút Làm mới và Đóng.
-     - Chân ô chat: Input mềm mại + Nút gửi đỏ + Dòng nhắc pháp lý ngắn gọn ở đáy.
-- **Kiểm tra kỹ thuật:**
-  - `npm run typecheck`: **0 lỗi (exit code 0)**.
-  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
-  - `npm run build`: **Build production bundle thành công trong 20.38s (exit code 0)**.
-- **Trạng thái Git & Commit:** Đã phân chia thành 4 commit theo đúng quy tắc và chuẩn conventional:
-  1. `3d215f4`: `feat(ai-ocr): prevent session expiry on 401 and enhance CCCD lightbox preview`
-  2. `20dcb84`: `feat(procedures): streamline lookup hero with compact search bar and sync tests`
-  3. `e80d3fb`: `feat(officer-chat): add inline document preview and simplify assistant chat widget`
-  4. (Commit hiện tại): `docs(handover): add recent changes test plan and update progress tracking`
+- Theo yêu cầu mới, thay phần KPI dạng thẻ và khối truy cập nhanh bằng bố cục tập trung vào **4 biểu đồ**: đường xu hướng theo ngày; thanh ngang so sánh hoạt động tiền kiểm; vòng phân bố hạn xử lý của hồ sơ đã sẵn sàng; thanh ngang phân bố đánh giá 1–5 sao. Desktop hai cột, mobile một cột.
+- Sửa `src/pages/manager/views/ManagerOverviewView.tsx`, thêm `src/components/analytics/OverviewCountChart.tsx` dùng Recharts đã cài. Giữ ba API overview/trends/feedback summary, bộ lọc và làm mới chung, lỗi/retry từng khối, coverage, bảng dữ liệu cho accessibility và nút vào màn chi tiết.
+- Các hoạt động không phải tập hồ sơ loại trừ nhau nên dùng thanh so sánh, không tính tỷ lệ cộng dồn. Biểu đồ vòng chỉ dùng bốn nhóm hồ sơ đã hoàn tất tiền kiểm (đúng hạn/quá hạn/chưa xác định hạn/không áp dụng hạn); hồ sơ đang tồn/tạm dừng hiển thị riêng. Tổng bằng 0 hiển thị trạng thái rỗng; rate null giữ “Chưa đủ dữ liệu”, không tạo hình hoặc phần trăm giả.
+- Cập nhật `tests/manager.spec.ts`, `tests/analytics.spec.ts` theo UI biểu đồ; thêm dữ liệu rỗng trong fixture và test không vẽ vòng/tỷ lệ giả. **17/17 test Edge/mock đạt** ở lượt cuối (37,7 giây), gồm Manager và Analytics. Đã chụp/xem ảnh desktop và mobile, không tràn ngang trong kiểm tra mobile.
+- `npm run typecheck`, `npm run lint`, `npm run build` đều đạt; build cuối 16,41 giây, còn cảnh báo annotation Zod/bundle lớn như trước. Không thay đổi API/auth/proxy/BE, không thêm dependency, không commit/push; chưa xác minh dữ liệu bằng tài khoản Azure thật. Giữ nguyên thay đổi có sẵn trong `package-lock.json`.
 
-## Mở Xem trước Giấy tờ Ngay Dưới Từng Mục (Inline Document Preview) — 23/10/2026
+## Bổ sung trang Tổng quan Manager — 23/10/2026
 
-- **Yêu cầu người dùng:** Khi cán bộ ấn nút "Mở giấy tờ" (hoặc "Mở bản khai") ở mục nào, nội dung xem trước phải hiển thị ngay bên dưới thẻ/hàng của mục đó (inline preview), không được nhảy xuống tận cuối trang.
-- **Hiện trạng trước sửa:** Toàn bộ danh sách giấy tờ được map ra trước, còn component xem trước `{selected && <DocumentFilePreview ... />}` nằm ở tận đáy container sau tất cả các mục, khiến cán bộ không thấy được nội dung ngay tại vị trí vừa bấm mà phải cuộn chuột dài xuống cuối trang.
-- **Giải pháp triển khai (`OfficerDocumentsPanel.tsx`):**
-  1. **Hiển thị Inline trực tiếp tại thẻ được chọn:**
-     - Chuyển component `<DocumentFilePreview>` vào render trực tiếp bên trong thẻ của từng mục `documents` và `submissions` khi `selected?.id === item.id`.
-     - Xóa bỏ hoàn toàn khối render xem trước ở tận cuối trang.
-  2. **Trạng thái nút thông minh & Nút đóng tiện lợi:**
-     - Khi mở: Nút chuyển sang `primary` với nhãn *"Đóng giấy tờ"* / *"Đóng bản khai"*.
-     - Hỗ trợ toggle: Bấm lại chính nút đó sẽ thu gọn/đóng khung xem trước.
-     - Khung xem trước bổ sung header nhỏ hiển thị tên tài liệu kèm nút *"Đóng"* tiện lợi.
-- **Kiểm tra kỹ thuật:**
-  - `npm run typecheck`: **0 lỗi (exit code 0)**.
-  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
-  - `tests/document-workflow.spec.ts`: test cán bộ discovery và mở bản khai DOCX **PASSED** (13.7s).
-  - `npm run build`: **Build production bundle thành công trong 1m 1s (exit code 0)**.
-- **Trạng thái Git:** Giữ nguyên các thay đổi tại local working tree, không tự ý commit hay push khi chưa có yêu cầu từ người dùng.
+- Đã thêm mục **Tổng quan** ở đầu sidebar Manager và đặt làm màn mặc định tại `/manager` (cả route alias dùng cùng component). Mục Thống kê hồ sơ vẫn là màn chi tiết riêng; không còn dùng màn này thay dashboard.
+- UI mới tại `src/pages/manager/views/ManagerOverviewView.tsx`: bốn chỉ số lượt gửi/giấy tờ sẵn sàng/đúng hạn/tồn quá hạn, số lượt bổ sung/gửi lại/hủy, cảnh báo thiếu hạn/tạm dừng, biểu đồ theo ngày, điểm hài lòng/phân bố sao và nút tới hồ sơ/phản hồi/thủ tục/cán bộ. Dùng chung bộ lọc ngày/thủ tục và nút làm mới trên dashboard.
+- Đọc ba API đã có (`overview`, `trends`, `feedback/summary`) qua `useAnalytics`; không thêm endpoint, mock vào runtime hoặc dependency. Các khối loading/lỗi/retry độc lập; thiếu dữ liệu hiện cảnh báo, tỷ lệ null không đổi thành 0. Tái sử dụng schema/validation và phân quyền Manager hiện có.
+- Tách `src/components/analytics/AnalyticsTrendChart.tsx` dùng chung giữa Tổng quan và thống kê chi tiết, có bảng dữ liệu cho accessibility, giữ khoảng trống ngày thiếu và tắt animation để dữ liệu hiển thị ngay. Chỉnh bộ lọc `items-start` để ô ngày không bị kéo cao theo cột tìm thủ tục.
+- File điều hướng liên quan: `ManagerPage.tsx`, `ManagerHeader.tsx`, `types.ts`, `RoleWorkspaceSidebars.tsx`; lời chào chuyển sang Tổng quan.
+- Kiểm tra mới: `npm run typecheck` đạt; `npm run lint` đạt. **22/22 test Edge/mock đạt** ở lượt cuối (40,4 giây), gồm `manager.spec.ts`, `analytics.spec.ts`, `workspace-sidebar.spec.ts`: mặc định Tổng quan, điều hướng chi tiết, lỗi từng khối, kỳ lọc chung, hồi quy API/sidebar và không tràn ngang mobile. Đã chụp và xem ảnh desktop/mobile trong `test-results` (không commit artifact).
+- `npm run build` bản cuối đạt (28,23 giây, exit 0); còn cảnh báo annotation Zod và bundle lớn như trước. `git diff --check` đạt. Chưa xác minh bằng tài khoản thật trên Azure. Không sửa BE, không commit/push và giữ nguyên thay đổi khác đang có.
 
-## Tinh gọn Giao diện Tra cứu Thủ tục Hành chính: Giữ duy nhất Khung Tìm kiếm — 23/10/2026
+## Rà soát lại API Analytics và sửa validation — 23/10/2026
 
-- **Yêu cầu người dùng:** Loại bỏ triệt để tình trạng dư thừa 2 nút "Trang chủ" (ở menu điều hướng đỏ và breadcrumb), loại bỏ tiêu đề lặp lại, chỉ để lại duy nhất phần Search (Khung tìm kiếm).
-- **Các điểm đã hoàn thành:**
-  1. **Xóa bỏ Breadcrumb và Khối tiêu đề lặp lại:**
-     - Loại bỏ hoàn toàn breadcrumb `Trang chủ > Thủ tục hành chính` (tránh dư 2 chữ "Trang chủ" với Navbar).
-     - Loại bỏ khối tiêu đề `Thủ tục hành chính` và dòng mô tả phụ trong khung hero.
-     - Vẫn duy trì thẻ `<h1 id="procedures-title" className="sr-only">` khi `!embedded` để đảm bảo 100% chuẩn Accessibility và Semantic HTML/SEO mà không gây trùng 2 thẻ `h1` khi nhúng trong Cổng công dân.
-  2. **Tối ưu Khung Search tinh gọn (Clean Search Box):**
-     - Khối `.procedures-hero` giờ chỉ chứa thanh tìm kiếm (Input, Kính lúp, Nút xóa X, Nút đỏ "Tìm kiếm →") và dòng gợi ý nhập liệu.
-     - Tự động ẩn vế *"Không cần đăng nhập để tra cứu"* khi tài khoản đã đăng nhập (`isAuthenticated`).
-     - Tối ưu padding `p-4 sm:p-5`, giúp toàn bộ danh sách kết quả và bộ lọc lĩnh vực hiển thị trọn vẹn ngay trong tầm nhìn đầu tiên của người dùng.
-  3. **Đồng bộ Kiểm thử tự động:**
-     - Cập nhật `tests/procedures-ui.spec.ts` và `tests/landing.spec.ts` tương ứng với thiết kế giao diện tinh gọn mới.
-- **Kiểm tra kỹ thuật:**
-  - `npm run typecheck`: **0 lỗi (exit code 0)**.
-  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
-  - Playwright test:
-    - `tests/procedures-ui.spec.ts`: **2/2 passed** (30.1s) ở cả 4 breakpoint (1440px, 768px, 390px, 360px).
-    - `tests/landing.spec.ts` & `tests/procedure-detail.spec.ts`: **17/17 passed** (1.1m).
-  - `npm run build`: **Build production bundle thành công trong 21.71s (exit code 0)**.
-  - Đã xác minh ảnh chụp màn hình desktop (1440px) và mobile (390px): giao diện thoáng đãng, sắc nét, không tràn ngang.
-- **Trạng thái Git:** Giữ nguyên các thay đổi tại local working tree, không tự ý commit hay push khi chưa có yêu cầu từ người dùng.
+- Đã đọc lại Swagger Azure trực tiếp và đối chiếu controller/DTO BE với client cùng nơi gọi UI: **đủ 10/10 thao tác nghiệp vụ** (Manager 6, Admin 2, công dân 2). `GET /` chỉ là thông tin dịch vụ. Bảng đối chiếu đầy đủ tại `docs/ANALYTICS_API_AUDIT_2026-10-23.md`.
+- Sửa `src/lib/api/analytics.ts`: GUID tương thích .NET, không áp đặt version/variant UUID, vẫn chặn GUID rỗng. Kiểm tra response đúng kỳ/trang đã yêu cầu, số lượng phần tử hợp lệ; missingDates không trùng/ngoài kỳ; xu hướng đủ ngày, không trùng/ngoài kỳ. API phản hồi không trả coverage thì không tự tuyên bố đã xác minh kỳ từ metadata response.
+- Test bổ sung tái hiện lỗi focus validation BE ở modal công dân: thông báo có nhưng fieldset còn khóa nên không focus được. Đã sửa trong `CitizenFeedbackModal.tsx`; `AnalyticsJobsView.tsx` chờ modal xác nhận đóng/khôi phục focus trước khi focus ô ngày. Chỉ ánh xạ các trường thuộc đúng form.
+- Thêm “Làm mới dữ liệu” cho Manager, giữ bộ lọc và tải lại cả overview/trends khi cần; tra job dùng staleTime 0 để không bỏ qua việc đọc lại trạng thái khi quay lại mã đã tra.
+- Kiểm tra mới trong lượt này: **22/22 test Edge/mock đạt**, gồm `analytics.spec.ts`, `feedback.spec.ts`, `manager.spec.ts` (50 giây, exit 0). Bổ sung ca sai kỳ/trang/trùng ngày, GUID/pageSize/jobId tại biên, 409 hồ sơ chưa sẵn sàng, lỗi trường và focus của hai form. Fixture trends đã mô phỏng đủ ngày theo implementation BE thay vì chỉ một ngày.
+- `npm run typecheck`: đạt; `npm run lint`: đạt; `npm run build` bản cuối: đạt (28,61 giây), còn cảnh báo annotation Zod và bundle lớn như trước. `git diff --check`: đạt. Không chạy lại bộ JWT/core hoặc proxy vì không sửa các phần đó trong lượt này; kết quả 46 test và 16 route của lượt trước là lịch sử riêng.
+- Chưa kiểm chứng luồng có tài khoản thật hoặc gửi mutation lên Azure. Không thiếu call API trong Swagger; các tính năng ngoài hợp đồng và giới hạn tra tên cán bộ từ 100 mục IAM đầu tiên được ghi rõ trong tài liệu audit. Không sửa BE, không thêm dependency, không commit/push; giữ nguyên thay đổi `package-lock.json` có sẵn.
 
-## Khắc phục triệt để lỗi UI Lightbox Portal và Phân tích chuyên sâu lỗi 401 Backend AI OCR — 23/10/2026
+## Tích hợp Analytics / AnalyticsJobs / CitizenFeedback — 23/10/2026
 
-- **Yêu cầu người dùng:**
-  - Vẫn còn lỗi UI (ảnh Lightbox bị chìm phía sau khung modal trắng trong ảnh chụp màn hình).
-  - Khi gọi API vẫn bị lỗi 401: Yêu cầu đọc và kiểm tra thật kỹ mã nguồn Backend (`d:\wardmate-backend`) để giải thích nguyên nhân và khắc phục ở phía Frontend.
-  - Tuyệt đối không chỉnh sửa Backend (`d:\wardmate-backend`), chỉ thực hiện ở Frontend (`d:\frontend`).
-  - Không push Git khi chưa đạt yêu cầu / chưa có sự đồng ý của người dùng.
-
-- **1. Khắc phục triệt để lỗi UI Lightbox bị chìm sau Modal:**
-  - **Hiện tượng trên ảnh:** Khi người dùng bấm xem to ảnh CCCD, lớp phủ xem ảnh màu đen xuất hiện ở phía sau hộp thoại Modal trắng của Radix Dialog (`z-[91]`), khiến tiêu đề và chân trang của Lightbox bị che khuất và người dùng không thể xem được trọn vẹn thẻ CCCD.
-  - **Nguyên nhân:** Radix Dialog hiển thị trong Portal với `z-[90]` và `z-[91]`. Thẻ div Lightbox trước đây nằm trong luồng DOM thông thường với `z-50`, do đó bị Radix Dialog đè lên.
-  - **Giải pháp xử lý:**
-    - Sử dụng `createPortal(..., document.body)` để đưa toàn bộ giao diện Lightbox ra lớp cao nhất của `document.body` với `z-[9999]`.
-    - Bổ sung thanh công cụ chuyên nghiệp trong Lightbox:
-      - **Nút xoay 90° (`ArrowClockwise`):** Cho phép xoay ảnh 90, 180, 270 độ, cực kỳ tiện lợi cho các ảnh chụp dọc từ điện thoại thông minh (smartphone portrait photos).
-      - **Phóng to / Thu nhỏ (`MagnifyingGlassPlus` / `MagnifyingGlassMinus`):** Tỉ lệ zoom từ 50% đến 300%.
-      - **Nút đặt lại kích thước gốc (`ArrowsIn`):** Trở về 100%.
-      - **Nút đóng / Phím tắt `Esc`:** Đóng nhanh và quay lại modal.
-    - Tại thẻ xem trước trong modal: Bổ sung nút **Xoay 90°** trực tiếp trên thumbnail để người dùng có thể lật ngang thẻ CCCD ngay trước khi bấm xem to hoặc quét AI.
-
-- **2. Kết quả kiểm tra và phân tích chi tiết mã nguồn Backend về lỗi 401:**
-  - Qua rà soát chi tiết mã nguồn tại `d:\wardmate-backend`:
-    - Controller `AssistantController.cs` (dòng 9) gắn nhãn `[Authorize]`.
-    - Trong `AssistantRegistration.cs` (dòng 24-41):
-      - Cấu hình kiểm tra JWT:
-        - `ValidIssuer = config["Jwt:Issuer"] ?? "WardMate.IAM"`
-        - `ValidAudience = config["Jwt:Audience"] ?? "WardMate.Client"`
-        - `IssuerSigningKey = key.Length >= 32 ? new SymmetricSecurityKey(...) : null`
-    - Đối chiếu với IAM Service (`WardMate.Services.IAM.API/appsettings.json` và `JwtOptions.cs`):
-      - Token do IAM cấp phát có `Issuer = "wardmate"` và `Audience = "wardmate-client"`.
-    - **Điểm bất đồng bộ (Root Cause) trên Backend:**
-      1. **Sai lệch Issuer & Audience:** AI OCR mặc định yêu cầu `WardMate.IAM` và `WardMate.Client`, trong khi token IAM cấp ra là `wardmate` và `wardmate-client`.
-      2. **Thiếu cấu hình `Jwt:Key` trong `WardMate.Services.AIOCR.API/appsettings.json`:** Service AI OCR hoàn toàn không có mục `Jwt`, dẫn đến `key = ""` và `IssuerSigningKey = null`. Khi đó `JwtBearerHandler` của ASP.NET Core tự động coi mọi token gửi lên là `invalid_token` và trả về `HTTP 401 Unauthorized` (`WWW-Authenticate: Bearer error="invalid_token"`).
-      3. **AccountSessionMiddleware:** Service AI OCR gắn middleware xác minh session tới `Iam:BaseUrl` (`http://localhost:5001/`), vốn không kết nối được trong môi trường container/cloud.
-  - **Giải pháp giải tỏa nghẽn cho người dùng tại Frontend (Unblocking Solution):**
-    - Đảm bảo `createJwtClient.ts` tuyệt đối không kích hoạt `expire()` hay đăng xuất người dùng khi API AI OCR trả về 401 (`suppressSessionExpiry: true`).
-    - Bổ sung chế độ **"Nhập thông tin nhanh từ ảnh" (`manualMode`)** ngay trong modal: Khi AI OCR gặp lỗi 401 hoặc dịch vụ AI chưa sẵn sàng, người dùng có thể bấm nút này để hiển thị các ô nhập liệu (Số CCCD, Họ tên, Ngày sinh, Giới tính, Quê quán, Thường trú) ngay dưới các ảnh CCCD đã tải lên. Người dùng vừa nhìn ảnh đối chiếu (có thể phóng to/xoay ảnh), vừa điền dữ liệu và bấm "Áp dụng vào biểu mẫu" để tiếp tục quy trình mà không bị gián đoạn.
-
-- **3. Hoàn thiện Quét CCCD: Chống Logout Tuyệt Đối khi 401 & Hiển Thị Trọn Vẹn 100% Ảnh Preview — 23/10/2026
-
-- **Cải tiến Hiển thị Full Ảnh Preview (`CccdOcrScanModal.tsx`):**
-  - **Hiển thị 100% trọn vẹn, không cắt xén:**
-    - Thay thế khung cố định cứng nhắc bằng khung preview cao thoáng (`min-h-[220px] max-h-[280px]`) trên nền tương phản tối `bg-slate-950/90`.
-    - Ảnh thẻ CCCD hiển thị `object-contain` tự nhiên, giữ trọn vẹn 100% cả 4 góc, số thẻ, họ tên, chip và hoa văn nền.
-    - Hiển thị badge định dạng & dung lượng file (ví dụ `Mặt trước • 1.8MB`).
-  - **Tính năng Phóng to / Lightbox Toàn màn hình (`ArrowsOut` / `MagnifyingGlassPlus`):**
-    - Nhấp trực tiếp vào ảnh hoặc bấm nút phóng to sẽ mở modal Lightbox hiển thị ảnh ở kích thước gốc siêu nét, có phím tắt `Esc` để đóng.
-    - Người dùng có thể kiểm tra từng con số, dấu vân tay trên thẻ một cách trực quan trước khi bấm quét.
-  - **Bổ sung xem ảnh đối chiếu ở màn hình Kết quả:**
-    - Khi bóc tách xong, modal vẫn giữ thumbnail ảnh mặt trước/mặt sau kèm tính năng click mở lớn, giúp công dân dễ dàng đối soát từng trường dữ liệu với ảnh chụp thực tế.
-  - **Xử lý lỗi 401 & nút chuyển đổi linh hoạt:**
-    - Hiển thị thông báo giải thích rõ phiên đăng nhập vẫn an toàn và cung cấp nút **"Đóng và điền thủ công"** để công dân tiếp tục công việc ngay mà không bị gián đoạn.
-
-- **Cải tiến API & Dev Proxy:**
-  - `src/lib/api/aiOcr.ts`: Bổ sung `z.preprocess` tự động chuẩn hóa cả định dạng camelCase lẫn PascalCase từ server; gửi kèm `filename` trong `FormData`; xử lý chi tiết các mã HTTP 401, 413 (ảnh quá 8MB), 415 (sai định dạng), 429 (rate limit), 502/503/504.
-  - `vite.config.ts`: Bổ sung định tuyến `aiOcr` ưu tiên biến môi trường `VITE_AI_OCR_API_URL` (nếu có) trước khi fallback về `documentForm` Gateway.
-
-- **Kiểm tra kỹ thuật & Tự động hóa:**
-  - Viết mới test tự động trong `tests/jwt-client.spec.ts`: `request with suppressSessionExpiry throws 401 without refreshing or expiring session` => **12/12 tests PASS**.
-  - `tests/profile-validation.spec.ts`: **9/9 tests PASS**.
-  - `npm run typecheck`: **0 lỗi (exit code 0)**.
-  - `npm run lint`: **0 lỗi (exit code 0)**.
-  - `npm run build`: **Build production bundle thành công trong 35.75s (exit code 0)**.
-  - Trạng thái Git: Các thay đổi nằm tại local working tree, **chưa commit và chưa push lên remote**.
+- **Đã triển khai FE đủ 10 thao tác HTTP nghiệp vụ** theo kế hoạch `docs/ANALYTICS_API_INTEGRATION_PLAN_2026-10-23.md`, sau khi đọc code FE/BE và Swagger Azure. Không sửa BE, không triển khai mọi API còn thiếu của toàn bộ WardMate. Ghi chú cũ loại trừ Analytics không còn áp dụng cho phạm vi mới này.
+- **Client / routing:** thêm `src/lib/api/analytics.ts`, `src/hooks/useAnalytics.ts`; Zod kiểm tra query, response và ID hồ sơ/job; dùng Axios/JWT chung, Query theo userId, không tự retry thao tác ghi. Thêm `VITE_ANALYTICS_API_URL`, proxy Analytics/feedback trước IAM; cập nhật `.env.example`, Playwright và script kiểm tra proxy. Đã thêm origin Gateway vào `.env.development.local` đang được ignore mà không ghi đè biến có sẵn; production cần biến môi trường/reverse proxy tương đương.
+- **Manager:** nối overview/trends/procedures/officers/feedback/feedback summary qua `src/components/analytics/ManagerAnalyticsView.tsx` và các view hiện có. Có lọc ngày/thủ tục, kỳ tháng/quý/năm hiện tại, phân trang server, tra tên thủ tục/cán bộ, biểu đồ và bảng dữ liệu, loading/error/retry/empty. Ngày thiếu để trống trên biểu đồ và cảnh báo coverage; tỷ lệ null là chưa đủ dữ liệu. Nhóm hồ sơ chưa phân công tách riêng. Nhãn UI diễn đạt tiền kiểm và số lượt bổ sung, không tự tính tỷ lệ thiếu mẫu số hoặc mô tả tiếp nhận chính thức.
+- **Công dân:** sửa `CitizenFeedbackModal.tsx`, `CitizenPage.tsx`, các view đánh giá/dashboard/danh sách hồ sơ. Truyền applicationId thật; cho chọn hồ sơ `DOCUMENTS_READY` hoặc dữ liệu lịch sử `OFFICIALLY_RECEIVED`; GET đánh giá trước khi gửi, chỉ coi 404 `feedback.not_found` là chưa đánh giá. Form RHF/Controller giữ rating là số nguyên 1–5, comment tối đa 2.000 ký tự; bỏ tiêu chí phụ BE chưa lưu. Chặn gửi trùng, giữ dữ liệu khi lỗi/đóng nhầm, xử lý 409 đã đánh giá bằng tải lại, khóa gửi khi hồ sơ không còn đủ điều kiện; response phải khớp hồ sơ. Trang đánh giá có phân trang hồ sơ, không giả lập lịch sử toàn bộ tài khoản.
+- **Admin:** thêm `src/pages/admin/AnalyticsJobsView.tsx` và menu Job thống kê. Form ngày có xác nhận, POST 202 chỉ báo xếp lịch; GET trạng thái có polling, dừng khi kết thúc/lỗi/trạng thái chưa biết. Xử lý jobs_disabled và tra cứu mã job; không tự retry POST sau timeout.
+- **Validation:** ngày lịch hợp lệ từ 01/01/2000, From ≤ To ≤ hôm nay tại UTC+7, tối đa 366 ngày tính cả hai đầu; GUID khác rỗng, page 1–100.000, pageSize 1–100, jobId gồm 1–30 chữ số ASCII. Có ánh xạ lỗi HTTP validation theo trường; không xóa phiên vì 503.
+- **Kiểm tra đã chạy trong lượt triển khai trước khi bị ngắt:** `npm run typecheck` đạt; `npm run lint` đạt; `npm run build` đạt (37,59 giây ở lượt cuối). Build còn cảnh báo annotation của Zod và bundle lớn, gồm editor DOCX hiện có. `node tests/api-proxy-check.mjs`: **16/16 route đạt**.
+- **Kiểm thử Edge/mock cuối cùng:** **46/46 test đạt, exit 0**, gồm `analytics.spec.ts`, `feedback.spec.ts`, `manager.spec.ts`, `jwt-client.spec.ts`, `design-system.spec.ts`, `landing.spec.ts`. Bao phủ cả 10 thao tác, ngày biên/năm nhuận, sao/nội dung, phân trang/đổi kỳ, coverage/null, 403/404/409/503, response sai hồ sơ/cấu trúc, job 202/polling và mobile/đóng form. Các lượt chạy trong sandbox trước đó treo ở dọn tiến trình; lượt cuối ngoài sandbox đã kết thúc đầy đủ. Lượt tiếp tục sau ngắt chỉ kiểm tra Git/diff, xác nhận `.last-run.json` passed và hoàn tất tài liệu, không báo đã chạy lại toàn bộ test.
+- **Azure:** đã đọc Swagger live; GET không token tới ba nhóm route overview/job/citizen feedback đều trả 401. Đây chỉ là kiểm tra routing/yêu cầu xác thực, chưa kiểm chứng dữ liệu, quyền/phường, cookie hoặc job thật; không gửi mutation lên Azure.
+- **Còn chờ xác minh môi trường thật:** tài khoản công dân/Manager/Admin đúng role/phường và môi trường cho phép chạy job. Các chức năng BE chưa có (lịch sử toàn bộ đánh giá công dân, sửa/xóa/trả lời đánh giá, xuất Excel, thống kê tra cứu/biểu mẫu) không được giả lập. SignalR thông báo nằm ngoài 10 thao tác HTTP đã chốt.
+- Giữ nguyên thay đổi có sẵn trong `package-lock.json` (27 dòng thêm/25 dòng bỏ); không thêm dependency. Trạng thái behind trong lượt tích hợp cũ đã được thay thế bởi mốc Git xác minh ở mục bàn giao 23/10 đầu file. `git diff --check` đạt khi tiếp tục phiên.
 
 ## Bổ sung Tab "Hồ sơ đã hủy" trong Cổng dịch vụ công dân — 23/10/2026
 
