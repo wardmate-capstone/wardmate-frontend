@@ -1,8 +1,22 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 22/10/2026.
+Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Bổ sung Tab "Hồ sơ đã hủy" trong Cổng dịch vụ công dân — 23/10/2026
+
+- **Hạng mục hoàn thành:**
+  - Bổ sung định danh mục `dossiers_cancelled` vào kiểu dữ liệu `CitizenSectionId` (`src/pages/citizen/types.ts`).
+  - Thêm tab con **"Đã hủy"** (`XCircle` icon) dưới nhóm điều hướng *"Hồ sơ của tôi"* ở Sidebar (`src/pages/citizen/CitizenPage.tsx`).
+  - Cập nhật tiêu đề trang `sectionTitles.dossiers_cancelled: { title: 'Hồ sơ đã hủy' }`.
+  - Ánh xạ bộ lọc trạng thái `dossiers_cancelled` => `'Đã hủy'` trong `CitizenDossiersView.tsx`.
+  - Cập nhật nút quay lại từ chi tiết hồ sơ: nếu hồ sơ có trạng thái `'Đã hủy'`, hệ thống tự động quay lại đúng tab `dossiers_cancelled`.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run build`: **Build production bundle thành công trong 21.07s (exit code 0)**.
+- **Git Commit:**
+  - Commit `68e448f`: `feat(citizen): add cancelled dossiers tab to sidebar navigation` đã push lên `origin/main`.
 
 ## Hoàn thiện Cổng công dân, Menu tài khoản & Khắc phục hiển thị Phường trong Quản trị — 22/10/2026
 
