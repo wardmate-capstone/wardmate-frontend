@@ -4,20 +4,6 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Chia 20 commit và bàn giao main — 23/10/2026
-
-- Người dùng yêu cầu chia toàn bộ thay đổi FE hiện có thành đúng **20 commit** và đẩy lên `main`. Nền `ce4321d`; đã fetch và xác minh HEAD trùng `origin/main` trước khi chia. Remote: `https://github.com/wardmate-capstone/wardmate-frontend.git`, nhánh `main`. Không sửa BE hoặc thêm tính năng trong lượt chia commit.
-- Phân nhóm: cấu hình API/proxy; client Analytics; query cache; bộ lọc; biểu đồ; báo cáo Manager; tích hợp các workspace; Tổng quan Manager; modal đánh giá; hồ sơ đánh giá công dân; job Admin; kiểm thử Analytics; kiểm thử feedback; bảo vệ thao tác thủ tục; Admin chỉ danh sách và bỏ menu biểu mẫu; lockfile; kế hoạch; audit; hướng dẫn FE; bàn giao này. Giữ và đưa các thay đổi lockfile đã có vào commit riêng. 19 commit đầu từ `b03d00d` đến `a795de3`; commit cuối mang tiêu đề `docs(handover): record integration validation and delivery`.
-- Kiểm tra mới trong lượt này: **82/82 Playwright Edge đạt** (`analytics`, `feedback`, `manager`, `form-templates`, `jwt-client`, `design-system`, `landing`); **16/16 route proxy đạt**. Ở task Admin ngay trước: typecheck/lint/build và **33/33 Edge đạt** (`admin-procedures-readonly`, `workspace-sidebar`, `procedure-manager`); không chạy lại ba bộ này hoặc build trong lượt chỉ chia commit. `git diff --check` đạt. Kiểm thử trình duyệt dùng mock, chưa xác minh tài khoản/API Azure thật; build vẫn có cảnh báo bundle lớn.
-- Mốc ghi nhận của mục này là **trước push**: sau commit tài liệu sẽ đối chiếu đủ 20 commit, kiểm tra lại remote/nhánh rồi push thường, không force. Kết quả push và SHA remote được xác minh trong phản hồi bàn giao cuối; tài liệu không khẳng định đã deploy. Các dòng chưa commit/push ở mục cũ là trạng thái tại thời điểm task đó, không phải trạng thái hiện tại.
-- Kết quả thực tế: đã xác minh đúng **20 commit**, cây làm việc sạch và `main` đi trước `origin/main` 20 commit. **Chưa push**: automatic approval review từ chối `git push origin main` vì mã nguồn riêng tư sẽ được gửi lên GitHub nhưng người dùng chưa trực tiếp xác nhận URL đích. Chờ xác nhận push tới `https://github.com/wardmate-capstone/wardmate-frontend.git`; không đổi remote hoặc dùng cách gửi khác để vượt chặn. Chỉ amend commit tài liệu thứ 20 còn local để ghi nhận kết quả này, không tạo commit thứ 21.
-
-## Admin chỉ xem danh sách thủ tục — 23/10/2026
-
-- Theo yêu cầu mới nhất, Admin không cần chi tiết thủ tục. `AdminPage.tsx` dùng `AdminProceduresView.tsx` riêng, tái sử dụng `ProcedureApiList` không có callback mở chi tiết/lịch sử. Bỏ cột thao tác, nút Chi tiết và liên kết công khai; số bản lưu chỉ hiển thị tĩnh. Giữ tìm kiếm, bộ lọc, sắp xếp, phân trang và báo lỗi/thử lại.
-- Admin chỉ tải danh mục và danh sách quản lý, không mount workspace quản lý hoặc xử lý query bản nháp; áp dụng cả tài khoản Admin kiêm Quản lý thủ tục. Workspace Quản lý thủ tục độc lập giữ hành vi theo quyền hiện có. Không sửa IAM/BE.
-- Kiểm tra: `npm run typecheck`, `npm run lint`, `npm run build` và `git diff --check` đạt; build còn cảnh báo kích thước bundle. Playwright Edge: **33/33 đạt** trong `admin-procedures-readonly.spec.ts`, `workspace-sidebar.spec.ts`, `procedure-manager.spec.ts` (tìm kiếm/bộ lọc, không có đường mở chi tiết/lịch sử, URL bản nháp không mở workspace ghi, hồi quy quản lý thủ tục). Kiểm thử trình duyệt dùng API mock, chưa xác minh phiên đăng nhập/API thật. Trạng thái commit xem mục bàn giao 23/10 ở đầu file.
-
 ## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
 
 - **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
