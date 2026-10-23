@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, MagnifyingGlass, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -12,8 +12,8 @@ export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenM
   const groups: WorkspaceNavGroup<ManagerSectionId>[] = [
     { title: 'Điều hành', items: [{ id: 'overview', label: 'Tổng quan', icon: House, fallbackRoles: role }] },
     { title: 'Thống kê hệ thống', items: [
-      { id: 'stats-dossiers', label: 'Thống kê hồ sơ', icon: Files, fallbackRoles: role }, { id: 'stats-procedures', label: 'Thống kê thủ tục', icon: ClipboardText, fallbackRoles: role },
-      { id: 'stats-searches', label: 'Thống kê lượt tra cứu', icon: MagnifyingGlass, fallbackRoles: role }, { id: 'stats-forms', label: 'Thống kê biểu mẫu', icon: FileText, fallbackRoles: role },
+      { id: 'stats-dossiers', label: 'Thống kê hồ sơ', icon: Files, fallbackRoles: role },
+      { id: 'stats-procedures', label: 'Thống kê thủ tục', icon: ClipboardText, fallbackRoles: role },
     ] },
     { title: 'Nhân sự Một cửa', items: [{ id: 'profiles', label: 'Cán bộ Một cửa', icon: IdentificationCard, fallbackRoles: role }] },
     { title: 'Hiệu suất xử lý', items: [

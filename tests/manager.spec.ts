@@ -61,16 +61,6 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await page.locator('aside').getByRole('button', { name: 'Thống kê thủ tục' }).click();
     await expect(page.getByRole('heading', { name: 'Thống kê Thủ tục Hành chính', exact: true })).toBeVisible();
     await expect(page.getByText('Thống kê theo thủ tục', { exact: false })).toBeVisible();
-
-    // 3. Thống kê lượt tra cứu
-    await page.locator('aside').getByRole('button', { name: 'Thống kê lượt tra cứu' }).click();
-    await expect(page.getByRole('heading', { name: 'Thống kê Lượt tra cứu', exact: true })).toBeVisible();
-    await expect(page.getByText('API thống kê lưu lượng tra cứu sẽ được tích hợp sau.', { exact: false })).toBeVisible();
-
-    // 4. Thống kê biểu mẫu
-    await page.locator('aside').getByRole('button', { name: 'Thống kê biểu mẫu' }).click();
-    await expect(page.getByRole('heading', { name: 'Thống kê Biểu mẫu & E-Form', exact: true })).toBeVisible();
-    await expect(page.getByText('API thống kê biểu mẫu trực tuyến sẽ được tích hợp sau.', { exact: false })).toBeVisible();
   });
 
   test('Hiệu suất xử lý & Phản hồi người dân: Hiển thị dữ liệu API', async ({ page }) => {

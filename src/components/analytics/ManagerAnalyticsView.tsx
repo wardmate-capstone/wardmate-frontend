@@ -30,12 +30,11 @@ function OfficerName({ id }: { id: string }) {
 }
 export function ManagerAnalyticsView({ section }: { section: string }) {
   const [filters, setFilters] = useState(initialAnalyticsQuery);
-  const unavailable = section === 'stats-searches' || section === 'stats-forms';
   const procedures = section === 'stats-procedures';
   const officers = section === 'perf-officers' || section === 'perf-processing-time';
   const feedback = section === 'feedback-reports';
   const summary = section === 'satisfaction-level';
-  const overviewEnabled = !unavailable && !procedures && !officers && !feedback && !summary;
+  const overviewEnabled = !procedures && !officers && !feedback && !summary;
   const overview = useAnalytics('overview', analyticsApi.overview, filters, overviewEnabled);
   const trends = useAnalytics('trends', analyticsApi.trends, filters, section === 'stats-dossiers');
   const procedureRows = useAnalytics('procedures', analyticsApi.procedures, filters, procedures);
@@ -44,7 +43,6 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
   const feedbackSummary = useAnalytics('summary', analyticsApi.summary, filters, summary);
   const current = procedures ? procedureRows : officers ? officerRows : feedback ? feedbackRows : summary ? feedbackSummary : overview;
   const pageData = procedures ? procedureRows.data : officers ? officerRows.data : feedback ? feedbackRows.data : undefined;
-  if (unavailable) return <div className="admin-card p-6" role="status">{section === 'stats-searches' ? 'API thống kê lưu lượng tra cứu sẽ được tích hợp sau.' : 'API thống kê biểu mẫu trực tuyến sẽ được tích hợp sau.'} Backend hiện chưa cung cấp dữ liệu cho mục này.</div>;
   return <div className="space-y-5"><AnalyticsFilters value={filters} onChange={setFilters} /><Button variant="outline" loading={current.isFetching || (section === 'stats-dossiers' && trends.isFetching)} onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }}>Làm mới dữ liệu</Button><AnalyticsStatus pending={current.isPending} error={current.error} retry={() => void current.refetch()} />
     {!current.isError && current.data && <section className="admin-card space-y-5 p-5">
       {overviewEnabled && overview.data && <><h2 className="font-bold">Kết quả tiền kiểm trong kỳ</h2>{section === 'perf-supplement-rate' && <p>Backend cung cấp số lượt yêu cầu bổ sung; chưa có tỷ lệ hồ sơ hoặc phân tích nguyên nhân bổ sung.</p>}<dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Object.entries(labels).map(([key, label]) => <div key={key} className="rounded-xl bg-slate-50 p-4"><dt className="text-sm text-slate-600">{label}</dt><dd className="mt-2 text-2xl font-bold text-red-900">{overview.data!.totals[key as keyof typeof labels].toLocaleString('vi-VN')}</dd></div>)}</dl><Deadlines value={overview.data.deadlines} /><CoverageNotice data={overview.data.coverage} /></>}

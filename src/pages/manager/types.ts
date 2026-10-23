@@ -2,8 +2,6 @@ export type ManagerSectionId =
   | 'overview'
   | 'stats-dossiers'
   | 'stats-procedures'
-  | 'stats-searches'
-  | 'stats-forms'
   | 'profiles'
   // Hiệu suất xử lý
   | 'perf-processing-time'

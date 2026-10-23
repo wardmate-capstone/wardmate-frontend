@@ -5,7 +5,6 @@ import {
   List,
   SidebarSimple,
   MagnifyingGlass,
-  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import { ManagerSectionId } from './types';
 
@@ -13,8 +12,6 @@ export const managerSectionTitles: Record<ManagerSectionId, { title: string; sub
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
   'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
   'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
-  'stats-searches': { title: 'Thống kê Lượt tra cứu', subtitle: 'Lưu lượng tìm kiếm và quan tâm của người dân qua cổng trực tuyến' },
-  'stats-forms': { title: 'Thống kê Biểu mẫu & E-Form', subtitle: 'Tình hình sử dụng, tải mẫu đơn và kê khai trực tuyến' },
   profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
   'perf-processing-time': { title: 'Hiệu suất Thời gian Xử lý', subtitle: 'Thời gian tiền kiểm trung bình và số mẫu theo cán bộ' },
   'perf-completion-rate': { title: 'Tỷ lệ Đúng hạn Tiền kiểm', subtitle: 'Tỷ lệ đúng hạn theo các hồ sơ sẵn sàng có thời hạn xác định' },
@@ -102,16 +99,15 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
           />
         </div>
 
-        {/* Nút xuất báo cáo nhanh */}
+        {/* Nút xuất / in báo cáo */}
         {onExportReport && (
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-2xs transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-900 shrink-0"
             onClick={onExportReport}
-            title="In màn hình hiện tại"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-red-700"
+            title="In / Xuất báo cáo"
           >
-            <ArrowSquareOut size={16} className="text-slate-500" />
-            <span className="hidden sm:inline">In màn hình</span>
+            <span>In báo cáo</span>
           </button>
         )}
 

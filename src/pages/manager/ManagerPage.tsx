@@ -333,9 +333,7 @@ export const ManagerPage: React.FC = () => {
           )}
 
           {(currentSection === 'stats-dossiers' ||
-            currentSection === 'stats-procedures' ||
-            currentSection === 'stats-searches' ||
-            currentSection === 'stats-forms') && (
+            currentSection === 'stats-procedures') && (
             <ManagerSystemStatsView section={currentSection} />
           )}
 
