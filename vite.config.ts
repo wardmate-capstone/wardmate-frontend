@@ -12,11 +12,16 @@ function proxyTo(target?: string): ProxyOptions | undefined {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   const iam = proxyTo(env.VITE_API_BASE_URL);
+  const analytics = proxyTo(env.VITE_ANALYTICS_API_URL || env.VITE_API_BASE_URL);
   const catalog = proxyTo(env.VITE_CATALOG_API_URL);
   const workflow = proxyTo(env.VITE_WORKFLOW_API_URL);
   const documentForm = proxyTo(env.VITE_DOCUMENT_FORM_API_URL);
   const aiOcr = proxyTo(env.VITE_AI_OCR_API_URL) || documentForm;
   const proxy: Record<string, ProxyOptions> = {};
+  if (analytics) {
+    proxy['/api/v1/analytics'] = analytics;
+    proxy['/api/v1/citizen/feedback'] = analytics;
+  }
 
   if (documentForm) {
     proxy['/api/v1/citizen/submissions'] = documentForm;

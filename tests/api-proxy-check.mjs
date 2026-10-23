@@ -6,7 +6,7 @@ import { createServer, loadConfigFromFile } from 'vite';
 const targets = [];
 let vite;
 try {
-  for (const name of ['iam', 'catalog', 'workflow', 'document']) {
+  for (const name of ['iam', 'catalog', 'workflow', 'document', 'analytics']) {
     const server = createHttpServer((request, response) => {
       response.setHeader('Content-Type', 'application/json');
       response.end(JSON.stringify({ service: name, path: request.url }));
@@ -19,6 +19,7 @@ try {
     VITE_CATALOG_API_URL: targets[1].url,
     VITE_WORKFLOW_API_URL: targets[2].url,
     VITE_DOCUMENT_FORM_API_URL: targets[3].url,
+    VITE_ANALYTICS_API_URL: targets[4].url,
     VITE_USE_API_PROXY: 'true',
   };
   Object.assign(process.env, env);
@@ -28,6 +29,10 @@ try {
   await vite.listen();
   const base = `http://127.0.0.1:${vite.httpServer.address().port}`;
   const cases = [
+    ['/api/v1/analytics/overview?from=2026-10-01&to=2026-10-23', 'analytics'],
+    ['/api/v1/analytics/jobs/rebuild', 'analytics'],
+    ['/api/v1/analytics/jobs/123', 'analytics'],
+    ['/api/v1/citizen/feedback/app', 'analytics'],
     ['/api/v1/applications/app/contents', 'document'],
     ['/api/v1/applications/app/approved-qr', 'document'],
     ['/api/v1/applications/app/approved-qr/image', 'document'],
