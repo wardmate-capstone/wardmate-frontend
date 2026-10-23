@@ -196,7 +196,7 @@ export function CitizenDossiersView({
                         </button>
                       )}
 
-                      {item.status === 'Đã hoàn thành' && (
+                      {['Giấy tờ sẵn sàng', 'Đã tiếp nhận tại quầy'].includes(item.status) && (
                         <button
                           type="button"
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"

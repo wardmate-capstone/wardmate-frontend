@@ -138,7 +138,7 @@ export function CitizenDashboardView({
                         Bổ sung ngay
                       </button>
                     )}
-                    {dossier.status === 'Đã hoàn thành' && (
+                    {['Giấy tờ sẵn sàng', 'Đã tiếp nhận tại quầy'].includes(dossier.status) && (
                       <button
                         type="button"
                         className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"

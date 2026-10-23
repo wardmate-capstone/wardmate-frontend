@@ -168,7 +168,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [notifications, setNotifications] = useState<CitizenNotification[]>([]);
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string }>({
+  const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string; id?: string }>({
     procedure: 'Dịch vụ hỗ trợ thủ tục',
   });
 
@@ -364,7 +364,13 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   }
 
   function handleOpenFeedback(procedure: string, code?: string) {
-    setSelectedFeedbackDossier({ procedure, code });
+    const dossier = dossiers.find(item => item.code === code);
+    if (!dossier?.id || !['Giấy tờ sẵn sàng', 'Đã tiếp nhận tại quầy'].includes(dossier.status)) {
+      toast.info('Chọn hồ sơ có giấy tờ sẵn sàng để đánh giá.');
+      selectSection('feedback');
+      return;
+    }
+    setSelectedFeedbackDossier({ procedure, code, id: dossier.id });
     setIsFeedbackModalOpen(true);
   }
 
@@ -551,7 +557,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           )}
 
           {activeSection === 'feedback' && (
-            <CitizenFeedbackView onOpenFeedback={handleOpenFeedback} />
+            <CitizenFeedbackView page={dossierPage} total={citizenAppsQuery.data?.total ?? 0} onPageChange={setDossierPage} dossiers={dossiers} loading={citizenAppsQuery.isPending} error={citizenAppsQuery.isError} onRetry={() => void citizenAppsQuery.refetch()} onOpenFeedback={handleOpenFeedback} />
           )}
 
           {activeSection === 'profile' && (
@@ -572,6 +578,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         onOpenChange={setIsFeedbackModalOpen}
         procedureName={selectedFeedbackDossier.procedure}
         applicationCode={selectedFeedbackDossier.code}
+        applicationId={selectedFeedbackDossier.id}
+        onRefreshApplication={() => void citizenAppsQuery.refetch()}
       />
 
       <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
