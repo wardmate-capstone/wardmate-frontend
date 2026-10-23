@@ -12,9 +12,10 @@ interface ProcedureVersionsModalProps {
   categories: Category[];
   onClose: () => void;
   onChanged: () => void;
+  readOnly?: boolean;
 }
 
-export function ProcedureVersionsModal({ procedure, categories, onClose, onChanged }: ProcedureVersionsModalProps) {
+export function ProcedureVersionsModal({ procedure, categories, onClose, onChanged, readOnly = false }: ProcedureVersionsModalProps) {
   const [rollback, setRollback] = useState<ProcedureVersion>();
   const [reason, setReason] = useState('');
   const [decisionNumber, setDecisionNumber] = useState('');
@@ -48,7 +49,7 @@ export function ProcedureVersionsModal({ procedure, categories, onClose, onChang
           <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">Chưa có phiên bản.</p>
         )}
 
-        {versions.data?.map((version) => (
+        {procedure && versions.data?.map((version) => (
           <details key={version.id} className="rounded-xl border border-slate-200 bg-white p-4 transition-all">
             <summary className="cursor-pointer font-semibold text-slate-900 select-none">
               Phiên bản {version.versionNumber} · {version.decisionNumber ? `QĐ: ${version.decisionNumber}` : 'Chưa có số quyết định'} · Ngày hiệu lực: {version.effectiveDate}
@@ -66,12 +67,12 @@ export function ProcedureVersionsModal({ procedure, categories, onClose, onChang
               {version.pdfFileName && (
                 <div><p className="mb-2 text-xs italic text-slate-600">Tệp PDF đính kèm: {version.pdfFileName}</p><PdfSource id={procedure!.id} versionId={version.id} /></div>
               )}
-              <Button size="small" variant="outline" onClick={() => { setRollback(version); setReason(''); setDecisionNumber(''); setEffectiveDate(''); setError(''); }}>Khôi phục phiên bản này</Button>
+              {!readOnly && <Button size="small" variant="outline" onClick={() => { setRollback(version); setReason(''); setDecisionNumber(''); setEffectiveDate(''); setError(''); }}>Khôi phục phiên bản này</Button>}
             </div>
           </details>
         ))}
       </div>
-      <Modal open={!!rollback} onOpenChange={open => { if (!open && !busy) setRollback(undefined); }} title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ''}`} description="Nội dung của phiên bản này sẽ được khôi phục thành bản mới. Các phiên bản cũ vẫn được giữ lại." footer={<Button loading={busy} onClick={async () => { if (lock.current || !procedure || !rollback) return; lock.current = true; setBusy(true); setError(''); try { if (!reason.trim() || !decisionNumber.trim() || !effectiveDate) throw new Error('Nhập đủ lý do, số quyết định và ngày hiệu lực.'); await procedureApi.rollback(procedure.id, rollback.versionNumber, { reason: reason.trim(), decisionNumber: decisionNumber.trim(), effectiveDate }); setRollback(undefined); versions.refresh(); onChanged(); toast.success('Đã khôi phục nội dung và tạo phiên bản mới.'); } catch (e) { setError(procedureError(e)); } finally { setBusy(false); lock.current = false; } }}>Xác nhận khôi phục</Button>}>
+      <Modal open={!readOnly && !!rollback} onOpenChange={open => { if (!open && !busy) setRollback(undefined); }} title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ''}`} description="Nội dung của phiên bản này sẽ được khôi phục thành bản mới. Các phiên bản cũ vẫn được giữ lại." footer={<Button loading={busy} onClick={async () => { if (readOnly || lock.current || !procedure || !rollback) return; lock.current = true; setBusy(true); setError(''); try { if (!reason.trim() || !decisionNumber.trim() || !effectiveDate) throw new Error('Nhập đủ lý do, số quyết định và ngày hiệu lực.'); await procedureApi.rollback(procedure.id, rollback.versionNumber, { reason: reason.trim(), decisionNumber: decisionNumber.trim(), effectiveDate }); setRollback(undefined); versions.refresh(); onChanged(); toast.success('Đã khôi phục nội dung và tạo phiên bản mới.'); } catch (e) { setError(procedureError(e)); } finally { setBusy(false); lock.current = false; } }}>Xác nhận khôi phục</Button>}>
         <ProcedureFeedback error={error} /><div className="space-y-4"><Input label="Lý do khôi phục" value={reason} disabled={busy} onChange={e => setReason(e.target.value)} /><Input label="Số quyết định" value={decisionNumber} disabled={busy} onChange={e => setDecisionNumber(e.target.value)} /><Input label="Ngày hiệu lực" type="date" value={effectiveDate} disabled={busy} onChange={e => setEffectiveDate(e.target.value)} /></div>
       </Modal>
     </Modal>

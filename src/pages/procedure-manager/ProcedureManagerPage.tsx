@@ -33,9 +33,9 @@ import { FormsView } from '@/pages/admin/FormsView';
 import { ProcedureValidationError } from '@/lib/procedureValidation';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
-export function ProcedureManagerPage({ embedded = false, initialSection = "dashboard" }: { embedded?: boolean; initialSection?: ProcedureNavSection } = {}) {
+export function ProcedureManagerPage({ embedded = false, readOnly = false, initialSection = "dashboard" }: { embedded?: boolean; readOnly?: boolean; initialSection?: ProcedureNavSection } = {}) {
   const [params, setParams] = useSearchParams();
-  const [section, setSection] = useState<ProcedureNavSection>(initialSection);
+  const [section, setSection] = useState<ProcedureNavSection>(readOnly ? 'procedures' : initialSection);
   const [mobile, setMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<ProcedureSummary>();
@@ -52,7 +52,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
   const guard = useUnsavedChanges(creating && JSON.stringify(input) !== JSON.stringify(emptyProcedure()), busy);
   const { profile } = useUserProfile();
   const user = useAuthStore((s) => s.user);
-  const can = (permission: string) => user?.permissions.includes(permission) ?? false;
+  const can = (permission: string) => !readOnly && (user?.permissions.includes(permission) ?? false);
   const procedureManagerName =
     profile?.fullName?.trim() || user?.username || "Chuyên viên";
   const categories = useProcedureQuery(
@@ -71,8 +71,9 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
       [revision],
     ),
   );
-  const drafts = section === "drafts" || params.get("section") === "drafts" || params.has("draft");
+  const drafts = !readOnly && (section === "drafts" || params.get("section") === "drafts" || params.has("draft"));
   const navigate = (next: ProcedureNavSection) => {
+    if (readOnly && next !== 'procedures') return;
     if (draftPending) {
       toast.info(
         "Hãy lưu hoặc bỏ thay đổi và chờ thao tác hoàn tất trước khi rời bản nháp.",
@@ -88,13 +89,14 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
     }
   };
   const openCreate = () => {
+    if (!can('procedure.create')) return;
     setValidationError(null);
     setInput(emptyProcedure());
     setConfirmed(false);
     setError("");
     setCreating(true);
   };
-  const isEditingDraft = Boolean(params.get("draft"));
+  const isEditingDraft = !readOnly && Boolean(params.get("draft"));
 
   if (isEditingDraft && !embedded) {
     return (
@@ -158,6 +160,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             error={categories.error}
             retry={categories.refresh}
           />
+          {readOnly && <p className="text-sm text-slate-600">Chỉ xem thông tin thủ tục.</p>}
           {drafts && !can("procedure.drafts.read") ? (
             <section className="admin-card space-y-3 p-6" role="alert">
               <h1 className="text-xl font-bold">Bạn chưa có quyền xem PDF và bản nháp</h1>
@@ -171,6 +174,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             />
           ) : selected ? (
             <ProcedureApiDetail
+              readOnly={readOnly}
               key={selected.id}
               row={selected}
               categories={categories.data ?? []}
@@ -211,7 +215,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             <ProcedureApiList
               categories={categories.data ?? []}
               onSelect={setSelected}
-              onViewVersions={setViewingVersions}
+              onViewVersions={user?.permissions.includes('procedure.versions.read') ? setViewingVersions : undefined}
               revision={revision}
             />
           ) : (
@@ -242,7 +246,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
             </section>
           )}
           <Modal
-            open={creating}
+            open={!readOnly && creating}
             onOpenChange={(open) => {
               if (!open) guard.requestClose(() => setCreating(false));
             }}
@@ -254,7 +258,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
                 loading={busy}
                 disabled={!confirmed}
                 onClick={async () => {
-                  if (lock.current) return;
+                  if (!can('procedure.create') || lock.current) return;
                   lock.current = true;
                   setBusy(true);
                   setError("");
@@ -301,6 +305,7 @@ export function ProcedureManagerPage({ embedded = false, initialSection = "dashb
           </Modal>
           {guard.confirmation}
           <ProcedureVersionsModal
+            readOnly={readOnly}
             procedure={viewingVersions}
             categories={categories.data ?? []}
             onClose={() => setViewingVersions(null)}

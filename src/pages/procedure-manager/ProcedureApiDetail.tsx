@@ -27,14 +27,16 @@ export function ProcedureApiDetail({
   categories,
   onBack,
   onChange,
+  readOnly = false,
 }: {
   row: ProcedureSummary;
   categories: Category[];
   onBack: () => void;
   onChange: (active: boolean) => void;
+  readOnly?: boolean;
 }) {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const can = (permission: string) => permissions.includes(permission);
+  const can = (permission: string) => permissions.includes(permission) && (!readOnly || permission === 'procedure.versions.read');
   const detail = useProcedureQuery(
     useCallback(
       (signal: AbortSignal) => procedureApi.managerDetail(row.id, signal),
@@ -44,7 +46,7 @@ export function ProcedureApiDetail({
   const versions = useProcedureQuery(
     useCallback(
       (signal: AbortSignal) => can("procedure.versions.read") ? procedureApi.versions(row.id, signal) : Promise.resolve([]),
-      [row.id, permissions],
+      [row.id, permissions, readOnly],
     ),
   );
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
@@ -65,7 +67,7 @@ export function ProcedureApiDetail({
   const dateInput = useRef<HTMLInputElement>(null);
   const guard = useUnsavedChanges(Boolean(editing && (date || JSON.stringify(editing) !== JSON.stringify(detail.data))), busy);
   async function run(action: () => Promise<void>) {
-    if (lock.current) return;
+    if (readOnly || lock.current) return;
     lock.current = true;
     setBusy(true);
     setError("");
@@ -207,7 +209,7 @@ export function ProcedureApiDetail({
         ))}
       </section>}
       <Modal
-        open={!!rollback}
+        open={!readOnly && !!rollback}
         onOpenChange={(open) => {
           if (!open && !busy) setRollback(undefined);
         }}
@@ -272,7 +274,7 @@ export function ProcedureApiDetail({
         </div>
       </Modal>
       <Modal
-        open={!!editing}
+        open={!readOnly && !!editing}
         onOpenChange={(open) => {
           if (!open) guard.requestClose(() => setEditing(null));
         }}
@@ -336,7 +338,7 @@ export function ProcedureApiDetail({
         />
       </Modal>
       <Modal
-        open={statusOpen}
+        open={!readOnly && statusOpen}
         onOpenChange={(open) => {
           if (!busy) setStatusOpen(open);
         }}
@@ -366,7 +368,7 @@ export function ProcedureApiDetail({
         />
         <ProcedureFeedback error={error} />
       </Modal>
-      {detail.data && (
+      {!readOnly && detail.data && (
         <ProcedureChecklistModal
           open={checklistOpen}
           onOpenChange={setChecklistOpen}
