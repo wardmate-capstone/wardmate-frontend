@@ -74,7 +74,10 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
     subtitle: 'Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ.',
   },
   notifications: { title: 'Thông báo & Cập nhật' },
-  qr_code: { title: 'Mã QR hồ sơ điện tử' },
+  qr_code: {
+    title: 'Mã QR hồ sơ điện tử',
+    subtitle: 'Thẻ tra cứu và đối soát hồ sơ nhanh tại Bộ phận tiếp nhận Một cửa UBND.',
+  },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
   profile: { title: 'Hồ sơ cá nhân & Định danh' },
 };
@@ -547,7 +550,11 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           )}
 
           {activeSection === 'qr_code' && (
-            <CitizenQrCodeView dossiers={dossiers} />
+            <CitizenQrCodeView
+              dossiers={dossiers}
+              onOpenDossierDetail={handleOpenDossierDetail}
+              onSelectSection={selectSection}
+            />
           )}
 
           {activeSection === 'feedback' && (
