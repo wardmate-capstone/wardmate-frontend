@@ -1,5 +1,20 @@
 # Nền tảng FE Web
 
+## Danh sách thủ tục trong Admin — 23/10/2026
+
+- Admin dùng `AdminProceduresView` với `ProcedureApiList` không truyền `onSelect`/`onViewVersions`: chỉ danh sách, tìm kiếm, bộ lọc và phân trang; không cột thao tác, chi tiết, liên kết công khai hoặc lịch sử. Số bản lưu chỉ hiển thị tĩnh. Chỉ gọi danh mục và danh sách quản lý để vẫn xem được thủ tục ngừng công khai; không mount workspace quản lý hoặc đọc tham số bản nháp từ URL. Áp dụng cả tài khoản đa vai trò.
+- Workspace Quản lý thủ tục độc lập vẫn dùng quyền hiện có; không thay đổi IAM/BE. Khi tái sử dụng workspace cho màn chỉ xem, phải truyền cờ xuống cả detail và versions modal, không chỉ ẩn nút ở danh sách.
+
+## Analytics / phản hồi / job — 23/10/2026
+
+- Manager mở `/manager` vào **Tổng quan** mặc định. Dashboard tại `ManagerOverviewView.tsx` đọc overview/trends/feedback summary với bộ lọc chung; từng khối tải và báo lỗi độc lập. UI hiện tập trung vào 4 biểu đồ (xu hướng, hoạt động, hạn xử lý, đánh giá), không còn các thẻ KPI lớn. Menu Thống kê hồ sơ vẫn giữ màn chi tiết. Biểu đồ/bảng dữ liệu dùng `AnalyticsTrendChart.tsx` và `OverviewCountChart.tsx`; dữ liệu rỗng không tạo tỷ lệ/hình giả.
+
+- `VITE_ANALYTICS_API_URL` là origin Gateway hoặc AnalyticsSystem, không gồm đường dẫn Swagger. Khi dùng proxy, Vite ưu tiên `/api/v1/analytics` và `/api/v1/citizen/feedback` trước `/api` của IAM; production cần reverse proxy tương đương hoặc cấu hình gọi trực tiếp có CORS. `.env.example` đã có origin Gateway; local hiện tại đã thêm biến này mà không ghi đè các biến có sẵn.
+- Client `src/lib/api/analytics.ts` kiểm tra request/response bằng Zod; Query ở `src/hooks/useAnalytics.ts` cách ly theo user. Manager đọc sáu API thống kê/phản hồi; Admin tạo/theo dõi job; công dân GET/POST đánh giá theo applicationId. Đánh giá dùng RHF/Controller, rating nguyên 1–5 và comment tối đa 2.000 ký tự; không gửi tiêu chí phụ mà BE chưa lưu.
+- Rà soát bổ sung: GUID theo .NET; response có coverage/page phải khớp kỳ/trang yêu cầu, xu hướng đủ ngày, không trùng/ngoài kỳ. Manager có nút làm mới dữ liệu. Lỗi BE chỉ focus sau khi fieldset hết khóa hoặc modal xác nhận đã trả focus; tra job luôn đọc lại trạng thái khi quay lại. Xem bảng API → UI và giới hạn tại `ANALYTICS_API_AUDIT_2026-10-23.md`.
+- Ngày thống kê là ngày Việt Nam, tối đa 366 ngày tính cả hai đầu. `coverage.missingDates` được hiển thị rõ và tạo khoảng trống biểu đồ, không biến thành số 0; tỷ lệ null là chưa đủ dữ liệu. 202 job chỉ là xếp lịch; không tự retry POST, dừng polling ở trạng thái kết thúc/lỗi/không xác định.
+- Chi tiết phạm vi và giới hạn: `ANALYTICS_API_INTEGRATION_PLAN_2026-10-23.md`. Không gồm SignalR thông báo hoặc API nội bộ service. Không có endpoint lịch sử toàn bộ đánh giá công dân, sửa/xóa đánh giá, trả lời phản ánh, xuất Excel hoặc thống kê lượt tìm kiếm/khai thác biểu mẫu.
+
 Setup ngày 06/10/2026. Giữ React/Vite/Tailwind, routing, Zustand và UI WardMate hiện có.
 
 ## Query
