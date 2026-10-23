@@ -4,6 +4,24 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Khắc phục lỗi Quét CCCD (Ngăn chặn Logout oan do 401 & Hiển thị Full ảnh Preview) — 23/10/2026
+
+- **Vấn đề đã xử lý:**
+  1. **Hiển thị đầy đủ ảnh thẻ CCCD (`CccdOcrScanModal.tsx`):**
+     - Khắc phục tình trạng ảnh CCCD bị cắt xén (mất nửa trên/dưới) do dùng `h-40 object-cover`.
+     - Chuyển sang tỷ lệ chuẩn thẻ ID card `aspect-[1.58/1]` với `object-contain`, padding và nền trung tính `bg-slate-900/5`.
+     - Ảnh mặt trước và mặt sau hiển thị trọn vẹn 100% cả 4 góc, số CCCD, họ tên, chip và vân tay.
+     - Khung upload khi chưa chọn ảnh cũng đồng bộ `aspect-[1.58/1]`, cân xứng giao diện 2 cột. Bổ sung nhãn thẻ và nút xóa ảnh tiện dụng.
+  2. **Ngăn chặn triệt để tình trạng bị Logout khi quét AI OCR (`createJwtClient.ts`, `aiOcr.ts`):**
+     - Nguyên nhân: Trước đó Axios interceptor của `authClient` khi nhận 401 từ bất kỳ service nào (kể cả dịch vụ phụ như AI OCR) sau khi retry vẫn 401 sẽ tự động gọi `expire(session)` -> đá văng người dùng ra trang đăng nhập.
+     - Giải pháp: Mở rộng `AxiosRequestConfig` với tùy chọn `suppressSessionExpiry?: boolean`.
+     - Khi bật cờ này cho các API phụ trợ (`aiOcrApi.extractCccd` và `aiOcrApi.chat`), nếu request gặp lỗi 401 hoặc chưa sẵn sàng trên máy chủ, hệ thống ném lỗi về component để hiển thị alert đỏ thân thiện trong modal, **tuyệt đối không hủy phiên và không logout người dùng**.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run build`: **Build production bundle thành công (exit code 0)**.
+- **Git Commit:**
+  - Commit `9c70ac2`: `fix(ocr): prevent session logout on ocr 401 and fix cccd preview aspect ratio` đã push lên `origin/main`.
+
 ## Bổ sung Tab "Hồ sơ đã hủy" trong Cổng dịch vụ công dân — 23/10/2026
 
 - **Hạng mục hoàn thành:**
