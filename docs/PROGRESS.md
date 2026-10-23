@@ -4,6 +4,42 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Loại bỏ 2 trang Thống kê chưa có Backend: "Thống kê lượt tra cứu" & "Thống kê biểu mẫu" — 23/10/2026
+
+- **Yêu cầu người dùng:** Xóa 2 trang "Thống kê lượt tra cứu" và "Thống kê biểu mẫu" trong phân hệ Quản lý điều hành (Manager Workspace).
+- **Các file và thành phần đã cập nhật:**
+  1. `src/components/layout/RoleWorkspaceSidebars.tsx`: Loại bỏ 2 menu item `stats-searches` và `stats-forms` khỏi nhóm `Thống kê hệ thống` trong `UnifiedManagerSidebar`. Dọn dẹp import không dùng `MagnifyingGlass`.
+  2. `src/pages/manager/types.ts`: Xóa `stats-searches` và `stats-forms` khỏi union type `ManagerSectionId`.
+  3. `src/pages/manager/ManagerHeader.tsx`: Loại bỏ metadata tiêu đề tương ứng trong `managerSectionTitles`.
+  4. `src/pages/manager/ManagerPage.tsx`: Xóa logic kiểm tra điều kiện render cho 2 section này.
+  5. `src/pages/manager/views/ManagerSystemStatsView.tsx` & `src/components/analytics/ManagerAnalyticsView.tsx`: Cập nhật prop type và dọn sạch khối cảnh báo placeholder `unavailable`.
+  6. `tests/manager.spec.ts`: Cập nhật test case chuyển đổi tab thống kê chỉ còn `Thống kê hồ sơ` và `Thống kê thủ tục`.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi (exit code 0)**.
+  - `npx playwright test tests/manager.spec.ts tests/analytics.spec.ts`: **17/17 tests PASS (100%)**.
+  - `npm run build`: **Build production thành công**.
+
+
+## Nâng cấp Giao diện Bộ lọc Thống kê Quản lý (AnalyticsFilters UI) — 23/10/2026
+
+- **Yêu cầu người dùng:** Xây dựng lại khu vực bộ lọc của giao diện Manager (và các nơi tương tự) chuyên nghiệp, đẹp và hiện đại hơn.
+- **Các cải tiến đã triển khai tại `src/components/analytics/AnalyticsFilters.tsx`:**
+  1. **Thiết kế phân tầng hiện đại (Card Header & Body):**
+     - Bổ sung thanh tiêu đề phụ với icon `FunnelSimple`, nhãn *"Bộ lọc & Phạm vi thời gian"* và mô tả trực quan.
+     - Cụm nút bấm chọn nhanh thời gian (*Tháng này, Quý này, Năm nay*) được đưa vào cụm segment control viền mềm với hiệu ứng active nổi bật, đổi màu đỏ thương hiệu và bóng đổ tinh tế khi được chọn.
+  2. **Tối ưu hóa các trường nhập liệu ngày & thủ tục:**
+     - Các ô nhập ngày `Từ ngày` và `Đến ngày` bổ sung nhãn kèm icon `CalendarBlank`, styling viền bo góc tròn `rounded-xl`, màu nền xám nhẹ `bg-slate-50/40`, focus ring đỏ nhạt cao cấp `focus:ring-red-100`.
+     - Cụm "Thủ tục áp dụng": Gộp ô tìm kiếm nhanh (icon `MagnifyingGlass`) và dropdown chọn thủ tục liền kề cân đối, có badge xanh `Đã lọc thủ tục` khi đang chọn thủ tục cụ thể.
+     - Nút "Áp dụng" đồng bộ chiều cao `h-11`, bo góc hiện đại, shadow mượt mà.
+  3. **Cải tiến các khối trạng thái liên quan:**
+     - `AnalyticsStatus`: Loading spinner thanh lịch, khối lỗi có cảnh báo nhẹ và nút "Thử lại".
+     - `CoverageNotice`: Badge trực quan thể hiện trạng thái dữ liệu (đủ ngày vs thiếu ngày) và thời điểm cập nhật.
+     - `AnalyticsPagination`: Trình bày phân trang gọn gàng, tách biệt hàng nút với số trang hiện tại.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+
+
 ## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
 
 - **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
