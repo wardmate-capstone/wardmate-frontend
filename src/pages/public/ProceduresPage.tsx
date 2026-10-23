@@ -1,14 +1,16 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CaretLeft, CaretRight, Check, Clock, FileText, House, Info, MagnifyingGlass, SquaresFour, Wallet, X } from '@phosphor-icons/react';
+import { ArrowRight, CaretLeft, CaretRight, Check, Clock, Info, MagnifyingGlass, SquaresFour, Wallet, X } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input, Skeleton } from '@/components/ui';
 import { procedureError } from '@/lib/api/procedures';
 import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
+import { useAuthState } from '@/hooks/useAuthState';
 
 const PAGE_SIZE = 5;
 
 export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
+  const { isAuthenticated } = useAuthState();
   const [searchParams, setSearchParams] = useSearchParams();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const query = searchParams.get('q') ?? '';
@@ -87,18 +89,9 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
     <div className="procedures-page">
       <section className={`procedures-hero${embedded ? ' procedures-hero-embedded' : ''}`} aria-labelledby={embedded ? undefined : 'procedures-title'} aria-label={embedded ? 'Tìm kiếm thủ tục' : undefined}>
         <div className="procedures-hero-inner">
-          {!embedded && <><nav className="procedures-breadcrumb" aria-label="Đường dẫn">
-            <Link to="/"><House size={16} aria-hidden="true" /> Trang chủ</Link>
-            <CaretRight size={14} aria-hidden="true" />
-            <span aria-current="page">Thủ tục hành chính</span>
-          </nav>
-          <div className="procedures-hero-copy">
-            <p><FileText size={18} aria-hidden="true" /> Tra cứu & chuẩn bị hồ sơ</p>
-            <h1 id="procedures-title">Thủ tục hành chính</h1>
-            <span>Tìm đúng thủ tục, xem giấy tờ cần có và hướng dẫn thực hiện.</span>
-          </div></>}
+          {!embedded && <h1 id="procedures-title" className="sr-only">Thủ tục hành chính</h1>}
           <form className="procedures-search" role="search" onSubmit={handleSearch}>
-            <label htmlFor="procedures-search-input">Tên thủ tục hoặc nhu cầu của bạn</label>
+            <label htmlFor="procedures-search-input" className="sr-only">Tên thủ tục hoặc nhu cầu của bạn</label>
             <div>
               <MagnifyingGlass size={22} aria-hidden="true" />
               <Input id="procedures-search-input" type="search" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Ví dụ: đăng ký khai sinh, cấp bản sao…" aria-describedby="procedures-search-hint" className="min-h-14 pl-12 pr-12" />
@@ -106,7 +99,9 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
             </div>
             <Button type="submit">Tìm kiếm <ArrowRight size={18} aria-hidden="true" /></Button>
           </form>
-          <p id="procedures-search-hint" className="procedures-search-hint"><Info size={16} aria-hidden="true" /> Có thể nhập tiếng Việt có dấu hoặc không dấu.{!embedded && ' Không cần đăng nhập để tra cứu.'}</p>
+          <p id="procedures-search-hint" className="procedures-search-hint">
+            <Info size={16} aria-hidden="true" /> Có thể nhập tiếng Việt có dấu hoặc không dấu.{!embedded && !isAuthenticated && ' Không cần đăng nhập để tra cứu.'}
+          </p>
         </div>
       </section>
 

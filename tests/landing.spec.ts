@@ -118,7 +118,7 @@ test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', asy
 
 test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực và trạng thái rỗng', async ({ page }) => {
   await page.goto('/thu-tuc');
-  await expect(page.getByRole('heading', { name: 'Thủ tục hành chính' })).toBeVisible();
+  await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toBeVisible();
 
   await page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn').fill('khai sinh');
   await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();

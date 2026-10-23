@@ -11,12 +11,9 @@ test('lookup keeps readable cards and filters within public and citizen layouts'
     if (path.includes('citizen')) {
       await expect(page.locator('#citizen-main h1')).toHaveCount(1);
       await expect(page.locator('#citizen-main h1')).toHaveText('Tra cứu thủ tục');
-      await expect(page.locator('.procedures-breadcrumb')).toHaveCount(0);
-      await expect(page.locator('.procedures-hero-copy')).toHaveCount(0);
-    } else {
-      await expect(page.getByRole('heading', { name: 'Thủ tục hành chính', exact: true })).toBeVisible();
-      await expect(page.locator('.procedures-breadcrumb')).toBeVisible();
     }
+    await expect(page.locator('.procedures-breadcrumb')).toHaveCount(0);
+    await expect(page.locator('.procedures-hero-copy')).toHaveCount(0);
     for (const width of [1440, 768, 390, 360]) {
       await page.setViewportSize({ width, height: 900 });
       if (path.includes('citizen')) {
