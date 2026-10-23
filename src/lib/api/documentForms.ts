@@ -290,7 +290,7 @@ export function documentFormError(error: unknown): string {
 }
 
 export function submissionStatusLabel(status: string) {
-  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt (luồng cũ)', ReadyForDownload: 'Giấy tờ sẵn sàng' } as Record<string, string>)[status] ?? 'Chưa xác định';
+  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt', ReadyForDownload: 'Giấy tờ sẵn sàng' } as Record<string, string>)[status] ?? 'Chưa xác định';
 }
 
 export function safeDocumentLink(value: string) {

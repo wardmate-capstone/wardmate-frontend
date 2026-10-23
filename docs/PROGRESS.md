@@ -17,7 +17,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Tự động loại bỏ phần mở rộng kép bị lỗi từ backend (ví dụ: `.docx.docx` ➔ `.docx`).
   3. **Thanh công cụ Toolbar hiện đại (`CitizenSubmissionsView.tsx`):**
      - Bổ sung ô tìm kiếm nhanh (Search) theo tên tờ khai thời gian thực với nút xóa nhanh `×`.
-     - Dropdown chọn trạng thái bo góc tinh tế, giữ nhãn trợ năng `aria-label="Trạng thái bản khai"`.
+     - Dropdown chọn trạng thái bo góc tinh tế, giữ nhãn trợ năng `aria-label="Trạng thái bản khai"`; loại bỏ tùy chọn lỗi thời `Approved` ("luồng cũ") để chỉ giữ 4 trạng thái thực tế.
      - Nút xóa bộ lọc khi đang tìm kiếm hoặc lọc trạng thái.
      - Badge đếm số lượng tờ khai (`4 tờ khai`) và nút Làm mới kèm icon xoay đồng bộ.
   4. **Nâng cấp thẻ hiển thị tờ khai (Document Cards):**

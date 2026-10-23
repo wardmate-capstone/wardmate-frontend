@@ -153,7 +153,7 @@ export function CitizenSubmissionsView({
               }}
             >
               <option value="">Tất cả trạng thái</option>
-              {['Draft', 'Submitted', 'RevisionRequested', 'ReadyForDownload', 'Approved'].map(
+              {['Draft', 'Submitted', 'RevisionRequested', 'ReadyForDownload'].map(
                 (value) => (
                   <option key={value} value={value}>
                     {submissionStatusLabel(value)}
