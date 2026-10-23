@@ -5,7 +5,21 @@ import { servicePath, serviceUrls } from './serviceUrls';
 
 const aiPath = (path: string) => servicePath(serviceUrls.aiOcr, path);
 
-export const cccdExtractionSchema = z.object({
+export const cccdExtractionSchema = z.preprocess((val) => {
+  if (!val || typeof val !== 'object') return val;
+  const obj = val as Record<string, unknown>;
+  return {
+    citizenId: obj.citizenId ?? obj.CitizenId,
+    fullName: obj.fullName ?? obj.FullName,
+    dateOfBirth: obj.dateOfBirth ?? obj.DateOfBirth,
+    gender: obj.gender ?? obj.Gender,
+    nationality: obj.nationality ?? obj.Nationality,
+    placeOfOrigin: obj.placeOfOrigin ?? obj.PlaceOfOrigin,
+    placeOfResidence: obj.placeOfResidence ?? obj.PlaceOfResidence,
+    dateOfExpiry: obj.dateOfExpiry ?? obj.DateOfExpiry,
+    confidenceScore: obj.confidenceScore ?? obj.ConfidenceScore,
+  };
+}, z.object({
   citizenId: z.string().nullish(),
   fullName: z.string().nullish(),
   dateOfBirth: z.string().nullish(),
@@ -15,7 +29,7 @@ export const cccdExtractionSchema = z.object({
   placeOfResidence: z.string().nullish(),
   dateOfExpiry: z.string().nullish(),
   confidenceScore: z.number().nullish(),
-});
+}));
 
 export type CccdExtractionDto = z.infer<typeof cccdExtractionSchema>;
 
@@ -36,9 +50,9 @@ export interface ChatMessageInput {
 export const aiOcrApi = {
   extractCccd: async (frontImage: File, backImage?: File, signal?: AbortSignal): Promise<CccdExtractionDto> => {
     const data = new FormData();
-    data.append('frontImage', frontImage);
+    data.append('frontImage', frontImage, frontImage.name);
     if (backImage) {
-      data.append('backImage', backImage);
+      data.append('backImage', backImage, backImage.name);
     }
 
     try {
@@ -55,8 +69,17 @@ export const aiOcrApi = {
         if (status === 401) {
           throw new Error('Dịch vụ AI OCR chưa được ủy quyền hoặc cấu hình xác thực trên server chưa sẵn sàng (HTTP 401). Phiên đăng nhập của bạn vẫn an toàn; vui lòng thử lại sau hoặc nhập thông tin thủ công.');
         }
-        if (status === 404 || status === 502 || status === 503) {
-          throw new Error(`Dịch vụ AI OCR tạm thời chưa sẵn sàng (HTTP ${status}). Vui lòng nhập thông tin vào biểu mẫu hoặc thử lại sau.`);
+        if (status === 413) {
+          throw new Error('Kích thước ảnh vượt quá giới hạn cho phép (tối đa 8MB mỗi ảnh, tổng yêu cầu 17MB).');
+        }
+        if (status === 415) {
+          throw new Error('Định dạng tệp không được hỗ trợ. Vui lòng tải ảnh CCCD định dạng PNG hoặc JPEG (HTTP 415).');
+        }
+        if (status === 429) {
+          throw new Error('Hệ thống AI đang bận hoặc bạn thao tác quá nhanh (HTTP 429). Vui lòng đợi 1 phút trước khi quét lại.');
+        }
+        if (status === 404 || status === 502 || status === 503 || status === 504) {
+          throw new Error(`Dịch vụ AI OCR tạm thời chưa phản hồi hoặc chưa sẵn sàng (HTTP ${status}). Vui lòng nhập thông tin vào biểu mẫu hoặc thử lại sau.`);
         }
         const serverMsg = (err.response?.data as { title?: string; detail?: string })?.title ||
                           (err.response?.data as { message?: string })?.message;

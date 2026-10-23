@@ -89,17 +89,20 @@ export function createJwtClient(options: JwtClientOptions) {
   api.interceptors.response.use((response) => response, async (error: unknown) => {
     if (!axios.isAxiosError(error) || error.response?.status !== 401 || !error.config || error.config.skipAuth) throw error;
     const request: InternalAxiosRequestConfig = error.config;
+    if (request.suppressSessionExpiry) {
+      // Failing or persistent 401 on this request must NEVER invalidate user session,
+      // trigger refresh errors that expire the session, or cause redirect to login.
+      throw error;
+    }
     const sent = request._jwt;
     if (!sent || sent.session !== session || request.signal?.aborted) throw error;
     if (sent.retried) {
-      if (!request.suppressSessionExpiry) {
-        expire(sent.session);
-      }
+      expire(sent.session);
       throw error;
     }
     if (!options.refreshAccessToken) {
       // No backend contract yet: never invent a refresh endpoint.
-      if (token && !request.suppressSessionExpiry) expire(sent.session);
+      if (token) expire(sent.session);
       throw error;
     }
     request._jwt = { ...sent, retried: true };

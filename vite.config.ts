@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
   const catalog = proxyTo(env.VITE_CATALOG_API_URL);
   const workflow = proxyTo(env.VITE_WORKFLOW_API_URL);
   const documentForm = proxyTo(env.VITE_DOCUMENT_FORM_API_URL);
+  const aiOcr = proxyTo(env.VITE_AI_OCR_API_URL) || documentForm;
   const proxy: Record<string, ProxyOptions> = {};
 
   if (documentForm) {
@@ -24,8 +25,10 @@ export default defineConfig(({ mode }) => {
     proxy['/api/v1/generated-documents'] = documentForm;
     proxy['^/api/v1/applications/[^/]+/(contents|supporting-documents|generate-pdf|generated-documents|approved-qr(?:/image)?)(?:\\?.*)?$'] = documentForm;
     proxy['/api/v1/form-templates'] = documentForm;
-    proxy['/api/v1/ai-ocr'] = documentForm;
-    proxy['/api/v1/ai/chat'] = documentForm;
+  }
+  if (aiOcr) {
+    proxy['/api/v1/ai-ocr'] = aiOcr;
+    proxy['/api/v1/ai/chat'] = aiOcr;
   }
   if (catalog) {
     proxy['/api/v1/procedures'] = catalog;

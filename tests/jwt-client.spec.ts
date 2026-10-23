@@ -101,6 +101,23 @@ test('public requests and 403 errors do not refresh or redirect', async () => {
   expect(expired).toBe(0);
 });
 
+test('request with suppressSessionExpiry throws 401 without refreshing or expiring session', async () => {
+  let refreshes = 0;
+  let expired = 0;
+  const client = createJwtClient({
+    baseURL,
+    refreshAccessToken: async () => { refreshes++; return 'new'; },
+    onSessionExpired: () => { expired++; },
+  });
+  client.setAccessToken('old');
+  client.api.defaults.adapter = async (config) => { throw failure(config, 401); };
+
+  await expect(client.api.post('/auxiliary', {}, { suppressSessionExpiry: true })).rejects.toBeInstanceOf(AxiosError);
+  expect(refreshes).toBe(0);
+  expect(expired).toBe(0);
+  expect(client.hasAccessToken()).toBe(true);
+});
+
 test('temporary refresh failure keeps session and permits a later refresh', async () => {
   let refreshes = 0;
   let expired = 0;
