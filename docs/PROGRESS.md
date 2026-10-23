@@ -4,6 +4,44 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Tinh chỉnh Giao diện Thẻ QR & Đặc tả API Tạo Cán bộ Hệ thống — 23/10/2026
+
+- **Yêu cầu người dùng:**
+  1. Căn lề trên (`items-start`) cho cột thông tin bên phải trong thẻ chi tiết mã QR (`CitizenQrCodeView.tsx`) sau khi tinh giản các khối hướng dẫn không cần thiết, dọn dẹp các import không dùng (`ShieldCheck`).
+  2. Tạo tài liệu đặc tả chuẩn nghiệp vụ gửi đội Backend (IAM) để hỗ trợ IT Admin tạo trực tiếp tài khoản cán bộ cho vai trò `MANAGER` (Lãnh đạo UBND cấp xã/phường, bắt buộc gán `WardId`) và `PROCEDURE_MANAGER` (Cán bộ quản lý thủ tục); đồng thời loại bỏ việc Admin phải dùng API phân vai trò thủ công (`/api/v1/rbac/users/{userId}/roles/{roleId}`) cho người dùng thông thường; giữ nguyên quy tắc tài khoản đăng ký mặc định là `REGISTERED_CITIZEN`.
+- **Việc đã thực hiện:**
+  - `src/pages/citizen/views/CitizenQrCodeView.tsx`: Thay `items-center` thành `items-start`, dọn bỏ import không dùng `ShieldCheck`.
+  - `src/pages/citizen/CitizenPage.tsx`: Bổ sung subtitle giải thích và truyền callbacks `onOpenDossierDetail`, `onSelectSection` cho `CitizenQrCodeView`.
+  - Tạo tài liệu đặc tả đầy đủ: `docs/ADMIN_USER_PROVISIONING_BACKEND_SPEC.md` (frontend) và `docs/iam-admin-staff-provisioning-spec.md` (backend) gồm:
+    - Bối cảnh nghiệp vụ và nguyên tắc bảo mật.
+    - Hợp đồng API chi tiết: `POST /api/v1/accounts/manager` và `POST /api/v1/accounts/procedure-manager` (kèm phương án gom chung `POST /api/v1/accounts/staff`).
+    - DTO, validation rules, quyền hạn (`iam.accounts.manage`), xử lý transaction khóa advisory lock và bảng mã lỗi ProblemDetails.
+    - Kế hoạch chuyển đổi UI Admin và kịch bản nghiệm thu (Acceptance Criteria).
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run build`: **Production bundle build thành công (21.86s, exit code 0)**.
+- **Trạng thái Git:** Thực hiện commit và push theo yêu cầu trực tiếp của người dùng.
+
+## Nâng cấp Thẻ Tra Cứu Hồ Sơ Điện Tử (Digital QR Pass) — 23/10/2026
+
+- **Yêu cầu người dùng:** Cải tổ UI/UX cho trang "Mã QR hồ sơ điện tử", thiết kế lại theo dạng Thẻ điện tử (Digital Pass Card), loại bỏ mã GUID thô ở nút tải và giữ tiêu đề gọn gàng (bỏ panel hướng dẫn 3 bước theo yêu cầu).
+- **Các cải tiến đã triển khai:**
+  1. **Bố cục Master-Detail Chuẩn Web Dashboard Desktop (`CitizenQrCodeView.tsx`):**
+     - Giải quyết triệt để bài toán hiển thị từ 1, 2 đến 10+ mã QR bằng cấu trúc Master-Detail phân cột Grid 12:
+       + **Cột trái (lg:col-span-4 - Danh mục hồ sơ sẵn sàng):** Danh sách thẻ hồ sơ xếp dọc kèm ô tìm kiếm nhanh (khi có >= 3 hồ sơ) và thanh cuộn mượt (`max-h-[560px] overflow-y-auto`). Thẻ đang chọn nổi bật với viền đỏ thương hiệu và badge xanh *"Sẵn sàng"*.
+       + **Cột phải (lg:col-span-8 - Chi tiết mã QR & Đối soát):** Khung hiển thị mã QR kích thước chuẩn desktop (`224x224px`), mã hồ sơ cỡ chữ lớn font mono kèm nút copy, bảng thuộc tính chi tiết, hướng dẫn mang giấy tờ gốc và nút chuyển đến xem hồ sơ.
+  2. **Bộ nút hành động chuẩn xác & Tên file tải về thân thiện:**
+     - Tải ảnh mã QR: Tự động đặt tên file sạch theo mã hồ sơ: `Ma-QR-[Mã-Hồ-Sơ].png` (ví dụ `Ma-QR-HS-20261016-00000025.png`), triệt tiêu chuỗi GUID thô. Nút bấm mang nhãn `"Tải xuống ma-qr (PNG)"` đảm bảo tương thích 100% với kiểm thử tự động.
+     - In thẻ QR: Nút `"In thẻ QR"` (icon `Printer`) hỗ trợ in trực tiếp thẻ để người dân mang kẹp cùng hồ sơ giấy.
+     - Xem hồ sơ: Nút `"Xem chi tiết hồ sơ"` chuyển nhanh sang trang chi tiết hồ sơ để rà soát giấy tờ.
+  3. **Cảnh báo pháp lý & Trạng thái rỗng:**
+     - Thiết kế khung ghi chú pháp lý trang trọng có icon `ShieldCheck` màu hổ phách viền mềm.
+     - Empty state đẹp mắt khi chưa có hồ sơ nào sẵn sàng.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npx playwright test tests/document-workflow.spec.ts`: **100% PASS (17.6s)**.
+- **Trạng thái Git:** Chỉ lưu ở **local working tree**, tuyệt đối không tự ý push lên remote.
+
 ## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
 
 - **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
