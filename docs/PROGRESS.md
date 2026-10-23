@@ -4,23 +4,136 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Khắc phục lỗi Quét CCCD (Ngăn chặn Logout oan do 401 & Hiển thị Full ảnh Preview) — 23/10/2026
+## Tinh gọn Giao diện Trợ lý Chat & Đồng bộ Logo User — 23/10/2026
 
-- **Vấn đề đã xử lý:**
-  1. **Hiển thị đầy đủ ảnh thẻ CCCD (`CccdOcrScanModal.tsx`):**
-     - Khắc phục tình trạng ảnh CCCD bị cắt xén (mất nửa trên/dưới) do dùng `h-40 object-cover`.
-     - Chuyển sang tỷ lệ chuẩn thẻ ID card `aspect-[1.58/1]` với `object-contain`, padding và nền trung tính `bg-slate-900/5`.
-     - Ảnh mặt trước và mặt sau hiển thị trọn vẹn 100% cả 4 góc, số CCCD, họ tên, chip và vân tay.
-     - Khung upload khi chưa chọn ảnh cũng đồng bộ `aspect-[1.58/1]`, cân xứng giao diện 2 cột. Bổ sung nhãn thẻ và nút xóa ảnh tiện dụng.
-  2. **Ngăn chặn triệt để tình trạng bị Logout khi quét AI OCR (`createJwtClient.ts`, `aiOcr.ts`):**
-     - Nguyên nhân: Trước đó Axios interceptor của `authClient` khi nhận 401 từ bất kỳ service nào (kể cả dịch vụ phụ như AI OCR) sau khi retry vẫn 401 sẽ tự động gọi `expire(session)` -> đá văng người dùng ra trang đăng nhập.
-     - Giải pháp: Mở rộng `AxiosRequestConfig` với tùy chọn `suppressSessionExpiry?: boolean`.
-     - Khi bật cờ này cho các API phụ trợ (`aiOcrApi.extractCccd` và `aiOcrApi.chat`), nếu request gặp lỗi 401 hoặc chưa sẵn sàng trên máy chủ, hệ thống ném lỗi về component để hiển thị alert đỏ thân thiện trong modal, **tuyệt đối không hủy phiên và không logout người dùng**.
+- **Yêu cầu người dùng:** Tinh gọn toàn bộ giao diện Chatbot đang bị rườm rà, loại bỏ các khối chiếm diện tích và thay toàn bộ logo chatbot thành logo User.
+- **Các cải tiến đã triển khai (`AiChatWidget.tsx`):**
+  1. **Đồng bộ Logo User:**
+     - Thay thế toàn bộ biểu tượng ngôi sao lấp lánh `Sparkle` ở nút nổi ngoài màn hình, header cửa sổ chat và avatar của trợ lý trong bong bóng tin nhắn thành biểu tượng **`User`** chuẩn mực, thân thiện.
+  2. **Gỡ bỏ các thành phần rườm rà:**
+     - Xóa bỏ hoàn toàn thanh cảnh báo vàng chèn ngang đầu trang.
+     - Xóa bỏ drawer kho câu hỏi mẫu cồng kềnh với các tab lọc phức tạp chiếm gần 50% chiều cao khung chat.
+     - Thay bằng **4 chip gợi ý nhanh (Quick Suggestions)** tinh tế đặt trực tiếp dưới tin nhắn chào đầu tiên: *Đăng ký kết hôn, Khai sinh cho con, Sao y chứng thực CCCD, Quy trình tiền kiểm hồ sơ*. Khi người dùng gửi câu hỏi, các chip tự động ẩn đi để nhường toàn bộ không gian cho nội dung chat.
+  3. **Header & Footer tối giản:**
+     - Header tinh gọn: Icon User kèm chấm xanh trực tuyến + Tiêu đề *"Trợ lý Một cửa"* + Nút Làm mới và Đóng.
+     - Chân ô chat: Input mềm mại + Nút gửi đỏ + Dòng nhắc pháp lý ngắn gọn ở đáy.
 - **Kiểm tra kỹ thuật:**
   - `npm run typecheck`: **0 lỗi (exit code 0)**.
-  - `npm run build`: **Build production bundle thành công (exit code 0)**.
-- **Git Commit:**
-  - Commit `9c70ac2`: `fix(ocr): prevent session logout on ocr 401 and fix cccd preview aspect ratio` đã push lên `origin/main`.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `npm run build`: **Build production bundle thành công trong 20.38s (exit code 0)**.
+- **Trạng thái Git & Commit:** Đã phân chia thành 4 commit theo đúng quy tắc và chuẩn conventional:
+  1. `3d215f4`: `feat(ai-ocr): prevent session expiry on 401 and enhance CCCD lightbox preview`
+  2. `20dcb84`: `feat(procedures): streamline lookup hero with compact search bar and sync tests`
+  3. `e80d3fb`: `feat(officer-chat): add inline document preview and simplify assistant chat widget`
+  4. (Commit hiện tại): `docs(handover): add recent changes test plan and update progress tracking`
+
+## Mở Xem trước Giấy tờ Ngay Dưới Từng Mục (Inline Document Preview) — 23/10/2026
+
+- **Yêu cầu người dùng:** Khi cán bộ ấn nút "Mở giấy tờ" (hoặc "Mở bản khai") ở mục nào, nội dung xem trước phải hiển thị ngay bên dưới thẻ/hàng của mục đó (inline preview), không được nhảy xuống tận cuối trang.
+- **Hiện trạng trước sửa:** Toàn bộ danh sách giấy tờ được map ra trước, còn component xem trước `{selected && <DocumentFilePreview ... />}` nằm ở tận đáy container sau tất cả các mục, khiến cán bộ không thấy được nội dung ngay tại vị trí vừa bấm mà phải cuộn chuột dài xuống cuối trang.
+- **Giải pháp triển khai (`OfficerDocumentsPanel.tsx`):**
+  1. **Hiển thị Inline trực tiếp tại thẻ được chọn:**
+     - Chuyển component `<DocumentFilePreview>` vào render trực tiếp bên trong thẻ của từng mục `documents` và `submissions` khi `selected?.id === item.id`.
+     - Xóa bỏ hoàn toàn khối render xem trước ở tận cuối trang.
+  2. **Trạng thái nút thông minh & Nút đóng tiện lợi:**
+     - Khi mở: Nút chuyển sang `primary` với nhãn *"Đóng giấy tờ"* / *"Đóng bản khai"*.
+     - Hỗ trợ toggle: Bấm lại chính nút đó sẽ thu gọn/đóng khung xem trước.
+     - Khung xem trước bổ sung header nhỏ hiển thị tên tài liệu kèm nút *"Đóng"* tiện lợi.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - `tests/document-workflow.spec.ts`: test cán bộ discovery và mở bản khai DOCX **PASSED** (13.7s).
+  - `npm run build`: **Build production bundle thành công trong 1m 1s (exit code 0)**.
+- **Trạng thái Git:** Giữ nguyên các thay đổi tại local working tree, không tự ý commit hay push khi chưa có yêu cầu từ người dùng.
+
+## Tinh gọn Giao diện Tra cứu Thủ tục Hành chính: Giữ duy nhất Khung Tìm kiếm — 23/10/2026
+
+- **Yêu cầu người dùng:** Loại bỏ triệt để tình trạng dư thừa 2 nút "Trang chủ" (ở menu điều hướng đỏ và breadcrumb), loại bỏ tiêu đề lặp lại, chỉ để lại duy nhất phần Search (Khung tìm kiếm).
+- **Các điểm đã hoàn thành:**
+  1. **Xóa bỏ Breadcrumb và Khối tiêu đề lặp lại:**
+     - Loại bỏ hoàn toàn breadcrumb `Trang chủ > Thủ tục hành chính` (tránh dư 2 chữ "Trang chủ" với Navbar).
+     - Loại bỏ khối tiêu đề `Thủ tục hành chính` và dòng mô tả phụ trong khung hero.
+     - Vẫn duy trì thẻ `<h1 id="procedures-title" className="sr-only">` khi `!embedded` để đảm bảo 100% chuẩn Accessibility và Semantic HTML/SEO mà không gây trùng 2 thẻ `h1` khi nhúng trong Cổng công dân.
+  2. **Tối ưu Khung Search tinh gọn (Clean Search Box):**
+     - Khối `.procedures-hero` giờ chỉ chứa thanh tìm kiếm (Input, Kính lúp, Nút xóa X, Nút đỏ "Tìm kiếm →") và dòng gợi ý nhập liệu.
+     - Tự động ẩn vế *"Không cần đăng nhập để tra cứu"* khi tài khoản đã đăng nhập (`isAuthenticated`).
+     - Tối ưu padding `p-4 sm:p-5`, giúp toàn bộ danh sách kết quả và bộ lọc lĩnh vực hiển thị trọn vẹn ngay trong tầm nhìn đầu tiên của người dùng.
+  3. **Đồng bộ Kiểm thử tự động:**
+     - Cập nhật `tests/procedures-ui.spec.ts` và `tests/landing.spec.ts` tương ứng với thiết kế giao diện tinh gọn mới.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
+  - Playwright test:
+    - `tests/procedures-ui.spec.ts`: **2/2 passed** (30.1s) ở cả 4 breakpoint (1440px, 768px, 390px, 360px).
+    - `tests/landing.spec.ts` & `tests/procedure-detail.spec.ts`: **17/17 passed** (1.1m).
+  - `npm run build`: **Build production bundle thành công trong 21.71s (exit code 0)**.
+  - Đã xác minh ảnh chụp màn hình desktop (1440px) và mobile (390px): giao diện thoáng đãng, sắc nét, không tràn ngang.
+- **Trạng thái Git:** Giữ nguyên các thay đổi tại local working tree, không tự ý commit hay push khi chưa có yêu cầu từ người dùng.
+
+## Khắc phục triệt để lỗi UI Lightbox Portal và Phân tích chuyên sâu lỗi 401 Backend AI OCR — 23/10/2026
+
+- **Yêu cầu người dùng:**
+  - Vẫn còn lỗi UI (ảnh Lightbox bị chìm phía sau khung modal trắng trong ảnh chụp màn hình).
+  - Khi gọi API vẫn bị lỗi 401: Yêu cầu đọc và kiểm tra thật kỹ mã nguồn Backend (`d:\wardmate-backend`) để giải thích nguyên nhân và khắc phục ở phía Frontend.
+  - Tuyệt đối không chỉnh sửa Backend (`d:\wardmate-backend`), chỉ thực hiện ở Frontend (`d:\frontend`).
+  - Không push Git khi chưa đạt yêu cầu / chưa có sự đồng ý của người dùng.
+
+- **1. Khắc phục triệt để lỗi UI Lightbox bị chìm sau Modal:**
+  - **Hiện tượng trên ảnh:** Khi người dùng bấm xem to ảnh CCCD, lớp phủ xem ảnh màu đen xuất hiện ở phía sau hộp thoại Modal trắng của Radix Dialog (`z-[91]`), khiến tiêu đề và chân trang của Lightbox bị che khuất và người dùng không thể xem được trọn vẹn thẻ CCCD.
+  - **Nguyên nhân:** Radix Dialog hiển thị trong Portal với `z-[90]` và `z-[91]`. Thẻ div Lightbox trước đây nằm trong luồng DOM thông thường với `z-50`, do đó bị Radix Dialog đè lên.
+  - **Giải pháp xử lý:**
+    - Sử dụng `createPortal(..., document.body)` để đưa toàn bộ giao diện Lightbox ra lớp cao nhất của `document.body` với `z-[9999]`.
+    - Bổ sung thanh công cụ chuyên nghiệp trong Lightbox:
+      - **Nút xoay 90° (`ArrowClockwise`):** Cho phép xoay ảnh 90, 180, 270 độ, cực kỳ tiện lợi cho các ảnh chụp dọc từ điện thoại thông minh (smartphone portrait photos).
+      - **Phóng to / Thu nhỏ (`MagnifyingGlassPlus` / `MagnifyingGlassMinus`):** Tỉ lệ zoom từ 50% đến 300%.
+      - **Nút đặt lại kích thước gốc (`ArrowsIn`):** Trở về 100%.
+      - **Nút đóng / Phím tắt `Esc`:** Đóng nhanh và quay lại modal.
+    - Tại thẻ xem trước trong modal: Bổ sung nút **Xoay 90°** trực tiếp trên thumbnail để người dùng có thể lật ngang thẻ CCCD ngay trước khi bấm xem to hoặc quét AI.
+
+- **2. Kết quả kiểm tra và phân tích chi tiết mã nguồn Backend về lỗi 401:**
+  - Qua rà soát chi tiết mã nguồn tại `d:\wardmate-backend`:
+    - Controller `AssistantController.cs` (dòng 9) gắn nhãn `[Authorize]`.
+    - Trong `AssistantRegistration.cs` (dòng 24-41):
+      - Cấu hình kiểm tra JWT:
+        - `ValidIssuer = config["Jwt:Issuer"] ?? "WardMate.IAM"`
+        - `ValidAudience = config["Jwt:Audience"] ?? "WardMate.Client"`
+        - `IssuerSigningKey = key.Length >= 32 ? new SymmetricSecurityKey(...) : null`
+    - Đối chiếu với IAM Service (`WardMate.Services.IAM.API/appsettings.json` và `JwtOptions.cs`):
+      - Token do IAM cấp phát có `Issuer = "wardmate"` và `Audience = "wardmate-client"`.
+    - **Điểm bất đồng bộ (Root Cause) trên Backend:**
+      1. **Sai lệch Issuer & Audience:** AI OCR mặc định yêu cầu `WardMate.IAM` và `WardMate.Client`, trong khi token IAM cấp ra là `wardmate` và `wardmate-client`.
+      2. **Thiếu cấu hình `Jwt:Key` trong `WardMate.Services.AIOCR.API/appsettings.json`:** Service AI OCR hoàn toàn không có mục `Jwt`, dẫn đến `key = ""` và `IssuerSigningKey = null`. Khi đó `JwtBearerHandler` của ASP.NET Core tự động coi mọi token gửi lên là `invalid_token` và trả về `HTTP 401 Unauthorized` (`WWW-Authenticate: Bearer error="invalid_token"`).
+      3. **AccountSessionMiddleware:** Service AI OCR gắn middleware xác minh session tới `Iam:BaseUrl` (`http://localhost:5001/`), vốn không kết nối được trong môi trường container/cloud.
+  - **Giải pháp giải tỏa nghẽn cho người dùng tại Frontend (Unblocking Solution):**
+    - Đảm bảo `createJwtClient.ts` tuyệt đối không kích hoạt `expire()` hay đăng xuất người dùng khi API AI OCR trả về 401 (`suppressSessionExpiry: true`).
+    - Bổ sung chế độ **"Nhập thông tin nhanh từ ảnh" (`manualMode`)** ngay trong modal: Khi AI OCR gặp lỗi 401 hoặc dịch vụ AI chưa sẵn sàng, người dùng có thể bấm nút này để hiển thị các ô nhập liệu (Số CCCD, Họ tên, Ngày sinh, Giới tính, Quê quán, Thường trú) ngay dưới các ảnh CCCD đã tải lên. Người dùng vừa nhìn ảnh đối chiếu (có thể phóng to/xoay ảnh), vừa điền dữ liệu và bấm "Áp dụng vào biểu mẫu" để tiếp tục quy trình mà không bị gián đoạn.
+
+- **3. Hoàn thiện Quét CCCD: Chống Logout Tuyệt Đối khi 401 & Hiển Thị Trọn Vẹn 100% Ảnh Preview — 23/10/2026
+
+- **Cải tiến Hiển thị Full Ảnh Preview (`CccdOcrScanModal.tsx`):**
+  - **Hiển thị 100% trọn vẹn, không cắt xén:**
+    - Thay thế khung cố định cứng nhắc bằng khung preview cao thoáng (`min-h-[220px] max-h-[280px]`) trên nền tương phản tối `bg-slate-950/90`.
+    - Ảnh thẻ CCCD hiển thị `object-contain` tự nhiên, giữ trọn vẹn 100% cả 4 góc, số thẻ, họ tên, chip và hoa văn nền.
+    - Hiển thị badge định dạng & dung lượng file (ví dụ `Mặt trước • 1.8MB`).
+  - **Tính năng Phóng to / Lightbox Toàn màn hình (`ArrowsOut` / `MagnifyingGlassPlus`):**
+    - Nhấp trực tiếp vào ảnh hoặc bấm nút phóng to sẽ mở modal Lightbox hiển thị ảnh ở kích thước gốc siêu nét, có phím tắt `Esc` để đóng.
+    - Người dùng có thể kiểm tra từng con số, dấu vân tay trên thẻ một cách trực quan trước khi bấm quét.
+  - **Bổ sung xem ảnh đối chiếu ở màn hình Kết quả:**
+    - Khi bóc tách xong, modal vẫn giữ thumbnail ảnh mặt trước/mặt sau kèm tính năng click mở lớn, giúp công dân dễ dàng đối soát từng trường dữ liệu với ảnh chụp thực tế.
+  - **Xử lý lỗi 401 & nút chuyển đổi linh hoạt:**
+    - Hiển thị thông báo giải thích rõ phiên đăng nhập vẫn an toàn và cung cấp nút **"Đóng và điền thủ công"** để công dân tiếp tục công việc ngay mà không bị gián đoạn.
+
+- **Cải tiến API & Dev Proxy:**
+  - `src/lib/api/aiOcr.ts`: Bổ sung `z.preprocess` tự động chuẩn hóa cả định dạng camelCase lẫn PascalCase từ server; gửi kèm `filename` trong `FormData`; xử lý chi tiết các mã HTTP 401, 413 (ảnh quá 8MB), 415 (sai định dạng), 429 (rate limit), 502/503/504.
+  - `vite.config.ts`: Bổ sung định tuyến `aiOcr` ưu tiên biến môi trường `VITE_AI_OCR_API_URL` (nếu có) trước khi fallback về `documentForm` Gateway.
+
+- **Kiểm tra kỹ thuật & Tự động hóa:**
+  - Viết mới test tự động trong `tests/jwt-client.spec.ts`: `request with suppressSessionExpiry throws 401 without refreshing or expiring session` => **12/12 tests PASS**.
+  - `tests/profile-validation.spec.ts`: **9/9 tests PASS**.
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npm run lint`: **0 lỗi (exit code 0)**.
+  - `npm run build`: **Build production bundle thành công trong 35.75s (exit code 0)**.
+  - Trạng thái Git: Các thay đổi nằm tại local working tree, **chưa commit và chưa push lên remote**.
 
 ## Bổ sung Tab "Hồ sơ đã hủy" trong Cổng dịch vụ công dân — 23/10/2026
 
