@@ -4,6 +4,39 @@ Cập nhật: 23/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
+
+- **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
+- **Các cải tiến đã triển khai:**
+  1. **Chuẩn hóa Tựa đề & Phân cấp Tiêu đề (`CitizenPage.tsx`):**
+     - Đổi tên gọi từ `Bản khai của tôi` ➔ **`Tờ khai của tôi`** chuẩn hành chính một cửa, đồng bộ giữa Breadcrumb, Sidebar và H1 trang.
+     - Bổ sung subtitle giải thích rõ ràng: *"Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ."* hiển thị dưới H1 trang.
+     - Xóa bỏ thẻ H2 trùng lặp bên trong Card (`CitizenSubmissionsView.tsx`), thay bằng `<h2 className="sr-only">Danh sách tờ khai</h2>` chuẩn trợ năng WCAG.
+  2. **Bộ lọc làm sạch tên file thông minh (`cleanSubmissionFileName`):**
+     - Tự động cắt bỏ tiền tố mã băm GUID 32 ký tự hex (ví dụ: `dccb6f4a..._don-nhap.docx` ➔ `don-nhap.docx`).
+     - Tự động loại bỏ phần mở rộng kép bị lỗi từ backend (ví dụ: `.docx.docx` ➔ `.docx`).
+  3. **Thanh công cụ Toolbar hiện đại (`CitizenSubmissionsView.tsx`):**
+     - Bổ sung ô tìm kiếm nhanh (Search) theo tên tờ khai thời gian thực với nút xóa nhanh `×`.
+     - Dropdown chọn trạng thái bo góc tinh tế, giữ nhãn trợ năng `aria-label="Trạng thái bản khai"`.
+     - Nút xóa bộ lọc khi đang tìm kiếm hoặc lọc trạng thái.
+     - Badge đếm số lượng tờ khai (`4 tờ khai`) và nút Làm mới kèm icon xoay đồng bộ.
+  4. **Nâng cấp thẻ hiển thị tờ khai (Document Cards):**
+     - Thêm icon nhận diện file Word màu xanh (`FileDoc` trong khung xanh nhạt bo góc).
+     - Badge trạng thái trực quan với màu sắc & chấm trạng thái rõ ràng (*Nháp đã lưu*, *Đã chốt*, *Cần chỉnh sửa*, *Giấy tờ sẵn sàng*, *Đã duyệt*).
+     - Hiển thị ngày giờ cập nhật có icon `Clock` và dung lượng file KB.
+     - Khối thông báo ghi chú của cán bộ trong hộp cảnh báo vàng viền mềm.
+     - Phân cấp nút bấm rõ ràng: Nút chính `"Xem bản khai"` (đỏ thương hiệu) và Nút phụ `"Mở hồ sơ liên quan"` (outline nhã nhặn).
+  5. **Empty state & Phân trang:** Thêm giao diện trạng thái rỗng sinh động khi không có dữ liệu và làm đẹp thanh phân trang.
+- **Kiểm tra kỹ thuật:**
+  - `npm run typecheck`: **0 lỗi (exit code 0)**.
+  - `npx playwright test tests/docx-online.spec.ts`: **100% tests liên quan PASS**.
+  - `npm run build`: **Build production bundle thành công**.
+- **File liên quan:**
+  - `src/pages/citizen/CitizenPage.tsx`
+  - `src/pages/citizen/views/CitizenSubmissionsView.tsx`
+  - `src/pages/citizen/views/CitizenDashboardView.tsx`
+  - `tests/docx-online.spec.ts`
+
 ## Tinh gọn Giao diện Trợ lý Chat & Đồng bộ Logo User — 23/10/2026
 
 - **Yêu cầu người dùng:** Tinh gọn toàn bộ giao diện Chatbot đang bị rườm rà, loại bỏ các khối chiếm diện tích và thay toàn bộ logo chatbot thành logo User.

@@ -69,7 +69,10 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
   dossiers_cancelled: { title: 'Hồ sơ đã hủy' },
   dossier_detail: { title: 'Chi tiết hồ sơ' },
-  submissions: { title: 'Bản khai của tôi' },
+  submissions: {
+    title: 'Tờ khai của tôi',
+    subtitle: 'Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ.',
+  },
   notifications: { title: 'Thông báo & Cập nhật' },
   qr_code: { title: 'Mã QR hồ sơ điện tử' },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
@@ -374,7 +377,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
-      { id: 'submissions', label: 'Bản khai của tôi', icon: FileText, permissions: ['document.submissions.read'] },
+      { id: 'submissions', label: 'Tờ khai của tôi', icon: FileText, permissions: ['document.submissions.read'] },
       { id: 'dossiers_all', label: 'Hồ sơ của tôi', icon: Files, children: [
         { id: 'dossiers_all', label: 'Tất cả hồ sơ', icon: Files, permissions: ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit'] },
         { id: 'dossiers_draft', label: 'Bản nháp', icon: FileText, permissions: ['document.submissions.write'] },
@@ -454,6 +457,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           <div className="admin-page-heading mb-6">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">{meta.title}</h1>
+              {meta.subtitle && (
+                <p className="mt-1 text-sm text-slate-500">{meta.subtitle}</p>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

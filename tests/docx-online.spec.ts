@@ -123,7 +123,7 @@ test('citizen submission list filters and paginates without linking legacy recor
     return authReply(route, { json: { items: [{ id: documentIds.submission, templateId: documentIds.template, applicantId: documentIds.citizen, applicationId: null, checklistId: null, fileName: 'ban-khai-cu.docx', fileSizeBytes: 1234, status: 'Draft', createdAt: '2026-10-16T01:00:00Z' }], page: Number(query.get('page')), pageSize: 20, totalCount: 21, totalPages: 2 } });
   });
   await page.goto('/citizen?section=submissions');
-  await expect(page.getByRole('heading', { name: 'Bản khai của tôi', exact: true, level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tờ khai của tôi' })).toBeVisible();
   await expect(page.getByText('Bản khai cũ chưa liên kết hồ sơ.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mở hồ sơ liên quan', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Bản khai sau', exact: true }).click();

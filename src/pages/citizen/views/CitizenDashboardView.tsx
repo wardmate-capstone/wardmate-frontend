@@ -3,11 +3,11 @@ import {
   WarningCircle,
   CheckCircle,
   SealCheck,
-  MagnifyingGlass,
-  NotePencil,
-  Folder,
+  // MagnifyingGlass,
+  // NotePencil,
+  // Folder,
   QrCode,
-  CaretDown,
+  // CaretDown,
   ShieldCheck,
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
@@ -39,12 +39,12 @@ export function CitizenDashboardView({
     { label: 'Đã hoàn tất thủ tục', value: `${completedCount}`, icon: SealCheck, tone: 'success' },
   ];
 
-  const quickShortcuts = [
-    { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', icon: MagnifyingGlass },
-    { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', icon: NotePencil },
-    { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', icon: Folder },
-    { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', icon: QrCode },
-  ];
+  // const quickShortcuts = [
+  //   { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', icon: MagnifyingGlass },
+  //   { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', icon: NotePencil },
+  //   { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', icon: Folder },
+  //   { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', icon: QrCode },
+  // ];
 
   return (
     <>
@@ -74,7 +74,7 @@ export function CitizenDashboardView({
       <CitizenUsageChart />
 
       {/* Phím tắt thao tác nhanh */}
-      <section className="admin-card admin-module-card">
+      {/* <section className="admin-card admin-module-card">
         <div className="admin-card-heading">
           <div>
             <h2>Tiện ích nộp & Chuẩn bị hồ sơ</h2>
@@ -93,7 +93,7 @@ export function CitizenDashboardView({
             </button>
           ))}
         </div>
-      </section>
+      </section> */}
 
       {/* 2 Khối thông tin: Hồ sơ gần đây & Lưu ý hướng dẫn */}
       <section className="admin-insight-grid">
