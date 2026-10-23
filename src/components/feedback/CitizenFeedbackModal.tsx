@@ -1,219 +1,73 @@
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import React, { useRef, useState } from 'react';
-import { Star, Check } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import {
-  CitizenFeedback,
-  FEEDBACK_RATING_LABELS,
-  DEFAULT_FEEDBACK_ASPECTS,
-} from '@/types/feedback';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useCitizenFeedback } from '@/hooks/useAnalytics';
+import { analyticsApi, analyticsError, applyAnalyticsFieldErrors, feedbackInputSchema, type FeedbackInput } from '@/lib/api/analytics';
+import { useAuthStore } from '@/stores/authStore';
+import { AnalyticsStatus } from '@/components/analytics/AnalyticsFilters';
 
-interface CitizenFeedbackModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  procedureName?: string;
-  applicationCode?: string;
-  onSubmitFeedback?: (data: CitizenFeedback) => void | Promise<void>;
+export function CitizenFeedbackModal({ open, onOpenChange, applicationId, procedureName, applicationCode, onRefreshApplication }: {
+  open: boolean; onOpenChange: (open: boolean) => void; applicationId?: string; procedureName?: string; applicationCode?: string; onRefreshApplication?: () => void;
+}) {
+  if (!open) return null;
+  return applicationId ? <FeedbackForm key={applicationId} id={applicationId} onClose={() => onOpenChange(false)} onRefreshApplication={onRefreshApplication} description={`${applicationCode || ''} · ${procedureName || 'Hỗ trợ tiền kiểm'}`} /> : <Modal open onOpenChange={onOpenChange} title="Đánh giá trải nghiệm dịch vụ"><p>Hãy chọn hồ sơ để xem hoặc gửi đánh giá.</p></Modal>;
 }
-
-export const CitizenFeedbackModal: React.FC<CitizenFeedbackModalProps> = ({
-  open,
-  onOpenChange,
-  procedureName = 'Thủ tục hành chính',
-  applicationCode,
-  onSubmitFeedback,
-}) => {
-  const [rating, setRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState<number>(0);
-  const [selectedAspects, setSelectedAspects] = useState<string[]>([]);
-  const [comment, setComment] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  const [submitError, setSubmitError] = useState('');
+function FeedbackForm({ id, onClose, onRefreshApplication, description }: { id: string; onClose: () => void; onRefreshApplication?: () => void; description: string }) {
+  const existing = useCitizenFeedback(id);
+  const userId = useAuthStore(state => state.user?.id);
+  const queryClient = useQueryClient();
   const lock = useRef(false);
-  const guard = useUnsavedChanges(Boolean(rating || selectedAspects.length || comment.trim()), isSubmitting);
-  const activeRating = hoverRating || rating;
-
-  const handleToggleAspect = (aspect: string) => {
-    setSelectedAspects((prev) =>
-      prev.includes(aspect) ? prev.filter((a) => a !== aspect) : [...prev, aspect]
-    );
-  };
-
-  const handleReset = () => {
-    setRating(0);
-    setHoverRating(0);
-    setSelectedAspects([]);
-    setComment('');
-  };
-
-  const handleClose = () => {
-    guard.requestClose(() => { onOpenChange(false); handleReset(); setSubmitError(''); });
-  };
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!rating || !onSubmitFeedback || lock.current) return;
-    lock.current = true; setIsSubmitting(true); setSubmitError('');
-    try {
-      await onSubmitFeedback({ id: '', procedureName, applicationCode, rating, aspects: selectedAspects, comment: comment.trim(), createdAt: new Date().toISOString() });
-      onOpenChange(false); handleReset();
-    } catch { setSubmitError('Chưa gửi được đánh giá. Nội dung vẫn được giữ để bạn thử lại.'); }
-    finally { lock.current = false; setIsSubmitting(false); }
-  };
-
-  return (
-    <><Modal
-      open={open}
-      onOpenChange={handleClose}
-      title="Đánh giá trải nghiệm dịch vụ"
-      description={
-        applicationCode
-          ? `Đánh giá chất lượng hỗ trợ tiền kiểm cho hồ sơ ${applicationCode} (${procedureName})`
-          : `Đánh giá chất lượng hỗ trợ và hướng dẫn thủ tục ${procedureName}`
+  const [notReady, setNotReady] = useState(false);
+  const [pendingFocus, setPendingFocus] = useState<keyof FeedbackInput | null>(null);
+  const { register, handleSubmit, control, reset, watch, setError, setFocus, formState: { errors, isDirty } } = useForm<FeedbackInput>({ resolver: zodResolver(feedbackInputSchema), defaultValues: { rating: 0, comment: '' } });
+  const mutation = useMutation({ mutationFn: (input: FeedbackInput) => analyticsApi.createFeedback(id, input), retry: false,
+    onSuccess: async data => {
+      // The session may have changed while the write was in flight.
+      if (useAuthStore.getState().user?.id !== userId) return;
+      queryClient.setQueryData(['citizen-feedback', userId, id], data);
+      await queryClient.invalidateQueries({ queryKey: ['analytics', userId] });
+    },
+  });
+  useEffect(() => {
+    if (!pendingFocus || mutation.isPending) return;
+    // Wait until the fieldset is enabled again before focusing a server error.
+    setFocus(pendingFocus);
+    setPendingFocus(null);
+  }, [mutation.isPending, pendingFocus, setFocus]);
+  const guard = useUnsavedChanges(isDirty && !existing.data, mutation.isPending);
+  const rating = watch('rating');
+  const comment = watch('comment');
+  const submit = handleSubmit(async input => {
+    if (lock.current || existing.isFetching || existing.isError || existing.data || notReady) return;
+    lock.current = true;
+    try { await mutation.mutateAsync(input); }
+    catch (error) {
+      let firstField: keyof FeedbackInput | null = null;
+      applyAnalyticsFieldErrors(error, (field, message) => {
+        if (field !== 'rating' && field !== 'comment') return;
+        setError(field, { message });
+        firstField ??= field;
+      });
+      setPendingFocus(firstField);
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        if (error.response.data?.code === 'feedback.already_exists') await existing.refetch();
+        if (error.response.data?.code === 'feedback.not_ready') { setNotReady(true); onRefreshApplication?.(); }
       }
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {!onSubmitFeedback && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Chức năng gửi đánh giá chưa khả dụng. Nội dung chưa được gửi đến cán bộ.</p>}
-        {submitError && <p role="alert">{submitError}</p>}
-          {/* Section 1: Star Rating */}
-          <div className="space-y-2 text-center sm:text-left">
-            <label className="block text-sm font-bold text-slate-900">
-              1. Mức độ hài lòng chung của bạn <span className="text-red-600">*</span>
-            </label>
-            
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-              <div
-                className="flex items-center gap-1.5"
-                role="radiogroup"
-                aria-label="Đánh giá từ 1 đến 5 sao"
-              >
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const isFilled = star <= activeRating;
-                  return (
-                    <button
-                      key={star}
-                      type="button"
-                      role="radio"
-                      tabIndex={rating === star || (!rating && star === 1) ? 0 : -1}
-                      onKeyDown={event => {
-                        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
-                        event.preventDefault();
-                        const next = event.key === 'Home' ? 1 : event.key === 'End' ? 5 : ((star - 1 + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : 4)) % 5) + 1;
-                        setRating(next); event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=radio]')[next - 1]?.focus();
-                      }}
-                      aria-checked={rating === star}
-                      aria-label={`${star} sao - ${FEEDBACK_RATING_LABELS[star]}`}
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="group p-1 text-slate-300 transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-800 rounded-lg"
-                    >
-                      <Star
-                        size={32}
-                        weight={isFilled ? 'fill' : 'regular'}
-                        className={`transition-colors ${
-                          isFilled ? 'text-amber-500' : 'text-slate-300 group-hover:text-amber-400'
-                        }`}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeRating > 0 && (
-                <span className="text-sm font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/60 animate-in fade-in">
-                  {FEEDBACK_RATING_LABELS[activeRating]}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Quality Criteria Aspects */}
-          <div className="space-y-2.5">
-            <label className="block text-sm font-bold text-slate-900">
-              2. Những điểm bạn hài lòng hoặc cần ghi nhận <span className="text-xs font-normal text-slate-400">(Tùy chọn)</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_FEEDBACK_ASPECTS.map((aspect) => {
-                const isSelected = selectedAspects.includes(aspect);
-                return (
-                  <button
-                    key={aspect}
-                    type="button"
-                    onClick={() => handleToggleAspect(aspect)}
-                    aria-pressed={isSelected}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'border-red-800 bg-red-50 text-red-900 shadow-xs'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span
-                      className={`grid size-4 place-items-center rounded-sm border ${
-                        isSelected
-                          ? 'border-red-800 bg-red-800 text-white'
-                          : 'border-slate-300 bg-white'
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {isSelected && <Check size={12} weight="bold" />}
-                    </span>
-                    <span>{aspect}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Detailed Feedback Comment */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="feedback-comment" className="block text-sm font-bold text-slate-900">
-                3. Góp ý bổ sung của bạn <span className="text-xs font-normal text-slate-400">(Tùy chọn)</span>
-              </label>
-              <span className="text-xs text-slate-400">
-                {comment.length}/500
-              </span>
-            </div>
-            <textarea
-              id="feedback-comment"
-              rows={3}
-              maxLength={500}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-             className="w-full rounded-xl border border-slate-200 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-red-800 focus:outline-none focus:ring-1 focus:ring-red-800"
-            />
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-            <span className="flex items-center gap-1.5 text-xs text-slate-500">
-              
-            </span>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Để sau
-              </Button>
-              <Button
-                type="submit"
-                loading={isSubmitting}
-                disabled={!onSubmitFeedback || rating === 0 || isSubmitting}
-                className="min-w-[120px]"
-              >
-                Gửi đánh giá
-              </Button>
-            </div>
-          </div>
-        </form>
-    </Modal>{guard.confirmation}</>
-  );
-};
+    } finally { lock.current = false; }
+  });
+  return <><Modal open onOpenChange={open => { if (!open) guard.requestClose(onClose); }} title="Đánh giá trải nghiệm dịch vụ" description={description}><div className="space-y-4">
+    <AnalyticsStatus pending={existing.isPending} error={existing.error} retry={() => void existing.refetch()} />
+    {existing.data ? <div role="status" className="space-y-3"><p className="font-bold">Đánh giá đã được ghi nhận: {existing.data.rating}/5 sao</p><p className="whitespace-pre-wrap break-words">{existing.data.comment || 'Không có góp ý thêm.'}</p><p className="text-sm text-slate-600">{new Date(existing.data.createdAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p><Button onClick={onClose}>Đóng</Button></div> : !existing.isPending && !existing.isError && <form onSubmit={submit} className="space-y-5">
+      <fieldset disabled={mutation.isPending} className="space-y-4"><legend className="mb-3 font-semibold">Mức độ hài lòng (bắt buộc)</legend><Controller name="rating" control={control} render={({ field }) => <div className="flex flex-wrap gap-2">{[1, 2, 3, 4, 5].map(star => <label key={star} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border p-3 ${field.value === star ? 'border-red-800 bg-red-50' : 'border-slate-200'}`}><input type="radio" name={field.name} ref={star === 1 ? field.ref : undefined} value={star} checked={field.value === star} onBlur={field.onBlur} onChange={() => field.onChange(star)} />{star} sao</label>)}</div>} />{errors.rating && <p role="alert" className="text-red-800">{errors.rating.message}</p>}
+      <label className="block space-y-2"><span>Góp ý bổ sung (tùy chọn)</span><textarea rows={4} maxLength={2000} {...register('comment')} aria-invalid={!!errors.comment} aria-describedby="feedback-comment-error feedback-comment-count" className="w-full rounded-xl border border-slate-300 p-3" /></label><p id="feedback-comment-count" className="text-sm text-slate-600">{comment.length}/2000 ký tự</p><p id="feedback-comment-error" role={errors.comment ? 'alert' : undefined}>{errors.comment?.message}</p></fieldset>
+      {mutation.error && <p role="alert" className="text-red-800">{analyticsError(mutation.error)} Nội dung được giữ để bạn kiểm tra hoặc thử lại.</p>}
+      <div className="flex flex-wrap justify-end gap-3"><Button type="button" variant="outline" disabled={mutation.isPending} onClick={() => guard.requestClose(onClose)}>Để sau</Button><Button type="submit" loading={mutation.isPending} disabled={notReady || existing.isFetching || mutation.isPending || rating === 0}>Gửi đánh giá</Button></div>
+      <button type="button" className="text-sm underline" disabled={mutation.isPending} onClick={() => reset({ rating: 0, comment: '' })}>Xóa nội dung đang nhập</button>
+    </form>}
+  </div></Modal>{guard.confirmation}</>;
+}
