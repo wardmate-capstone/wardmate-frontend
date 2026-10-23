@@ -11,6 +11,7 @@ export default defineConfig({
     // Auth tests intercept this origin; never use the real API from the developer's .env.
     env: {
       VITE_API_BASE_URL: 'http://localhost:5000',
+      VITE_ANALYTICS_API_URL: 'http://localhost:5000',
       VITE_CATALOG_API_URL: 'http://localhost:5000',
       VITE_WORKFLOW_API_URL: 'http://localhost:5000',
       VITE_DOCUMENT_FORM_API_URL: 'http://localhost:5000',
