@@ -41,6 +41,7 @@ import {
   Star,
   UserCircle,
   WarningCircle,
+  XCircle,
 } from '@phosphor-icons/react';
 
 // Types & Views
@@ -66,6 +67,7 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa' },
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
   dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
+  dossiers_cancelled: { title: 'Hồ sơ đã hủy' },
   dossier_detail: { title: 'Chi tiết hồ sơ' },
   submissions: { title: 'Bản khai của tôi' },
   notifications: { title: 'Thông báo & Cập nhật' },
@@ -380,6 +382,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, permissions: ['document.submissions.write'] },
         { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, permissions: ['document.submissions.read'] },
         { id: 'dossiers_approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_cancelled', label: 'Đã hủy', icon: XCircle, permissions: ['document.submissions.read'] },
       ] },
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
@@ -514,7 +517,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
             <CitizenDossierDetailView
               dossier={selectedDossierDetail}
               wardName={availableWards.find(ward => ward.code === selectedDossierDetail.wardCode)?.name}
-              onBack={() => selectSection(selectedDossierDetail.status === 'Bản nháp' ? 'dossiers_draft' : 'dossiers_all')}
+              onBack={() => selectSection(selectedDossierDetail.status === 'Bản nháp' ? 'dossiers_draft' : selectedDossierDetail.status === 'Đã hủy' ? 'dossiers_cancelled' : 'dossiers_all')}
               onSubmitPrecheck={handleSubmitPrecheck}
               onResubmitPrecheck={handleResubmitPrecheck}
               onUpdateChecklistItem={handleUpdateChecklistItem}

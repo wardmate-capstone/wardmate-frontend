@@ -10,6 +10,7 @@ export type CitizenSectionId =
   | 'dossiers_need_revision'
   | 'dossiers_resubmitted'
   | 'dossiers_approved'
+  | 'dossiers_cancelled'
   | 'dossier_detail'
   | 'submissions'
   // Tiện ích
