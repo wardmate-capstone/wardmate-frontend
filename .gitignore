@@ -8,3 +8,4 @@ dist/
 playwright-report/
 test-results/
 landing-*.png
+graphify-out/
