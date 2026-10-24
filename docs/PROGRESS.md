@@ -1,8 +1,87 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 23/10/2026.
+Cập nhật: 24/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Tích hợp phân công theo lĩnh vực (FE bước 1–3) — 24/10/2026
+
+- **BE:** đã đối chiếu source `D:/wardmate-backend` (commit WORKFLOW-ASSIGN-01/IAM-CATEGORY-01/WORKFLOW-RESUBMIT-01) và Swagger Workflow/IAM trên Azure (GET 200, khớp source). Route `PUT /api/v1/manager/applications/{id}/assignee` trả 401 khi không có token (route tồn tại). **Chưa gọi bằng tài khoản thật**, chưa xác minh migration DB.
+- **Quyết định bổ sung của người dùng:** hồ sơ cũ không có lĩnh vực hiển thị "Chưa xác định lĩnh vực" theo BE (bỏ tra lĩnh vực theo thủ tục hiện tại); Manager được chuyển người cả khi `DOCUMENTS_READY` như BE.
+- **Đã làm:**
+  - Proxy dev `vite.config.ts`: `/api/v1/manager/applications` → Workflow (trước `/api` của IAM); `tests/api-proxy-check.mjs` thêm 3 route (19/19 đạt).
+  - `src/lib/api/workflow.ts`: `assignmentVersion`, `assignmentHistory`, bộ lọc `categoryIds/scope/assignee/overdue/sort`, `releaseApplication`, `manageAssignee`, `reasonSchema` 5–500, thông báo lỗi `workflow.*` mới. `officerCategoryError` cho `iam.invalid_categories`/`iam.catalog_unavailable`.
+  - `authStore`/`loadCurrentUser`: `assignedCategories` từ `/users/me`.
+  - Hooks `useReleaseApplicationMutation`, `useManagerAssigneeMutation` (invalidate cả khi lỗi).
+  - Cán bộ: 3 tab Lĩnh vực của tôi/Đang xử lý của tôi/Toàn phường (`scope`/`assignee` ở server, chỉ áp cho danh sách; Tổng quan giữ toàn phường), lọc lĩnh vực theo ID và "Chỉ hồ sơ quá hạn" ở server, nhãn "Ngoài lĩnh vực", modal xác nhận khi nhận hồ sơ ngoài lĩnh vực, nút "Trả về hàng đợi" (modal RHF/Zod, gửi `expectedAssignmentVersion`), timeline "Lịch sử phân công".
+  - Manager: mục mới "Giám sát hồ sơ" (`ManagerApplicationsView`): thẻ chưa phân công/quá hạn, khối lượng theo cán bộ (đếm bằng truy vấn `pageSize=1`), bảng lọc trạng thái/lĩnh vực/cán bộ/quá hạn/mã hồ sơ, modal Giao/Chuyển (`AssignOfficerModal`, ưu tiên cán bộ đúng lĩnh vực, lý do bắt buộc). Trang chi tiết cán bộ đổ "Lịch sử hồ sơ" bằng `assignee={id}`.
+  - Component dùng chung: `src/components/workflow/AssignmentModals.tsx`. Gỡ hook tra lĩnh vực theo thủ tục.
+- **Lưu ý working tree:** có thay đổi song song không thuộc phiên này (Review lại chỉ cho cán bộ phụ trách, `TableSkeletonRows.cellClassName`, bỏ hỏi khi đóng modal quyết định, test mới trong `tests/officer.spec.ts`); đã giữ nguyên.
+- **Kiểm tra:** `npm run typecheck`, `npm run lint`: đạt. `npm run build`: đạt. `node tests/api-proxy-check.mjs`: 19/19 đạt. Playwright (officer, officer-submissions, manager, auth, auth-session): lần đầu 50/55 đạt; chạy lại thì manager + auth đều đạt (lỗi lần đầu là timeout chập chờn). Còn 2 lỗi có từ trước: `officer.spec.ts:53` và `:66` tìm nút "Tiếp nhận tại quầy", nút này không còn trong src. Chưa có test mới cho tab/release/assign (bước 4).
+- **Sửa sau kiểm tra tay (24/10):** FE đang map `CANCELLED` thành "Chờ tiền kiểm" nên vẫn hiện nút Nhận xử lý, bấm vào bị BE trả 409. Đã thêm trạng thái `CANCELLED` ("Đã hủy"), không hiện nút nhận, không gắn nhãn quá hạn. Ghi nhận: API nhận hồ sơ (`/assign`) không kiểm tra lĩnh vực; 409 chỉ do `application.invalid_status` (hồ sơ không còn SUBMITTED hoặc đã có người nhận) hoặc `application.snapshot_missing` (hồ sơ cũ thiếu snapshot). typecheck + eslint đạt.
+- **Sửa tiếp (24/10):** nguyên nhân chính của 409 khi nhận hồ sơ "Chờ tiền kiểm": `mapStatus` đổi `DRAFT` thành `SUBMITTED_FOR_REVIEW`, trong khi BE `ListAll` (`GET /officer/applications`) trả cả bản nháp của công dân trong phường. Đã thêm trạng thái `DRAFT` ("Bản nháp"), không hiện nút nhận. Đề xuất BE: `ListAll` loại `DRAFT` để cán bộ không thấy bản nháp chưa gửi. typecheck + eslint đạt; chưa xác minh lại trên Azure.
+- **Ẩn bản nháp khỏi hàng đợi (24/10):** khi không chọn trạng thái, danh sách cán bộ (Tổng quan, Tất cả hồ sơ) và Manager "Giám sát hồ sơ" gửi `Status=OFFICER_VISIBLE_STATUSES` (`src/lib/api/workflow.ts`, mọi trạng thái trừ `DRAFT`). Giới hạn: bản nháp công dân tự hủy (`CANCELLED` chưa từng nộp) vẫn có thể hiện. Playwright officer/officer-submissions/manager: 25 đạt, 2 lỗi cũ (`officer.spec.ts:53`, `:66`).
+- **Chi tiết hồ sơ công dân (24/10):** request `comments` bị hủy (canceled) khi mở bản nháp. Nguyên nhân: dữ liệu từ danh sách chưa có `currentVersion` nên FE gọi luôn; khi chi tiết trả về version 0, hook tắt query và hủy request. Giờ bản nháp không gọi `comments`. `contents` trả 200 nhưng mất khoảng 6 giây trên Azure.
+- **Sửa sau kiểm tra tay vòng đời (24/10):**
+  - Lĩnh vực cán bộ: thêm `refreshAssignedCategories()` (`src/lib/api/index.ts`); `OfficerPage` tải lại `/users/me` khi quay lại tab và mỗi 60 giây, nên nhãn "Ngoài lĩnh vực" đúng mà không cần đăng nhập lại. BE `WorkflowAccessMiddleware` đọc access-context mỗi request nên bộ lọc server vốn đã đúng ngay.
+  - Công dân: `mapSummaryDtoToCitizenDossier` dùng `resubmitCount`, hồ sơ gửi lại vào mục "Đã gửi lại".
+  - Yêu cầu bổ sung khi chưa có nhận xét: chặn trước khi mở hộp thoại, chuyển sang tab Nhận xét và ghi rõ cần làm gì; câu báo lỗi `application.comments_required` rõ hơn.
+  - Xác nhận sẵn sàng: đóng hộp thoại ngay khi BE trả thành công, ở lại workspace (đã khóa) và mở tab PDF; tải lại chạy nền. Yêu cầu bổ sung không còn refetch rồi bị hủy khi workspace đóng.
+  - Manager "Giám sát hồ sơ": nút "Lịch sử" mở modal lịch sử phân công (từ `GET /officer/applications/{id}` → `assignmentHistory`).
+  - Các request "(canceled)" còn lại (`applications?page=1`, `comments`) là TanStack hủy lần tải cũ khi invalidate/refetch, có request 200 ngay sau; không phải lỗi API.
+  - Kiểm tra: typecheck, lint đạt. Playwright officer/officer-submissions/manager/auth/auth-session: 51/55; `officer.spec:6`, `manager.spec:8` chập chờn khi chạy song song, chạy riêng đều đạt; còn 2 lỗi cũ `officer.spec:53`, `:66`. Chưa kiểm tra lại trên Azure.
+  - Câu chữ màn thẩm định: bỏ thuật ngữ kỹ thuật (OPEN, checklist, phiên bản N) trong thông báo yêu cầu bổ sung / xác nhận sẵn sàng; tab "Thông tin & giấy tờ", hộp xác nhận ghi "Lần nộp đang kiểm tra" (đã cập nhật `tests/officer-submissions.spec.ts`). Playwright officer + officer-submissions: 18 đạt, 2 lỗi cũ.
+- **Tối ưu FE sau rà soát (24/10):**
+  - Nhận hồ sơ dùng luôn kết quả `POST .../assign` (đã có chi tiết) để mở workspace, bỏ 2 request chi tiết + nhận xét.
+  - Danh sách cán bộ: ghim cột Thao tác bên phải; bộ lọc 2 cột ở tablet, 1 hàng ở desktop rộng; "Gửi từ … đến …" luôn cùng hàng; trạng thái rỗng theo tab ("Xem hồ sơ toàn phường", "Mở hàng đợi lĩnh vực của tôi", "Xóa bộ lọc").
+  - Công dân: nút "Xóa bộ lọc" không xuống dòng, tắt khi chưa lọc. Manager: nút Lịch sử chỉ còn biểu tượng (có aria-label), cột thao tác ghim phải.
+  - Thông báo cán bộ: thêm `@microsoft/signalr@10.0.11`, `src/lib/api/notifications.ts`, `src/hooks/useNotificationHub.ts`; nối NotificationHub qua gateway `/api/analytics-system/hubs/notifications` (Vite proxy `ws: true`); trang Thông báo và số trên chuông dùng dữ liệu thật, mở hồ sơ từ thông báo, đánh dấu đã đọc (BE chưa có MarkAll nên gọi MarkRead từng cái). Đã probe Azure: negotiate trả 401 khi không token. Chưa thử với tài khoản thật.
+  - Test: mới `tests/assignment.spec.ts` (5: tab/bộ lọc, nhận ngoài lĩnh vực + 409, trả hồ sơ, Manager giao + 409, chuyển + lịch sử) và `tests/officer-notifications.spec.ts` (2, mock SignalR qua routeWebSocket). Thay 2 test "Tiếp nhận tại quầy" lỗi thời bằng 1 test kiểm tra không có thao tác tiếp nhận/biên nhận giả.
+  - Kiểm tra: typecheck, lint, build đạt; proxy check 20/20. Playwright 11 file liên quan (`--workers=2`): 92/93; lỗi còn lại `citizen-dossier-ui.spec.ts:40` ("Cần xác nhận bản khai") vẫn lỗi khi hoàn lại thay đổi của task này nên là lỗi có sẵn. Chạy mặc định nhiều worker ngay sau build bị nhiều timeout do quá tải.
+  - Gửi BE: `docs/BE_REQUEST_PERFORMANCE_AND_OFFICER_ACTIVITY.md` (A applicantName, B loại DRAFT, C thống kê phân công, D API lịch sử thao tác cán bộ, E độ trễ Azure). Màn "Lịch sử xử lý" vẫn chỉ là log tạm phía trình duyệt cho đến khi có mục D.
+  - Test tay thông báo (24/10): FE kết nối hub thành công (long polling, 200) nhưng `GetNotifications` rỗng và không nhận thông báo sau khi Manager chuyển cán bộ. Nghi chuỗi Workflow outbox → RabbitMQ → Analytics chưa bật trên Azure; đã ghi mục F trong file gửi BE. Chưa xác minh được phía Azure.
+- **Còn chờ (bước 4):** test Playwright mock cho các luồng mới; kiểm thử thật cần 2 cán bộ cùng phường + 1 Manager + hồ sơ thử (thao tác ghi dữ liệu thật).
+
+## Phân công hồ sơ theo lĩnh vực cho cán bộ Một cửa — 23/10/2026
+
+- **Quyết định người dùng (đã chốt):**
+  - Ưu tiên mềm theo lĩnh vực: cán bộ vẫn nhận được hồ sơ thuộc lĩnh vực khác.
+  - MANAGER giám sát hồ sơ, được giao/chuyển hồ sơ (có lý do, ghi lịch sử), nhưng không tự duyệt.
+  - Cán bộ được trả lại hồ sơ khi còn `UNDER_REVIEW`.
+  - Cán bộ chưa được gán lĩnh vực được coi là phụ trách mọi lĩnh vực.
+  - PROCEDURE_MANAGER giữ nguyên vai trò.
+- **Spec BE:** `docs/OFFICER_CATEGORY_ROUTING_BACKEND_SPEC.md`.
+  - Nội dung: snapshot lĩnh vực trên hồ sơ, `assignedCategories` trong access-context, bộ lọc `categoryIds`/`scope`/`assignee`, `POST .../release`, `PUT /manager/applications/{id}/assignee`, permission `workflow.assign.manage`.
+  - **Trạng thái:** chưa triển khai ở BE; chưa sửa `D:/wardmate-backend`.
+- **FE đã làm, không cần API mới:**
+  - Schema Workflow nhận thêm các trường nullish `categoryId`, `categoryName`, `assignedAt`, `assignedOfficerName`, `resubmitCount`.
+  - Bỏ nhãn lĩnh vực ghi cứng ở hàng đợi cán bộ. Lĩnh vực lấy từ DTO, nếu không có thì tra chi tiết thủ tục qua `useProcedureCategoryLookup`. Thủ tục ngừng công khai hiển thị "Chưa xác định lĩnh vực". Phía công dân vẫn giữ nhãn cũ khi BE chưa trả lĩnh vực.
+  - Lọc trạng thái theo mục sidebar và lọc khoảng ngày gửi ở server (`OfficerListInput`). Khoảng ngày ngược thì không gửi lên và báo lỗi tại bộ lọc.
+  - Thêm bộ lọc lĩnh vực; sắp xếp theo ngày nộp thật thay cho sắp theo id.
+  - Hồ sơ công dân gửi lại: BE chuyển về `SUBMITTED` và giữ `AssignedOfficerId`, nhưng summary chưa có `resubmitCount`. FE suy ra "Đã gửi lại" từ điều kiện `SUBMITTED` có người phụ trách, vì hồ sơ mới nộp luôn chưa có người phụ trách.
+    - Chỉ cán bộ đang phụ trách thấy nút "Review lại". Nút này gọi `assign` để chuyển sang `UNDER_REVIEW` rồi mở workspace.
+    - Cán bộ khác thấy "Chờ cán bộ phụ trách". Dashboard chỉ ưu tiên hồ sơ gửi lại của chính mình.
+    - Test: `tests/officer.spec.ts` "hồ sơ công dân gửi lại…".
+    - Khi BE có thêm `release`, cần đối chiếu lại điều kiện suy luận này.
+  - Sửa câu mô tả trong modal phân công lĩnh vực của Manager.
+  - Skeleton bảng hồ sơ cán bộ bị dính vì ô thiếu padding: `TableSkeletonRows` thêm prop `cellClassName` cho bảng ngoài `.admin-table-wrap`.
+  - Theo yêu cầu người dùng, đóng modal quyết định (yêu cầu bổ sung / giấy tờ sẵn sàng) không còn hỏi "Bỏ thay đổi chưa lưu?". Vẫn giữ cảnh báo khi rời workspace với nhận xét chưa lưu.
+- **Kiểm tra:**
+  - `npm run typecheck`, `npm run lint`, `npm run build`: đạt.
+  - Playwright các file officer, officer-submissions, manager, auth: 30/34 đạt.
+    - `auth.spec.ts:84` và `manager.spec.ts:8` bị timeout lúc trang đang tải; chạy lại riêng thì đạt.
+    - `officer.spec.ts:53` và `officer.spec.ts:66` tìm nút "Tiếp nhận tại quầy" vốn không có trong `src` hiện tại. Đây là lỗi có từ trước, không thuộc thay đổi này.
+  - Chưa có test riêng cho bộ lọc lĩnh vực và ngày gửi.
+- **Còn chờ:**
+  - Sau khi BE có API: tab "Lĩnh vực của tôi"/"Đang xử lý của tôi"/"Toàn phường", trả hồ sơ, section "Giám sát hồ sơ" và modal giao/chuyển cho Manager, `assignedCategories` trong `authStore`.
+  - Bộ lọc lĩnh vực và thủ tục hiện vẫn chỉ áp dụng trên trang đang tải (50 hồ sơ). Tìm theo họ tên/CCCD cũng vẫn làm phía client.
+
+## Knowledge graph bằng graphify (công cụ cá nhân) — 23/10/2026
+
+- **Phạm vi:** dựng knowledge graph cho FE (toàn bộ code + 27 tài liệu `.md`, bỏ 7 ảnh trang trí trong `public/`) và BE (`D:/wardmate-backend`: chỉ `src/` + `PROGRESS.md`, theo yêu cầu người dùng).
+- **Thay đổi trong repo:** chỉ thêm `graphify-out/` vào `.gitignore`. Output cục bộ, không commit: `graphify-out/graph.html`, `GRAPH_REPORT.md`, `graph.json`, `merged-graph.json` (gộp FE+BE). BE đã ignore `graphify-out/` sẵn.
+- **Kết quả:** FE 1.346 node / 3.791 cạnh / 73 cụm; BE 3.413 node / 11.208 cạnh / 149 cụm; gộp 4.759 node / 14.999 cạnh. Health check: FE 34 cạnh treo, BE 922 cạnh treo (phần lớn tham chiếu kiểu .NET ngoài repo).
+- **Giới hạn:** graphify (`pip install graphifyy`) là công cụ cá nhân giống Ponytail, không phải dependency; chưa cài hook PreToolUse vào `.claude/settings.json` chung. Node từ tài liệu chưa tự nối với node code tương ứng (ID khác nhau). Cập nhật sau khi sửa code: `/graphify . --update`.
 
 ## Loại bỏ 2 trang Thống kê chưa có Backend: "Thống kê lượt tra cứu" & "Thống kê biểu mẫu" — 23/10/2026
 
