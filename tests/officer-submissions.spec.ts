@@ -112,7 +112,7 @@ test('nhận xét chưa lưu chặn quyết định; có thể xóa nội dung v
   expect(state.writes).toHaveLength(0);
   await page.getByRole('button', { name: 'Xóa nội dung đang nhập' }).click();
   await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Phiên bản đang kiểm tra: 1');
+  await expect(page.getByRole('dialog')).toContainText('Lần nộp đang kiểm tra: 1');
 });
 
 test('phiên bản quyết định cố định đến khi đóng modal; không quyết định phiên bản mới bằng lý do cũ', async ({ page }) => {
@@ -126,11 +126,11 @@ test('phiên bản quyết định cố định đến khi đóng modal; không 
     await modal.getByRole('button', { name: 'Xác nhận quyết định' }).click();
     await expect(modal.getByRole('alert')).toContainText('Hồ sơ hoặc quyền thụ lý đã thay đổi');
   }
-  await expect(modal).toContainText('Phiên bản đang kiểm tra: 1');
+  await expect(modal).toContainText('Lần nộp đang kiểm tra: 1');
   expect(state.writes).toHaveLength(0);
   await modal.getByRole('button', { name: 'Đóng hộp thoại' }).click();
   await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Phiên bản đang kiểm tra: 2');
+  await expect(page.getByRole('dialog')).toContainText('Lần nộp đang kiểm tra: 2');
 });
 
 test('đơn biến mất khi xác nhận không chuyển sang Workflow để quyết định thay', async ({ page }) => {

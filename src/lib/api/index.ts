@@ -121,7 +121,32 @@ async function loadCurrentUser(version: number) {
     || !Array.isArray(data.permissions) || !data.permissions.every(permission => typeof permission === 'string')) {
     throw new Error('Thông tin tài khoản không hợp lệ. Vui lòng thử lại.');
   }
-  useAuthStore.setState({ status: 'authenticated', user: data, error: null, expired: false });
+  // Chỉ dùng để ưu tiên hiển thị; dữ liệu sai định dạng thì coi như chưa gán lĩnh vực.
+  const assignedCategories = Array.isArray(data.assignedCategories)
+    ? data.assignedCategories.filter((id): id is number => Number.isInteger(id) && id > 0)
+    : [];
+  useAuthStore.setState({ status: 'authenticated', user: { ...data, assignedCategories }, error: null, expired: false });
+}
+
+/**
+ * Đồng bộ lại lĩnh vực phụ trách mà không bắt đăng nhập lại: Manager đổi lĩnh vực thì IAM áp dụng ngay
+ * cho bộ lọc server, còn nhãn "Ngoài lĩnh vực" ở FE dựa vào danh sách lưu trong store.
+ */
+export async function refreshAssignedCategories(): Promise<number[]> {
+  const version = sessionVersion;
+  const { data } = await api.get<CurrentUser>('/api/v1/users/me', cookieConfig);
+  const state = useAuthStore.getState();
+  if (version !== sessionVersion || state.status !== 'authenticated' || !state.user || data?.id !== state.user.id) {
+    return state.user?.assignedCategories ?? [];
+  }
+  const assignedCategories = Array.isArray(data.assignedCategories)
+    ? data.assignedCategories.filter((id): id is number => Number.isInteger(id) && id > 0)
+    : [];
+  const current = state.user.assignedCategories ?? [];
+  if (current.length !== assignedCategories.length || current.some((id, i) => id !== assignedCategories[i])) {
+    useAuthStore.setState({ user: { ...state.user, assignedCategories } });
+  }
+  return assignedCategories;
 }
 
 let restorePending: { version: number; promise: Promise<boolean> } | undefined;
@@ -384,6 +409,17 @@ export async function assignOfficerCategories(userId: string, categories: number
     .filter(id => Number.isInteger(id) && id > 0)
     .slice(0, 100);
   await api.put(`/api/v1/manager/officers/${userId}/categories`, { categories: sanitized }, cookieConfig);
+}
+
+// IAM-CATEGORY-01: BE kiểm tra ID lĩnh vực với Catalog trước khi lưu.
+export function officerCategoryError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { code?: string; extensions?: { code?: string } } | undefined;
+    const code = data?.code ?? data?.extensions?.code;
+    if (code === 'iam.invalid_categories') return 'Có lĩnh vực không còn tồn tại trong danh mục thủ tục. Vui lòng tải lại danh sách lĩnh vực rồi chọn lại.';
+    if (code === 'iam.catalog_unavailable') return 'Chưa kiểm tra được danh mục lĩnh vực (dịch vụ thủ tục không phản hồi). Thay đổi chưa được lưu, vui lòng thử lại sau.';
+  }
+  return authErrorMessage(error);
 }
 
 export async function createWard(payload: CreateWardInput): Promise<WardDto> {

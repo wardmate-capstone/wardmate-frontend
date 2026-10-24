@@ -33,18 +33,78 @@ import {
   extractCitizenInfoFromFormData,
   type OfficerLookup,
 } from '@/lib/api/workflowAdapters';
-import { getManagerOfficers } from '@/lib/api';
-import { workflowError, workflowApi } from '@/lib/api/workflow';
-import { Button } from '@/components/ui';
+import { getManagerOfficers, refreshAssignedCategories } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { workflowError, workflowApi, OFFICER_VISIBLE_STATUSES } from '@/lib/api/workflow';
+import { useProcedureCategories } from '@/hooks/useProcedureCategories';
+import { Button, Modal } from '@/components/ui';
+import type { QueueTab } from './OfficerApplicationListView';
+
+// Trạng thái Workflow gửi lên server theo mục sidebar; "Đã gửi lại" là SUBMITTED có resubmitCount > 0.
+const SECTION_STATUS: Partial<Record<OfficerSection, string>> = {
+  'apps-pending': 'SUBMITTED',
+  'apps-reviewing': 'UNDER_REVIEW',
+  'apps-need-revision': 'NEED_REVISION',
+  'apps-resubmitted': 'SUBMITTED',
+  'apps-approved': 'DOCUMENTS_READY',
+};
+
+// Ngày chọn là ngày Việt Nam; gửi mốc đầu/cuối ngày theo giờ trình duyệt dạng ISO.
+function dayBoundary(date: string, end: boolean): string | undefined {
+  if (!date) return undefined;
+  const value = new Date(`${date}T${end ? '23:59:59.999' : '00:00:00'}`);
+  return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+}
 
 export const OfficerPage: React.FC = () => {
   const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
+  // Navigation States
+  const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
+  const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
+  const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
+
   // TanStack Query & Mutations từ Workflow API
   const [queuePage, setQueuePage] = useState(1);
-  const officerApplicationsQuery = useOfficerApplications({ page: queuePage, pageSize: 50 });
+  const [submittedRange, setSubmittedRange] = useState({ from: '', to: '' });
+  // Tab mặc định ưu tiên lĩnh vực của cán bộ (ưu tiên mềm: vẫn xem/nhận được lĩnh vực khác ở tab Toàn phường).
+  const [queueTab, setQueueTab] = useState<QueueTab>('my-categories');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [overdueOnly, setOverdueOnly] = useState(false);
+  const myCategoryIds = useMemo(() => user?.assignedCategories ?? [], [user?.assignedCategories]);
+  // Manager đổi lĩnh vực thì cập nhật nhãn "Ngoài lĩnh vực" mà không cần đăng nhập lại:
+  // tải lại khi quay lại tab trình duyệt và định kỳ 60 giây.
+  useQuery({
+    queryKey: ['iam', 'me', 'assigned-categories', user?.id],
+    queryFn: refreshAssignedCategories,
+    enabled: Boolean(user?.id),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const categoriesQuery = useProcedureCategories();
+  const inListSection = activeSection.startsWith('apps-');
+  // Khoảng ngày ngược thì không gửi (BE trả 400); danh sách tự hiển thị lỗi tại bộ lọc.
+  const rangeValid = !submittedRange.from || !submittedRange.to || submittedRange.from <= submittedRange.to;
+  const officerApplicationsQuery = useOfficerApplications({
+    page: queuePage,
+    pageSize: 50,
+    status: SECTION_STATUS[activeSection] ?? OFFICER_VISIBLE_STATUSES,
+    submittedFrom: rangeValid ? dayBoundary(submittedRange.from, false) : undefined,
+    submittedTo: rangeValid ? dayBoundary(submittedRange.to, true) : undefined,
+    // Tổng quan giữ toàn phường (BE đã xếp lĩnh vực của cán bộ lên trước); bộ lọc chỉ áp cho danh sách.
+    scope: inListSection && queueTab === 'my-categories' ? 'my-categories' : undefined,
+    assignee: inListSection && queueTab === 'mine' ? 'me' : undefined,
+    categoryIds: inListSection && categoryId ? [categoryId] : undefined,
+    overdue: inListSection && overdueOnly ? true : undefined,
+  });
+
+  // Đổi mục hoặc bộ lọc server thì quay về trang đầu để không rơi vào trang rỗng.
+  useEffect(() => {
+    setQueuePage(1);
+  }, [activeSection, submittedRange.from, submittedRange.to, queueTab, categoryId, overdueOnly]);
 
   const activeQuery = officerApplicationsQuery;
   const activeData = activeQuery.data;
@@ -160,11 +220,6 @@ export const OfficerPage: React.FC = () => {
     }
   }, [activeData, officerLookup, citizenInfoMap]);
 
-  // Navigation States
-  const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
-  const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
-  const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
-
   // Sidebar Layout States
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
@@ -180,6 +235,14 @@ export const OfficerPage: React.FC = () => {
       unreadNotifs: notifications.filter((n) => !n.isRead).length,
     };
   }, [applications, notifications]);
+
+  const isMine = (app: OfficerApplication) =>
+    Boolean(user?.id && app.assignedOfficerId?.toLowerCase() === user.id.toLowerCase());
+
+  // Ngoài lĩnh vực chỉ khi cán bộ đã được gán lĩnh vực; chưa gán nghĩa là phụ trách mọi lĩnh vực.
+  const isOutsideMyCategories = (app?: OfficerApplication) =>
+    Boolean(app && myCategoryIds.length > 0 && !(app.categoryId && myCategoryIds.includes(app.categoryId)));
+  const [outsideConfirm, setOutsideConfirm] = useState<OfficerApplication | null>(null);
 
   // ACTION: Nhận xử lý hồ sơ (Tiếp nhận hồ sơ tiền kiểm)
   const handleTakeApplication = async (appId: string) => {
@@ -213,6 +276,16 @@ export const OfficerPage: React.FC = () => {
       toast.error(workflowError(err));
       await refetchAll();
     } finally { assignLock.current = false; }
+  };
+
+  // Nhận hồ sơ ngoài lĩnh vực vẫn được (ưu tiên mềm) nhưng hỏi xác nhận trước.
+  const requestTakeApplication = (appId: string) => {
+    const target = applications.find((a) => a.id === appId) ?? (quickPreviewApp?.id === appId ? quickPreviewApp : undefined);
+    if (target && !isMine(target) && isOutsideMyCategories(target)) {
+      setOutsideConfirm(target);
+      return;
+    }
+    void handleTakeApplication(appId);
   };
 
   // ACTION: Yêu cầu bổ sung
@@ -260,7 +333,7 @@ export const OfficerPage: React.FC = () => {
       setAuditLogs((prev) => [newLog, ...prev]);
 
       toast.success(`Hồ sơ ${appNumber} đã được xác nhận giấy tờ sẵn sàng.`);
-      // The detail query reloads the authoritative state after confirmation.
+      // Ở lại workspace (đã khóa sửa) để cán bộ tạo PDF; mục bên trái chuyển sang Giấy tờ sẵn sàng.
       setActiveSection('apps-approved');
 
   };
@@ -277,8 +350,13 @@ export const OfficerPage: React.FC = () => {
 
   // ACTION: Mở chi tiết hồ sơ thẩm định (tải chi tiết từ backend)
   const handleOpenReview = async (app: OfficerApplication) => {
-    // Nếu hồ sơ đang chờ tiếp nhận (chưa phân công), tự động nhận xử lý trước khi mở workspace
-    if (app.status === 'SUBMITTED_FOR_REVIEW' || app.status === 'RESUBMITTED') {
+    // Hồ sơ công dân gửi lại vẫn giữ cán bộ cũ: chỉ người đó nhận lại được để chuyển sang UNDER_REVIEW.
+    if (app.status === 'RESUBMITTED') {
+      if (isMine(app)) await handleTakeApplication(app.id);
+      else toast.info(`Hồ sơ đang do ${app.assignedOfficer} phụ trách.`);
+      return;
+    }
+    if (app.status === 'SUBMITTED_FOR_REVIEW') {
       toast.info('Bấm Nhận xử lý để nhận thụ lý trước khi mở hồ sơ.');
       return;
     }
@@ -391,11 +469,22 @@ export const OfficerPage: React.FC = () => {
                   activeSection={activeSection}
                   onSelectSection={(sec) => setActiveSection(sec)}
                   onOpenReviewWorkspace={handleOpenReview}
-                  onTakeApplication={handleTakeApplication}
+                  onTakeApplication={requestTakeApplication}
+                  currentUserId={user?.id}
+                  queueTab={queueTab}
+                  onQueueTabChange={setQueueTab}
+                  myCategoryIds={myCategoryIds}
+                  categories={categoriesQuery.data ?? []}
+                  categoryId={categoryId}
+                  onCategoryChange={setCategoryId}
+                  overdueOnly={overdueOnly}
+                  onOverdueChange={setOverdueOnly}
                   onQuickPreview={(app) => setQuickPreviewApp(app)}
                   onRefresh={() => void refetchAll()}
                   isRefreshing={activeQuery.isFetching}
                   isLoading={activeQuery.isPending}
+                  submittedRange={submittedRange}
+                  onSubmittedRangeChange={setSubmittedRange}
                   pagination={{
                     currentPage: queuePage,
                     totalItems: activeData?.total ?? applications.length,
@@ -504,13 +593,13 @@ export const OfficerPage: React.FC = () => {
               </button>
 
               <div className="flex items-center gap-2">
-                {quickPreviewApp.status === 'SUBMITTED_FOR_REVIEW' && (
+                {(quickPreviewApp.status === 'SUBMITTED_FOR_REVIEW' || (quickPreviewApp.status === 'RESUBMITTED' && isMine(quickPreviewApp))) && (
                   <button
                     type="button"
                     onClick={() => {
                       const id = quickPreviewApp.id;
                       setQuickPreviewApp(null);
-                      handleTakeApplication(id);
+                      requestTakeApplication(id);
                     }}
                     className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-red-800 text-xs font-bold text-white hover:bg-red-900 shadow-2xs"
                   >
@@ -536,6 +625,29 @@ export const OfficerPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Modal
+        open={Boolean(outsideConfirm)}
+        onOpenChange={(open) => !open && setOutsideConfirm(null)}
+        title="Nhận hồ sơ ngoài lĩnh vực?"
+        description={`Hồ sơ ${outsideConfirm?.applicationNumber ?? ''} thuộc lĩnh vực "${outsideConfirm?.procedureCategory ?? ''}", không nằm trong lĩnh vực bạn được phân công. Bạn vẫn có thể nhận để hỗ trợ xử lý.`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOutsideConfirm(null)}>Để cán bộ khác nhận</Button>
+            <Button
+              onClick={() => {
+                const id = outsideConfirm?.id;
+                setOutsideConfirm(null);
+                if (id) void handleTakeApplication(id);
+              }}
+            >
+              Vẫn nhận xử lý
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">Sau khi nhận, hồ sơ chuyển sang Đang kiểm tra và bạn là cán bộ phụ trách.</p>
+      </Modal>
     </div>
   );
 };

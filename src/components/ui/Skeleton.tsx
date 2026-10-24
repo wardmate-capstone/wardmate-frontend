@@ -5,11 +5,12 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLSpanE
   return <span aria-hidden="true" className={cn('block animate-pulse rounded-md bg-slate-200/80', className)} {...props} />;
 }
 
-export function TableSkeletonRows({ columns, rows = 5 }: { columns: number; rows?: number }) {
+// cellClassName: bảng không nằm trong .admin-table-wrap cần tự thêm padding cho ô.
+export function TableSkeletonRows({ columns, rows = 5, cellClassName }: { columns: number; rows?: number; cellClassName?: string }) {
   return Array.from({ length: rows }, (_, row) => (
     <tr key={row} aria-hidden="true">
       {Array.from({ length: columns }, (__, column) => (
-        <td key={column}>
+        <td key={column} className={cellClassName}>
           <Skeleton className={cn('h-4', column === 0 ? 'w-32' : column === columns - 1 ? 'ml-auto w-20' : 'w-24')} />
         </td>
       ))}

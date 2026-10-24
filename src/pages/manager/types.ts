@@ -1,5 +1,6 @@
 export type ManagerSectionId =
   | 'overview'
+  | 'applications'
   | 'stats-dossiers'
   | 'stats-procedures'
   | 'profiles'

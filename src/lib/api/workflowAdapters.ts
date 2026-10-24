@@ -13,6 +13,7 @@ import type { ChecklistItem as ProcedureChecklistItem } from '@/lib/procedureCon
 import type {
   ApplicationDto,
   ApplicationSummaryDto,
+  AssignmentHistoryDto,
   ChecklistDto,
   CommentDto,
   HistoryDto,
@@ -91,7 +92,8 @@ export function extractCitizenInfoFromFormData(formData: Record<string, unknown>
 
 function mapStatus(status?: string | null, resubmitCount = 0): ApplicationStatus {
   const s = (status || '').toUpperCase();
-  if (s === 'DRAFT') return 'SUBMITTED_FOR_REVIEW';
+  // Bản nháp chưa gửi: không được hiện như Chờ tiền kiểm, nếu không nút Nhận xử lý sẽ bị BE trả 409.
+  if (s === 'DRAFT') return 'DRAFT';
   if (s === 'SUBMITTED') return resubmitCount > 0 ? 'RESUBMITTED' : 'SUBMITTED_FOR_REVIEW';
   if (s === 'UNDER_REVIEW') return 'UNDER_REVIEW';
   if (s === 'NEED_REVISION') return 'NEED_REVISION';
@@ -100,6 +102,8 @@ function mapStatus(status?: string | null, resubmitCount = 0): ApplicationStatus
   if (s === 'READY_TO_SUBMIT') return 'READY_TO_SUBMIT';
   if (s === 'APPROVED') return 'APPROVED';
   if (s === 'REJECTED') return 'REJECTED';
+  // Không để hồ sơ đã hủy rơi vào "Chờ tiền kiểm": nút Nhận xử lý sẽ luôn bị BE trả 409.
+  if (s === 'CANCELLED') return 'CANCELLED';
   return 'SUBMITTED_FOR_REVIEW';
 }
 
@@ -170,6 +174,38 @@ export type OfficerLookup = {
   directory?: Record<string, string>; // map lowercase officerId -> fullName hoặc username
 };
 
+export const UNKNOWN_CATEGORY_LABEL = 'Chưa xác định lĩnh vực';
+
+// Lĩnh vực là snapshot lúc tạo hồ sơ; hồ sơ cũ BE giữ NULL và không suy từ thủ tục hiện tại.
+export function resolveCategoryName(categoryName: string | null | undefined): string {
+  return categoryName?.trim() || UNKNOWN_CATEGORY_LABEL;
+}
+
+const ASSIGNMENT_TITLES: Record<string, string> = {
+  CLAIM: 'Cán bộ nhận xử lý hồ sơ',
+  RELEASE: 'Cán bộ trả hồ sơ về hàng đợi',
+  ASSIGN: 'Lãnh đạo giao hồ sơ cho cán bộ',
+  TRANSFER: 'Lãnh đạo chuyển cán bộ phụ trách',
+};
+
+export function mapAssignmentHistoryToTimelineItem(h: AssignmentHistoryDto, lookup?: OfficerLookup): TimelineItem {
+  const name = (id?: string | null) => resolveOfficerDisplayName(id, undefined, lookup);
+  const parts = [
+    h.fromOfficerId ? `Từ: ${name(h.fromOfficerId)}` : '',
+    h.toOfficerId ? `Đến: ${name(h.toOfficerId)}` : '',
+    h.reason?.trim() ? `Lý do: ${h.reason.trim()}` : '',
+  ].filter(Boolean);
+  return {
+    id: `assignment-${h.id}`,
+    time: formatDateTime(h.createdAt),
+    title: ASSIGNMENT_TITLES[h.action] || `Thay đổi phân công: ${h.action}`,
+    actor: name(h.actorId),
+    description: parts.join(' · ') || undefined,
+    type: 'officer',
+    status: 'done',
+  };
+}
+
 export function resolveOfficerDisplayName(
   assignedOfficerId?: string | null,
   assignedOfficerName?: string | null,
@@ -202,7 +238,9 @@ export function mapSummaryDtoToOfficerApplication(
   summary: ApplicationSummaryDto,
   lookup?: OfficerLookup
 ): OfficerApplication {
-  const status = mapStatus(summary.status);
+  // BE trả resubmitCount (WORKFLOW-RESUBMIT-01); suy luận theo người phụ trách chỉ còn cho response cũ.
+  const resubmitted = summary.resubmitCount ?? (summary.assignedOfficerId ? 1 : 0);
+  const status = mapStatus(summary.status, resubmitted);
   const assignedOfficer = resolveOfficerDisplayName(
     summary.assignedOfficerId,
     summary.assignedOfficerName,
@@ -214,7 +252,10 @@ export function mapSummaryDtoToOfficerApplication(
     applicationNumber: summary.applicationCode || `HS-${summary.id.slice(0, 8).toUpperCase()}`,
     procedureId: summary.procedureId,
     procedureName: summary.procedureTitle || 'Thủ tục hành chính',
-    procedureCategory: 'Hành chính cấp Xã/Phường',
+    procedureCategory: resolveCategoryName(summary.categoryName),
+    categoryId: summary.categoryId ?? null,
+    assignmentVersion: summary.assignmentVersion ?? null,
+    resubmitCount: resubmitted,
     citizen: {
       fullName: summary.applicantName?.trim() || 'Công dân',
       dateOfBirth: '—',
@@ -226,11 +267,13 @@ export function mapSummaryDtoToOfficerApplication(
       gender: 'Nam',
     },
     submittedAt: formatDateTime(summary.submittedAt || summary.createdAt),
+    submittedAtUtc: summary.submittedAt || summary.createdAt,
     status,
-    urgency: summary.dueAtUtc && Date.parse(summary.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' ? 'overdue' : 'normal',
+    urgency: summary.dueAtUtc && Date.parse(summary.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' ? 'overdue' : 'normal',
     dueAtUtc: summary.dueAtUtc,
     deadlineStatus: summary.deadlineStatus,
     assignedOfficer,
+    assignedOfficerId: summary.assignedOfficerId ?? undefined,
     eligibility: [],
     checklist: [],
     documents: [],
@@ -258,7 +301,7 @@ export function mapApplicationDtoToOfficerApplication(
   const formData = parseFormData(dto.formData);
   const status = mapStatus(dto.status, dto.resubmitCount);
   const currentVersion = dto.currentVersionNumber;
-  const officerDisplayName = resolveOfficerDisplayName(dto.assignedOfficerId, undefined, lookup);
+  const officerDisplayName = resolveOfficerDisplayName(dto.assignedOfficerId, dto.assignedOfficerName, lookup);
   const citizenInfo = extractCitizenInfoFromFormData(formData);
 
   // Citizen info extracted from formData
@@ -306,8 +349,13 @@ export function mapApplicationDtoToOfficerApplication(
   // E-form fields
   const eformFields: EformField[] = formDataFields(formData);
 
-  // Timeline from backend history
-  const timeline: TimelineItem[] = (dto.history || []).map(mapHistoryDtoToTimelineItem);
+  // Timeline: lịch sử trạng thái + lịch sử phân công (chỉ có với cán bộ/Manager), xếp theo thời gian.
+  const timeline: TimelineItem[] = [
+    ...(dto.history || []).map((h) => ({ at: h.createdAt, item: mapHistoryDtoToTimelineItem(h) })),
+    ...(dto.assignmentHistory || []).map((h) => ({ at: h.createdAt, item: mapAssignmentHistoryToTimelineItem(h, lookup) })),
+  ]
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+    .map(({ item }) => item);
 
   // Review comments mapped from backend
   const mappedComments: OfficerReviewComment[] = comments.map((c) =>
@@ -320,16 +368,21 @@ export function mapApplicationDtoToOfficerApplication(
     procedureId: dto.procedureId,
     caseCode: dto.caseCode || undefined,
     procedureName: dto.procedureTitle || 'Thủ tục hành chính',
-    procedureCategory: 'Hành chính cấp Xã/Phường',
+    procedureCategory: resolveCategoryName(dto.categoryName),
+    categoryId: dto.categoryId ?? null,
+    assignmentVersion: dto.assignmentVersion ?? null,
+    resubmitCount: dto.resubmitCount,
     citizen,
     submittedAt: formatDateTime(dto.submittedAt || dto.createdAt),
+    submittedAtUtc: dto.submittedAt || dto.createdAt,
     reviewStartedAt: dto.assignedOfficerId ? formatDateTime(dto.updatedAt) : undefined,
     reviewedBy: dto.assignedOfficerId ? officerDisplayName : undefined,
     status,
-    urgency: dto.dueAtUtc && Date.parse(dto.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' ? 'overdue' : 'normal',
+    urgency: dto.dueAtUtc && Date.parse(dto.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' ? 'overdue' : 'normal',
     dueAtUtc: dto.dueAtUtc,
     deadlineStatus: dto.deadlineStatus,
     assignedOfficer: officerDisplayName,
+    assignedOfficerId: dto.assignedOfficerId ?? undefined,
     eligibility: [
       { id: 'el-1', label: 'Đúng đơn vị hành chính tiếp nhận (Phường/Xã)', met: Boolean(dto.wardCode), notes: dto.wardCode || undefined },
       { id: 'el-2', label: 'Đúng trường hợp hồ sơ quy định', met: Boolean(dto.caseCode), notes: dto.caseCode || undefined },
@@ -356,7 +409,9 @@ export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): C
   const s = (summary.status || '').toUpperCase();
   let status: CitizenDossier['status'] = 'Bản nháp';
   if (s === 'DRAFT') status = 'Bản nháp';
-  else if (s === 'SUBMITTED' || s === 'UNDER_REVIEW') status = 'Chờ tiền kiểm';
+  // Giống trang chi tiết: hồ sơ gửi lại sau yêu cầu bổ sung phải vào mục "Đã gửi lại".
+  else if (s === 'SUBMITTED') status = (summary.resubmitCount ?? 0) > 0 ? 'Đã gửi lại' : 'Chờ tiền kiểm';
+  else if (s === 'UNDER_REVIEW') status = 'Chờ tiền kiểm';
   else if (s === 'NEED_REVISION') status = 'Cần chỉnh sửa';
   else if (s === 'DOCUMENTS_READY') status = 'Giấy tờ sẵn sàng';
   else if (s === 'OFFICIALLY_RECEIVED') status = 'Đã tiếp nhận tại quầy';
@@ -369,7 +424,7 @@ export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): C
     code: summary.applicationCode || `HS-${summary.id.slice(0, 8).toUpperCase()}`,
     procedureId: summary.procedureId,
     procedureName: summary.procedureTitle || 'Thủ tục hành chính',
-    field: 'Hành chính cấp Xã/Phường',
+    field: summary.categoryName?.trim() || 'Hành chính cấp Xã/Phường',
     createdAt: formatDateTime(summary.createdAt),
     updatedAt: formatDateTime(summary.submittedAt || summary.createdAt),
     status,
@@ -421,7 +476,7 @@ export function mapApplicationDtoToCitizenDossier(
     procedureId: dto.procedureId,
     caseCode: dto.caseCode || undefined,
     procedureName: dto.procedureTitle || 'Thủ tục hành chính',
-    field: 'Hành chính cấp Xã/Phường',
+    field: dto.categoryName?.trim() || 'Hành chính cấp Xã/Phường',
     createdAt: formatDateTime(dto.createdAt),
     updatedAt: formatDateTime(dto.updatedAt),
     status,

@@ -7,8 +7,9 @@ import axios from 'axios';
 import { Badge, Button, Input, Modal, Skeleton, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { useAddCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions } from '@/hooks/useWorkflow';
-import { formDataFields } from '@/lib/api/workflowAdapters';
+import { useAddCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
+import { formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
+import { ReleaseApplicationModal } from '@/components/workflow/AssignmentModals';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
 import { GeneratedDocumentsPanel } from '@/pages/citizen/components/GeneratedDocumentsPanel';
@@ -86,6 +87,8 @@ export function OfficerReviewWorkspaceView({
   const diff = useApplicationDiff(application.id, from, to, tab === 'versions');
   const isRefreshing = detail.isFetching || comments.isFetching || submissions.isFetching;
   const addComment = useAddCommentMutation();
+  const release = useReleaseApplicationMutation();
+  const [releaseOpen, setReleaseOpen] = useState(false);
   const writing = useIsMutating() > 0;
   const [decision, setDecision] = useState<'ready' | 'revision'>();
   const [decisionContext, setDecisionContext] = useState<{ version: number; hadSubmissions: boolean }>();
@@ -109,10 +112,8 @@ export function OfficerReviewWorkspaceView({
     defaultValues: { reason: '' },
   });
 
-  const guard = useUnsavedChanges(
-    commentForm.formState.isDirty || Boolean(decision && reasonForm.formState.isDirty),
-    busy || addComment.isPending,
-  );
+  // Chỉ cảnh báo khi rời workspace với nhận xét chưa lưu; đóng modal quyết định không hỏi lại.
+  const guard = useUnsavedChanges(commentForm.formState.isDirty, busy || addComment.isPending);
 
   const editable =
     !writing &&
@@ -135,7 +136,7 @@ export function OfficerReviewWorkspaceView({
   const isAllMandatoryCompleted = mandatoryChecklists.length > 0 && completedMandatoryCount === mandatoryChecklists.length;
 
   const tabs: { id: Tab; label: string; count?: number; icon: React.ReactNode }[] = [
-    { id: 'info', label: 'Thông tin & checklist', count: checklists.length, icon: <FileText className="h-4 w-4" /> },
+    { id: 'info', label: 'Thông tin & giấy tờ', count: checklists.length, icon: <FileText className="h-4 w-4" /> },
     { id: 'documents', label: 'Bản khai & giấy tờ', count: submissions.data?.length, icon: <FileCheck className="h-4 w-4" /> },
     { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <AlertTriangle className="h-4 w-4" /> },
     { id: 'versions', label: 'Phiên bản & so sánh', icon: <GitCompare className="h-4 w-4" /> },
@@ -146,6 +147,12 @@ export function OfficerReviewWorkspaceView({
   function openDecision(next: 'ready' | 'revision') {
     if (commentForm.formState.isDirty) {
       setDecisionWarning('Bạn có nhận xét chưa lưu. Hãy lưu hoặc xóa nội dung đang nhập trước khi gửi quyết định.');
+      setTab('comments');
+      return;
+    }
+    // Chặn sớm: yêu cầu bổ sung phải dựa trên nhận xét cụ thể để công dân biết cần sửa gì.
+    if (next === 'revision' && comments.isSuccess && openComments.length === 0) {
+      setDecisionWarning(`Bạn chưa ghi nhận xét nào cho lần nộp này. Hãy ghi rõ điểm công dân cần sửa ở mục “Thêm nhận xét mới” bên dưới, bấm Lưu nhận xét, rồi bấm lại Yêu cầu bổ sung.`);
       setTab('comments');
       return;
     }
@@ -228,7 +235,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         return;
       }
       if (!Array.isArray(currentApplication.checklists)) {
-        throw new Error('Chưa tải được checklist của hồ sơ. Vui lòng tải lại.');
+        throw new Error('Chưa tải được danh sách giấy tờ của hồ sơ. Vui lòng bấm Làm mới dữ liệu.');
       }
       const latestSubmissions = await submissions.refetch();
       if (latestSubmissions.isError) throw latestSubmissions.error;
@@ -255,22 +262,27 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
       if (latest.isError) throw latest.error;
       const open = latest.data?.filter(x => x.status === 'OPEN' && x.versionNumber === decisionContext.version) ?? [];
       if (decision === 'ready' && open.length) {
-        setActionError('Còn nhận xét OPEN ở phiên bản hiện tại. Cần yêu cầu công dân sửa trước khi xác nhận sẵn sàng.');
+        setActionError(`Hồ sơ còn ${open.length} nhận xét công dân chưa sửa. Hãy chọn Yêu cầu bổ sung để gửi cho công dân; khi công dân gửi lại bản đã sửa, bạn mới xác nhận được.`);
         return;
       }
       if (decision === 'ready' && currentApplication.checklists?.some(x => x.isRequired && x.status !== 'COMPLETED')) {
-        setActionError('Chưa hoàn tất các giấy tờ bắt buộc trong checklist.');
+        setActionError('Còn giấy tờ bắt buộc chưa hoàn tất. Vui lòng kiểm tra tab Thông tin & giấy tờ.');
         return;
       }
       if (decision === 'revision' && !open.length) {
-        setActionError('Cần ít nhất một nhận xét OPEN đã lưu trên phiên bản hiện tại.');
+        setActionError(`Chưa có nhận xét nào về điểm cần sửa. Hãy đóng hộp thoại, ghi và lưu nhận xét ở tab Nhận xét, rồi thử lại.`);
         return;
       }
       const selectedId = linked.length ? submissionId : undefined;
       if (decision === 'ready') await onConfirmReadiness(application.id, selectedId);
       else await onRequestRevision(application.id, reasonForm.getValues('reason').trim(), open.map(x => x.commentText || ''), selectedId);
-      await Promise.all([detail.refetch(), submissions.refetch()]);
+      // Đóng hộp thoại ngay khi BE xác nhận; không chờ tải lại (Azure mất vài giây) để tránh tưởng bị treo.
+      // Yêu cầu bổ sung: trang cha đóng workspace. Sẵn sàng: ở lại, tải lại nền và mở tab PDF.
       setDecision(undefined);
+      if (decision === 'ready') {
+        setTab('pdf');
+        void Promise.all([detail.refetch(), submissions.refetch()]);
+      }
     } catch (error) {
       const refreshed = await Promise.all([detail.refetch(), comments.refetch(), submissions.refetch()]);
       const recovery = refreshed.some(result => result.isError)
@@ -285,6 +297,17 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
       decisionLock.current = false;
       setBusy(false);
     }
+  }
+
+  // Trả hồ sơ về hàng đợi chung; gửi assignmentVersion để BE từ chối nếu phân công vừa đổi (409).
+  async function handleRelease(reason: string) {
+    await release.mutateAsync({
+      id: application.id,
+      input: { reason, expectedAssignmentVersion: detail.data?.assignmentVersion },
+    });
+    setReleaseOpen(false);
+    toast.success(`Đã trả hồ sơ ${application.applicationNumber} về hàng đợi.`);
+    guard.requestClose(onBack);
   }
 
   return (
@@ -371,13 +394,24 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 <CheckCircle className="h-4 w-4" />
                 Xác nhận giấy tờ sẵn sàng
               </Button>
+              {editable && (
+                <Button
+                  variant="ghost"
+                  className="gap-2 text-slate-600 hover:text-slate-900"
+                  disabled={busy}
+                  onClick={() => setReleaseOpen(true)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Trả về hàng đợi
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Quick Metrics Bar */}
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4">
             <div className="rounded-xl bg-slate-50 p-3">
-              <span className="text-xs font-medium text-slate-500">Checklist bắt buộc</span>
+              <span className="text-xs font-medium text-slate-500">Giấy tờ bắt buộc</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
                 {completedMandatoryCount} / {mandatoryChecklists.length} mục hoàn tất
               </p>
@@ -478,7 +512,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div className="border-t border-slate-100 pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Checklist hồ sơ</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Danh mục giấy tờ</h3>
                   <p className="mt-0.5 text-xs text-slate-500">Danh mục giấy tờ và tài liệu công dân cần cung cấp.</p>
                 </div>
                 <span className="text-xs font-semibold text-slate-500">
@@ -837,6 +871,29 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 </div>
               ))}
             </div>
+            {Boolean(detail.data?.assignmentHistory?.length) && (
+              <section aria-labelledby="assignment-history-title" className="space-y-3">
+                <h3 id="assignment-history-title" className="text-lg font-bold text-slate-900">Lịch sử phân công</h3>
+                {detail.data?.assignmentHistory?.map((h) => {
+                  const item = mapAssignmentHistoryToTimelineItem(h, {
+                    currentOfficer: user?.id ? { id: user.id, name: 'Bạn' } : undefined,
+                    directory: detail.data?.assignedOfficerId && detail.data.assignedOfficerName
+                      ? { [detail.data.assignedOfficerId.toLowerCase()]: detail.data.assignedOfficerName }
+                      : undefined,
+                  });
+                  return (
+                    <div key={item.id} className="rounded-xl border border-slate-200 p-4 pl-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-slate-800">{item.title}</p>
+                        <time className="text-xs text-slate-400">{item.time}</time>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">Thực hiện: {item.actor}</p>
+                      {item.description && <p className="mt-1.5 text-sm text-slate-600">{item.description}</p>}
+                    </div>
+                  );
+                })}
+              </section>
+            )}
           </div>
         )}
 
@@ -862,19 +919,19 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
       <Modal
         open={Boolean(decision)}
         onOpenChange={open => {
-          if (!open && !busy) guard.requestClose(() => setDecision(undefined));
+          if (!open && !busy) setDecision(undefined);
         }}
         title={decision === 'ready' ? 'Xác nhận giấy tờ sẵn sàng' : 'Yêu cầu bổ sung hồ sơ'}
         description="Thao tác áp dụng cho toàn bộ hồ sơ và các bản khai liên quan. Xác nhận giấy tờ sẵn sàng không phải tiếp nhận chính thức hay quyết định giải quyết thủ tục."
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-500">Phiên bản đang kiểm tra: {decisionContext?.version}</p>
+          <p className="text-xs text-slate-500">Lần nộp đang kiểm tra: {decisionContext?.version}</p>
 
           {/* Pre-flight Condition Checklist for 'ready' */}
           {decision === 'ready' && (
             <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
               <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Kiểm tra điều kiện trước khi xác nhận:
+                Điều kiện để xác nhận
               </span>
               <ul className="space-y-1.5 text-xs">
                 <li className="flex items-center gap-2">
@@ -894,7 +951,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
                   )}
                   <span className={openComments.length === 0 ? 'text-emerald-900 font-medium' : 'text-red-900 font-medium'}>
-                    Nhận xét dở dang: {openComments.length === 0 ? 'Không còn nhận xét OPEN nào' : `Còn ${openComments.length} nhận xét đang mở`}
+                    Nhận xét cần công dân sửa: {openComments.length === 0 ? 'Không còn' : `Còn ${openComments.length} nhận xét chưa sửa`}
                   </span>
                 </li>
               </ul>
@@ -1019,6 +1076,13 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           </Button>
         </div>
       </Modal>
+
+      <ReleaseApplicationModal
+        open={releaseOpen}
+        onOpenChange={setReleaseOpen}
+        applicationNumber={application.applicationNumber}
+        onConfirm={handleRelease}
+      />
 
       {guard.confirmation}
     </article>

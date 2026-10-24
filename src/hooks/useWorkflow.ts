@@ -9,6 +9,8 @@ import {
   type CreateApplicationInput,
   type ResubmitInput,
   type UpdateChecklistInput,
+  type ReleaseApplicationInput,
+  type ManageAssigneeInput,
 } from '@/lib/api/workflow';
 import { documentFormApi } from '@/lib/api/documentForms';
 import { useAuthStore } from '@/stores/authStore';
@@ -103,6 +105,31 @@ export function useConfirmReadinessMutation() {
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
       queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] }),
     ]).then(() => undefined),
+  });
+}
+
+// Phân công đổi cả danh sách và chi tiết; làm mới kể cả khi lỗi (409 nghĩa là dữ liệu đã khác).
+function invalidateAssignment(queryClient: ReturnType<typeof useQueryClient>, id: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
+    queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
+    queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
+  ]).then(() => undefined);
+}
+
+export function useReleaseApplicationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ReleaseApplicationInput }) => workflowApi.releaseApplication(id, input),
+    onSettled: (_, _error, { id }) => invalidateAssignment(queryClient, id),
+  });
+}
+
+export function useManagerAssigneeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ManageAssigneeInput }) => workflowApi.manageAssignee(id, input),
+    onSettled: (_, _error, { id }) => invalidateAssignment(queryClient, id),
   });
 }
 

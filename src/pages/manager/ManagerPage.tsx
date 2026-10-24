@@ -7,6 +7,9 @@ import { ManagerSystemStatsView } from './views/ManagerSystemStatsView';
 import { ManagerPerformanceView } from './views/ManagerPerformanceView';
 import { ManagerFeedbackView } from './views/ManagerFeedbackView';
 import { ManagerOverviewView } from './views/ManagerOverviewView';
+import { ManagerApplicationsView } from './views/ManagerApplicationsView';
+import { workflowApi } from '@/lib/api/workflow';
+import { UNKNOWN_CATEGORY_LABEL } from '@/lib/api/workflowAdapters';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { ManagerProfileItem, ManagerSectionId } from './types';
 import { toast } from '@/components/ui/Toast';
@@ -18,6 +21,7 @@ import {
   updateAccountStatus,
   assignOfficerCategories,
   authErrorMessage,
+  officerCategoryError,
 } from '@/lib/api';
 import { procedureApi, type Category } from '@/lib/api/procedures';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -101,7 +105,7 @@ export const ManagerPage: React.FC = () => {
       ));
       toast.success(`Đã cập nhật lĩnh vực phụ trách của ${item.fullName}.`);
     } catch (err) {
-      toast.error(authErrorMessage(err));
+      toast.error(officerCategoryError(err));
       throw err;
     }
   };
@@ -206,8 +210,29 @@ export const ManagerPage: React.FC = () => {
     }
   };
 
+  // Hồ sơ cán bộ đang/đã phụ trách theo phân công hiện tại (BE lọc assignee={id}, chỉ Manager).
+  const loadDossierHistory = async (userId: string) => {
+    try {
+      const page = await workflowApi.listOfficerApplications({ assignee: userId, page: 1, pageSize: 20, sort: '-submittedAt' });
+      const dossierHistory: NonNullable<ManagerProfileItem['dossierHistory']> = (page.items ?? []).map((a) => ({
+        code: a.applicationCode || `HS-${a.id.slice(0, 8).toUpperCase()}`,
+        procedureName: a.procedureTitle || 'Thủ tục hành chính',
+        field: a.categoryName?.trim() || UNKNOWN_CATEGORY_LABEL,
+        submittedAt: a.submittedAt ? new Date(a.submittedAt).toLocaleDateString('vi-VN') : '—',
+        status: a.status === 'DOCUMENTS_READY' || a.status === 'OFFICIALLY_RECEIVED'
+          ? 'Đã hoàn thành'
+          : a.status === 'NEED_REVISION' ? 'Cần bổ sung' : 'Đang xử lý',
+        officer: a.assignedOfficerName?.trim() || '',
+      }));
+      setSelectedProfile((prev) => (prev && prev.userId === userId ? { ...prev, dossierHistory } : prev));
+    } catch {
+      // Lịch sử là thông tin phụ; lỗi không chặn xem hồ sơ cán bộ.
+    }
+  };
+
   const handleSelectProfile = async (item: ManagerProfileItem) => {
     setSelectedProfile(item);
+    if (item.userId) void loadDossierHistory(item.userId);
     if (item.userId) {
       try {
         const fresh = await getAdminProfile(item.userId);
@@ -292,6 +317,7 @@ export const ManagerPage: React.FC = () => {
             setCurrentSection(section);
             setSelectedProfile(null);
           }} />}
+          {currentSection === 'applications' && <ManagerApplicationsView />}
           {currentSection === 'profiles' && (
             selectedProfile ? (
               <ManagerProfileDetailView

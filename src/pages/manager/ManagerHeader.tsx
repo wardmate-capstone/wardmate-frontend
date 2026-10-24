@@ -10,6 +10,7 @@ import { ManagerSectionId } from './types';
 
 export const managerSectionTitles: Record<ManagerSectionId, { title: string; subtitle?: string }> = {
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
+  applications: { title: 'Giám sát hồ sơ', subtitle: 'Theo dõi hồ sơ toàn phường, giao và chuyển cán bộ phụ trách' },
   'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
   'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
   profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },

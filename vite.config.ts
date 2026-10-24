@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => {
   }
   if (workflow) {
     proxy['/api/v1/officer/applications'] = workflow;
+    // Phải đứng trước '/api' của IAM: '/api/v1/manager/officers' vẫn thuộc IAM.
+    proxy['/api/v1/manager/applications'] = workflow;
     proxy['/api/v1/applications'] = workflow;
   }
   if (iam) proxy['/api'] = iam;

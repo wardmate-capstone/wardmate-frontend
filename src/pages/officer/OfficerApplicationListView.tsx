@@ -36,6 +36,31 @@ interface OfficerApplicationListViewProps {
   isRefreshing?: boolean;
   isLoading?: boolean;
   pagination?: PaginationConfig;
+  currentUserId?: string;
+  submittedRange?: { from: string; to: string };
+  onSubmittedRangeChange?: (range: { from: string; to: string }) => void;
+  queueTab?: QueueTab;
+  onQueueTabChange?: (tab: QueueTab) => void;
+  /** Lĩnh vực được gán cho cán bộ đang đăng nhập; rỗng = mọi lĩnh vực. */
+  myCategoryIds?: number[];
+  categories?: { id: number; categoryName: string }[];
+  categoryId?: number | null;
+  onCategoryChange?: (id: number | null) => void;
+  overdueOnly?: boolean;
+  onOverdueChange?: (value: boolean) => void;
+}
+
+export type QueueTab = 'my-categories' | 'mine' | 'ward';
+
+const QUEUE_TABS: { id: QueueTab; label: string }[] = [
+  { id: 'my-categories', label: 'Lĩnh vực của tôi' },
+  { id: 'mine', label: 'Đang xử lý của tôi' },
+  { id: 'ward', label: 'Toàn phường' },
+];
+
+function submittedTime(app: OfficerApplication): number {
+  const time = app.submittedAtUtc ? Date.parse(app.submittedAtUtc) : Number.NaN;
+  return Number.isNaN(time) ? 0 : time;
 }
 
 export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProps> = ({
@@ -48,6 +73,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   isRefreshing = false,
   isLoading = false,
   pagination,
+  submittedRange = { from: '', to: '' },
+  onSubmittedRangeChange,
+  currentUserId,
+  queueTab,
+  onQueueTabChange,
+  myCategoryIds = [],
+  categories = [],
+  categoryId = null,
+  onCategoryChange,
+  overdueOnly = false,
+  onOverdueChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProcedure, setSelectedProcedure] = useState('ALL');
@@ -71,6 +107,10 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         return 'ALL';
     }
   }, [activeSection]);
+
+  // Ưu tiên mềm: chỉ đánh dấu, không ẩn hồ sơ ngoài lĩnh vực.
+  const isOutside = (app: OfficerApplication) =>
+    myCategoryIds.length > 0 && !(app.categoryId && myCategoryIds.includes(app.categoryId));
 
   // Unique procedures list
   const procedureOptions = useMemo(() => {
@@ -117,13 +157,14 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         }
         return true;
       })
-      .sort((a, b) => {
-        if (sortOrder === 'newest') {
-          return b.id.localeCompare(a.id);
-        }
-        return a.id.localeCompare(b.id);
-      });
+      .sort((a, b) => (sortOrder === 'newest' ? submittedTime(b) - submittedTime(a) : submittedTime(a) - submittedTime(b)));
   }, [applications, statusFilter, searchQuery, selectedProcedure, selectedOfficer, sortOrder]);
+
+  const hasFilters = Boolean(
+    searchQuery || categoryId || overdueOnly || selectedProcedure !== 'ALL' || selectedOfficer !== 'ALL' ||
+    submittedRange.from || submittedRange.to
+  );
+  const invalidRange = Boolean(submittedRange.from && submittedRange.to && submittedRange.from > submittedRange.to);
 
 
   function renderStatusBadge(status: ApplicationStatus, priorityBadge?: string) {
@@ -179,6 +220,18 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             <span>Đã tiếp nhận tại UBND</span>
           </span>
         );
+      case 'DRAFT':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <span>Bản nháp</span>
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <span>Đã hủy</span>
+          </span>
+        );
       default:
         return null;
     }
@@ -186,6 +239,35 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
   return (
     <section aria-label="Quản lý danh sách hồ sơ" className="space-y-5">
+
+      {/* Phạm vi hàng đợi (ưu tiên mềm theo lĩnh vực) */}
+      {queueTab && onQueueTabChange && (
+        <div className="space-y-2">
+          <div role="tablist" aria-label="Phạm vi hồ sơ" className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
+            {QUEUE_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={queueTab === tab.id}
+                onClick={() => onQueueTabChange(tab.id)}
+                className={`min-h-10 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-600 ${
+                  queueTab === tab.id ? 'bg-red-800 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {queueTab === 'my-categories' && (
+            <p className="text-xs text-slate-500">
+              {myCategoryIds.length > 0
+                ? `Đang hiển thị hồ sơ thuộc ${myCategoryIds.length} lĩnh vực bạn được phân công. Hồ sơ lĩnh vực khác xem ở tab Toàn phường.`
+                : 'Bạn chưa được gán lĩnh vực nên phụ trách mọi lĩnh vực trong phường.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Filter Toolbar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
@@ -287,19 +369,93 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
         </div>
 
+        {/* Lĩnh vực & ngày gửi */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-4">
+            <label htmlFor="filter-category-select" className="sr-only">
+              Lọc theo lĩnh vực
+            </label>
+            <div className="relative">
+              <select
+                id="filter-category-select"
+                value={categoryId ?? ''}
+                disabled={!onCategoryChange}
+                onChange={(e) => onCategoryChange?.(e.target.value ? Number(e.target.value) : null)}
+                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+              >
+                <option value="">Tất cả lĩnh vực</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.categoryName}
+                  </option>
+                ))}
+              </select>
+              <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+
+          {onSubmittedRangeChange && (
+            <fieldset className="md:col-span-6 flex flex-wrap items-center gap-2">
+              <legend className="sr-only">Lọc theo ngày gửi</legend>
+              <label htmlFor="filter-submitted-from" className="text-xs font-semibold text-slate-600">Gửi từ</label>
+              <input
+                id="filter-submitted-from"
+                type="date"
+                value={submittedRange.from}
+                max={submittedRange.to || undefined}
+                onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
+                aria-invalid={invalidRange}
+                aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+              />
+              <label htmlFor="filter-submitted-to" className="text-xs font-semibold text-slate-600">đến</label>
+              <input
+                id="filter-submitted-to"
+                type="date"
+                value={submittedRange.to}
+                min={submittedRange.from || undefined}
+                onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
+                aria-invalid={invalidRange}
+                aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+              />
+              {invalidRange && (
+                <p id="filter-submitted-error" role="alert" className="w-full text-xs font-medium text-red-700">
+                  Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
+                </p>
+              )}
+            </fieldset>
+          )}
+
+          {onOverdueChange && (
+            <label className="md:col-span-2 inline-flex min-h-10 items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={overdueOnly}
+                onChange={(e) => onOverdueChange(e.target.checked)}
+                className="size-4 rounded border-slate-300 accent-red-700"
+              />
+              Chỉ hồ sơ quá hạn
+            </label>
+          )}
+        </div>
+
         {/* Results summary, clear & refresh */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 pt-1">
           <div className="flex items-center gap-3">
             <span>
               Tìm thấy <strong className="font-bold text-slate-900">{filteredApps.length}</strong> hồ sơ phù hợp
             </span>
-            {(searchQuery || selectedProcedure !== 'ALL' || selectedOfficer !== 'ALL') && (
+            {hasFilters && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
+                  onCategoryChange?.(null);
+                  onOverdueChange?.(false);
                   setSelectedProcedure('ALL');
                   setSelectedOfficer('ALL');
+                  onSubmittedRangeChange?.({ from: '', to: '' });
                 }}
                 className="text-red-700 font-semibold hover:underline"
               >
@@ -340,7 +496,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {isLoading ? (
-                <TableSkeletonRows columns={7} rows={6} />
+                <TableSkeletonRows columns={7} rows={6} cellClassName="px-4 py-3.5 first:pl-5 last:pr-5" />
               ) : filteredApps.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
@@ -378,13 +534,20 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                       <span className="block font-medium text-slate-900 truncate" title={app.procedureName}>
                         {app.procedureName}
                       </span>
-                      <span className="block text-[11px] text-slate-400">{app.procedureCategory}</span>
+                      <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                        <span>{app.procedureCategory}</span>
+                        {isOutside(app) && (
+                          <span className="rounded px-1.5 py-0.5 font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            Ngoài lĩnh vực
+                          </span>
+                        )}
+                      </span>
                     </td>
 
                     {/* Ngày gửi */}
                     <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
                       <div>{app.submittedAt}</div>
-                      {app.dueAtUtc && app.status !== 'DOCUMENTS_READY' && app.status !== 'OFFICIALLY_RECEIVED' && app.status !== 'REJECTED' && (
+                      {app.dueAtUtc && app.status !== 'DOCUMENTS_READY' && app.status !== 'OFFICIALLY_RECEIVED' && app.status !== 'REJECTED' && app.status !== 'CANCELLED' && (
                         <div className="mt-1">
                           {app.urgency === 'overdue' ? (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
@@ -449,13 +612,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                         )}
 
                         {app.status === 'RESUBMITTED' && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenReviewWorkspace(app)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-700 font-bold text-white hover:bg-purple-800 shadow-2xs transition-colors"
-                          >
-                            <span>Review lại</span>
-                          </button>
+                          currentUserId && app.assignedOfficerId?.toLowerCase() === currentUserId.toLowerCase() ? (
+                            <button
+                              type="button"
+                              onClick={() => onTakeApplication(app.id)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-700 font-bold text-white hover:bg-purple-800 shadow-2xs transition-colors"
+                            >
+                              <span>Review lại</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-500">Chờ cán bộ phụ trách</span>
+                          )
                         )}
 
                         {(app.status === 'DOCUMENTS_READY' || app.status === 'APPROVED' || app.status === 'READY_TO_SUBMIT' || app.status === 'NEED_REVISION') && (

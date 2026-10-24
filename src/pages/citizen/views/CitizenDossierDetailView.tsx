@@ -24,7 +24,8 @@ function goToPaper(id?: string | null) {
 }
 
 export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPrecheck, onResubmitPrecheck, onUpdateChecklistItem, submitting = false }: Props) {
-  const commentsQuery = useApplicationComments(dossier.id, dossier.currentVersion);
+  // Bản nháp chưa có phiên bản nộp nên không có nhận xét; tránh gọi rồi bị hủy khi chi tiết tải xong (version 0).
+  const commentsQuery = useApplicationComments(dossier.status === 'Bản nháp' ? undefined : dossier.id, dossier.currentVersion);
   const cancelMutation = useCancelApplicationMutation();
   const comments = commentsQuery.data ?? [];
   const [confirmOpen, setConfirmOpen] = useState(false);

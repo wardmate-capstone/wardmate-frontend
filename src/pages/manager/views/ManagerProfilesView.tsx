@@ -359,7 +359,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           if (!open && !categorySubmitting) setCategoryProfile(undefined);
         }}
         title="Phân công lĩnh vực phụ trách"
-        description={`Chọn lĩnh vực hỗ trợ cho ${categoryProfile?.fullName ?? 'cán bộ'}. Danh sách này phục vụ tra cứu và phân công, không tự giới hạn hàng đợi hồ sơ.`}
+        description={`Chọn lĩnh vực hỗ trợ cho ${categoryProfile?.fullName ?? 'cán bộ'}. Danh sách này dùng để lọc và phân công theo lĩnh vực, không chặn cán bộ nhận hồ sơ lĩnh vực khác trong phường.`}
         footer={
           <button
             type="button"

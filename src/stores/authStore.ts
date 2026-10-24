@@ -9,6 +9,8 @@ export type CurrentUser = {
   roles: string[];
   permissions: string[];
   wardId?: string | null;
+  /** Lĩnh vực được Manager gán cho cán bộ; rỗng nghĩa là phụ trách mọi lĩnh vực (ưu tiên mềm, không phải phân quyền). */
+  assignedCategories?: number[];
 };
 
 // Session metadata only; refresh cookies stay HttpOnly and access tokens stay in the client RAM.

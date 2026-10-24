@@ -10,7 +10,10 @@ type CommonProps<Section extends string> = { currentSection: Section; onSelectSe
 export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenMobile, onCloseMobile, isCollapsedDesktop }: CommonProps<ManagerSectionId> & { profilesCount?: number; onToggleCollapseDesktop?: () => void }) {
   const role = ['MANAGER'];
   const groups: WorkspaceNavGroup<ManagerSectionId>[] = [
-    { title: 'Điều hành', items: [{ id: 'overview', label: 'Tổng quan', icon: House, fallbackRoles: role }] },
+    { title: 'Điều hành', items: [
+      { id: 'overview', label: 'Tổng quan', icon: House, fallbackRoles: role },
+      { id: 'applications', label: 'Giám sát hồ sơ', icon: ListChecks, permissions: ['workflow.queue.read'], fallbackRoles: role },
+    ] },
     { title: 'Thống kê hệ thống', items: [
       { id: 'stats-dossiers', label: 'Thống kê hồ sơ', icon: Files, fallbackRoles: role },
       { id: 'stats-procedures', label: 'Thống kê thủ tục', icon: ClipboardText, fallbackRoles: role },

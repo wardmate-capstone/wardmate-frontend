@@ -11,6 +11,7 @@ export type OfficerSection =
   | 'profile';
 
 export type ApplicationStatus =
+  | 'DRAFT'                // Bản nháp công dân chưa gửi
   | 'SUBMITTED_FOR_REVIEW' // Chờ tiền kiểm
   | 'UNDER_REVIEW'         // Đang kiểm tra
   | 'NEED_REVISION'        // Cần bổ sung
@@ -18,6 +19,7 @@ export type ApplicationStatus =
   | 'DOCUMENTS_READY'      // Giấy tờ sẵn sàng (Hoàn thành tiền kiểm trực tuyến)
   | 'APPROVED'             // Trạng thái lịch sử, không mở khóa PDF
   | 'REJECTED'             // Từ chối tiền kiểm
+  | 'CANCELLED'            // Công dân đã hủy
   | 'READY_TO_SUBMIT'      // Trạng thái tương thích cũ
   | 'OFFICIALLY_RECEIVED'; // Trạng thái ngoài hệ thống Một cửa điện tử Nhà nước
 
@@ -138,6 +140,11 @@ export interface OfficerApplication {
   procedureCategory: string;
   citizen: CitizenInfo;
   submittedAt: string;
+  submittedAtUtc?: string | null;
+  categoryId?: number | null;
+  /** Phiên bản phân công để gửi kèm khi trả lại/giao/chuyển (chống thao tác trên dữ liệu cũ). */
+  assignmentVersion?: number | null;
+  resubmitCount?: number;
   reviewStartedAt?: string;
   reviewedBy?: string;
   reviewedAt?: string;
@@ -145,6 +152,7 @@ export interface OfficerApplication {
   urgency: 'normal' | 'urgent' | 'overdue';
   priorityBadge?: string;
   assignedOfficer: string;
+  assignedOfficerId?: string;
   eligibility: EligibilityCriterion[];
   checklist: ChecklistItem[];
   documents: SupportingDocument[];

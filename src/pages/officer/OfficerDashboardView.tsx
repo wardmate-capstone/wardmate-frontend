@@ -35,7 +35,10 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
   // Hồ sơ gửi lại cần ưu tiên & hồ sơ có giấy tờ sẵn sàng
-  const resubmittedApps = applications.filter((a) => a.status === 'RESUBMITTED');
+  // Chỉ cán bộ đang phụ trách mới nhận lại được hồ sơ công dân gửi lại.
+  const resubmittedApps = applications.filter(
+    (a) => a.status === 'RESUBMITTED' && Boolean(user?.id && a.assignedOfficerId?.toLowerCase() === user.id.toLowerCase())
+  );
   const documentsReadyApps = applications.filter((a) => a.status === 'DOCUMENTS_READY');
 
   // Top hồ sơ gửi lại cần ưu tiên xem ngay (tối đa 2 hồ sơ để tổng quan không bị dài)

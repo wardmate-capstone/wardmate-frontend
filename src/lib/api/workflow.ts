@@ -44,6 +44,16 @@ export const historyDtoSchema = z.object({
   createdAt: z.string(),
 });
 
+export const assignmentHistoryDtoSchema = z.object({
+  id: z.string(),
+  action: z.string(), // CLAIM | RELEASE | ASSIGN | TRANSFER
+  fromOfficerId: z.string().nullish(),
+  toOfficerId: z.string().nullish(),
+  actorId: z.string(),
+  reason: z.string().nullish(),
+  createdAt: z.string(),
+});
+
 export const applicationDtoSchema = z.object({
   id: z.string(),
   applicationCode: z.string().nullish(),
@@ -59,6 +69,14 @@ export const applicationDtoSchema = z.object({
   checklists: z.array(checklistDtoSchema).nullish(),
   history: z.array(historyDtoSchema).nullish(),
   assignedOfficerId: z.string().nullish(),
+  // Lĩnh vực/phân công theo WORKFLOW-ASSIGN-01 (docs/OFFICER_CATEGORY_ROUTING_BACKEND_SPEC.md).
+  assignedOfficerName: z.string().nullish(),
+  assignedAt: z.string().nullish(),
+  categoryId: z.number().int().nullish(),
+  categoryName: z.string().nullish(),
+  assignmentVersion: z.number().int().nonnegative().nullish(),
+  // Chỉ có trong response cho cán bộ/Manager; API công dân trả null.
+  assignmentHistory: z.array(assignmentHistoryDtoSchema).nullish(),
   resubmitCount: z.number().int(),
   currentVersionNumber: z.number().int(),
   notes: z.string().nullish(),
@@ -83,6 +101,11 @@ export const applicationSummaryDtoSchema = z.object({
   wardCode: z.string().nullish(),
   assignedOfficerId: z.string().nullish(),
   assignedOfficerName: z.string().nullish(),
+  assignedAt: z.string().nullish(),
+  categoryId: z.number().int().nullish(),
+  categoryName: z.string().nullish(),
+  resubmitCount: z.number().int().nullish(),
+  assignmentVersion: z.number().int().nonnegative().nullish(),
   applicantName: z.string().nullish(),
   citizenId: z.string().nullish(),
   dueAtUtc: z.string().nullish(),
@@ -141,6 +164,7 @@ export const reviewResultDtoSchema = z.object({
 
 // Inferred TypeScript Types
 export type ChecklistDto = z.infer<typeof checklistDtoSchema>;
+export type AssignmentHistoryDto = z.infer<typeof assignmentHistoryDtoSchema>;
 export type HistoryDto = z.infer<typeof historyDtoSchema>;
 export type ApplicationDto = z.infer<typeof applicationDtoSchema>;
 export type ApplicationSummaryDto = z.infer<typeof applicationSummaryDtoSchema>;
@@ -206,6 +230,29 @@ export type OfficerListInput = {
   submittedTo?: string;
   page?: number;
   pageSize?: number;
+  categoryIds?: number[];
+  /** Lọc theo lĩnh vực được gán của cán bộ; danh sách rỗng ở BE nghĩa là mọi lĩnh vực. */
+  scope?: 'my-categories';
+  /** 'me' | 'unassigned' | GUID cán bộ (GUID chỉ Manager). */
+  assignee?: string;
+  overdue?: boolean;
+  sort?: 'submittedAt' | '-submittedAt' | 'dueAt';
+};
+
+// Hàng đợi cán bộ/Manager không hiển thị bản nháp công dân chưa gửi (BE ListAll vẫn trả DRAFT khi không lọc).
+export const OFFICER_VISIBLE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY,OFFICIALLY_RECEIVED,CANCELLED';
+
+export const reasonSchema = z.string().trim().min(5, 'Lý do cần ít nhất 5 ký tự.').max(500, 'Lý do tối đa 500 ký tự.');
+
+export type ReleaseApplicationInput = {
+  reason: string;
+  expectedAssignmentVersion?: number | null;
+};
+
+export type ManageAssigneeInput = {
+  officerId: string;
+  reason: string;
+  expectedAssignmentVersion: number;
 };
 
 export const officialReceiptInputSchema = z.object({
@@ -255,6 +302,11 @@ export const workflowApi = {
     if (input.applicationCode) params.ApplicationCode = input.applicationCode;
     if (input.submittedFrom) params.SubmittedFrom = input.submittedFrom;
     if (input.submittedTo) params.SubmittedTo = input.submittedTo;
+    if (input.categoryIds?.length) params.CategoryIds = input.categoryIds.join(',');
+    if (input.scope) params.Scope = input.scope;
+    if (input.assignee) params.Assignee = input.assignee;
+    if (input.overdue) params.Overdue = true;
+    if (input.sort) params.Sort = input.sort;
 
     const res = await api.get(workflowPath('/api/v1/officer/applications'), { params, signal });
     return applicationPageSchema.parse(res.data);
@@ -262,6 +314,25 @@ export const workflowApi = {
 
   assignOfficer: async (id: string) => {
     const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/assign`));
+    return reviewResultDtoSchema.parse(res.data);
+  },
+
+  releaseApplication: async (id: string, input: ReleaseApplicationInput) => {
+    const reason = reasonSchema.parse(input.reason);
+    const body: Record<string, unknown> = { reason };
+    if (typeof input.expectedAssignmentVersion === 'number') body.expectedAssignmentVersion = input.expectedAssignmentVersion;
+    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/release`), body);
+    return reviewResultDtoSchema.parse(res.data);
+  },
+
+  // Manager giao (hồ sơ SUBMITTED chưa có người) hoặc chuyển (đã có người phụ trách).
+  manageAssignee: async (id: string, input: ManageAssigneeInput) => {
+    const body = {
+      officerId: input.officerId,
+      reason: reasonSchema.parse(input.reason),
+      expectedAssignmentVersion: z.number().int().nonnegative().parse(input.expectedAssignmentVersion),
+    };
+    const res = await api.put(workflowPath(`/api/v1/manager/applications/${id}/assignee`), body);
     return reviewResultDtoSchema.parse(res.data);
   },
 
@@ -391,13 +462,16 @@ export function workflowError(error: unknown): string {
         return `Vui lòng hoàn tất các giấy tờ bắt buộc trước khi nộp: ${itemNames}`;
       }
       if (code === 'application.comments_required') {
-        return 'Cần ít nhất một nhận xét lỗi cụ thể trên tờ khai hoặc giấy tờ phiên bản hiện tại trước khi yêu cầu công dân sửa.';
+        return 'Chưa có nhận xét nào về điểm cần sửa. Hãy ghi và lưu nhận xét trước khi yêu cầu công dân bổ sung.';
       }
       if (code === 'application.open_comments') {
         return 'Hồ sơ còn nhận xét lỗi chưa giải quyết. Cần yêu cầu công dân sửa và kiểm tra lại trước khi xác nhận giấy tờ sẵn sàng.';
       }
       if (code === 'application.version_conflict') {
         return 'Phiên bản hồ sơ đã thay đổi bởi thao tác khác. Vui lòng tải lại hồ sơ để xem nội dung mới nhất.';
+      }
+      if (code === 'workflow.not_assignee') {
+        return 'Bạn không còn là cán bộ phụ trách hồ sơ này. Vui lòng tải lại danh sách.';
       }
       if (code === 'application.forbidden' || error.response?.status === 403) {
         return 'Bạn không có quyền thực hiện thao tác trên hồ sơ này (khác phường/xã hoặc không đúng thẩm quyền).';
@@ -428,7 +502,25 @@ export function workflowError(error: unknown): string {
       if (code === 'application.snapshot_missing') {
         return 'Hồ sơ chưa có bản chụp dữ liệu (snapshot) hợp lệ để thụ lý.';
       }
-      if (code === 'application.iam_unavailable') {
+      if (code === 'workflow.assignment_conflict') {
+        return 'Phân công hồ sơ vừa thay đổi bởi thao tác khác. Vui lòng tải lại hồ sơ rồi thực hiện lại.';
+      }
+      if (code === 'workflow.same_assignee') {
+        return 'Cán bộ được chọn đang phụ trách hồ sơ này.';
+      }
+      if (code === 'workflow.invalid_assignee') {
+        return 'Cán bộ được chọn không còn hoạt động, không cùng phường hoặc không phải cán bộ Một cửa.';
+      }
+      if (code === 'workflow.invalid_status') {
+        return 'Trạng thái hiện tại của hồ sơ không cho phép thao tác phân công này.';
+      }
+      if (code === 'workflow.snapshot_missing') {
+        return 'Hồ sơ chưa có bản nộp hợp lệ nên chưa thể giao cho cán bộ.';
+      }
+      if (code === 'workflow.validation') {
+        return 'Dữ liệu gửi lên chưa hợp lệ (lý do 5–500 ký tự hoặc bộ lọc không đúng).';
+      }
+      if (code === 'workflow.iam_unavailable' || code === 'application.iam_unavailable') {
         return 'Hệ thống định danh xác thực tạm thời không phản hồi. Vui lòng thử lại sau giây lát.';
       }
 
