@@ -289,7 +289,7 @@ export function ManagerApplicationsView() {
                 <th className="whitespace-nowrap">Ngày gửi</th>
                 <th className="whitespace-nowrap">Trạng thái</th>
                 <th className="min-w-[160px]">Cán bộ phụ trách</th>
-                <th className="whitespace-nowrap text-right">Thao tác</th>
+                <th className="sticky right-0 z-10 whitespace-nowrap bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -319,9 +319,18 @@ export function ManagerApplicationsView() {
                         ? <span className="font-semibold text-slate-800">{officerName(item.assignedOfficerId, item.assignedOfficerName)}</span>
                         : <span className="italic text-slate-400">Chưa phân công</span>}
                     </td>
-                    <td className="whitespace-nowrap text-right space-x-1.5">
-                      <Button size="small" variant="ghost" className="gap-1.5" onClick={() => setHistoryItem(item)}>
-                        <ClockCounterClockwise size={14} aria-hidden="true" /> Lịch sử
+                    {/* Cột thao tác ghim phải; Lịch sử chỉ còn biểu tượng để dòng không bị chật */}
+                    <td className="sticky right-0 z-10 whitespace-nowrap bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
+                      <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        className="min-h-10 min-w-10 px-2"
+                        onClick={() => setHistoryItem(item)}
+                        aria-label={`Xem lịch sử phân công hồ sơ ${item.applicationCode || item.id.slice(0, 8)}`}
+                        title="Lịch sử phân công"
+                      >
+                        <ClockCounterClockwise size={16} aria-hidden="true" />
                       </Button>
                       {canAssign && (
                         <Button size="small" className="gap-1.5" onClick={() => openAssign(item)}>
@@ -333,6 +342,7 @@ export function ManagerApplicationsView() {
                           <UserSwitch size={14} aria-hidden="true" /> Chuyển cán bộ
                         </Button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 );

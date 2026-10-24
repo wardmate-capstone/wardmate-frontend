@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { authReply, mockWorkspaceAuth } from './fixtures/auth';
-import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
+import { mockDocumentWorkflow } from './fixtures/documentWorkflow';
 test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['FRONT_DESK_OFFICER']));
 
 test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và không tràn ngang trên mobile', async ({ page }) => {
@@ -50,35 +50,51 @@ test('Cổng cán bộ: Không hiển thị thao tác review khi chưa có API h
   await expect(page.getByRole('button', { name: 'Review lại ngay' })).toHaveCount(0);
 });
 
-test('Cổng cán bộ: Tiếp nhận hồ sơ tại quầy và đối chiếu hồ sơ giấy', async ({ page }) => {
+// Màn "Tiếp nhận tại quầy" đã gỡ khỏi FE (chưa có hợp đồng tiếp nhận chính thức):
+// hồ sơ Giấy tờ sẵn sàng không được có thao tác tiếp nhận/cấp biên nhận giả và không ghi gì lên BE.
+test('Cổng cán bộ: Không cấp biên nhận hoặc tiếp nhận giả khi chưa có API', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
+  const state = await mockDocumentWorkflow(page, 'officer', 'DOCUMENTS_READY');
   await page.goto('/officer');
-
-  // Open "Tiếp nhận tại quầy"
-  await page.getByRole('button', { name: 'Tiếp nhận tại quầy' }).click();
-
-  // Search screen and waiting list
-  await expect(page.getByRole('heading', { name: 'Tìm kiếm hồ sơ có giấy tờ sẵn sàng' })).toBeVisible();
-  await expect(page.getByText('Không tìm thấy hồ sơ nào đang chờ tiếp nhận.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Bắt đầu đối chiếu giấy tờ' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
+  const row = page.getByRole('row').filter({ hasText: 'HS-TEST-01' });
+  await expect(row.getByText('Giấy tờ sẵn sàng')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Tiếp nhận tại quầy|Cấp biên nhận|Xác nhận tiếp nhận/ })).toHaveCount(0);
+  await row.getByRole('button', { name: 'Chi tiết' }).click();
+  await expect(page.getByRole('article', { name: 'Không gian làm việc tiền kiểm hồ sơ' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Tiếp nhận tại quầy|Cấp biên nhận|Xác nhận tiếp nhận/ })).toHaveCount(0);
+  await expect(page.getByText(/BN-2026-/)).toHaveCount(0);
+  expect(state.writes).toHaveLength(0);
 });
 
-test('Cổng cán bộ: Không cấp biên nhận hoặc tiếp nhận giả khi chưa có API', async ({ page }) => {
-  const state = await mockDocumentWorkflow(page, 'officer', 'DOCUMENTS_READY');
-  // Inject a ready application to exercise the receipt UI even though the real
-  // pending queue currently only returns submitted/under-review records.
-  await page.route('**/api/v1/officer/applications/pending*', route => authReply(route, {
-    json: { items: [{ id: documentIds.application, applicationCode: 'HS-TEST-01', procedureId: documentIds.template, procedureTitle: 'Thủ tục thử nghiệm', status: 'DOCUMENTS_READY', createdAt: '2026-10-17T01:00:00Z' }], page: 1, pageSize: 50, total: 1 },
-  }));
+test('Cổng cán bộ: hồ sơ công dân gửi lại chỉ cho cán bộ phụ trách Review lại', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const base = { procedureId: '0f0f0f0f-0000-4000-8000-000000000001', procedureTitle: 'Đăng ký khai sinh', status: 'SUBMITTED', createdAt: '2026-10-20T01:00:00Z', submittedAt: '2026-10-22T01:00:00Z', applicantName: 'Nguyễn Văn A' };
+  const items = [
+    { ...base, id: 'aaaaaaaa-0000-4000-8000-000000000001', applicationCode: 'HS-GUI-LAI', assignedOfficerId: 'ui-test' },
+    { ...base, id: 'aaaaaaaa-0000-4000-8000-000000000002', applicationCode: 'HS-CUA-NGUOI-KHAC', assignedOfficerId: 'bbbbbbbb-0000-4000-8000-000000000009' },
+    { ...base, id: 'aaaaaaaa-0000-4000-8000-000000000003', applicationCode: 'HS-MOI', assignedOfficerId: null },
+  ];
+  await page.route('**/api/v1/officer/applications?**', route => authReply(route, { json: { items, page: 1, pageSize: 50, total: items.length } }));
+  const assigned: string[] = [];
+  await page.route('**/api/v1/officer/applications/*/assign', route => {
+    assigned.push(new URL(route.request().url()).pathname.split('/').at(-2)!);
+    return authReply(route, { status: 409, json: { title: 'Hồ sơ không còn chờ tiếp nhận.', code: 'application.invalid_status' } });
+  });
+
   await page.goto('/officer');
-  await page.getByRole('button', { name: 'Tiếp nhận tại quầy', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Chưa thể xác nhận tiếp nhận');
-  await page.getByRole('button', { name: 'Bắt đầu đối chiếu giấy tờ' }).click();
-  const confirm = page.getByRole('button', { name: 'Xác nhận tiếp nhận chính thức tại quầy', exact: true });
-  await expect(confirm).toBeDisabled();
-  for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
-  await expect(confirm).toBeDisabled();
-  await expect(page.getByText(/BN-2026-|24\/09\/2026|21\/09\/2026/)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Xác nhận & Cấp biên nhận' })).toHaveCount(0);
-  expect(state.writes).toHaveLength(0);
+  await page.getByRole('button', { name: 'Tất cả hồ sơ' }).click();
+  const table = page.getByRole('table', { name: 'Bảng danh sách hồ sơ hành chính' });
+  const mine = table.getByRole('row').filter({ hasText: 'HS-GUI-LAI' });
+  const other = table.getByRole('row').filter({ hasText: 'HS-CUA-NGUOI-KHAC' });
+  const fresh = table.getByRole('row').filter({ hasText: 'HS-MOI' });
+
+  await expect(mine.getByText('Đã gửi lại')).toBeVisible();
+  await expect(mine.getByRole('button', { name: 'Nhận xử lý' })).toHaveCount(0);
+  await expect(other.getByRole('button', { name: 'Review lại' })).toHaveCount(0);
+  await expect(other.getByText('Chờ cán bộ phụ trách')).toBeVisible();
+  await expect(fresh.getByRole('button', { name: 'Nhận xử lý' })).toBeVisible();
+
+  await mine.getByRole('button', { name: 'Review lại' }).click();
+  await expect.poll(() => assigned).toEqual(['aaaaaaaa-0000-4000-8000-000000000001']);
 });

@@ -165,6 +165,14 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
     submittedRange.from || submittedRange.to
   );
   const invalidRange = Boolean(submittedRange.from && submittedRange.to && submittedRange.from > submittedRange.to);
+  const clearFilters = () => {
+    setSearchQuery('');
+    onCategoryChange?.(null);
+    onOverdueChange?.(false);
+    setSelectedProcedure('ALL');
+    setSelectedOfficer('ALL');
+    onSubmittedRangeChange?.({ from: '', to: '' });
+  };
 
 
   function renderStatusBadge(status: ApplicationStatus, priorityBadge?: string) {
@@ -271,9 +279,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
       {/* Filter Toolbar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
           {/* Search Box */}
-          <div className="relative md:col-span-5">
+          <div className="relative sm:col-span-2 xl:col-span-4">
             <label htmlFor="search-app-input" className="sr-only">
               Tìm kiếm hồ sơ
             </label>
@@ -303,7 +311,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {/* Procedure Filter */}
-          <div className="md:col-span-3">
+          <div className="xl:col-span-3">
             <label htmlFor="filter-proc-select" className="sr-only">
               Lọc theo thủ tục
             </label>
@@ -326,7 +334,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {/* Officer in charge */}
-          <div className="md:col-span-2">
+          <div className="xl:col-span-3">
             <label htmlFor="filter-officer-select" className="sr-only">
               Cán bộ phụ trách
             </label>
@@ -350,7 +358,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {/* Sort order */}
-          <div className="md:col-span-2">
+          <div className="xl:col-span-2">
             <label htmlFor="filter-sort-select" className="sr-only">
               Sắp xếp
             </label>
@@ -370,8 +378,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         </div>
 
         {/* Lĩnh vực & ngày gửi */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="md:col-span-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3 items-start">
+          <div className="xl:col-span-4">
             <label htmlFor="filter-category-select" className="sr-only">
               Lọc theo lĩnh vực
             </label>
@@ -395,9 +403,11 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {onSubmittedRangeChange && (
-            <fieldset className="md:col-span-6 flex flex-wrap items-center gap-2">
+            <fieldset className="sm:col-span-2 xl:col-span-5 grid gap-1">
               <legend className="sr-only">Lọc theo ngày gửi</legend>
-              <label htmlFor="filter-submitted-from" className="text-xs font-semibold text-slate-600">Gửi từ</label>
+              {/* Nhãn và hai ô ngày luôn cùng hàng để "đến" không bị tách khỏi khoảng ngày */}
+              <div className="flex items-center gap-2">
+              <label htmlFor="filter-submitted-from" className="shrink-0 text-xs font-semibold text-slate-600">Gửi từ</label>
               <input
                 id="filter-submitted-from"
                 type="date"
@@ -406,9 +416,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               />
-              <label htmlFor="filter-submitted-to" className="text-xs font-semibold text-slate-600">đến</label>
+              <label htmlFor="filter-submitted-to" className="shrink-0 text-xs font-semibold text-slate-600">đến</label>
               <input
                 id="filter-submitted-to"
                 type="date"
@@ -417,8 +427,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               />
+              </div>
               {invalidRange && (
                 <p id="filter-submitted-error" role="alert" className="w-full text-xs font-medium text-red-700">
                   Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
@@ -428,7 +439,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           )}
 
           {onOverdueChange && (
-            <label className="md:col-span-2 inline-flex min-h-10 items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+            <label className="xl:col-span-3 inline-flex min-h-10 items-center gap-2 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700">
               <input
                 type="checkbox"
                 checked={overdueOnly}
@@ -449,14 +460,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             {hasFilters && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  onCategoryChange?.(null);
-                  onOverdueChange?.(false);
-                  setSelectedProcedure('ALL');
-                  setSelectedOfficer('ALL');
-                  onSubmittedRangeChange?.({ from: '', to: '' });
-                }}
+                onClick={clearFilters}
                 className="text-red-700 font-semibold hover:underline"
               >
                 Xóa bộ lọc
@@ -491,7 +495,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 <th scope="col" className="px-4 py-3.5">Ngày gửi</th>
                 <th scope="col" className="px-4 py-3.5">Cán bộ</th>
                 <th scope="col" className="px-4 py-3.5">Trạng thái</th>
-                <th scope="col" className="px-5 py-3.5 text-right">Thao tác</th>
+                <th scope="col" className="sticky right-0 z-10 bg-slate-50 px-5 py-3.5 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -501,8 +505,36 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
                     <Funnel size={32} className="mx-auto text-slate-300 mb-2" aria-hidden="true" />
-                    <p className="font-semibold text-slate-700">Chưa có hồ sơ nào.</p>
-                    <p className="text-xs text-slate-400 mt-1">Hàng đợi trống hoặc không có hồ sơ nào phù hợp với bộ lọc hiện tại.</p>
+                    {hasFilters ? (
+                      <>
+                        <p className="font-semibold text-slate-700">Không có hồ sơ phù hợp với bộ lọc.</p>
+                        <p className="text-xs text-slate-400 mt-1">Thử bỏ bớt điều kiện lọc để xem thêm hồ sơ.</p>
+                        <button type="button" onClick={clearFilters} className="mt-3 min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                          Xóa bộ lọc
+                        </button>
+                      </>
+                    ) : queueTab === 'my-categories' && onQueueTabChange ? (
+                      <>
+                        <p className="font-semibold text-slate-700">Không có hồ sơ mới trong lĩnh vực của bạn.</p>
+                        <p className="text-xs text-slate-400 mt-1">Bạn vẫn có thể hỗ trợ xử lý hồ sơ thuộc lĩnh vực khác trong phường.</p>
+                        <button type="button" onClick={() => onQueueTabChange('ward')} className="mt-3 min-h-10 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white hover:bg-red-900">
+                          Xem hồ sơ toàn phường
+                        </button>
+                      </>
+                    ) : queueTab === 'mine' && onQueueTabChange ? (
+                      <>
+                        <p className="font-semibold text-slate-700">Bạn chưa phụ trách hồ sơ nào ở mục này.</p>
+                        <p className="text-xs text-slate-400 mt-1">Nhận hồ sơ mới từ hàng đợi để bắt đầu kiểm tra.</p>
+                        <button type="button" onClick={() => onQueueTabChange('my-categories')} className="mt-3 min-h-10 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white hover:bg-red-900">
+                          Mở hàng đợi lĩnh vực của tôi
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold text-slate-700">Chưa có hồ sơ nào.</p>
+                        <p className="text-xs text-slate-400 mt-1">Hồ sơ công dân gửi tiền kiểm sẽ xuất hiện tại đây.</p>
+                      </>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -577,7 +609,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Actions */}
-                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                    {/* Ghim cột thao tác bên phải để không phải cuộn ngang mới thấy nút Nhận xử lý */}
+                    <td className="sticky right-0 z-10 bg-white px-5 py-3.5 text-right whitespace-nowrap shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)] group-hover:bg-slate-50">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Quick Preview button */}
                         <button

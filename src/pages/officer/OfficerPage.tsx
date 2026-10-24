@@ -251,13 +251,10 @@ export const OfficerPage: React.FC = () => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
     try {
-      await assignMutation.mutateAsync(appId);
+      // Kết quả nhận hồ sơ đã chứa chi tiết đầy đủ; workspace tự tải nhận xét nên không gọi thêm 2 request.
+      const result = await assignMutation.mutateAsync(appId);
       toast.success(`Đã nhận xử lý hồ sơ ${appNumber}. Đang mở không gian thẩm định.`);
-
-      // Tải chi tiết hồ sơ đầy đủ từ backend để mở workspace
-      const fullDto = await workflowApi.getOfficerApplication(appId);
-      const comments = await workflowApi.getComments(appId).catch(() => []);
-      const mappedApp = mapApplicationDtoToOfficerApplication(fullDto, comments, officerLookup);
+      const mappedApp = mapApplicationDtoToOfficerApplication(result.application, [], officerLookup);
 
       // Thêm audit log
       const newLog: OfficerAuditLog = {

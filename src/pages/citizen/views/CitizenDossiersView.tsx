@@ -105,6 +105,8 @@ export function CitizenDossiersView({
           <button
             type="button"
             onClick={() => { setSearchTerm(''); setSelectedField('all'); }}
+            disabled={!searchTerm && selectedField === 'all'}
+            className="h-11 shrink-0 whitespace-nowrap rounded-lg px-3 text-xs font-bold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent"
           >
             Xóa bộ lọc
           </button>
