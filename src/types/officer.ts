@@ -185,6 +185,7 @@ export interface OfficerNotification {
   title: string;
   message: string;
   applicationNumber?: string;
+  applicationId?: string;
   type: 'resubmitted' | 'new_pending' | 'urgent' | 'system';
   isRead: boolean;
 }

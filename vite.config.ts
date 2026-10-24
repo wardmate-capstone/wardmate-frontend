@@ -30,6 +30,8 @@ export default defineConfig(({ mode }) => {
     proxy['/api/v1/generated-documents'] = documentForm;
     proxy['^/api/v1/applications/[^/]+/(contents|supporting-documents|generate-pdf|generated-documents|approved-qr(?:/image)?)(?:\\?.*)?$'] = documentForm;
     proxy['/api/v1/form-templates'] = documentForm;
+    // Hub thông báo (AnalyticsSystem) đi qua gateway; cần WebSocket. Phải đứng trước '/api' của IAM.
+    proxy['/api/analytics-system'] = { ...documentForm, ws: true };
   }
   if (aiOcr) {
     proxy['/api/v1/ai-ocr'] = aiOcr;

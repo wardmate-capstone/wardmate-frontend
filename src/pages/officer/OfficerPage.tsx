@@ -35,6 +35,7 @@ import {
 } from '@/lib/api/workflowAdapters';
 import { getManagerOfficers, refreshAssignedCategories } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
+import { useNotificationHub } from '@/hooks/useNotificationHub';
 import { workflowError, workflowApi, OFFICER_VISIBLE_STATUSES } from '@/lib/api/workflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
 import { Button, Modal } from '@/components/ui';
@@ -124,7 +125,17 @@ export const OfficerPage: React.FC = () => {
   // Nhật ký hoạt động
   const [auditLogs, setAuditLogs] = useState<OfficerAuditLog[]>([]);
   // Thông báo
-  const [notifications, setNotifications] = useState<OfficerNotification[]>([]);
+  // Thông báo thật từ NotificationHub (giao/chuyển hồ sơ, hồ sơ mới cần tiếp nhận…).
+  const notificationHub = useNotificationHub(Boolean(user?.id));
+  const notifications = useMemo<OfficerNotification[]>(() => notificationHub.items.map((n) => ({
+    id: n.id,
+    time: new Date(n.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+    title: n.title,
+    message: n.content,
+    applicationId: n.applicationId ?? undefined,
+    type: n.type === 'ASSIGNED_OFFICER' || n.title.includes('cần tiếp nhận') ? 'new_pending' : 'system',
+    isRead: n.isRead,
+  })), [notificationHub.items]);
 
   // Tải danh bạ cán bộ trong phường nếu có quyền (vd: Manager hoặc tài khoản có quyền)
   useEffect(() => {
@@ -232,9 +243,9 @@ export const OfficerPage: React.FC = () => {
       needRevision: applications.filter((a) => a.status === 'NEED_REVISION').length,
       resubmitted: applications.filter((a) => a.status === 'RESUBMITTED').length,
       approved: applications.filter((a) => a.status === 'DOCUMENTS_READY').length,
-      unreadNotifs: notifications.filter((n) => !n.isRead).length,
+      unreadNotifs: notificationHub.unreadCount,
     };
-  }, [applications, notifications]);
+  }, [applications, notificationHub.unreadCount]);
 
   const isMine = (app: OfficerApplication) =>
     Boolean(user?.id && app.assignedOfficerId?.toLowerCase() === user.id.toLowerCase());
@@ -369,9 +380,26 @@ export const OfficerPage: React.FC = () => {
   };
 
   // ACTION: Mark all notifications read
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    toast.info('Đã đánh dấu đã đọc tất cả thông báo.');
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await notificationHub.markAllRead();
+      toast.success('Đã đánh dấu đã đọc tất cả thông báo.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Chưa đánh dấu được thông báo. Vui lòng thử lại.');
+    }
+  };
+
+  // Mở hồ sơ từ thông báo: hồ sơ có thể không nằm trong trang danh sách đang tải nên lấy chi tiết theo id.
+  const handleOpenFromNotification = async (notificationId: string, applicationId: string) => {
+    void notificationHub.markRead(notificationId).catch(() => undefined);
+    const inList = applications.find((a) => a.id.toLowerCase() === applicationId.toLowerCase());
+    if (inList) return handleOpenReview(inList);
+    try {
+      const dto = await workflowApi.getOfficerApplication(applicationId);
+      await handleOpenReview(mapApplicationDtoToOfficerApplication(dto, [], officerLookup));
+    } catch (err) {
+      toast.error(workflowError(err));
+    }
   };
 
   // Breadcrumbs builder
@@ -508,11 +536,9 @@ export const OfficerPage: React.FC = () => {
               {activeSection === 'notifications' && (
                 <OfficerNotificationView
                   notifications={notifications}
-                  onMarkAllAsRead={handleMarkAllNotificationsRead}
-                  onSelectApplication={(appNum) => {
-                    const target = applications.find((a) => a.applicationNumber === appNum);
-                    if (target) handleOpenReview(target);
-                  }}
+                  connectionStatus={notificationHub.status}
+                  onMarkAllAsRead={() => void handleMarkAllNotificationsRead()}
+                  onOpenApplication={(notificationId, applicationId) => void handleOpenFromNotification(notificationId, applicationId)}
                 />
               )}
 

@@ -7,18 +7,22 @@ import {
   Check,
 } from '@phosphor-icons/react';
 import type { OfficerNotification } from '@/types/officer';
+import type { NotificationConnectionStatus } from '@/hooks/useNotificationHub';
 
 interface OfficerNotificationViewProps {
   notifications: OfficerNotification[];
+  connectionStatus: NotificationConnectionStatus;
   onMarkAllAsRead: () => void;
-  onSelectApplication?: (appNumber: string) => void;
+  onOpenApplication?: (notificationId: string, applicationId: string) => void;
 }
 
 export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = ({
   notifications,
+  connectionStatus,
   onMarkAllAsRead,
-  onSelectApplication,
+  onOpenApplication,
 }) => {
+  const hasUnread = notifications.some((n) => !n.isRead);
   return (
     <section aria-label="Danh sách thông báo ca trực" className="space-y-6">
       <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center justify-between">
@@ -28,13 +32,19 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
           </span>
           <div>
             <h3 className="text-base font-bold text-slate-950">Thông báo ca làm việc</h3>
+            <p role="status" className="text-xs text-slate-500">
+              {connectionStatus === 'connected' ? 'Đang nhận thông báo mới tự động.'
+                : connectionStatus === 'connecting' ? 'Đang kết nối máy chủ thông báo…'
+                : 'Mất kết nối máy chủ thông báo. Hệ thống sẽ tự thử lại.'}
+            </p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={onMarkAllAsRead}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+          disabled={!hasUnread || connectionStatus !== 'connected'}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check size={14} weight="bold" />
           <span>Đánh dấu đã đọc tất cả</span>
@@ -44,8 +54,8 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
         {notifications.length === 0 ? (
           <div className="p-10 text-center text-slate-500">
-            <p className="font-semibold text-slate-700">Chưa có thông báo mới.</p>
-            <p className="text-xs text-slate-400 mt-1 italic">⚠️ API thông báo cán bộ Một cửa sẽ được tích hợp sau.</p>
+            <p className="font-semibold text-slate-700">Chưa có thông báo.</p>
+            <p className="text-xs text-slate-400 mt-1">Khi có hồ sơ mới cần tiếp nhận hoặc được giao cho bạn, thông báo sẽ hiện tại đây.</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -80,14 +90,14 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
                   <span className="text-[11px] text-slate-400">{n.time}</span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1 leading-5">{n.message}</p>
-                {n.applicationNumber && (
+                {n.applicationId && onOpenApplication && (
                   <div className="mt-2">
                     <button
                       type="button"
-                      onClick={() => onSelectApplication?.(n.applicationNumber!)}
+                      onClick={() => onOpenApplication(n.id, n.applicationId!)}
                       className="text-xs font-bold text-red-800 hover:underline inline-flex items-center gap-1"
                     >
-                      <span>Mở hồ sơ {n.applicationNumber}</span>
+                      <span>Mở hồ sơ</span>
                       <span>→</span>
                     </button>
                   </div>
