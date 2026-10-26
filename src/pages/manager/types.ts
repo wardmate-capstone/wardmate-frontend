@@ -5,9 +5,6 @@ export type ManagerSectionId =
   | 'stats-procedures'
   | 'profiles'
   // Hiệu suất xử lý
-  | 'perf-processing-time'
-  | 'perf-completion-rate'
-  | 'perf-supplement-rate'
   | 'perf-officers'
   // Phản hồi người dân
   | 'feedback-reports'

@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, Clock, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -19,10 +19,8 @@ export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenM
       { id: 'stats-procedures', label: 'Thống kê thủ tục', icon: ClipboardText, fallbackRoles: role },
     ] },
     { title: 'Nhân sự Một cửa', items: [{ id: 'profiles', label: 'Cán bộ Một cửa', icon: IdentificationCard, fallbackRoles: role }] },
-    { title: 'Hiệu suất xử lý', items: [
-      { id: 'perf-processing-time', label: 'Thời gian xử lý', icon: Clock, fallbackRoles: role }, { id: 'perf-completion-rate', label: 'Đúng hạn tiền kiểm', icon: CheckCircle, fallbackRoles: role },
-      { id: 'perf-supplement-rate', label: 'Lượt yêu cầu bổ sung', icon: WarningCircle, fallbackRoles: role }, { id: 'perf-officers', label: 'Hiệu suất cán bộ', icon: UsersThree, fallbackRoles: role },
-    ] },
+    // Một mục duy nhất: thời gian xử lý, đúng hạn và yêu cầu bổ sung đều nằm trong bảng theo cán bộ / Thống kê hồ sơ.
+    { title: 'Hiệu suất xử lý', items: [{ id: 'perf-officers', label: 'Hiệu suất cán bộ', icon: UsersThree, fallbackRoles: role }] },
     { title: 'Phản hồi người dân', items: [{ id: 'feedback-reports', label: 'Báo cáo phản hồi', icon: Bell, fallbackRoles: role }, { id: 'satisfaction-level', label: 'Mức độ hài lòng', icon: ThumbsUp, fallbackRoles: role }] },
     { title: 'Tài khoản', items: [{ id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];

@@ -32,7 +32,6 @@ export const ManagerPage: React.FC = () => {
   const [currentSection, setCurrentSection] = useState<ManagerSectionId>('overview');
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const { profile } = useUserProfile();
   const user = useAuthStore((s) => s.user);
   const managerName = profile?.fullName?.trim() || user?.username || 'Lãnh đạo';
@@ -256,10 +255,6 @@ export const ManagerPage: React.FC = () => {
     }
   };
 
-  const handleExportQuickReport = () => {
-    window.print();
-  };
-
   const currentMeta = managerSectionTitles[currentSection] || {
     title: 'Quản lý Điều hành',
     subtitle: '',
@@ -292,9 +287,6 @@ export const ManagerPage: React.FC = () => {
           onOpenMobileSidebar={() => setIsOpenMobile(true)}
           isCollapsedDesktop={isCollapsedDesktop}
           onToggleCollapseDesktop={() => setIsCollapsedDesktop(!isCollapsedDesktop)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onExportReport={handleExportQuickReport}
         />
 
         <main id="manager-main" className="admin-main" tabIndex={-1}>
@@ -363,10 +355,7 @@ export const ManagerPage: React.FC = () => {
             <ManagerSystemStatsView section={currentSection} />
           )}
 
-          {(currentSection === 'perf-processing-time' ||
-            currentSection === 'perf-completion-rate' ||
-            currentSection === 'perf-supplement-rate' ||
-            currentSection === 'perf-officers') && (
+          {currentSection === 'perf-officers' && (
             <ManagerPerformanceView section={currentSection} />
           )}
 

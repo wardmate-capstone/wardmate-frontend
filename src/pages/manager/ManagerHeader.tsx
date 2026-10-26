@@ -4,7 +4,6 @@ import React from 'react';
 import {
   List,
   SidebarSimple,
-  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { ManagerSectionId } from './types';
 
@@ -14,9 +13,6 @@ export const managerSectionTitles: Record<ManagerSectionId, { title: string; sub
   'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
   'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
   profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
-  'perf-processing-time': { title: 'Hiệu suất Thời gian Xử lý', subtitle: 'Thời gian tiền kiểm trung bình và số mẫu theo cán bộ' },
-  'perf-completion-rate': { title: 'Tỷ lệ Đúng hạn Tiền kiểm', subtitle: 'Tỷ lệ đúng hạn theo các hồ sơ sẵn sàng có thời hạn xác định' },
-  'perf-supplement-rate': { title: 'Lượt Yêu cầu Bổ sung', subtitle: 'Số lượt yêu cầu bổ sung và gửi lại trong kỳ' },
   'perf-officers': { title: 'Đánh giá Hiệu suất Cán bộ', subtitle: 'Số giấy tờ sẵn sàng, yêu cầu bổ sung và thời hạn tiền kiểm theo cán bộ' },
   'feedback-reports': { title: 'Báo cáo Phản hồi Người dân', subtitle: 'Theo dõi đánh giá hỗ trợ tiền kiểm của người dân trong phường' },
   'satisfaction-level': { title: 'Đánh giá Mức độ Hài lòng', subtitle: 'Kết quả khảo sát chất lượng dịch vụ hành chính công của phường' },
@@ -28,9 +24,6 @@ interface ManagerHeaderProps {
   onOpenMobileSidebar: () => void;
   isCollapsedDesktop: boolean;
   onToggleCollapseDesktop: () => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  onExportReport?: () => void;
 }
 
 export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
@@ -38,9 +31,6 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
   onOpenMobileSidebar,
   isCollapsedDesktop,
   onToggleCollapseDesktop,
-  searchQuery,
-  onSearchChange,
-  onExportReport,
 }) => {
   const currentMeta = managerSectionTitles[currentSection] || {
     title: 'Cổng Quản lý Điều hành',
@@ -83,35 +73,8 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
         </div>
       </div>
 
-      {/* Cụm phải: Search, Action, Thông báo, User Pill */}
+      {/* Cụm phải: Thông báo, User Pill */}
       <div className="admin-topbar-actions ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Ô tìm kiếm nhanh */}
-        <div className="relative hidden md:block w-48 lg:w-60 xl:w-72">
-          <MagnifyingGlass
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Tìm kiếm nhanh chỉ số, hồ sơ..."
-            className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50/90 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 transition-colors hover:bg-slate-100/70 focus:border-red-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-700/15"
-          />
-        </div>
-
-        {/* Nút xuất / in báo cáo */}
-        {onExportReport && (
-          <button
-            type="button"
-            onClick={onExportReport}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-red-700"
-            title="In / Xuất báo cáo"
-          >
-            <span>In báo cáo</span>
-          </button>
-        )}
-
         {/* Nút thông báo chuông */}
         <NotificationBell />
 
