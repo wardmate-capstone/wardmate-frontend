@@ -44,6 +44,57 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Chưa thử với Azure IAM thật, chưa thử tạo Manager/Procedure-manager trên DB thật.
   - Chưa commit.
 
+## Làm lại UI thống kê Manager và gộp menu Hiệu suất — 26/10/2026
+
+- **Thư viện:** giữ Recharts (đã cài), không thêm dependency.
+- **Bảng màu:**
+  - 2 series dùng `#2a78d6` / `#eb6834`, đã chạy validator dataviz trên nền trắng: CVD ΔE 24,7, normal ΔE 33,6, tương phản ≥ 3:1.
+  - Trạng thái hạn dùng màu status, luôn kèm nhãn và số.
+  - Biểu đồ cột một độ đo dùng một màu, không tô 5 màu như trước.
+- **Thành phần mới `src/components/analytics/chartKit.tsx`:** token màu, `ChartTooltip`, `LegendKeys`, `StatTile`, `ChartDataTable` (bảng dữ liệu thay thế).
+- **Biểu đồ:**
+  - Xu hướng chuyển sang area: đường 2px, nền mờ, crosshair, ngày dd/MM, ngắt đường ở ngày thiếu dữ liệu.
+  - Cột ngang: rộng tối đa 24px, giá trị ở đầu cột.
+  - Donut: số chính (% đúng hạn) ở giữa, chú giải có số và %.
+- **Tổng quan:**
+  - 4 thẻ số liệu: lượt gửi, sẵn sàng, đúng hạn, hài lòng.
+  - Xu hướng rộng toàn hàng; mỗi thẻ có link sang màn chi tiết.
+  - Bỏ câu mô tả và ghi chú thừa; coverage chỉ hiện 1 lần.
+  - Ô số lớn hiện "—" khi thiếu dữ liệu, không nhét câu chữ vào.
+- **Màn chi tiết:**
+  - Bảng dùng style admin, có thanh dữ liệu trong ô.
+  - Hạn xử lý rút còn 4 chỉ số; khối "còn tồn" chỉ giữ 3 chỉ số tồn đọng.
+  - Bỏ cột "Số mẫu thời gian".
+  - Phản hồi hiện sao; mức độ hài lòng dùng thẻ số liệu + biểu đồ cột.
+- **Menu (người dùng chốt):** nhóm "Hiệu suất xử lý" chỉ còn "Hiệu suất cán bộ". Đã bỏ `perf-processing-time`, `perf-completion-rate`, `perf-supplement-rate` (trùng màn hình) khỏi sidebar, types, header và page.
+- **Kiểm tra:**
+  - typecheck, lint; Playwright analytics, manager, feedback, workspace-sidebar 31/31 (mock).
+  - Đã chụp và xem Tổng quan (1440px, 390px), Thống kê hồ sơ, Hiệu suất cán bộ.
+  - Chưa xem với dữ liệu thật.
+
+## Rà soát Analytics & Citizen Feedback (trừ NotificationDeliveryAdmin) — 26/10/2026
+
+- **Nguồn:**
+  - Swagger gateway `/api/analytics-system/swagger/v1/swagger.json`, gồm 10 endpoint Analytics, AnalyticsJobs và CitizenFeedback.
+  - Source `D:/wardmate-backend/src/Services/WardMate.Services.AnalyticsSystem`.
+  - Bỏ qua NotificationDeliveryAdmin (SMS, không dùng).
+- **Nguyên nhân 404:**
+  - `.env.development.local` không có `VITE_ANALYTICS_API_URL`.
+  - Khi thiếu biến này, `vite.config.ts` và `serviceUrls.ts` lùi về `VITE_API_BASE_URL` (IAM), nhưng IAM không có `/api/v1/analytics` hay `/api/v1/citizen/feedback`, nên luôn 404.
+  - Đã đo: gọi qua IAM thì 404; gọi qua gateway thì 401 khi chưa đăng nhập, tức route tồn tại.
+- **Đã sửa:** fallback đổi sang `VITE_DOCUMENT_FORM_API_URL` (gateway), giống AI OCR. Kiểm tra qua Vite dev server với env thật: 3 route trả 401 từ gateway, không còn 404.
+- **Hợp đồng đã đối chiếu, khớp với FE (`src/lib/api/analytics.ts`):**
+  - Tham số `from/to/procedureId/page/pageSize`.
+  - `ratingCounts` luôn đủ khoá 1–5; các tỷ lệ theo thang 0–100.
+  - `timelinessStatus`/`timeZone` có giá trị mặc định.
+  - `jobId` chỉ gồm chữ số; mã lỗi `feedback.not_found`.
+  - Phân quyền: thống kê chỉ MANAGER có phường; job chỉ IT_ADMIN; feedback chỉ REGISTERED_CITIZEN. FE gọi đúng theo vai trò.
+- **Kiểm tra:**
+  - typecheck, lint, `api-proxy-check` 26/26.
+  - Playwright analytics và feedback 18/18 (mock).
+  - Chưa xem dữ liệu thật bằng tài khoản Manager.
+- **Lưu ý production:** hosting phải có reverse proxy tương ứng, vì `vercel.json` chỉ có SPA rewrite; hoặc đặt `VITE_ANALYTICS_API_URL`.
+
 ## Đối chiếu các yêu cầu đã gửi BE — 26/10/2026
 
 - **Nguồn:** source BE `main` = `091b169` (24/10), không có commit nào sau 24/10. Đối chiếu với `ADMIN_USER_PROVISIONING_BACKEND_SPEC.md`, `OFFICER_CATEGORY_ROUTING_BACKEND_SPEC.md`, `BE_REQUEST_RESUBMIT_COUNT_IN_SUMMARY.md`, `BE_REQUEST_PERFORMANCE_AND_OFFICER_ACTIVITY.md`. Đã ghi trạng thái vào đầu từng file.
