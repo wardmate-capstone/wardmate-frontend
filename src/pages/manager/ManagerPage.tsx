@@ -16,7 +16,7 @@ import { toast } from '@/components/ui/Toast';
 import {
   getManagerOfficers,
   getAdminProfile,
-  updateAdminProfile,
+  saveAdminProfile,
   deleteAdminProfile,
   updateAccountStatus,
   assignOfficerCategories,
@@ -113,7 +113,7 @@ export const ManagerPage: React.FC = () => {
   const handleSaveProfile = async (profile: ManagerProfileItem) => {
     if (profile.userId) {
       try {
-        const updated = await updateAdminProfile(profile.userId, {
+        const updated = await saveAdminProfile(profile.userId, {
           fullName: profile.fullName,
           identityNumber: profile.identityNumber || null,
           phoneNumber: profile.phoneNumber || null,

@@ -36,6 +36,7 @@ import {
   getWards,
   createWard,
   assignUserWard,
+  saveAdminProfile,
   authErrorMessage,
   type ManagedUserDto,
   type ManagedUserPage,
@@ -49,6 +50,7 @@ import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRoles
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
+import { CreateStaffAccountModal } from './CreateStaffAccountModal';
 
 type SectionId =
   | "analytics-jobs"
@@ -142,26 +144,23 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [wards, setWards] = useState<WardDto[]>([]);
   const wardsRef = useRef<WardDto[]>([]);
+  // Lọc vai trò phía server (`role` của /admin/users); trạng thái BE chưa hỗ trợ nên lọc trong trang.
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [createStaffOpen, setCreateStaffOpen] = useState(false);
+  const canManageAccounts = Boolean(user?.permissions.includes('iam.accounts.manage'));
+  const canCreateStaff = canManageAccounts && Boolean(user?.roles.includes('IT_ADMIN'));
 
-  const fetchUsers = useCallback(async (page: number, wardList?: WardDto[]) => {
+  const fetchUsers = useCallback(async (page: number) => {
     setUserLoading(true);
     setUserError(null);
     try {
-      let activeWards: WardDto[] = wardList ?? wardsRef.current;
-      if (activeWards.length === 0) {
-        try {
-          activeWards = await getWards();
-          wardsRef.current = activeWards;
-          setWards(activeWards);
-        } catch {
-          // Softly fallback
-        }
-      }
-
+      // Tên phường lấy từ danh sách đang có; fetchWards (chạy song song) sẽ bổ sung khi tải xong.
+      const activeWards = wardsRef.current;
       const data = await getAdminUsers({
         page,
         pageSize: 20,
         search: query.trim() || undefined,
+        role: roleFilter === 'ALL' ? undefined : roleFilter,
       });
 
       setUserData({
@@ -191,9 +190,11 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
     } finally {
       setUserLoading(false);
     }
-  }, [query]);
+  }, [query, roleFilter]);
 
+  const [wardsLoading, setWardsLoading] = useState(false);
   const fetchWards = useCallback(async () => {
+    setWardsLoading(true);
     try {
       const data = await getWards();
       wardsRef.current = data;
@@ -212,18 +213,24 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
         }),
       }));
       return data;
-    } catch {
+    } catch (err) {
+      toast.error(`Không tải được danh sách phường / xã: ${authErrorMessage(err)}`);
       return [];
+    } finally {
+      setWardsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeSection === 'users' || activeSection === 'wards') {
+    if (activeSection === 'users') {
+      // Debounce theo ô tìm kiếm; danh sách phường chỉ cần để hiển thị tên và chọn phường.
       const timer = window.setTimeout(() => void fetchUsers(userPage), 300);
-      void fetchWards();
       return () => window.clearTimeout(timer);
     }
-  }, [activeSection, userPage, fetchUsers, fetchWards]);
+  }, [activeSection, userPage, fetchUsers]);
+  useEffect(() => {
+    if (activeSection === 'users' || activeSection === 'wards') void fetchWards();
+  }, [activeSection, fetchWards]);
 
   const currentUserId = useAuthStore((s) => s.user?.id);
 
@@ -308,6 +315,31 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
       }
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function handleSaveUserProfile(item: ManagerProfileItem) {
+    if (!selectedUser) return;
+    const keep = (value?: string | null) => value?.trim() || null;
+    try {
+      const updated = await saveAdminProfile(selectedUser.id, {
+        fullName: item.fullName,
+        identityNumber: keep(item.identityNumber),
+        phoneNumber: keep(item.phoneNumber),
+        dateOfBirth: (item.dateOfBirth || null) as unknown as import('@/types/profile').ProfileInput['dateOfBirth'],
+        gender: item.gender || null,
+        permanentAddress: keep(item.permanentAddress),
+        temporaryAddress: keep(item.temporaryAddress),
+      });
+      setDetailProfile(updated);
+      setUserData((prev) => prev && ({
+        ...prev,
+        items: prev.items.map((u) => (u.id === selectedUser.id ? { ...u, profile: { ...u.profile, ...updated } } : u)),
+      }));
+      toast.success(`Đã cập nhật hồ sơ của ${updated.fullName}.`);
+    } catch (err) {
+      toast.error(`Cập nhật hồ sơ thất bại: ${authErrorMessage(err)}`);
+      throw err;
     }
   }
 
@@ -423,16 +455,17 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                     email: selectedUser.email,
                     isActive: selectedUser.isActive,
                     fullName: detailProfile?.fullName || selectedUser.profile?.fullName || selectedUser.username,
-                    identityNumber: detailProfile?.identityNumber || selectedUser.profile?.identityNumber || 'Chưa được cập nhật',
-                    phoneNumber: detailProfile?.phoneNumber || selectedUser.profile?.phoneNumber || 'Chưa được cập nhật',
+                    identityNumber: detailProfile?.identityNumber || selectedUser.profile?.identityNumber || '',
+                    phoneNumber: detailProfile?.phoneNumber || selectedUser.profile?.phoneNumber || '',
                     dateOfBirth: detailProfile?.dateOfBirth || selectedUser.profile?.dateOfBirth || '',
                     gender: ((detailProfile?.gender || selectedUser.profile?.gender) === 'Nữ' || (detailProfile?.gender || selectedUser.profile?.gender) === 'Khác'
                       ? (detailProfile?.gender || selectedUser.profile?.gender)
                       : 'Nam') as 'Nam' | 'Nữ' | 'Khác',
-                    permanentAddress: detailProfile?.permanentAddress || selectedUser.profile?.permanentAddress || 'Chưa được cập nhật',
-                    temporaryAddress: detailProfile?.temporaryAddress || selectedUser.profile?.temporaryAddress || 'Chưa được cập nhật',
+                    permanentAddress: detailProfile?.permanentAddress || selectedUser.profile?.permanentAddress || '',
+                    temporaryAddress: detailProfile?.temporaryAddress || selectedUser.profile?.temporaryAddress || '',
                   }) as ManagerProfileItem}
                   isFrontDesk={false}
+                  onSave={canManageAccounts ? handleSaveUserProfile : undefined}
                   backLabel="Quay lại danh sách người dùng"
                   onBack={() => {
                     setSelectedUser(null);
@@ -465,13 +498,16 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                 onAssignWard={handleAssignWard}
                 onSelectUser={handleOpenUserDetail}
                 onManageRoles={setRoleUser}
+                roleFilter={roleFilter}
+                onRoleFilterChange={(value) => { setRoleFilter(value); setUserPage(1); }}
+                onCreateStaff={canCreateStaff ? () => setCreateStaffOpen(true) : undefined}
               />
             )
           )}
           {activeSection === "wards" && (
             <WardsView
               wards={wards}
-              users={userData?.items ?? []}
+              loading={wardsLoading}
               onRetry={() => void fetchWards()}
               onWardCreated={() => void fetchWards()}
             />
@@ -484,6 +520,14 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           {activeSection === "backup" && <BackupView onAction={demoAction} />}
         </main>
       </div>
+      {canCreateStaff && (
+        <CreateStaffAccountModal
+          open={createStaffOpen}
+          wards={wards}
+          onOpenChange={setCreateStaffOpen}
+          onCreated={() => void fetchUsers(userPage)}
+        />
+      )}
       <UserRolesModal user={roleUser} onClose={() => setRoleUser(undefined)} onChanged={() => void fetchUsers(userPage)} />
 
       {/* Modal xác nhận Khóa / Mở khóa tài khoản người dùng */}
@@ -749,8 +793,6 @@ function SearchBar({
   );
 }
 
-
-
 function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
   void onAction;
   return (
@@ -765,6 +807,8 @@ function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
     </section>
   );
 }
+
+
 
 interface SystemRoleConfig {
   value: string;
@@ -851,6 +895,9 @@ function UsersView({
   onAssignWard,
   onSelectUser,
   onManageRoles,
+  roleFilter,
+  onRoleFilterChange,
+  onCreateStaff,
 }: {
   query: string;
   setQuery: (value: string) => void;
@@ -868,29 +915,22 @@ function UsersView({
   onAssignWard: (userId: string, wardId: string | null) => void;
   onSelectUser: (user: ManagedUserDto) => void;
   onManageRoles: (user: ManagedUserDto) => void;
+  roleFilter: string;
+  onRoleFilterChange: (value: string) => void;
+  onCreateStaff?: () => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // Bộ lọc vai trò và trạng thái tài khoản (Mặc định lọc 'ACTIVE' - Đang hoạt động)
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  // Vai trò lọc phía server; trạng thái chỉ lọc trong trang hiện tại (BE chưa có tham số isActive).
   const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
 
   const displayUsers = useMemo(() => {
     return users.filter((u) => {
-      // 1. Lọc vai trò
-      if (roleFilter !== 'ALL') {
-        const hasRole = u.roles.some((r) => {
-          const config = getRoleConfig(r.roleName);
-          return config?.value === roleFilter;
-        });
-        if (!hasRole) return false;
-      }
-      // 2. Lọc trạng thái
       if (statusFilter === 'ACTIVE' && !u.isActive) return false;
       if (statusFilter === 'LOCKED' && u.isActive) return false;
       return true;
     });
-  }, [users, roleFilter, statusFilter]);
+  }, [users, statusFilter]);
 
   return (
     <section className="admin-card admin-table-card admin-content-card">
@@ -903,7 +943,7 @@ function UsersView({
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => onRoleFilterChange(e.target.value)}
             className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo vai trò"
           >
@@ -935,6 +975,11 @@ function UsersView({
             <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
             <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
           </button>
+          {onCreateStaff && (
+            <button type="button" onClick={onCreateStaff} className="admin-primary-action h-10 text-xs">
+              <Plus size={16} weight="bold" /> Tạo tài khoản cán bộ
+            </button>
+          )}
         </div>
       </div>
 
@@ -1163,13 +1208,11 @@ function UsersView({
 
 function WardsView({
   wards,
-  users,
   loading = false,
   onRetry,
   onWardCreated,
 }: {
   wards: WardDto[];
-  users: ManagedUserDto[];
   loading?: boolean;
   onRetry: () => void;
   onWardCreated: () => void;
@@ -1178,6 +1221,18 @@ function WardsView({
   const [wardModalOpen, setWardModalOpen] = useState(false);
   const [wardSubmitting, setWardSubmitting] = useState(false);
   const [wardInput, setWardInput] = useState({ code: '', name: '' });
+  // Đếm theo `total` của /admin/users?wardCode=… (pageSize 1); gọi song song, không chặn hiển thị bảng.
+  const [staffCounts, setStaffCounts] = useState<Record<string, number | null>>({});
+  useEffect(() => {
+    let cancelled = false;
+    setStaffCounts({});
+    for (const ward of wards) {
+      getAdminUsers({ wardCode: ward.code, page: 1, pageSize: 1 })
+        .then((page) => page.total, () => null)
+        .then((total) => { if (!cancelled) setStaffCounts((current) => ({ ...current, [ward.id]: total })); });
+    }
+    return () => { cancelled = true; };
+  }, [wards]);
 
   const filteredWards = useMemo(() => {
     const q = query.toLowerCase();
@@ -1246,20 +1301,15 @@ function WardsView({
               <th className="min-w-[130px]">Mã phường</th>
               <th className="min-w-[200px]">Tên đơn vị Phường / Xã</th>
               <th className="min-w-[160px]">Số cán bộ & Nhân sự</th>
-              <th className="min-w-[220px]">Mã định danh (ID)</th>
-              <th className="min-w-[110px]">Trạng thái</th>
+              <th className="min-w-[110px] text-right">Trạng thái</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows columns={5} rows={5} />
+              <TableSkeletonRows columns={4} rows={5} />
             ) : (
               filteredWards.map((w) => {
-                const count = users.filter(
-                  (u) =>
-                    (u.wardId && u.wardId === w.id) ||
-                    (u.wardCode && u.wardCode.trim().toUpperCase() === w.code.trim().toUpperCase())
-                ).length;
+                const count = staffCounts[w.id];
                 return (
                   <tr key={w.id}>
                     <td>
@@ -1272,11 +1322,12 @@ function WardsView({
                     </td>
                     <td>
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
-                        <span className="font-bold text-red-900">{count}</span> nhân sự trực thuộc
+                        {count === undefined
+                          ? <Skeleton className="h-4 w-24" />
+                          : count === null
+                            ? <span className="text-slate-400">Không tải được</span>
+                            : <><span className="font-bold text-red-900">{count}</span> nhân sự trực thuộc</>}
                       </span>
-                    </td>
-                    <td>
-                      <span className="font-mono text-[11px] text-slate-500">{w.id}</span>
                     </td>
                     <td>
                       <span className="admin-status-badge is-success">
