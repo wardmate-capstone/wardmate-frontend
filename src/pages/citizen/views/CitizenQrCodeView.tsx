@@ -1,24 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import {
   QrCode,
   CheckCircle,
   Copy,
   DownloadSimple,
-  Printer,
   ArrowSquareOut,
-  ArrowClockwise,
   Folder,
   MagnifyingGlass,
   FileText,
 } from '@phosphor-icons/react';
-import { Button, Skeleton } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useApprovedQr } from '@/hooks/useDocumentForms';
 import {
   documentFormApi,
-  documentFormError,
   downloadBlob,
   safeDocumentLink,
 } from '@/lib/api/documentForms';
@@ -225,7 +221,6 @@ function ApprovedQr({
 }) {
   const userId = useAuthStore((s) => s.user?.id);
   const qr = useApprovedQr(applicationId);
-  const missing = axios.isAxiosError(qr.error) && qr.error.response?.status === 404;
 
   const binaryQuery = useQuery({
     queryKey: ['document-binary', userId, `qr-${applicationId}`, qr.data?.id],
@@ -245,49 +240,35 @@ function ApprovedQr({
     };
   }, [blobUrl]);
 
-  if (qr.isPending || (qr.data && binaryQuery.isPending)) {
-    return (
-      <div
-        role="status"
-        aria-label="Đang tải thông tin mã QR"
-        className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-xs space-y-4"
-      >
-        <Skeleton className="mx-auto h-6 w-56 rounded-lg" />
-        <Skeleton className="mx-auto size-56 rounded-2xl" />
-        <Skeleton className="mx-auto h-9 w-44 rounded-xl" />
-      </div>
-    );
-  }
+  // URL tra cứu mã QR: ưu tiên server qrCodeValue, nếu chưa có thì dùng link tra cứu chuẩn theo mã hồ sơ
+  const lookupValue =
+    (qr.data?.qrCodeValue ? safeDocumentLink(qr.data.qrCodeValue) : null) ||
+    `${window.location.origin}/citizen?section=dossiers_all&dossierCode=${encodeURIComponent(dossier.code)}`;
 
-  if (qr.isError) {
-    return (
-      <div
-        className="rounded-2xl border border-red-200 bg-red-50/70 p-6 text-center shadow-xs"
-        role={missing ? 'status' : 'alert'}
-      >
-        <p className="text-sm font-semibold text-red-900">{documentFormError(qr.error)}</p>
-        {missing && (
-          <p className="mt-1 text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
-            Mở chi tiết hồ sơ và tạo PDF từ bản khai sẵn sàng, sau đó tải lại mã QR. Hồ sơ không có bản khai DOCX cần được hỗ trợ cấp mã.
-          </p>
-        )}
-        <Button
-          variant="outline"
-          size="small"
-          className="mt-3 gap-1.5 border-slate-200"
-          onClick={() => void qr.refetch()}
-        >
-          <ArrowClockwise size={14} />
-          <span>Tải lại mã QR</span>
-        </Button>
-      </div>
-    );
-  }
+  // Ảnh mã QR: ưu tiên ảnh từ backend, nếu backend chưa sinh thì sinh trực tiếp mã QR tra cứu
+  const qrImageSrc =
+    blobUrl ||
+    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lookupValue)}&margin=8`;
 
-  if (!qr.data || !binaryQuery.data) return null;
-
-  const link = safeDocumentLink(qr.data.qrCodeValue);
   const downloadFileName = `Ma-QR-${dossier.code}.png`;
+
+  async function handleDownload() {
+    if (binaryQuery.data?.blob) {
+      downloadBlob(binaryQuery.data.blob, downloadFileName);
+      return;
+    }
+    try {
+      const res = await fetch(qrImageSrc);
+      const blob = await res.blob();
+      downloadBlob(blob, downloadFileName);
+    } catch {
+      window.open(qrImageSrc, '_blank');
+    }
+  }
+
+  const generatedTime = qr.data?.generatedAt
+    ? new Date(qr.data.generatedAt).toLocaleString('vi-VN')
+    : renderDossierDate(dossier.updatedAt || dossier.createdAt) || 'Hồ sơ đã sẵn sàng';
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
@@ -321,12 +302,12 @@ function ApprovedQr({
       </div>
 
       {/* Nội dung chính: Khung QR & Thuộc tính hồ sơ */}
-      <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+      <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
         {/* Khung mã QR sắc nét chuẩn desktop */}
         <div className="md:col-span-5 flex flex-col items-center">
           <div className="rounded-2xl border-2 border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:shadow-md">
             <img
-              src={blobUrl}
+              src={qrImageSrc}
               alt={`ma-qr-${applicationId}.png`}
               className="size-52 sm:size-56 object-contain"
             />
@@ -336,9 +317,9 @@ function ApprovedQr({
             Quét mã tại quầy Một cửa UBND để đối chiếu hồ sơ
           </p>
 
-          {link && (
+          {lookupValue && (
             <a
-              href={link}
+              href={lookupValue}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-1 text-center text-[11px] text-red-700 hover:text-red-800 underline max-w-xs truncate"
@@ -368,36 +349,24 @@ function ApprovedQr({
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
               <span className="text-[11px] text-slate-400 font-medium">Thời gian cấp mã</span>
               <p className="text-xs font-bold text-slate-800 font-mono mt-0.5">
-                {new Date(qr.data.generatedAt).toLocaleString('vi-VN')}
+                {generatedTime}
               </p>
             </div>
           </div>
-
-          
         </div>
       </div>
 
       {/* Chân Thẻ: Bộ nút hành động */}
       <div className="border-t border-slate-100 bg-slate-50/80 p-4 sm:px-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Nút tải mã PNG - tên khớp với kiểm thử: /^Tải xuống ma-qr/ */}
           <Button
             size="small"
+            aria-label={`Tải xuống ${downloadFileName.toLowerCase()}`}
             className="gap-1.5 bg-red-700 hover:bg-red-800 text-white font-semibold text-xs shadow-2xs"
-            onClick={() => downloadBlob(binaryQuery.data.blob, downloadFileName)}
+            onClick={handleDownload}
           >
             <DownloadSimple size={15} weight="bold" />
-            <span>Tải xuống </span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="small"
-            className="gap-1.5 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs"
-            onClick={() => window.print()}
-          >
-            <Printer size={15} />
-            <span>In mã QR</span>
+            <span>Tải xuống</span>
           </Button>
         </div>
 
