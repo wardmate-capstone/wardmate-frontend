@@ -2,6 +2,8 @@
 **Tài liệu yêu cầu kỹ thuật & hợp đồng API dành cho Backend IAM (.NET 8 Clean Architecture)**  
 *Ngày lập: 23/10/2026 | Người lập: Frontend Team / IT Admin Module*
 
+> **Trạng thái 26/10/2026:** BE đã có `POST /api/v1/accounts/manager` và `/procedure-manager`; FE đã tích hợp modal "Tạo tài khoản cán bộ" trong Admin (`src/pages/admin/CreateStaffAccountModal.tsx`). Theo quyết định người dùng, vẫn **giữ** nút "Phân vai trò". Mới kiểm thử bằng mock.
+
 ---
 
 ## 1. Bối cảnh & Lý do thay đổi nghiệp vụ (Business Context & Rationale)

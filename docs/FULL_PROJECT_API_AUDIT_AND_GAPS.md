@@ -1,4 +1,6 @@
 # BÁO CÁO RÀ SOÁT TOÀN DIỆN VÀ ĐẶC TẢ HỆ THỐNG API DỰ ÁN WARDMATE
+
+> **Cập nhật IAM 26/10/2026:** đổi mật khẩu (`/users/me/change-password`) và quên/đặt lại mật khẩu đã có ở BE và FE đã tích hợp. BE dùng OTP email `/api/v1/auth/password-otp/request` + `/verify-and-change`, không phải `forgot-password`/`reset-password`. Tạo tài khoản Manager/Procedure-manager cũng đã tích hợp. Chi tiết xem `docs/PROGRESS.md`. Các mục IAM bên dưới là ảnh chụp cũ.
 **WardMate Full API Audit, Gap Analysis & Complete Specification Roadmap**
 
 *Ngày lập báo cáo: 20/10/2026*  

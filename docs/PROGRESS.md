@@ -1,8 +1,48 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 24/10/2026.
+Cập nhật: 26/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Rà soát và tích hợp API IAM (trừ phone/SMS) — 26/10/2026
+
+- **Nguồn:** đối chiếu 9 controller IAM tại `D:/wardmate-backend/src/Services/WardMate.Services.IAM` với mọi lời gọi IAM trong FE. BE không có envelope; lỗi là ProblemDetails `{ status, title, code, traceId }` (không có `detail`), `title` đã là tiếng Việt.
+- **Ngoài phạm vi (theo người dùng):** phone-verification, OTP kênh SMS. Cố ý không dùng: `/internal/*`, `/users/access-context` (BE-to-BE), `assignment-context` (workflow), remember-me, avatar (BE chưa có).
+- **Quyết định người dùng:** quên mật khẩu = 1 trang 2 bước; Admin có modal tạo cán bộ và **giữ** "Phân vai trò"; Admin được sửa hồ sơ người dùng (không có nút xoá).
+- **Đã làm:**
+  - `src/lib/api/index.ts`:
+    - `iamErrorCode()` đọc `code`. `authErrorMessage` map mã `iam.*` sang tiếng Việt trước, sau đó mới dùng status. Trước đây 403 ngoài phạm vi phường hay 404 `iam.ward_not_found` hiện sai ngữ cảnh.
+    - Thêm `requestPasswordOtp`, `resetPasswordWithOtp` (`channel: 'EMAIL'`, `purpose: 'FORGOT_PASSWORD'`). Hàm reset cũng xoá phiên trong tab.
+    - Thêm `createStaffAccount(role, input)` cho `/accounts/front-desk|manager|procedure-manager`.
+    - Thêm `saveAdminProfile` (PUT, gặp `iam.profile_not_found` thì POST). `updateMyProfile` cũng fallback POST.
+    - Bỏ `getAccounts` và `getUserProfiles` vì không còn nơi dùng.
+  - Quên/đặt lại mật khẩu:
+    - `src/pages/auth/PasswordRecovery.tsx` (RHF/Zod, schema trong `authSchema.ts`): bước 1 gửi mã (hiện thông báo chung của BE); bước 2 nhập OTP 6 số + mật khẩu mới, "Gửi lại mã" đếm ngược 60 giây.
+    - `/dat-lai-mat-khau` chỉ vào thẳng bước 2 khi có `emailOrUsername` trong router state. Đã xoá `RecoveryUnavailable.tsx`.
+  - Admin (`AdminPage.tsx`):
+    - Nút "Tạo tài khoản cán bộ" (`CreateStaffAccountModal.tsx`), chỉ hiện khi có IT_ADMIN và `iam.accounts.manage`. Phường bắt buộc với Cán bộ Một cửa/Quản lý, tuỳ chọn với Quản lý thủ tục.
+    - Lọc vai trò gửi `role` lên `/admin/users` và reset về trang 1. Lọc trạng thái vẫn chỉ trong trang hiện tại vì BE chưa có tham số `isActive`.
+    - Màn chi tiết có nút sửa hồ sơ khi có `iam.accounts.manage`. Manager cũng dùng `saveAdminProfile`.
+  - UI đặt mật khẩu thống nhất: `src/components/auth/PasswordStrength.tsx` (thanh 5 nấc + checklist + `PasswordMatchHint` báo khớp ngay khi gõ) dùng ở đăng ký, đặt lại mật khẩu, đổi mật khẩu (`AccountSecuritySection`) và modal tạo cán bộ. `strict` cho các luồng IAM bắt buộc thêm chữ thường và chữ số.
+  - **Hiệu năng IAM:** trước đây mọi request IAM đều đi qua Web Lock `wardmate-auth:` nên chạy tuần tự, kể cả giữa các tab. Đo IAM Azure khoảng 0,7–1 giây mỗi request, nên trang Phường/Xã (gọi `getWards` 2 lần + `/admin/users`) mất vài giây. Nay chỉ các request `/api/v1/auth/*` (đụng cookie refresh) còn khoá (`authCookieConfig`), request nghiệp vụ chạy song song.
+  - Trang Phường/Xã: bỏ lời gọi `getWards` trùng; không gọi `/admin/users` cho cả trang nữa. Số nhân sự đếm chính xác bằng `total` của `/admin/users?wardCode=…&pageSize=1` (song song). Trước đây chỉ đếm trên 20 user của trang đầu nên sai. Bảng có skeleton khi tải.
+  - Đổi mật khẩu có 2 cách (tab "Dùng mật khẩu hiện tại" / "Xác thực qua email" trong `AccountSecuritySection`):
+    - Cách OTP dùng `ChangePasswordOtpForm.tsx`: `password-otp/request` + `verify-and-change` với `purpose: 'CHANGE_PASSWORD'`, gửi kèm Bearer (không `skipAuth`), vì BE lấy `sub` làm actor và chỉ cho đổi mật khẩu của chính mình.
+    - Định danh gửi lên là `username` trong `/users/me`; email hiển thị được che bớt. Thành công thì xoá phiên và về đăng nhập.
+  - Bảng Phường/Xã: bỏ cột ID; căn phải tiêu đề "Trạng thái" cho khớp badge (CSS chung `td:last-child` căn phải). Lưu ý: "Hoạt động" vẫn là chữ ghi cứng vì BE không có trạng thái phường.
+  - Đăng ký: đã đối chiếu rule với `AuthValidators.cs` (khớp). Làm rõ lỗi tên đăng nhập (không khoảng trắng/không dấu, có ví dụ), placeholder có ví dụ, checklist mật khẩu tách mục bắt buộc và "nên có" (chữ thường, chữ số).
+  - Đổi mật khẩu: `AccountSecuritySection` so theo `code` thay cho `msg.includes(...)` (cách cũ không bao giờ khớp). Xoá `ChangePasswordModal.tsx` (UI chết) và state liên quan trong 2 profile view.
+- **Kiểm tra (chỉ mock):**
+  - `npm run typecheck`, `npm run lint`, `npm run build`: đạt.
+  - `node tests/api-proxy-check.mjs`: 26/26, đã thêm 3 route IAM.
+  - Spec mới `tests/auth-recovery.spec.ts` (3) và `tests/admin-provisioning.spec.ts` (3), cùng `admin-rbac`: 10/10.
+  - jwt-client, design-system, landing, auth, auth-session, manager, profile-validation, ui-audit, workspace-sidebar, assignment: 89/90.
+  - Ca lỗi là `ui-audit` REGISTERED_CITIZEN, lặp lại ổn định: `complementary` "Trợ lý hỗ trợ thủ tục" của `AiChatWidget` (thay đổi AI chưa commit, có từ trước) hiện ở màn hẹp. Không do task IAM; chưa sửa.
+  - Đã gỡ 2 test cũ trong `landing.spec.ts` vốn khẳng định "khôi phục chưa khả dụng".
+- **Giới hạn / cần xác minh thật:**
+  - OTP email phụ thuộc cấu hình gửi mail của BE; chưa cấu hình thì trả 503 `iam.email_unavailable`.
+  - Chưa thử với Azure IAM thật, chưa thử tạo Manager/Procedure-manager trên DB thật.
+  - Chưa commit.
 
 ## Tích hợp phân công theo lĩnh vực (FE bước 1–3) — 24/10/2026
 
