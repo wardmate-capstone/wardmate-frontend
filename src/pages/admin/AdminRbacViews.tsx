@@ -50,9 +50,16 @@ export const actionLabels: Record<string, string> = {
   "ward.created": "Tạo đơn vị Phường/Xã",
   "account.ward_changed": "Chuyển đơn vị công tác",
   "account.front_desk_created": "Tạo tài khoản cán bộ Một cửa",
+  "account.manager_created": "Tạo tài khoản Lãnh đạo UBND",
+  "account.procedure_manager_created": "Tạo tài khoản Quản lý thủ tục",
+  OFFICER_CATEGORIES_ASSIGNED: "Gán lĩnh vực phụ trách",
+  OFFICER_CATEGORIES_RECONCILED: "Đồng bộ lĩnh vực phụ trách",
   "account.enabled": "Kích hoạt tài khoản",
   "account.disabled": "Khóa tài khoản",
 };
+
+// Các thao tác tạo tài khoản cán bộ ghi details `{ wardId }` (wardId có thể null với Quản lý thủ tục).
+const staffCreatedActions = ["account.front_desk_created", "account.manager_created", "account.procedure_manager_created"];
 
 function ErrorBox({ error, retry }: { error: string; retry?: () => void }) {
   if (!error) return null;
@@ -871,10 +878,10 @@ function AuditDetailModal({
               </div>
             )}
 
-            {log.action === "account.front_desk_created" && (
+            {staffCreatedActions.includes(log.action) && (
               <div className="text-xs">
                 <span className="text-slate-500">Ủy ban nhân dân công tác:</span>{" "}
-                <strong>{parsed.wardId ? (wardsMap[parsed.wardId] ?? "Ủy ban Nhân dân") : "Đơn vị"}</strong>
+                <strong>{parsed.wardId ? (wardsMap[parsed.wardId] ?? "Ủy ban Nhân dân") : "Không gắn phường / xã"}</strong>
               </div>
             )}
 

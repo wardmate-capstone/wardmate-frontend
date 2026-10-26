@@ -87,3 +87,16 @@ test('trang phường đếm nhân sự theo từng phường bằng tham số w
   await expect(page.getByRole('row', { name: /Phường B/ })).toContainText('1 nhân sự trực thuộc');
   expect(wardCodes.sort()).toEqual(['WARD_A', 'WARD_B']);
 });
+
+test('nhật ký hiện nhãn tiếng Việt cho thao tác tạo tài khoản Lãnh đạo và Quản lý thủ tục', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['IT_ADMIN']);
+  await page.route('http://localhost:5000/api/v1/rbac/audit-logs**', route => authReply(route, { json: { items: [
+    { id: 'aaaaaaaa-0000-0000-0000-000000000001', actorUserId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', action: 'account.manager_created', targetUserId: '11111111-1111-1111-1111-111111111111', roleId: 3, permissionId: null, details: JSON.stringify({ wardId: ward.id }), createdAt: '2026-10-26T01:00:00Z' },
+    { id: 'aaaaaaaa-0000-0000-0000-000000000002', actorUserId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', action: 'account.procedure_manager_created', targetUserId: '22222222-2222-2222-2222-222222222222', roleId: 4, permissionId: null, details: JSON.stringify({ wardId: null }), createdAt: '2026-10-26T02:00:00Z' },
+  ], page: 1, pageSize: 20, total: 2 } }));
+  await page.goto('/admin');
+  await page.locator('aside').getByRole('button', { name: 'Nhật ký hoạt động' }).click();
+  await expect(page.getByRole('cell', { name: /^Tạo tài khoản Lãnh đạo UBND$/ })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /^Tạo tài khoản Quản lý thủ tục$/ })).toBeVisible();
+  await expect(page.getByText('account.manager_created', { exact: true })).toHaveCount(0);
+});
