@@ -1,6 +1,10 @@
 # Yêu cầu nhỏ cho BE ApplicationWorkflow: thêm `resubmitCount` vào danh sách hồ sơ
 
+> **ĐÃ XONG – không cần gửi lại BE (26/10/2026).** Việc BE còn tồn đọng nằm duy nhất trong `docs/BE_REQUESTS_PENDING.md`.
+
 *Ngày 23/10/2026 · Frontend Team · Mức độ: nên làm, không chặn*
+
+> **Trạng thái 26/10/2026: ĐÃ XONG.** BE thêm `ResubmitCount` (int, mặc định 0) vào `ApplicationSummaryDto` ở cả 3 projection (commit `4b9d19d`, 24/10). FE dùng giá trị thật (`workflowAdapters.ts`); suy luận "SUBMITTED + có người phụ trách" chỉ còn là fallback khi response thiếu trường. Không cần BE làm thêm.
 
 ## Vấn đề
 

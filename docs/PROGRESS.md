@@ -44,6 +44,25 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - Chưa thử với Azure IAM thật, chưa thử tạo Manager/Procedure-manager trên DB thật.
   - Chưa commit.
 
+## Đối chiếu các yêu cầu đã gửi BE — 26/10/2026
+
+- **Nguồn:** source BE `main` = `091b169` (24/10), không có commit nào sau 24/10. Đối chiếu với `ADMIN_USER_PROVISIONING_BACKEND_SPEC.md`, `OFFICER_CATEGORY_ROUTING_BACKEND_SPEC.md`, `BE_REQUEST_RESUBMIT_COUNT_IN_SUMMARY.md`, `BE_REQUEST_PERFORMANCE_AND_OFFICER_ACTIVITY.md`. Đã ghi trạng thái vào đầu từng file.
+- **BE xong, FE đã tích hợp:**
+  - Tạo Manager / Procedure-manager.
+  - Phân công theo lĩnh vực: field, bộ lọc, trả hồ sơ, Manager giao/chuyển.
+  - `resubmitCount`.
+  - `assignedCategories` trong `/users/me`.
+- **BE chưa làm:**
+  - Perf A `applicantName`, B loại DRAFT, C `assignment-summary`, D `/officer/activity`, E cache.
+  - F đã có code nhưng RabbitMQ/worker mặc định tắt. FE giữ các workaround tương ứng.
+- **FE vừa làm:**
+  - Nhãn audit `account.manager_created`, `account.procedure_manager_created`, `OFFICER_CATEGORIES_ASSIGNED/RECONCILED`; khối chi tiết hiện phường cho cả 3 loại tạo tài khoản (`AdminRbacViews.tsx`).
+  - Test `admin-provisioning.spec.ts` (5/5).
+- **Đã xét, không cần sửa:** query đếm quá hạn và lịch sử cán bộ không lọt DRAFT. BE `overdue` đã giới hạn trạng thái; bản nháp không có `assignee`.
+- **Gửi BE:** gộp mọi việc còn tồn đọng (6 mục A–F cũ + xác nhận deploy) vào **một file duy nhất** `docs/BE_REQUESTS_PENDING.md`. Các file yêu cầu cũ đã gắn nhãn "ĐÃ GỘP" / "ĐÃ XONG – không cần gửi lại".
+- **UI:** làm lại màn chặn truy cập trong `ProtectedRoute.tsx` (đang khôi phục phiên / lỗi xác minh / không đủ quyền): logo WardMate, thẻ bo góc như trang đăng nhập, nút Thử lại, Về trang chủ, Đăng nhập lại; responsive.
+- **Deploy:** PROGRESS của BE chưa ghi image Azure nào cho phân công, nhưng FE đã test tay trên Azure ngày 24/10 (Manager chuyển cán bộ được). Cần BE xác nhận phiên bản đang chạy và migration.
+
 ## Tích hợp phân công theo lĩnh vực (FE bước 1–3) — 24/10/2026
 
 - **BE:** đã đối chiếu source `D:/wardmate-backend` (commit WORKFLOW-ASSIGN-01/IAM-CATEGORY-01/WORKFLOW-RESUBMIT-01) và Swagger Workflow/IAM trên Azure (GET 200, khớp source). Route `PUT /api/v1/manager/applications/{id}/assignee` trả 401 khi không có token (route tồn tại). **Chưa gọi bằng tài khoản thật**, chưa xác minh migration DB.
@@ -83,6 +102,8 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Còn chờ (bước 4):** test Playwright mock cho các luồng mới; kiểm thử thật cần 2 cán bộ cùng phường + 1 Manager + hồ sơ thử (thao tác ghi dữ liệu thật).
 
 ## Phân công hồ sơ theo lĩnh vực cho cán bộ Một cửa — 23/10/2026
+
+> Lỗi thời: BE đã làm spec này ngày 24/10 (xem mục 24/10 ở trên và mục đối chiếu 26/10). Phần mô tả suy luận "đã gửi lại" bên dưới nay chỉ còn là fallback khi thiếu `resubmitCount`.
 
 - **Quyết định người dùng (đã chốt):**
   - Ưu tiên mềm theo lĩnh vực: cán bộ vẫn nhận được hồ sơ thuộc lĩnh vực khác.

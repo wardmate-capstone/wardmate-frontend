@@ -1,6 +1,9 @@
 # Yêu cầu BE: hiệu năng danh sách hồ sơ, thống kê phân công và lịch sử thao tác cán bộ
 
+> **ĐÃ GỘP (26/10/2026):** nội dung còn tồn đọng của file này đã chuyển sang `docs/BE_REQUESTS_PENDING.md`. **Chỉ gửi BE file đó**; file này giữ làm lịch sử.
+
 *Ngày 24/10/2026 · Frontend Team · Áp dụng sau WORKFLOW-ASSIGN-01 (đã deploy Azure)*
+
 
 Tài liệu gồm 6 mục, phát hiện khi kiểm tra trọn vòng đời hồ sơ trên môi trường Azure:
 

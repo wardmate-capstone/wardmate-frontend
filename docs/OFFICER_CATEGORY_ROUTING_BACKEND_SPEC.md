@@ -1,5 +1,7 @@
 # ĐẶC TẢ YÊU CẦU BACKEND: PHÂN CÔNG HỒ SƠ THEO LĨNH VỰC CHO CÁN BỘ MỘT CỬA
 
+> **ĐÃ XONG – không cần gửi lại BE (26/10/2026).** Việc BE còn tồn đọng nằm duy nhất trong `docs/BE_REQUESTS_PENDING.md`.
+
 **Hợp đồng API đề xuất cho ApplicationWorkflow và IAM (.NET 8)**
 _Ngày lập: 23/10/2026 | Người lập: Frontend Team | Trạng thái: BE đã triển khai 24/10/2026 (WORKFLOW-ASSIGN-01, IAM-CATEGORY-01, WORKFLOW-RESUBMIT-01); FE đã tích hợp, chưa kiểm thử với tài khoản thật_
 
