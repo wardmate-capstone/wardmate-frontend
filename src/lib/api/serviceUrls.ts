@@ -7,7 +7,8 @@ const useApiProxy = env.VITE_USE_API_PROXY === 'true';
 
 export const serviceUrls = {
   iam: useApiProxy ? '' : normalize(env.VITE_API_BASE_URL),
-  analytics: useApiProxy ? '' : normalize(env.VITE_ANALYTICS_API_URL || env.VITE_API_BASE_URL),
+  // Analytics chỉ đi qua gateway (YARP định tuyến /api/v1/analytics, /api/v1/citizen/feedback); IAM không có các route này.
+  analytics: useApiProxy ? '' : normalize(env.VITE_ANALYTICS_API_URL || env.VITE_DOCUMENT_FORM_API_URL),
   catalog: useApiProxy ? '' : normalize(env.VITE_CATALOG_API_URL),
   workflow: useApiProxy ? '' : normalize(env.VITE_WORKFLOW_API_URL),
   documentForm: useApiProxy ? '' : normalize(env.VITE_DOCUMENT_FORM_API_URL),
