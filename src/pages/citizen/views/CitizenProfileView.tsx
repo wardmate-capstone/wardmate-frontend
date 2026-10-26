@@ -16,7 +16,6 @@ import axios from 'axios';
 import { updateMyProfile, authErrorMessage } from '@/lib/api';
 import type { UserProfileDto } from '@/types/profile';
 import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
-import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
 import { CccdOcrScanModal } from '@/components/citizen/CccdOcrScanModal';
 import type { CccdExtractionDto } from '@/lib/api/aiOcr';
@@ -72,7 +71,6 @@ export function CitizenProfileView({
   const [errors, setErrors] = useState<ProfileFieldErrors>({});
   const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
   const [isEditing, setIsEditing] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -669,7 +667,6 @@ export function CitizenProfileView({
     <AccountSecuritySection />
   )}
 
-      <ChangePasswordModal open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
       <CccdOcrScanModal
         open={isOcrModalOpen}
         onOpenChange={setIsOcrModalOpen}

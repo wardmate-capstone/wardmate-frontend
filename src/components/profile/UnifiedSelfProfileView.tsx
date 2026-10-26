@@ -18,7 +18,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import { Skeleton } from '@/components/ui';
-import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
 
 function formatDate(value?: string | null): string {
@@ -86,7 +85,6 @@ export const UnifiedSelfProfileView: React.FC = () => {
   // Inline edit state
   const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
   const [isEditing, setIsEditing] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -630,7 +628,6 @@ export const UnifiedSelfProfileView: React.FC = () => {
     <AccountSecuritySection />
   )}
 
-      <ChangePasswordModal open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
     </div>
   );
 };

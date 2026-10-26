@@ -19,8 +19,10 @@ const cookieAdapter: AxiosAdapter = (config) => {
 const cookieConfig = {
   withCredentials: true,
   headers: { 'X-CSRF-Protection': '1' },
-  adapter: cookieAdapter,
 };
+// Chỉ các request /auth/* đọc hoặc xoay cookie refresh (Path=/api/v1/auth) mới cần khoá Web Lock.
+// Khoá cả request nghiệp vụ sẽ biến mọi lời gọi IAM thành tuần tự (kể cả giữa các tab).
+const authCookieConfig = { ...cookieConfig, adapter: cookieAdapter };
 
 function readAccessToken(data: unknown): string {
   if (!data || typeof data !== 'object'
@@ -39,7 +41,7 @@ export const authClient = createJwtClient({
   baseURL,
   allowedOrigins: configuredServiceOrigins,
   refreshAccessToken: async (transport) => {
-    const response = await transport.post('/api/v1/auth/refresh-token', undefined, cookieConfig);
+    const response = await transport.post('/api/v1/auth/refresh-token', undefined, authCookieConfig);
     return readAccessToken(response.data);
   },
   // A CSRF rejection is a configuration/security error, not an expired session.
@@ -74,7 +76,7 @@ export type RegisterRequest = { username: string; email: string; password: strin
 export type LoginRequest = { usernameOrEmail: string; password: string };
 
 export async function register(payload: RegisterRequest) {
-  const response = await api.post('/api/v1/auth/register', payload, { ...cookieConfig, skipAuth: true });
+  const response = await api.post('/api/v1/auth/register', payload, { ...authCookieConfig, skipAuth: true });
   if (response.status !== 201 || !response.data || typeof response.data.id !== 'string' || !response.data.id.trim()) {
     throw new Error('Phản hồi đăng ký không hợp lệ. Vui lòng thử đăng nhập hoặc liên hệ hỗ trợ.');
   }
@@ -88,7 +90,7 @@ export function login(payload: LoginRequest): Promise<void> {
   clearSession();
   useAuthStore.setState({ status: 'restoring' });
   const version = sessionVersion;
-  loginPending = api.post('/api/v1/auth/login', payload, { ...cookieConfig, skipAuth: true })
+  loginPending = api.post('/api/v1/auth/login', payload, { ...authCookieConfig, skipAuth: true })
     .then(async (response) => {
       if (version !== sessionVersion) throw new axios.CanceledError('Session changed.');
       authClient.setAccessToken(readAccessToken(response.data));
@@ -105,7 +107,7 @@ let logoutPending: Promise<void> | undefined;
 export function logout(): Promise<void> {
   if (logoutPending) return logoutPending;
   if (loginPending) return Promise.reject(new Error('Đang đăng nhập. Vui lòng chờ hoàn tất.'));
-  logoutPending = api.post('/api/v1/auth/revoke-token', undefined, cookieConfig)
+  logoutPending = api.post('/api/v1/auth/revoke-token', undefined, authCookieConfig)
     .then((response) => {
       if (response.status !== 204) throw new Error('Máy chủ chưa xác nhận thu hồi phiên. Vui lòng thử lại.');
       clearSession();
@@ -187,7 +189,12 @@ export async function getMyProfile(): Promise<UserProfileDto> {
 
 export async function updateMyProfile(payload: ProfileInput): Promise<UserProfileDto> {
   const owner = useAuthStore.getState().user;
-  const response = await api.put<UserProfileDto>('/api/v1/users/me/profile', payload, cookieConfig);
+  // Hồ sơ có thể đã bị xoá (PUT trả iam.profile_not_found) thì tạo mới bằng POST.
+  const response = await api.put<UserProfileDto>('/api/v1/users/me/profile', payload, cookieConfig)
+    .catch((error: unknown) => {
+      if (iamErrorCode(error) !== 'iam.profile_not_found') throw error;
+      return api.post<UserProfileDto>('/api/v1/users/me/profile', payload, cookieConfig);
+    });
   if (owner && useAuthStore.getState().user === owner) useAuthStore.setState({ user: { ...owner, profile: response.data } });
   return response.data;
 }
@@ -211,6 +218,37 @@ export async function changePassword(payload: ChangePasswordRequest): Promise<{ 
   return response.data;
 }
 
+/**
+ * OTP mật khẩu qua kênh EMAIL (SMS chưa triển khai). BE trả cùng thông báo dù tài khoản có tồn tại hay không.
+ * - FORGOT_PASSWORD: ẩn danh (quên mật khẩu).
+ * - CHANGE_PASSWORD: phải gửi kèm Bearer; BE chỉ cho đổi mật khẩu của chính người đang đăng nhập.
+ */
+export type PasswordOtpPurpose = 'FORGOT_PASSWORD' | 'CHANGE_PASSWORD';
+
+export async function requestPasswordOtp(emailOrUsername: string, purpose: PasswordOtpPurpose = 'FORGOT_PASSWORD'): Promise<{ message: string }> {
+  const response = await api.post<{ message?: string }>('/api/v1/auth/password-otp/request',
+    { emailOrUsername, channel: 'EMAIL', purpose },
+    { ...authCookieConfig, skipAuth: purpose === 'FORGOT_PASSWORD' });
+  return { message: response.data?.message || 'Nếu tài khoản hợp lệ, mã xác thực đã được gửi tới email đăng ký.' };
+}
+
+export interface ResetPasswordWithOtpRequest {
+  emailOrUsername: string;
+  otp: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+export async function resetPasswordWithOtp(payload: ResetPasswordWithOtpRequest, purpose: PasswordOtpPurpose = 'FORGOT_PASSWORD'): Promise<{ message: string }> {
+  const response = await api.post<{ message?: string }>('/api/v1/auth/password-otp/verify-and-change',
+    { ...payload, purpose },
+    { ...authCookieConfig, skipAuth: purpose === 'FORGOT_PASSWORD' });
+  // BE đã thu hồi phiên và xoá cookie refresh; đồng bộ trạng thái nếu tab này đang đăng nhập.
+  clearSession();
+  channel?.postMessage('logout');
+  return { message: response.data?.message || 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.' };
+}
+
 // -----------------------------------------------------------
 // ADMIN — Accounts API
 // -----------------------------------------------------------
@@ -220,21 +258,6 @@ export interface AccountItem {
   email: string;
   isActive: boolean;
   createdAt: string;
-}
-
-export interface AccountListResponse {
-  items: AccountItem[];
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-export async function getAccounts(page = 1, pageSize = 20): Promise<AccountListResponse> {
-  const response = await api.get<AccountListResponse>('/api/v1/accounts', {
-    ...cookieConfig,
-    params: { page, pageSize },
-  });
-  return response.data;
 }
 
 export async function getAccount(userId: string): Promise<AccountItem> {
@@ -264,38 +287,18 @@ export async function updateAdminProfile(userId: string, payload: ProfileInput):
   return response.data;
 }
 
+/** Cập nhật hồ sơ người dùng; nếu hồ sơ chưa tồn tại (đã bị xoá) thì tạo mới. */
+export async function saveAdminProfile(userId: string, payload: ProfileInput): Promise<UserProfileDto> {
+  try {
+    return await updateAdminProfile(userId, payload);
+  } catch (error) {
+    if (iamErrorCode(error) !== 'iam.profile_not_found') throw error;
+    return createAdminProfile(userId, payload);
+  }
+}
+
 export async function deleteAdminProfile(userId: string): Promise<void> {
   await api.delete(`/api/v1/users/${userId}/profile`, cookieConfig);
-}
-
-// -----------------------------------------------------------
-// ADMIN & MANAGER — Profiles List API (API 60: /api/v1/users/profiles)
-// -----------------------------------------------------------
-export interface ProfileListItemDto {
-  userId: string;
-  fullName: string;
-  identityNumber?: string | null;
-  phoneNumber?: string | null;
-  dateOfBirth?: string | null;
-  gender?: string | null;
-  permanentAddress?: string | null;
-  temporaryAddress?: string | null;
-  updatedAt: string;
-}
-
-export interface ProfileListResponse {
-  items: ProfileListItemDto[];
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-export async function getUserProfiles(page = 1, pageSize = 20): Promise<ProfileListResponse> {
-  const response = await api.get<ProfileListResponse>('/api/v1/users/profiles', {
-    ...cookieConfig,
-    params: { page, pageSize },
-  });
-  return response.data;
 }
 
 // -----------------------------------------------------------
@@ -377,6 +380,20 @@ export async function createFrontDeskAccount(payload: CreateFrontDeskInput): Pro
   return response.data;
 }
 
+export type StaffAccountRole = 'FRONT_DESK_OFFICER' | 'MANAGER' | 'PROCEDURE_MANAGER';
+
+const staffAccountPaths: Record<StaffAccountRole, string> = {
+  FRONT_DESK_OFFICER: '/api/v1/accounts/front-desk',
+  MANAGER: '/api/v1/accounts/manager',
+  PROCEDURE_MANAGER: '/api/v1/accounts/procedure-manager',
+};
+
+/** IT_ADMIN tạo tài khoản cán bộ; vai trò được BE gán theo endpoint. */
+export async function createStaffAccount(role: StaffAccountRole, payload: CreateFrontDeskInput): Promise<ManagedUserDto> {
+  const response = await api.post<ManagedUserDto>(staffAccountPaths[role], payload, cookieConfig);
+  return response.data;
+}
+
 export async function getWards(): Promise<WardDto[]> {
   const response = await api.get<WardDto[]>('/api/v1/accounts/wards', cookieConfig);
   return response.data;
@@ -413,12 +430,9 @@ export async function assignOfficerCategories(userId: string, categories: number
 
 // IAM-CATEGORY-01: BE kiểm tra ID lĩnh vực với Catalog trước khi lưu.
 export function officerCategoryError(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { code?: string; extensions?: { code?: string } } | undefined;
-    const code = data?.code ?? data?.extensions?.code;
-    if (code === 'iam.invalid_categories') return 'Có lĩnh vực không còn tồn tại trong danh mục thủ tục. Vui lòng tải lại danh sách lĩnh vực rồi chọn lại.';
-    if (code === 'iam.catalog_unavailable') return 'Chưa kiểm tra được danh mục lĩnh vực (dịch vụ thủ tục không phản hồi). Thay đổi chưa được lưu, vui lòng thử lại sau.';
-  }
+  const code = iamErrorCode(error);
+  if (code === 'iam.invalid_categories') return 'Có lĩnh vực không còn tồn tại trong danh mục thủ tục. Vui lòng tải lại danh sách lĩnh vực rồi chọn lại.';
+  if (code === 'iam.catalog_unavailable') return 'Chưa kiểm tra được danh mục lĩnh vực (dịch vụ thủ tục không phản hồi). Thay đổi chưa được lưu, vui lòng thử lại sau.';
   return authErrorMessage(error);
 }
 
@@ -432,11 +446,46 @@ export async function assignUserWard(userId: string, wardId: string | null): Pro
 }
 
 
+/** Mã lỗi IAM trong ProblemDetails (`code`), ví dụ `iam.otp_invalid`. */
+export function iamErrorCode(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) return undefined;
+  const data = error.response?.data as { code?: unknown; extensions?: { code?: unknown } } | undefined;
+  const code = data?.code ?? data?.extensions?.code;
+  return typeof code === 'string' ? code : undefined;
+}
+
+// Thông báo theo mã lỗi IAM; ưu tiên hơn thông báo chung theo HTTP status.
+const iamErrorMessages: Record<string, string> = {
+  'iam.invalid_credentials': 'Tên đăng nhập/email hoặc mật khẩu không đúng.',
+  'iam.forbidden': 'Bạn không có quyền thực hiện thao tác này hoặc tài khoản nằm ngoài phạm vi quản lý của bạn.',
+  'iam.csrf_rejected': 'Yêu cầu xác thực bị từ chối. Vui lòng kiểm tra cấu hình truy cập với quản trị viên.',
+  'iam.user_not_found': 'Không tìm thấy tài khoản.',
+  'iam.user_unavailable': 'Tài khoản không còn khả dụng. Vui lòng đăng nhập lại.',
+  'iam.ward_not_found': 'Phường/xã không tồn tại hoặc đã bị xoá.',
+  'iam.ward_required': 'Vui lòng chọn phường/xã cho tài khoản này.',
+  'iam.ward_exists': 'Mã phường/xã đã tồn tại.',
+  'iam.duplicate_account': 'Tên đăng nhập hoặc email đã được sử dụng.',
+  'iam.self_disable': 'Bạn không thể tự khoá tài khoản của mình.',
+  'iam.otp_invalid': 'Mã xác thực không đúng hoặc đã hết hạn.',
+  'iam.otp_limit': 'Bạn đã yêu cầu mã xác thực quá số lần cho phép trong ngày. Vui lòng thử lại sau.',
+  'iam.otp_rate_limited': 'Bạn thao tác quá nhiều lần. Vui lòng chờ khoảng 1 phút rồi thử lại.',
+  'iam.email_unavailable': 'Hệ thống chưa gửi được email lúc này. Vui lòng thử lại sau.',
+  'iam.current_password_invalid': 'Mật khẩu hiện tại không chính xác.',
+  'iam.password_unchanged': 'Mật khẩu mới không được trùng với mật khẩu hiện tại.',
+  'iam.concurrent_update': 'Tài khoản vừa được cập nhật ở nơi khác. Vui lòng thử lại.',
+  'iam.profile_not_found': 'Không tìm thấy hồ sơ người dùng.',
+  'iam.profile_exists': 'Hồ sơ người dùng đã tồn tại.',
+  'iam.profile_conflict': 'Hồ sơ vừa được thay đổi ở nơi khác. Vui lòng tải lại rồi thử lại.',
+  'iam.profile_changed': 'Hồ sơ vừa được thay đổi ở nơi khác. Vui lòng tải lại rồi thử lại.',
+};
+
 export function authErrorMessage(error: unknown): string {
   if (axios.isCancel(error)) return 'Phiên đăng nhập đã thay đổi. Vui lòng thử lại.';
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     if (!status) return 'Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối và thử lại.';
+    const code = iamErrorCode(error);
+    if (code && iamErrorMessages[code]) return iamErrorMessages[code];
     if (status === 401) return 'Thông tin đăng nhập không đúng hoặc phiên đã hết hạn.';
     if (status === 403) return 'Yêu cầu xác thực bị từ chối. Vui lòng kiểm tra cấu hình truy cập với quản trị viên.';
     if (status === 404) return 'Không tìm thấy thông tin hồ sơ.';

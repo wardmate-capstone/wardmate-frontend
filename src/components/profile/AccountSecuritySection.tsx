@@ -6,12 +6,13 @@ import {
   EyeSlash,
   CheckCircle,
   WarningCircle,
-  Check,
   ShieldCheck,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui';
-import { changePassword, authErrorMessage } from '@/lib/api';
+import { changePassword, authErrorMessage, iamErrorCode } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
+import { getPasswordChecks, PasswordMatchHint, PasswordStrength } from '@/components/auth/PasswordStrength';
+import { ChangePasswordOtpForm } from './ChangePasswordOtpForm';
 
 export interface AccountSecuritySectionProps {
   className?: string;
@@ -35,38 +36,32 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  // Hai cách IAM hỗ trợ: nhập mật khẩu hiện tại, hoặc xác thực bằng OTP email (CHANGE_PASSWORD).
+  const [method, setMethod] = useState<'password' | 'otp'>('password');
 
   const currentId = useId();
   const newId = useId();
   const confirmId = useId();
 
-  // 4 tiêu chuẩn mật khẩu an toàn
-  const hasMinLength = newPassword.length >= 8;
-  const hasUpper = /[A-Z]/.test(newPassword);
-  const hasLower = /[a-z]/.test(newPassword);
-  const hasDigit = /[0-9]/.test(newPassword);
-  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-  const isCaseValid = hasUpper && hasLower;
+  // Cùng rule với IAM change-password: 8 ký tự, hoa, thường, số, ký tự đặc biệt.
+  const checks = getPasswordChecks(newPassword);
   const isMatched = Boolean(confirmNewPassword && newPassword === confirmNewPassword);
-
-  // Tính điểm độ mạnh (0 - 4 điểm)
-  const score = [hasMinLength, isCaseValid, hasDigit, hasSpecial].filter(Boolean).length;
-
-  const strengthConfig = [
-    { label: 'Chưa nhập', bar: 'bg-slate-200', text: 'text-slate-400' },
-    { label: 'Yếu', bar: 'bg-rose-500', text: 'text-rose-600' },
-    { label: 'Trung bình', bar: 'bg-amber-500', text: 'text-amber-600' },
-    { label: 'Khá tốt', bar: 'bg-sky-500', text: 'text-sky-600' },
-    { label: 'Rất mạnh', bar: 'bg-emerald-600', text: 'text-emerald-700' },
-  ][newPassword.length === 0 ? 0 : score];
 
   const isFormValid =
     currentPassword.length > 0 &&
-    hasMinLength &&
-    isCaseValid &&
-    hasDigit &&
-    hasSpecial &&
+    checks.passed === 5 &&
+    new TextEncoder().encode(newPassword).length <= 72 &&
     isMatched;
+
+  // Cả hai cách đều thu hồi phiên ở BE: báo thành công rồi chuyển về đăng nhập.
+  const handleChanged = () => {
+    setIsSuccess(true);
+    toast.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
+    onSuccess?.();
+    setTimeout(() => {
+      navigate('/dang-nhap', { replace: true });
+    }, 1500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,21 +77,15 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
         confirmNewPassword,
       });
 
-      setIsSuccess(true);
-      toast.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
-      onSuccess?.();
-
-      setTimeout(() => {
-        navigate('/dang-nhap', { replace: true });
-      }, 1500);
+      handleChanged();
     } catch (err: unknown) {
-      const msg = authErrorMessage(err);
-      if (msg.includes('iam.current_password_invalid')) {
+      const code = iamErrorCode(err);
+      if (code === 'iam.current_password_invalid') {
         setErrorMessage('Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại.');
-      } else if (msg.includes('iam.password_unchanged')) {
+      } else if (code === 'iam.password_unchanged') {
         setErrorMessage('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
       } else {
-        setErrorMessage(msg);
+        setErrorMessage(authErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -142,6 +131,27 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
         </div>
       </div>
 
+      <div className="px-6 sm:px-8 pt-5">
+        <div role="radiogroup" aria-label="Cách xác thực khi đổi mật khẩu" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+          {([
+            ['password', 'Dùng mật khẩu hiện tại'],
+            ['otp', 'Xác thực qua email'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={method === value}
+              onClick={() => { setMethod(value); setErrorMessage(null); }}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${method === value ? 'bg-white text-red-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {method === 'otp' ? <ChangePasswordOtpForm onSuccess={handleChanged} /> : (
       <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5" noValidate>
         {errorMessage && (
           <div
@@ -187,11 +197,6 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
             <label htmlFor={newId} className="block text-xs font-semibold text-slate-800">
               Mật khẩu mới <span className="text-red-600">*</span>
             </label>
-            {newPassword.length > 0 && (
-              <span className={`text-[11px] font-bold ${strengthConfig.text}`}>
-                Độ mạnh: {strengthConfig.label}
-              </span>
-            )}
           </div>
 
           <div className="relative">
@@ -216,90 +221,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
             </button>
           </div>
 
-          {/* Thanh đo độ mạnh trực quan 4 đoạn */}
-          {newPassword.length > 0 && (
-            <div className="grid grid-cols-4 gap-1.5 h-1.5 pt-0.5">
-              {[1, 2, 3, 4].map((step) => (
-                <div
-                  key={step}
-                  className={`rounded-full transition-all duration-300 ${
-                    score >= step ? strengthConfig.bar : 'bg-slate-200'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Checklist 4 tiêu chuẩn trực quan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <div
-              className={`flex items-center gap-2 p-2 rounded-lg border text-xs transition-all duration-200 ${
-                hasMinLength
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 font-semibold'
-                  : 'bg-slate-50 border-slate-200/80 text-slate-500'
-              }`}
-            >
-              <div
-                className={`grid size-4 place-items-center rounded-full text-[10px] ${
-                  hasMinLength ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
-                }`}
-              >
-                {hasMinLength && <Check size={11} weight="bold" />}
-              </div>
-              <span className="text-[11px]">Tối thiểu 8 ký tự</span>
-            </div>
-
-            <div
-              className={`flex items-center gap-2 p-2 rounded-lg border text-xs transition-all duration-200 ${
-                isCaseValid
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 font-semibold'
-                  : 'bg-slate-50 border-slate-200/80 text-slate-500'
-              }`}
-            >
-              <div
-                className={`grid size-4 place-items-center rounded-full text-[10px] ${
-                  isCaseValid ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
-                }`}
-              >
-                {isCaseValid && <Check size={11} weight="bold" />}
-              </div>
-              <span className="text-[11px]">Chữ hoa và chữ thường</span>
-            </div>
-
-            <div
-              className={`flex items-center gap-2 p-2 rounded-lg border text-xs transition-all duration-200 ${
-                hasDigit
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 font-semibold'
-                  : 'bg-slate-50 border-slate-200/80 text-slate-500'
-              }`}
-            >
-              <div
-                className={`grid size-4 place-items-center rounded-full text-[10px] ${
-                  hasDigit ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
-                }`}
-              >
-                {hasDigit && <Check size={11} weight="bold" />}
-              </div>
-              <span className="text-[11px]">Ít nhất 1 số (0-9)</span>
-            </div>
-
-            <div
-              className={`flex items-center gap-2 p-2 rounded-lg border text-xs transition-all duration-200 ${
-                hasSpecial
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 font-semibold'
-                  : 'bg-slate-50 border-slate-200/80 text-slate-500'
-              }`}
-            >
-              <div
-                className={`grid size-4 place-items-center rounded-full text-[10px] ${
-                  hasSpecial ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
-                }`}
-              >
-                {hasSpecial && <Check size={11} weight="bold" />}
-              </div>
-              <span className="text-[11px]">Ít nhất 1 ký tự đặc biệt</span>
-            </div>
-          </div>
+          <PasswordStrength value={newPassword} strict />
         </div>
 
         {/* 3. Xác nhận mật khẩu mới */}
@@ -335,22 +257,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
             </button>
           </div>
 
-          {/* Phản hồi trạng thái khớp mật khẩu */}
-          {confirmNewPassword.length > 0 && (
-            <div className="pt-0.5">
-              {isMatched ? (
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
-                  <CheckCircle size={15} weight="fill" className="text-emerald-600" />
-                  <span>Mật khẩu xác nhận trùng khớp</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-rose-600">
-                  <WarningCircle size={15} weight="fill" className="text-rose-500" />
-                  <span>Mật khẩu xác nhận chưa trùng khớp</span>
-                </div>
-              )}
-            </div>
-          )}
+          <PasswordMatchHint password={newPassword} confirm={confirmNewPassword} />
         </div>
 
         {/* Thanh thao tác dưới cùng */}
@@ -372,6 +279,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
           </Button>
         </div>
       </form>
+      )}
     </div>
   );
 };

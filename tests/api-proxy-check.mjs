@@ -49,6 +49,9 @@ try {
     ['/api/v1/manager/officers?assignedCategory=1', 'iam'],
     ['/api/v1/procedures?pageNumber=1', 'catalog'],
     ['/api/v1/users/me', 'iam'],
+    ['/api/v1/auth/password-otp/request', 'iam'],
+    ['/api/v1/accounts/manager', 'iam'],
+    ['/api/v1/admin/users?role=MANAGER', 'iam'],
   ];
   for (const [path, service] of cases) {
     const response = await fetch(base + path);

@@ -67,22 +67,6 @@ test('đăng ký kiểm tra mật khẩu xác nhận', async ({ page }) => {
   await expect(page.getByText('Mật khẩu xác nhận chưa khớp.')).toBeVisible();
 });
 
-test('quên mật khẩu giải thích chưa khả dụng và giữ lối về đăng nhập', async ({ page }) => {
-  await page.goto('/dang-nhap');
-  await page.getByRole('link', { name: 'Quên mật khẩu?' }).click();
-  await expect(page).toHaveURL(/\/quen-mat-khau$/);
-  await expect(page.getByRole('status')).toContainText('Tính năng khôi phục mật khẩu chưa khả dụng');
-  await expect(page.getByRole('textbox')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Về trang đăng nhập', exact: true })).toHaveAttribute('href', '/dang-nhap');
-});
-
-test('đặt lại mật khẩu không thu thập mật khẩu hoặc báo thành công khi chưa có API', async ({ page }) => {
-  await page.goto('/dat-lai-mat-khau');
-  await expect(page.getByRole('status')).toContainText('mật khẩu của bạn chưa thay đổi');
-  await expect(page.locator('input[type=password]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu thành công' })).toHaveCount(0);
-});
-
 test('trang không tìm thấy có lối quay về rõ ràng và không tràn ngang', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/duong-dan-khong-ton-tai');

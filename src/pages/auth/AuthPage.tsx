@@ -20,21 +20,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { authErrorMessage, login, register } from '@/lib/api';
 
 import { Modal } from '@/components/ui/Modal';
-import { Check, X as XIcon } from '@phosphor-icons/react';
+import { PasswordMatchHint, PasswordStrength } from '@/components/auth/PasswordStrength';
 
 type AuthPageProps = { mode: 'login' | 'register' };
 
-function getPasswordStrength(val: string) {
-  const hasMin = val.length >= 8;
-  const hasUpper = /\p{Lu}/u.test(val);
-  const hasLower = /\p{Ll}/u.test(val);
-  const hasNumber = /\d/.test(val);
-  const hasSpecial = /[\p{P}\p{S}]/u.test(val);
-  const passed = [hasMin, hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-  return { hasMin, hasUpper, hasLower, hasNumber, hasSpecial, passed };
-}
-
-function PasswordField({ id, label, autoComplete, field, error }: { id: string; label: string; autoComplete: string; field: UseFormRegisterReturn; error?: string }) {
+export function PasswordField({ id, label, autoComplete, field, error }: { id: string; label: string; autoComplete: string; field: UseFormRegisterReturn; error?: string }) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -66,7 +56,7 @@ export function AuthPage({ mode }: AuthPageProps) {
     defaultValues: { identity: '', password: '', fullName: '', email: '', confirmPassword: '', terms: false },
   });
   const passwordValue = watch('password') || '';
-  const pwdStrength = getPasswordStrength(passwordValue);
+  const confirmValue = watch('confirmPassword') || '';
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, [mode]);
 
   async function submit(values: AuthFormValues) {
@@ -184,7 +174,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                   id="identity"
                   className="auth-input min-h-11 sm:min-h-12 pl-11"
                   autoComplete="username"
-                  placeholder={isRegister ? 'Nhập tên đăng nhập' : 'Nhập tên đăng nhập hoặc email'}
+                  placeholder={isRegister ? 'Ví dụ: anh.duc (không dấu, không khoảng trắng)' : 'Nhập tên đăng nhập hoặc email'}
                   required
                 />
               </div>
@@ -214,55 +204,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               autoComplete={isRegister ? 'new-password' : 'current-password'}
             />
 
-            {/* Password strength indicator for registration */}
-            {isRegister && passwordValue.length > 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-600">Độ mạnh mật khẩu:</span>
-                  <span
-                    className={
-                      pwdStrength.passed <= 2
-                        ? 'text-red-700'
-                        : pwdStrength.passed <= 4
-                        ? 'text-amber-700'
-                        : 'text-emerald-700'
-                    }
-                  >
-                    {pwdStrength.passed <= 2 ? 'Yếu' : pwdStrength.passed <= 4 ? 'Khá' : 'Mạnh'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-5 gap-1 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  {[1, 2, 3, 4, 5].map((lvl) => (
-                    <div
-                      key={lvl}
-                      className={`h-full transition-colors ${
-                        pwdStrength.passed >= lvl
-                          ? pwdStrength.passed <= 2
-                            ? 'bg-red-600'
-                            : pwdStrength.passed <= 4
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-600'
-                          : 'bg-transparent'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500">
-                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasMin ? 'text-emerald-700 font-semibold' : ''}`}>
-                    {pwdStrength.hasMin ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Ít nhất 8 ký tự
-                  </span>
-                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasUpper ? 'text-emerald-700 font-semibold' : ''}`}>
-                    {pwdStrength.hasUpper ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Có chữ in hoa
-                  </span>
-                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasNumber ? 'text-emerald-700 font-semibold' : ''}`}>
-                    {pwdStrength.hasNumber ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Có chữ số
-                  </span>
-                  <span className={`inline-flex items-center gap-1 ${pwdStrength.hasSpecial ? 'text-emerald-700 font-semibold' : ''}`}>
-                    {pwdStrength.hasSpecial ? <Check size={12} weight="bold" /> : <XIcon size={12} />} Ký tự đặc biệt (@#$...)
-                  </span>
-                </div>
-              </div>
-            )}
+            {isRegister && <PasswordStrength value={passwordValue} />}
 
             {isRegister && (
               <PasswordField
@@ -273,6 +215,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               autoComplete="new-password"
               />
             )}
+            {isRegister && <PasswordMatchHint password={passwordValue} confirm={confirmValue} />}
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-xs sm:text-sm">
               <label className="auth-checkbox">

@@ -1,5 +1,5 @@
-import { RecoveryUnavailable } from './RecoveryUnavailable';
+import { PasswordRecovery } from './PasswordRecovery';
 
 export function ForgotPasswordPage() {
-  return <RecoveryUnavailable />;
+  return <PasswordRecovery />;
 }
