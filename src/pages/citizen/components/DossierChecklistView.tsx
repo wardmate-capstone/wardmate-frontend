@@ -45,7 +45,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     if (lock.current) { if (rethrow) throw new Error('Một thao tác tài liệu khác đang được lưu. Vui lòng chờ rồi thử lại.'); return; }
     lock.current = true; setBusy(true); setErrors(prev => ({ ...prev, [item.checklistId]: '' }));
     try { await action(); }
-    catch (error) { setErrors(prev => ({ ...prev, [item.checklistId]: error instanceof Error && !('isAxiosError' in error) ? error.message : documentFormError(error) })); await contents.refetch(); if (rethrow) throw error; }
+    catch (error) { setErrors(prev => ({ ...prev, [item.checklistId]: documentFormError(error) })); await contents.refetch(); if (rethrow) throw error; }
     finally { lock.current = false; setBusy(false); }
   }
   async function syncChecklist(item: ChecklistItem) {

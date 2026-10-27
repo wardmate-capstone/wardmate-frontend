@@ -26,7 +26,7 @@ test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản th
   await expect(form.getByRole('alert')).toContainText('Tệp đã lưu nhưng chưa cập nhật trạng thái giấy tờ');
   await form.getByRole('button', { name: 'Kiểm tra lại giấy tờ' }).click();
   await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
-  expect(state.writes.filter(x => x.path.endsWith('/draft'))).toHaveLength(1);
+  expect(state.writes.filter(x => x.path.endsWith('/upload-filled-docx'))).toHaveLength(1);
   await evidence.getByLabel('Đính kèm giấy tờ').setInputFiles(pdf);
   const upload = page.getByRole('dialog', { name: 'Khai số bản trong tệp' });
   await upload.getByLabel('Số bản thực tế').fill('0');
@@ -74,7 +74,7 @@ test('cán bộ discovery, DOCX thật, annotate và lỗi nhận xét không si
   await expect(page.getByText('Cần sửa tờ khai', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
-  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('OPEN');
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('nhận xét công dân chưa sửa');
   expect(state.writes.filter(x => x.path.endsWith('/confirm-readiness'))).toHaveLength(0);
 });
 

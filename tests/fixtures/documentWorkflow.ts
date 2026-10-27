@@ -47,7 +47,7 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
     }
     state.writes.push({ path, body: request.postDataBuffer()?.toString() || '' });
     if (path.endsWith('/annotate-docx')) return reply(saved());
-    if (path.endsWith('/draft')) { state.submissionStatus = 'Draft'; return reply(saved(), method === 'POST' ? 201 : 200); }
+    if (path.endsWith('/draft') || path.endsWith('/upload-filled-docx')) { state.submissionStatus = 'Draft'; return reply(saved(), method === 'POST' ? 201 : 200); }
     if (path.includes('/citizen/submissions/') && path.endsWith('/submit')) {
       if (state.failChot) { state.failChot = false; return reply({ code: 'document.storage_unavailable' }, 503); }
       state.submissionStatus = 'Submitted'; return reply(saved());

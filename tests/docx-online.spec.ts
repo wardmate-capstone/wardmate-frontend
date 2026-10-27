@@ -36,7 +36,7 @@ async function setup(page: Page, actor: 'citizen' | 'officer' = 'citizen') {
       if (path.endsWith('download-docx')) return authReply(route, { body: bytes, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       return authReply(route, { json: { id: documentIds.submission, templateId: documentIds.template, applicationId: documentIds.application, checklistId: documentIds.checklist, applicantId: documentIds.citizen, fileName: 'to-khai.docx', fileSizeBytes: bytes.length, status: state.submissionStatus, createdAt: '2026-10-16T01:00:00Z' } });
     }
-    if (path.endsWith('/draft')) {
+    if (path.endsWith('/draft') || path.endsWith('/upload-filled-docx')) {
       if (fail) return authReply(route, { status: 503, json: { code: 'document.blob_upload_failed', message: 'internal-storage-exception' } });
       bytes = uploadedDocx(route); files.push(bytes);
     }
@@ -91,7 +91,7 @@ test('editor loads real DOCX, saves edited bytes and reopens the same draft', as
   await expect(page.getByRole('button', { name: 'Lưu vào hồ sơ', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Lưu vào hồ sơ', exact: true }).click();
   await expect.poll(() => files.length).toBe(2);
-  expect(state.writes.filter(x => x.path === '/api/v1/citizen/submissions/draft')).toHaveLength(1);
+  expect(state.writes.filter(x => x.path === '/api/v1/citizen/submissions/upload-filled-docx')).toHaveLength(1);
   expect(state.writes.filter(x => x.path.endsWith(`/${documentIds.submission}/draft`))).toHaveLength(1);
   await page.screenshot({ path: 'test-results/docx-online-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
