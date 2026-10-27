@@ -30,7 +30,7 @@ test('Cổng cán bộ: Mở menu điều hướng mobile và chuyển sang Qu�
 
   // Open mobile menu
   await page.getByRole('button', { name: 'Mở menu điều hướng cán bộ' }).click();
-  await expect(page.getByRole('complementary', { name: 'Thanh điều hướng Cán bộ Một cửa' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /Điều hướng/ })).toBeVisible();
 
   // Click on "Tất cả hồ sơ"
   await page.getByRole('button', { name: 'Tất cả hồ sơ' }).click();
