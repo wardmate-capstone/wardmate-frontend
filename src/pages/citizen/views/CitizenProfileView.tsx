@@ -11,7 +11,8 @@ import {
   Scan,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
-import { Skeleton } from '@/components/ui';
+import { Input, Skeleton } from '@/components/ui';
+import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
 import { updateMyProfile, authErrorMessage } from '@/lib/api';
 import type { UserProfileDto } from '@/types/profile';
@@ -58,6 +59,7 @@ export function CitizenProfileView({
   loading,
   onProfileUpdated,
 }: CitizenProfileViewProps) {
+  const accountEmail = useAuthStore(state => state.user?.email ?? '');
   const [formData, setFormData] = useState({
     fullName: initialProfile?.fullName || '',
     identityNumber: initialProfile?.identityNumber || '',
@@ -540,6 +542,12 @@ export function CitizenProfileView({
             </div>
 
             {/* SĐT */}
+            <div>
+              <label htmlFor="profile-account-email" className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Email đăng ký</label>
+              <Input id="profile-account-email" type="email" value={accountEmail} readOnly aria-describedby="profile-email-help" placeholder="Tài khoản chưa có email" className="min-w-0 bg-slate-50 text-sm" />
+              <p id="profile-email-help" className="mt-2 text-xs leading-5 text-slate-500">Email nhận mã xác thực khi quên mật khẩu. Bạn có thể xem địa chỉ này; hiện chưa hỗ trợ đổi email tại đây.</p>
+            </div>
+
             <div>
               <label htmlFor="profile-phoneNumber" className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                 Số điện thoại liên hệ
