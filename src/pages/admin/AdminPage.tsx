@@ -458,9 +458,9 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                     identityNumber: detailProfile?.identityNumber || selectedUser.profile?.identityNumber || '',
                     phoneNumber: detailProfile?.phoneNumber || selectedUser.profile?.phoneNumber || '',
                     dateOfBirth: detailProfile?.dateOfBirth || selectedUser.profile?.dateOfBirth || '',
-                    gender: ((detailProfile?.gender || selectedUser.profile?.gender) === 'Nữ' || (detailProfile?.gender || selectedUser.profile?.gender) === 'Khác'
+                    gender: (['Nam', 'Nữ', 'Khác'].includes(detailProfile?.gender || selectedUser.profile?.gender || '')
                       ? (detailProfile?.gender || selectedUser.profile?.gender)
-                      : 'Nam') as 'Nam' | 'Nữ' | 'Khác',
+                      : '') as '' | 'Nam' | 'Nữ' | 'Khác',
                     permanentAddress: detailProfile?.permanentAddress || selectedUser.profile?.permanentAddress || '',
                     temporaryAddress: detailProfile?.temporaryAddress || selectedUser.profile?.temporaryAddress || '',
                   }) as ManagerProfileItem}

@@ -66,7 +66,7 @@ export const ManagerPage: React.FC = () => {
         identityNumber: p.identityNumber || '',
         phoneNumber: '',
         dateOfBirth: '',
-        gender: 'Nam',
+        gender: '',
         permanentAddress: '',
         temporaryAddress: '',
         isActive: p.isActive,
@@ -128,7 +128,7 @@ export const ManagerPage: React.FC = () => {
           identityNumber: updated.identityNumber || '',
           phoneNumber: updated.phoneNumber || '',
           dateOfBirth: updated.dateOfBirth || '',
-          gender: (updated.gender === 'Nữ' || updated.gender === 'Khác' ? updated.gender : 'Nam'),
+          gender: (updated.gender === 'Nam' || updated.gender === 'Nữ' || updated.gender === 'Khác' ? updated.gender : ''),
           permanentAddress: updated.permanentAddress || '',
           temporaryAddress: updated.temporaryAddress || '',
         };
@@ -243,7 +243,7 @@ export const ManagerPage: React.FC = () => {
                 identityNumber: fresh.identityNumber || '',
                 phoneNumber: fresh.phoneNumber || '',
                 dateOfBirth: fresh.dateOfBirth || '',
-                gender: (fresh.gender === 'Nữ' || fresh.gender === 'Khác' ? fresh.gender : 'Nam'),
+                gender: (fresh.gender === 'Nam' || fresh.gender === 'Nữ' || fresh.gender === 'Khác' ? fresh.gender : ''),
                 permanentAddress: fresh.permanentAddress || '',
                 temporaryAddress: fresh.temporaryAddress || '',
               }

@@ -24,7 +24,7 @@ export interface ManagerProfileItem {
   identityNumber: string;
   phoneNumber: string;
   dateOfBirth: string;
-  gender: 'Nam' | 'Nữ' | 'Khác';
+  gender: '' | 'Nam' | 'Nữ' | 'Khác';
   permanentAddress: string;
   temporaryAddress: string;
   updatedAt?: string;
