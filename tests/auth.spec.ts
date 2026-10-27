@@ -27,6 +27,7 @@ async function mock(context: BrowserContext, handler: (route: Route) => Promise<
       roles: ['REGISTERED_CITIZEN', 'FRONT_DESK_OFFICER'], permissions: ['profile.read'],
     });
     // Workspace requests can complete after navigation; keep them separate from IAM assertions.
+    if (path === '/api/analytics-system/hubs/notifications/negotiate') return reply(route, 503);
     if (path === '/api/v1/procedures') return reply(route, 200, { items: [], currentPage: 1, pageSize: 50, totalCount: 0, totalPages: 0, hasPrevious: false, hasNext: false });
     if (path === '/api/v1/wards') return reply(route, 200, []);
     if (path === '/api/v1/applications' || path === '/api/v1/officer/applications/pending') return reply(route, 200, { items: [], page: 1, pageSize: 50, total: 0 });

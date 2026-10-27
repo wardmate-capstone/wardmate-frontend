@@ -1,8 +1,70 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 26/10/2026.
+Cập nhật: 27/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Chốt 20 commit và kiểm tra trước push main — 27/10/2026
+
+- Theo yêu cầu người dùng, toàn bộ đợt thay đổi từ `789587a` được chia thành **20 commit** theo hạng mục: profile/validation, chat/AI/OCR, quyết định và trạng thái hồ sơ, QR, tài liệu, thủ tục, lớp hiển thị, thông báo, kiểm thử và báo cáo. Không sửa backend, không đổi dependency.
+- 19 commit đầu: `01dc919` → `091be5b`. Đã xác minh bằng `git ls-remote origin refs/heads/main` rằng GitHub `wardmate-capstone/wardmate-frontend`, nhánh `main`, ở `091be5b35dfb123a9aebaa12a0c060af4564402f` và đã chứa 19 commit này. Commit bàn giao này là commit thứ 20, gồm 3 tài liệu còn lại và fixture auth được cập nhật sau kiểm tra toàn bộ. Xác nhận SHA push cuối cùng bằng Git; không dùng các dòng “chưa commit/push” trong những mục lịch sử phía dưới làm trạng thái hiện tại.
+- **Kiểm tra chốt đợt:** `npm run typecheck`, `npm run lint`, `npm run build` đạt; build còn cảnh báo chunk DOCX lớn và annotation Zod đã biết. Proxy local **23/23** đạt.
+- Playwright toàn bộ **243/244 đạt**. Ca lỗi `auth.spec.ts` không nhận biết request negotiate của NotificationHub mới tại cổng công dân; mock coi request này là `/mock-private`. Đã cập nhật fixture trả 503 cho negotiate để mô phỏng dịch vụ thông báo không khả dụng, giữ nguyên các assertion cookie HttpOnly, token RAM và refresh. Chạy lại toàn bộ `tests/auth.spec.ts`: **8/8 đạt**. Không trình bày kết quả này thành một lượt toàn bộ 244/244 đạt.
+- Source sản phẩm giữ nguyên sau lượt toàn bộ; thay đổi cuối chỉ là fixture test và tài liệu. Các commit không được kiểm thử độc lập. SignalR/API trong Playwright dùng mock; chưa nghiệm thu Azure có đăng nhập, OTP/worker/Blob/Gotenberg hoặc quét QR thực tế.
+- Báo cáo: [FULL_AUDIT_2026-10-27.md](FULL_AUDIT_2026-10-27.md), [API_UI_ENDPOINTS_2026-10-27.md](API_UI_ENDPOINTS_2026-10-27.md), [CHANGES_AND_CHECKLIST_2026-10-27.md](CHANGES_AND_CHECKLIST_2026-10-27.md). Các giới hạn nghiệp vụ/API trong báo cáo vẫn còn hiệu lực.
+
+## Sửa UI hộp thư thông báo công dân — 27/10/2026
+
+- Theo ảnh người dùng, trang chỉ có thanh tiêu đề/nút đọc tất cả và khoảng trống. Nguyên nhân code: `CitizenPage` giữ mảng thông báo rỗng cục bộ; thao tác đọc tất cả chỉ sửa state/toast, chưa dùng NotificationHub.
+- `CitizenNotificationsView.tsx`: dựng lại header/mô tả, bộ lọc Tất cả/Chưa đọc có số lượng trong danh sách, nhãn chưa đọc, thời gian, mở hồ sơ và đánh dấu từng mục/tất cả. Thêm loading/empty/offline/lỗi thao tác riêng; khóa gửi lặp và thao tác khi chưa kết nối; nút/khối xuống dòng ở 320px. Không có xóa hoặc dữ liệu mẫu.
+- `CitizenPage.tsx`: dùng `useNotificationHub` hiện có cho hộp thư và số chưa đọc ở chuông; mở hồ sơ bằng applicationId qua Workflow. Không dùng actionUrl tùy ý từ notification. Đây là hộp thư trong cổng công dân, không phải thay đổi dropdown `NotificationBell` công khai.
+- `useNotificationHub.ts`: chỉ báo connected sau khi tải snapshot thành công; lỗi tải được hiển thị offline và retry trên kết nối hiện hữu; reconnect cũng tải lại qua cùng luồng retry. Sau MarkRead, đọc lại GetUnreadCount; offline không được xem là đánh dấu thành công. Đã đối chiếu GetNotifications/GetUnreadCount/MarkRead với NotificationHub BE; BE chưa có MarkAllRead nên đọc tất cả áp dụng các thông báo đã tải (lần tải hiện tại tối đa 50), UI ghi rõ phạm vi.
+- Test mới `tests/citizen-notifications.spec.ts` bao phủ loading/empty, list/filter, mark lỗi/thử lại, mở hồ sơ, offline và snapshot lỗi. Đã xem ảnh empty/desktop/320px. Lượt đầu nhóm notification 9/9 đạt; lượt cuối `citizen-notifications`, `officer-notifications`, `notifications`, `ui-audit` **16/16 đạt**. Typecheck/lint/build và `git diff --check` đạt; build còn cảnh báo chunk DOCX/annotation Zod đã biết. Các ca SignalR dùng mock; chưa nghiệm thu Azure có đăng nhập. Chưa commit/push.
+
+## Sửa chat bị thanh điều hướng che phần đầu — 27/10/2026
+
+- Theo ảnh người dùng: header công khai `z-50` che cửa sổ AI `z-40` khi viewport thấp hoặc thu phóng. Sửa `src/components/layout/MainLayout.tsx`: header về `z-30`, chat giữ 40; menu mobile 70/80 và modal 90/91 tiếp tục phủ phía trên. Không tăng chat vượt các hộp thoại.
+- Thêm 2 test khách/đã đăng nhập vào `tests/full-audit.spec.ts`: tại 1440×600, 1024×500 và 320×640, cuộn trang rồi mở chat; dùng hit test ở nút đóng để xác nhận header không che thao tác, kiểm tra menu mobile phủ chat và đóng chat được. Đã xem ảnh desktop/mobile sau sửa.
+- Kiểm tra: typecheck/lint/build đạt (cảnh báo chunk DOCX và annotation Zod đã biết); Playwright `full-audit` + `landing` **24/24 đạt** (mock); `git diff --check` đạt. Chưa commit/push.
+
+## Hiển thị trợ lý AI cho khách chưa đăng nhập — 27/10/2026
+
+- Theo yêu cầu mới, `AiChatWidget.tsx` hiện nút và cửa sổ chat cả khi chưa đăng nhập trên trang chủ. Khách thấy lời chào và nút “Đăng nhập để trò chuyện”; link giữ `returnTo` gồm đường dẫn/query/hash. Mở cửa sổ đưa focus tới nút đăng nhập, Escape đóng và trả focus về nút mở.
+- Đã đọc lại `AssistantController.cs`: controller có `[Authorize]`, completions dùng `UserId` từ JWT. Khách chưa được gửi câu hỏi trực tiếp với hợp đồng BE hiện tại. Widget khách không tải phường hoặc gọi chat; người đã đăng nhập giữ luồng chọn phường/gửi như trước. Hội thoại vẫn tách theo user/guest và hủy request khi đổi danh tính.
+- Không sửa backend. Yêu cầu mới thay thế quyết định hiển thị widget chỉ cho người đăng nhập ở lượt audit trước.
+- Thêm test khách trong `tests/full-audit.spec.ts`: hiển thị tại 320px, Escape/focus, không gọi chat khi khách và link đăng nhập giữ trang quay lại. Lượt đầu phát hiện lỗi focus khách, đã sửa; kiểm tra lại **10/10 đạt** (mock). `npm run typecheck`, `npm run lint`, `npm run build` đạt; build còn cảnh báo chunk DOCX lớn/annotation Zod như trước. Đã xem ảnh guest mobile. Chưa nghiệm thu API Azure có đăng nhập; chưa commit/push.
+
+## Bổ sung cơ sở nghiệp vụ và danh sách file để kiểm tra — 27/10/2026
+
+- Người dùng cung cấp 3 sơ đồ Main Flow/Main Flow 2/Flow 3 và Conceptual ERD; yêu cầu dùng làm cơ sở nghiệp vụ khi rà soát tiếp. ERD gốc: `e:/FileSubject/Part 9/WardMate_ERD-Conceptual ERD.drawio.png`; 3 ảnh luồng nằm trong hội thoại. ERD thể hiện mô hình khái niệm, không được suy ra endpoint hoặc implementation từ sự tồn tại của thực thể.
+- Đã tạo [CHANGES_AND_CHECKLIST_2026-10-27.md](CHANGES_AND_CHECKLIST_2026-10-27.md): từng file đã sửa so với `789587a`, hành vi trước/sau, 14 bước kiểm tra và bảng những điểm cần tiếp tục đối chiếu theo sơ đồ/ERD. Chưa thực hiện lượt rà soát đầy đủ ERD hoặc triển khai tính năng bổ sung từ các ảnh.
+- Lượt này chỉ sửa tài liệu; đã đối chiếu diff hiện tại, kiểm tra đường dẫn/nội dung và `git diff --check`. Không chạy lại test/build; kết quả lượt sửa tính năng bên dưới được giữ nguyên với ngày/phạm vi thực tế. Chưa commit/push.
+
+## Rà soát toàn bộ API, actor UI, validation và main flow — 27/10/2026
+
+- **Phạm vi:** thực hiện yêu cầu rà soát/sửa lỗi sau khi người dùng cho triển khai kế hoạch. Bắt đầu từ FE `main` tại `789587a`, working tree sạch. Chỉ đọc BE tại `E:/wardmate-backend`, không sửa BE, không dùng Git trong BE. Chưa commit/push.
+- **Bằng chứng API:** GET trực tiếp 5 Swagger Azure thành công, tổng 148 HTTP operations gồm health. GET chưa đăng nhập: IAM `/users/me` 401; Catalog `/procedures/categories` 200; Workflow `/applications` 401; gateway `/form-templates` và `/analytics/overview` 401. Không gọi mutation nghiệp vụ trên Azure.
+- **Tài liệu bàn giao:** [FULL_AUDIT_2026-10-27.md](FULL_AUDIT_2026-10-27.md) ghi kết quả, đề xuất từng actor, sơ đồ luồng và phụ thuộc; [API_UI_ENDPOINTS_2026-10-27.md](API_UI_ENDPOINTS_2026-10-27.md) kiểm kê từng method/route. Phân biệt call-site đã có với tích hợp thật đã nghiệm thu.
+- **Đã sửa:**
+  - Workflow/DocumentForm: bỏ fallback POST `/approve` khi `confirm-readiness` trả 404; chi tiết công dân kiểm tra ID response. Trạng thái không biết hiển thị chưa xác định, không biến thành bản nháp/chờ nhận xử lý.
+  - QR công dân: bỏ QR tự sinh qua qrserver.com và link danh sách tự chế; chỉ hiển thị/tải ảnh từ backend, có loading/error/retry và mở chi tiết để tạo PDF.
+  - Hồ sơ Admin/Manager dùng RHF/Zod chung, lỗi liên kết focus về trường, giữ dữ liệu khi lỗi và chặn gửi lặp. Bỏ giới tính/trạng thái xác thực/dân tộc/quốc tịch suy đoán. Công dân chặn gửi lặp và đọc lỗi server có tiền tố trường.
+  - `profileSchema.ts`/HTTP client: tên Unicode NFC; chuẩn hóa số điện thoại có dấu phân cách ở lớp API cho mọi màn sửa hồ sơ; so ngày sinh theo giờ Việt Nam. Giữ các ràng buộc sản phẩm đang có dù chặt hơn BE, không tự nới nghiệp vụ.
+  - Chat dùng phường từ API công khai; không dùng `WARD_001`. Gợi ý lý do cán bộ dùng phường hồ sơ, thiếu thì nhập tay. Widget tách hội thoại theo user, hủy request reset/unmount, giữ câu hỏi khi lỗi và không lặp tin khi thử lại, kiểm tra clipboard, sửa reflow 320px/nhãn/Escape; nút mở thu gọn trên mobile để giảm che nội dung.
+  - OCR: chặn tệp rỗng, xóa tệp/kết quả cũ khi chọn sai, chọn lại cùng tệp; hủy request khi đóng/thay ảnh/unmount, chặn gửi lặp; nhập tay không tự gán Nam.
+  - Chi tiết thủ tục bỏ danh sách/cơ quan mẫu, đổi nhãn xếp hạng không có bằng chứng thành “Thủ tục khác”; lỗi danh mục quản lý có tải lại. Upload hiển thị lỗi tiếng Việt qua `documentFormError`.
+  - Fixture/test cập nhật đúng `/upload-filled-docx`, hành vi gửi lại đã có cán bộ phụ trách và menu mobile Radix Dialog. Thêm `tests/full-audit.spec.ts` cho các lỗi vừa sửa. ESLint bỏ qua thư mục kết quả test.
+- **Môi trường:** khôi phục 16 package đã có trong lockfile nhưng thiếu ở node_modules (gồm SignalR); không thêm dependency/đổi phiên bản. Nội dung `package-lock.json` giữ nguyên HEAD. `.env.development.local` và `.env.example` có đủ 5 URL đã cung cấp.
+- **Kiểm tra đã chạy trên code hiện tại:**
+  - `npm run typecheck`, `npm run lint`, `npm run build`: đạt. Build còn cảnh báo chunk lớn (DOCX editor khoảng 3,86 MB, gzip 1,20 MB) và annotation của Zod bị Rollup bỏ qua; không phải build lỗi.
+  - `npx playwright test --workers=2 --reporter=line`: **236/237 đạt**, 1 ca `auth-recovery` timeout lúc nút bị tháo khỏi DOM và trang điều hướng lại. Chưa khẳng định nguyên nhân; không sửa auth chỉ để test xanh.
+  - Sau chỉnh cuối nút chat/mobile và chống lặp tin gửi lỗi: `npx playwright test tests/full-audit.spec.ts tests/ui-audit.spec.ts tests/citizen-dossier-ui.spec.ts tests/auth-recovery.spec.ts --workers=1 --reporter=line`: **22/22 đạt**, gồm ca quên mật khẩu timeout ở trên. Không trình bày thành một lượt toàn bộ 237/237 đạt.
+  - `node tests/api-proxy-check.mjs`: **23/23 tuyến đạt**, exit 0; dùng HTTP server thử tại local, không gọi Azure.
+  - Đã xem ảnh chat 320px, validation auth, chi tiết hồ sơ công dân/cán bộ và dashboard Manager/Admin. Test kiểm tra reflow 1440/720/320, focus trap/Escape cho cả 5 vai trò; screenshot nằm trong `test-results` (Git ignore, bị ghi lại khi chạy test).
+  - `git diff --check`: đạt. Các lượt chẩn đoán trước có fixture/assertion cũ và teardown Vite treo trong sandbox Windows; lượt xác minh cuối chạy Edge ngoài sandbox, thoát bình thường. Toàn bộ Playwright là **mock**, chưa phải nghiệm thu Azure có đăng nhập.
+- **Còn thiếu:** chưa nối UI cho AI `documents/verify`, chat sessions/messages và Knowledge/RAG; một số màn vận hành còn placeholder. Xem báo cáo để biết API đã có source và phần cần thêm hợp đồng BE. Lọc trạng thái hồ sơ công dân/Admin vẫn chỉ trên trang đã tải do giới hạn query BE; số lượng phân công cần API tổng hợp để giảm request.
+- **Giữ quyết định cũ:** không bật lại tiếp nhận chính thức/cấp biên nhận, phone/SMS, remember-me hay delivery admin. Không suy ra các mục đó phải được triển khai chỉ vì Swagger có endpoint.
+- **Bước nghiệm thu thật còn cần:** tài khoản thử được phép cho 5 vai trò thuộc ít nhất 2 phường; chạy xuyên actor, kiểm tra 403/409, OTP mail, SignalR/worker, PDF/Blob/Gotenberg và QR công khai. Chưa có credentials nên không xác nhận luồng production, CORS/cookie hoặc phân quyền Azure đã hoạt động xuyên suốt.
 
 ## Rà soát và tích hợp API IAM (trừ phone/SMS) — 26/10/2026
 
