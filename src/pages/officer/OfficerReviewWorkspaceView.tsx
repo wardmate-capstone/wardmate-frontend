@@ -167,6 +167,11 @@ export function OfficerReviewWorkspaceView({
 
   async function handleGenerateAiReason() {
     if (isGeneratingAiReason || busy) return;
+    const wardCode = detail.data?.wardCode;
+    if (!wardCode) {
+      toast.error('Chưa xác định được phường/xã của hồ sơ. Vui lòng nhập lý do thủ công.');
+      return;
+    }
     setIsGeneratingAiReason(true);
     try {
       const missingDocs = mandatoryChecklists
@@ -196,7 +201,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
       const res = await aiOcrApi.chat({
         message: prompt,
-        wardCode: detail.data?.wardCode || 'WARD_001',
+        wardCode,
       });
 
       if (res.answer) {
