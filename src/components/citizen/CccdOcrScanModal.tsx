@@ -62,15 +62,29 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     citizenId: '',
     fullName: '',
     dateOfBirth: '',
-    gender: 'Nam',
+    gender: '',
     placeOfOrigin: '',
     placeOfResidence: '',
   });
 
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
+  const scanRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => () => scanRequest.current?.abort(), []);
+
+  useEffect(() => {
+    if (!open) scanRequest.current?.abort();
+  }, [open]);
+
+  const cancelScan = () => {
+    scanRequest.current?.abort();
+    scanRequest.current = null;
+    setLoading(false);
+  };
 
   const resetState = () => {
+    cancelScan();
     setFrontFile(null);
     setBackFile(null);
     if (frontPreview) URL.revokeObjectURL(frontPreview);
@@ -90,7 +104,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
       citizenId: '',
       fullName: '',
       dateOfBirth: '',
-      gender: 'Nam',
+      gender: '',
       placeOfOrigin: '',
       placeOfResidence: '',
     });
@@ -117,6 +131,17 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
   const handleFrontChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    cancelScan();
+    setFrontFile(null);
+    setResult(null);
+    if (frontPreview) URL.revokeObjectURL(frontPreview);
+    setFrontPreview(null);
+
+    if (!file.size) {
+      setError('Ảnh mặt trước không có nội dung. Vui lòng chọn ảnh khác.');
+      return;
+    }
 
     if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
       setError('Ảnh mặt trước phải có định dạng JPEG hoặc PNG.');
@@ -130,13 +155,23 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     setError(null);
     setFrontFile(file);
     setFrontRotation(0);
-    if (frontPreview) URL.revokeObjectURL(frontPreview);
     setFrontPreview(URL.createObjectURL(file));
   };
 
   const handleBackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    cancelScan();
+    setBackFile(null);
+    setResult(null);
+    if (backPreview) URL.revokeObjectURL(backPreview);
+    setBackPreview(null);
+
+    if (!file.size) {
+      setError('Ảnh mặt sau không có nội dung. Vui lòng chọn ảnh khác.');
+      return;
+    }
 
     if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
       setError('Ảnh mặt sau phải có định dạng JPEG hoặc PNG.');
@@ -150,7 +185,6 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     setError(null);
     setBackFile(file);
     setBackRotation(0);
-    if (backPreview) URL.revokeObjectURL(backPreview);
     setBackPreview(URL.createObjectURL(file));
   };
 
@@ -165,6 +199,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
   };
 
   const handleScan = async () => {
+    if (scanRequest.current) return;
     if (!frontFile) {
       setError('Vui lòng chọn ảnh mặt trước của Căn cước công dân.');
       return;
@@ -172,16 +207,23 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
 
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    scanRequest.current = controller;
 
     try {
-      const data = await aiOcrApi.extractCccd(frontFile, backFile || undefined);
+      const data = await aiOcrApi.extractCccd(frontFile, backFile || undefined, controller.signal);
+      if (controller.signal.aborted) return;
       setResult(data);
       toast.success('Bóc tách thông tin CCCD thành công!');
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       const message = err instanceof Error ? err.message : 'Không thể bóc tách CCCD. Vui lòng thử lại với ảnh rõ nét hơn.';
       setError(message);
     } finally {
-      setLoading(false);
+      if (scanRequest.current === controller) {
+        scanRequest.current = null;
+        setLoading(false);
+      }
     }
   };
 
@@ -278,6 +320,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                   <input
                     ref={frontInputRef}
                     type="file"
+                    aria-label="Ảnh CCCD mặt trước"
                     accept="image/jpeg,image/png,image/jpg"
                     className="hidden"
                     onChange={handleFrontChange}
@@ -327,6 +370,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                         <button
                           type="button"
                           onClick={() => {
+                            cancelScan();
                             setFrontFile(null);
                             setFrontPreview(null);
                             setFrontRotation(0);
@@ -381,6 +425,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                   <input
                     ref={backInputRef}
                     type="file"
+                    aria-label="Ảnh CCCD mặt sau"
                     accept="image/jpeg,image/png,image/jpg"
                     className="hidden"
                     onChange={handleBackChange}
@@ -428,6 +473,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                         <button
                           type="button"
                           onClick={() => {
+                            cancelScan();
                             setBackFile(null);
                             setBackPreview(null);
                             setBackRotation(0);
@@ -601,12 +647,14 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       Giới tính
                     </label>
                     <select
-                      value={manualForm.gender || 'Nam'}
+                      value={manualForm.gender || ''}
                       onChange={(e) => setManualForm({ ...manualForm, gender: e.target.value })}
                       className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-white"
                     >
+                      <option value="">Chưa cập nhật</option>
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
                     </select>
                   </div>
 
