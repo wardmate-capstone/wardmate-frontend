@@ -43,7 +43,7 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   state.actor = 'officer';
   await page.goto('/officer');
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
-  await page.getByRole('button', { name: 'Nhận xử lý', exact: true }).click();
+  await page.getByRole('button', { name: 'Review lại', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận quyết định' }).click();
   await expect.poll(() => state.status).toBe('DOCUMENTS_READY');
