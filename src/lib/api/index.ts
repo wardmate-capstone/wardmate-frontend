@@ -4,6 +4,7 @@ import { redirectToLogin } from '../authRedirect';
 import { useAuthStore, type CurrentUser } from '@/stores/authStore';
 import type { UserProfileDto, ProfileInput } from '@/types/profile';
 import { configuredServiceOrigins, serviceUrls } from './serviceUrls';
+import { normalizeProfileInput } from '@/lib/profileSchema';
 export type { UserProfileDto, ProfileInput };
 
 const baseURL = serviceUrls.iam;
@@ -188,6 +189,7 @@ export async function getMyProfile(): Promise<UserProfileDto> {
 }
 
 export async function updateMyProfile(payload: ProfileInput): Promise<UserProfileDto> {
+  payload = normalizeProfileInput(payload);
   const owner = useAuthStore.getState().user;
   // Hồ sơ có thể đã bị xoá (PUT trả iam.profile_not_found) thì tạo mới bằng POST.
   const response = await api.put<UserProfileDto>('/api/v1/users/me/profile', payload, cookieConfig)
@@ -278,11 +280,13 @@ export async function getAdminProfile(userId: string): Promise<UserProfileDto> {
 }
 
 export async function createAdminProfile(userId: string, payload: ProfileInput): Promise<UserProfileDto> {
+  payload = normalizeProfileInput(payload);
   const response = await api.post<UserProfileDto>(`/api/v1/users/${userId}/profile`, payload, cookieConfig);
   return response.data;
 }
 
 export async function updateAdminProfile(userId: string, payload: ProfileInput): Promise<UserProfileDto> {
+  payload = normalizeProfileInput(payload);
   const response = await api.put<UserProfileDto>(`/api/v1/users/${userId}/profile`, payload, cookieConfig);
   return response.data;
 }

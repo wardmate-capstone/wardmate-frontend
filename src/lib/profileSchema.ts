@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import axios from 'axios';
+import type { ProfileInput } from '@/types/profile';
 
 export const VIETNAMESE_PHONE_REGEX = /^0[35789]\d{8}$/;
 export const VIETNAMESE_CITIZEN_ID_REGEX = /^\d{12}$/;
@@ -8,6 +10,7 @@ export const profileSchema = z.object({
   fullName: z
     .string()
     .trim()
+    .normalize('NFC')
     .min(1, 'Vui lòng nhập họ và tên.')
     .max(100, 'Họ và tên không được vượt quá 100 ký tự.')
     .regex(
@@ -59,11 +62,8 @@ export const profileSchema = z.object({
     }, 'Ngày sinh không đúng định dạng hoặc không tồn tại trên lịch.')
     .refine((val) => {
       if (!val) return true;
-      const [year, month, day] = val.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
-      return date <= today;
+      const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      return val <= today;
     }, 'Ngày sinh không được vượt quá ngày hiện tại.')
     .refine((val) => {
       if (!val) return true;
@@ -112,6 +112,29 @@ export const profileSchema = z.object({
 export type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export type ProfileFieldErrors = Partial<Record<keyof ProfileFormValues, string>>;
+
+export function profileServerErrors(error: unknown): ProfileFieldErrors {
+  if (!axios.isAxiosError(error)) return {};
+  const errors = error.response?.data?.errors;
+  if (!errors || typeof errors !== 'object' || Array.isArray(errors)) return {};
+  const fields = Object.keys(profileSchema.shape) as Array<keyof ProfileFormValues>;
+  const result: ProfileFieldErrors = {};
+  for (const [key, messages] of Object.entries(errors)) {
+    const field = fields.find(field => field.toLowerCase() === key.split('.').at(-1)?.toLowerCase());
+    const message = Array.isArray(messages) ? messages[0] : messages;
+    if (field && typeof message === 'string' && message.trim()) result[field] = message;
+  }
+  return result;
+}
+
+// Cùng định dạng mà validation chấp nhận, áp dụng cho mọi màn tự sửa/Admin/Manager.
+export function normalizeProfileInput(input: ProfileInput): ProfileInput {
+  return {
+    ...input,
+    fullName: input.fullName.normalize('NFC').trim().replace(/\s+/g, ' '),
+    phoneNumber: input.phoneNumber?.replace(/[\s.-]/g, '') || null,
+  };
+}
 
 export function validateProfile(values: {
   fullName: string;
