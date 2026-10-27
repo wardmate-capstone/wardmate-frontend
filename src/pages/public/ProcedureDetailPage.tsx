@@ -22,7 +22,7 @@ export function ProcedureDetailPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const listUrl = '/thu-tuc' + search;
 
-  // Danh sách thủ tục tìm kiếm nhiều nhất (dùng TanStack Query cache an toàn)
+  // Catalog trả danh sách công khai, không có số liệu xếp hạng lượt tìm kiếm.
   const popularQuery = usePublicProcedureList({ pageSize: 7 });
 
   // State chọn trường hợp nếu thủ tục có nhiều case
@@ -561,13 +561,13 @@ export function ProcedureDetailPage() {
             <div className="rounded-lg border border-slate-300 bg-white shadow-xs overflow-hidden">
               <div className="bg-[#f8fafc] px-4 py-2.5 border-b border-slate-200">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Tìm kiếm nhiều nhất
+                  Thủ tục khác
                 </h3>
               </div>
 
               <div className="divide-y divide-slate-100">
-                {popularQuery.data?.items && popularQuery.data.items.length > 0 ? (
-                  popularQuery.data.items.slice(0, 7).map((item: ProcedureSummary) => (
+                {popularQuery.data?.items?.some(item => item.id !== procedure.id) ? (
+                  popularQuery.data.items.filter(item => item.id !== procedure.id).slice(0, 7).map((item: ProcedureSummary) => (
                     <Link
                       key={item.id}
                       to={`/thu-tuc/${item.id}`}
@@ -585,26 +585,10 @@ export function ProcedureDetailPage() {
                     </Link>
                   ))
                 ) : (
-                  // Fallback các thủ tục phổ biến theo mẫu DVCQG
-                  [
-                    { title: 'Hỗ trợ phát triển sản xuất cộng đồng.', org: 'UBND tỉnh Sơn La' },
-                    { title: 'Hưởng trợ cấp thất nghiệp (Cấp tỉnh)', org: 'Bộ Nội vụ' },
-                    { title: 'Cấp Phiếu lý lịch tư pháp cho công dân Việt Nam, người nước ngoài...', org: 'Bộ Công an' },
-                    { title: 'Thông báo hàng tháng về việc tìm kiếm việc làm (Cấp tỉnh)', org: 'Bộ Nội vụ' },
-                    { title: 'Đăng ký biến động quyền sử dụng đất, quyền sở hữu tài sản gắn liền...', org: 'UBND tỉnh Gia Lai' },
-                    { title: 'Cung cấp thông tin, dữ liệu đất đai', org: 'Bộ Nông nghiệp và Môi trường' },
-                    { title: 'Thủ tục Chứng thực bản sao từ bản chính các giấy tờ, văn bản...', org: 'Bộ Ngoại giao' },
-                  ].map((mock, idx) => (
-                    <div key={idx} className="flex items-start gap-2 p-3 text-xs sm:text-[13px]">
-                      <CaretRight size={14} className="text-red-700 mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 line-clamp-2 leading-snug">
-                          {mock.title}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">{mock.org}</p>
-                      </div>
-                    </div>
-                  ))
+                  <div className="p-3 text-sm text-slate-600">
+                    <ProcedureFeedback loading={popularQuery.isPending} error={popularQuery.isError ? procedureError(popularQuery.error) : ''} retry={() => void popularQuery.refetch()} />
+                    {!popularQuery.isPending && !popularQuery.isError && <p>Chưa có thủ tục khác trong danh mục.</p>}
+                  </div>
                 )}
               </div>
             </div>
