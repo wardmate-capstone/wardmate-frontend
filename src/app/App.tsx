@@ -7,6 +7,7 @@ import { HomePage } from '@/pages/public/HomePage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { FaqPage } from '@/pages/public/FaqPage';
+import { GuidePage } from '@/pages/public/GuidePage';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { ProcedureDetailPage } from '@/pages/public/ProcedureDetailPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
@@ -77,6 +78,7 @@ export function App() {
                   <Route path="quen-mat-khau" element={<ForgotPasswordPage />} />
                   <Route path="dat-lai-mat-khau" element={<ResetPasswordPage />} />
                   <Route path="hoi-dap" element={<FaqPage />} />
+                  <Route path="huong-dan" element={<GuidePage />} />
                   <Route path="thu-tuc" element={<ProceduresPage />} />
                   <Route path="thu-tuc/:procedureId" element={<ProcedureDetailPage />} />
                   <Route path="thu-tuc-hanh-chinh/:procedureId" element={<ProcedureDetailPage />} />
