@@ -108,7 +108,7 @@ test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực v
   await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Xem Đăng ký kết hôn/ })).toHaveCount(0);
 
-  await page.getByRole('button', { name: /Chứng thực/ }).click();
+  await page.getByRole('complementary', { name: 'Lọc theo lĩnh vực' }).getByRole('button', { name: 'Chứng thực', exact: true }).click();
   await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
   await page.getByRole('button', { name: 'Xem tất cả thủ tục' }).click();
   await expect(page.getByText('6 thủ tục phù hợp')).toBeVisible();

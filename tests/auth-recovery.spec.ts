@@ -86,6 +86,44 @@ test('gửi OTP quá nhiều lần hiện thông báo chờ và không chuyển 
   await expect(page.locator('input[type=password]')).toHaveCount(0);
 });
 
+test('refresh 401 khi khách chưa đăng nhập không chặn yêu cầu OTP email', async ({ page }) => {
+  const requests: Array<{ path: string; authorization?: string; csrf?: string; body: unknown }> = [];
+  await page.route('http://localhost:5000/**', route => {
+    if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    requests.push({ path, authorization: request.headers().authorization, csrf: request.headers()['x-csrf-protection'], body: request.postDataJSON() });
+    if (path.endsWith('/refresh-token')) return authReply(route, { status: 401, json: { code: 'iam.invalid_token' } });
+    if (path.endsWith('/password-otp/request')) return authReply(route, { status: 202, json: { message: 'Nếu tài khoản hợp lệ, yêu cầu gửi mã đã được tiếp nhận.' } });
+    return authReply(route, { status: 404 });
+  });
+  await page.goto('/quen-mat-khau');
+  await expect.poll(() => requests.filter(request => request.path.endsWith('/refresh-token')).length).toBe(1);
+  await page.getByLabel('Email hoặc tên đăng nhập').fill('  an@example.com  ');
+  await page.getByRole('button', { name: 'Gửi mã xác thực' }).click();
+  await expect(page.getByLabel('Mã xác thực (6 chữ số)')).toBeVisible();
+  expect(requests.filter(request => request.path.endsWith('/password-otp/request'))).toEqual([{
+    path: '/api/v1/auth/password-otp/request', authorization: undefined, csrf: '1',
+    body: { emailOrUsername: 'an@example.com', channel: 'EMAIL', purpose: 'FORGOT_PASSWORD' },
+  }]);
+  expect(requests.filter(request => request.path.endsWith('/refresh-token'))).toHaveLength(1);
+});
+
+test('dịch vụ email 503 hiển thị lỗi và giữ email, không giả chuyển sang bước nhập OTP', async ({ page }) => {
+  await page.route('http://localhost:5000/**', route => {
+    if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+    return new URL(route.request().url()).pathname.endsWith('/password-otp/request')
+      ? authReply(route, { status: 503, json: { status: 503, code: 'iam.email_unavailable', title: 'Dịch vụ Email chưa sẵn sàng.' } })
+      : authReply(route, { status: 401, json: { code: 'iam.invalid_token' } });
+  });
+  await page.goto('/quen-mat-khau');
+  await page.getByLabel('Email hoặc tên đăng nhập').fill('an@example.com');
+  await page.getByRole('button', { name: 'Gửi mã xác thực' }).click();
+  await expect(page.getByText('Hệ thống chưa gửi được email lúc này. Vui lòng thử lại sau.')).toBeVisible();
+  await expect(page.getByLabel('Email hoặc tên đăng nhập')).toHaveValue('an@example.com');
+  await expect(page.getByLabel('Mã xác thực (6 chữ số)')).toHaveCount(0);
+});
+
 test('đặt lại mật khẩu không có tài khoản bắt đầu từ bước gửi mã', async ({ page }) => {
   await mockRecovery(page, () => ({ status: 200, json: {} }));
   await page.goto('/dat-lai-mat-khau');

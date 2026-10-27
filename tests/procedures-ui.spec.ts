@@ -51,7 +51,7 @@ test('submit searches immediately, clear removes pending text and pagination kee
   await expect(search).toHaveValue('');
   await expect(page).toHaveURL('/thu-tuc');
   await expect(page.locator('.procedures-list > li')).toHaveCount(5);
-  await page.getByRole('button', { name: 'Chứng thực', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Lọc theo lĩnh vực' }).getByRole('button', { name: 'Chứng thực', exact: true }).click();
   await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
   await page.getByRole('button', { name: 'Xem tất cả thủ tục', exact: true }).click();
   await expect(page.locator('.procedures-list > li')).toHaveCount(5);
