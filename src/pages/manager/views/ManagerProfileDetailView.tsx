@@ -1,5 +1,8 @@
 import { copyToClipboard } from '@/lib/clipboard';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { profileSchema, profileServerErrors, type ProfileFormValues } from '@/lib/profileSchema';
 import {
   ArrowLeft,
   IdentificationCard,
@@ -48,30 +51,38 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
   const [activeTab, setActiveTab] = useState<TabType>('identity-residence');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<ManagerProfileItem>({ ...profile });
+  const form = useForm<ProfileFormValues>({ resolver: zodResolver(profileSchema), defaultValues: profile });
+  const formData = form.watch();
+  const saveLock = useRef(false);
 
   function handleStartEdit() {
-    setFormData({ ...profile });
+    form.reset(profile);
     setIsEditing(true);
   }
 
   function handleCancelEdit() {
-    setFormData({ ...profile });
+    form.reset(profile);
     setIsEditing(false);
   }
 
-  async function handleSubmitEdit() {
-    if (!onSave) return;
+  const handleSubmitEdit = form.handleSubmit(async values => {
+    if (!onSave || saveLock.current) return;
+    saveLock.current = true;
     setIsSaving(true);
     try {
-      await onSave(formData);
+      await onSave({ ...profile, ...values, identityNumber: values.identityNumber || '', phoneNumber: values.phoneNumber || '', dateOfBirth: values.dateOfBirth || '', gender: (values.gender || '') as ManagerProfileItem['gender'], permanentAddress: values.permanentAddress || '', temporaryAddress: values.temporaryAddress || '' });
       setIsEditing(false);
-    } catch {
-      // lỗi đã xử lý ở parent bằng toast
+    } catch (error) {
+      const errors = profileServerErrors(error);
+      for (const [field, message] of Object.entries(errors)) form.setError(field as keyof ProfileFormValues, { message });
+      const firstField = Object.keys(errors)[0] as keyof ProfileFormValues | undefined;
+      if (firstField) form.setFocus(firstField);
+      // Parent hiển thị thông báo lỗi chung; giữ dữ liệu để sửa/thử lại.
     } finally {
       setIsSaving(false);
+      saveLock.current = false;
     }
-  }
+  });
 
   function formatDate(d?: string | null) {
     if (!d || !d.includes('-')) return 'Chưa được cập nhật';
@@ -166,6 +177,10 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
         </div>
       </div>
 
+      {isEditing && Object.keys(form.formState.errors).length > 0 && <div id="managed-profile-errors" role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p className="font-semibold">Vui lòng kiểm tra thông tin:</p>
+        <ul className="mt-2 space-y-1">{Object.entries(form.formState.errors).map(([field, error]) => <li key={field}><button type="button" className="min-h-11 text-left underline" onClick={() => form.setFocus(field as keyof ProfileFormValues)}>{error.message}</button></li>)}</ul>
+      </div>}
       {/* Citizen / User Overview Header Banner */}
       <div className="admin-card p-6 border-l-4 border-l-red-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -177,9 +192,6 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">{profile.fullName}</h1>
 
-                <span className="admin-status-badge is-success flex items-center gap-1">
-                  <ShieldCheck size={14} /> Đã xác thực
-                </span>
 
                 {accountInfo && (
                   <span
@@ -322,8 +334,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                         <input
                           type="text"
                           maxLength={12}
-                          aria-label="Số định danh cá nhân (CCCD)" value={formData.identityNumber}
-                          onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
+                          aria-label="Số định danh cá nhân (CCCD)" {...form.register('identityNumber')} aria-invalid={Boolean(form.formState.errors.identityNumber)} aria-describedby={form.formState.errors.identityNumber ? 'managed-profile-errors' : undefined}
                           placeholder="Nhập 12 chữ số CCCD"
                           className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
                         />
@@ -361,8 +372,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <input
                       type="text"
-                      aria-label="Họ và tên khai sinh" value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      aria-label="Họ và tên khai sinh" {...form.register('fullName')} aria-invalid={Boolean(form.formState.errors.fullName)} aria-describedby={form.formState.errors.fullName ? 'managed-profile-errors' : undefined}
                       placeholder="Ví dụ: NGUYỄN VĂN A"
                       className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                     />
@@ -382,8 +392,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                     {isEditing ? (
                       <input
                         type="date"
-                        aria-label="Ngày sinh" value={formData.dateOfBirth}
-                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        aria-label="Ngày sinh" {...form.register('dateOfBirth')} aria-invalid={Boolean(form.formState.errors.dateOfBirth)} aria-describedby={form.formState.errors.dateOfBirth ? 'managed-profile-errors' : undefined}
                         className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                       />
                     ) : (
@@ -400,10 +409,10 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                     </label>
                     {isEditing ? (
                       <select
-                        aria-label="Giới tính" value={formData.gender}
-                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'Nam' | 'Nữ' | 'Khác' })}
+                        aria-label="Giới tính" {...form.register('gender')} aria-invalid={Boolean(form.formState.errors.gender)} aria-describedby={form.formState.errors.gender ? 'managed-profile-errors' : undefined}
                         className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                       >
+                        <option value="">Chưa cập nhật</option>
                         <option value="Nam">Nam</option>
                         <option value="Nữ">Nữ</option>
                         <option value="Khác">Khác</option>
@@ -422,7 +431,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       Dân tộc
                     </span>
                     <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100 bg-slate-50/50 px-2 rounded">
-                      {profile.ethnicity || 'Kinh'}
+                      {profile.ethnicity || 'Chưa được cập nhật'}
                     </div>
                   </div>
                   <div>
@@ -430,7 +439,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       Quốc tịch
                     </span>
                     <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100 bg-slate-50/50 px-2 rounded">
-                      Việt Nam
+                      Chưa được cập nhật
                     </div>
                   </div>
                 </div>
@@ -443,8 +452,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <input
                       type="tel"
-                      aria-label="Số điện thoại" value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      aria-label="Số điện thoại" {...form.register('phoneNumber')} aria-invalid={Boolean(form.formState.errors.phoneNumber)} aria-describedby={form.formState.errors.phoneNumber ? 'managed-profile-errors' : undefined}
                       placeholder="Ví dụ: 0912345678"
                       className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
                     />
@@ -483,8 +491,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <textarea
                       rows={3}
-                      aria-label="Địa chỉ thường trú" value={formData.permanentAddress}
-                      onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
+                      aria-label="Địa chỉ thường trú" {...form.register('permanentAddress')} aria-invalid={Boolean(form.formState.errors.permanentAddress)} aria-describedby={form.formState.errors.permanentAddress ? 'managed-profile-errors' : undefined}
                       placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
                       className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
                     />
@@ -504,8 +511,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                   {isEditing ? (
                     <textarea
                       rows={3}
-                      aria-label="Địa chỉ tạm trú" value={formData.temporaryAddress}
-                      onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
+                      aria-label="Địa chỉ tạm trú" {...form.register('temporaryAddress')} aria-invalid={Boolean(form.formState.errors.temporaryAddress)} aria-describedby={form.formState.errors.temporaryAddress ? 'managed-profile-errors' : undefined}
                       placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
                       className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
                     />
