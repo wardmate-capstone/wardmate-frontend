@@ -15,6 +15,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useApprovedQr } from '@/hooks/useDocumentForms';
 import {
   documentFormApi,
+  documentFormError,
   downloadBlob,
   safeDocumentLink,
 } from '@/lib/api/documentForms';
@@ -85,8 +86,8 @@ export function CitizenQrCodeView({
           </div>
           <h3 className="mt-4 text-base font-bold text-slate-800">Chưa có mã QR đối soát</h3>
           <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-500 leading-relaxed">
-            Mã QR tra cứu chỉ được tự động tạo sau khi hồ sơ của bạn được cán bộ tiền kiểm phê duyệt và chuyển sang trạng thái{' '}
-            <strong className="text-slate-700">"Giấy tờ sẵn sàng"</strong>.
+            Sau khi hồ sơ chuyển sang trạng thái{' '}
+            <strong className="text-slate-700">"Giấy tờ sẵn sàng"</strong>, bạn có thể mở hồ sơ và tạo PDF để nhận mã QR từ hệ thống.
           </p>
           {onSelectSection && (
             <div className="mt-5">
@@ -240,35 +241,36 @@ function ApprovedQr({
     };
   }, [blobUrl]);
 
-  // URL tra cứu mã QR: ưu tiên server qrCodeValue, nếu chưa có thì dùng link tra cứu chuẩn theo mã hồ sơ
-  const lookupValue =
-    (qr.data?.qrCodeValue ? safeDocumentLink(qr.data.qrCodeValue) : null) ||
-    `${window.location.origin}/citizen?section=dossiers_all&dossierCode=${encodeURIComponent(dossier.code)}`;
-
-  // Ảnh mã QR: ưu tiên ảnh từ backend, nếu backend chưa sinh thì sinh trực tiếp mã QR tra cứu
-  const qrImageSrc =
-    blobUrl ||
-    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lookupValue)}&margin=8`;
+  const lookupValue = qr.data?.qrCodeValue ? safeDocumentLink(qr.data.qrCodeValue) : null;
 
   const downloadFileName = `Ma-QR-${dossier.code}.png`;
 
-  async function handleDownload() {
+  function handleDownload() {
     if (binaryQuery.data?.blob) {
       downloadBlob(binaryQuery.data.blob, downloadFileName);
       return;
-    }
-    try {
-      const res = await fetch(qrImageSrc);
-      const blob = await res.blob();
-      downloadBlob(blob, downloadFileName);
-    } catch {
-      window.open(qrImageSrc, '_blank');
     }
   }
 
   const generatedTime = qr.data?.generatedAt
     ? new Date(qr.data.generatedAt).toLocaleString('vi-VN')
-    : renderDossierDate(dossier.updatedAt || dossier.createdAt) || 'Hồ sơ đã sẵn sàng';
+    : 'Chưa có thông tin';
+
+  if (qr.isPending || (qr.isSuccess && binaryQuery.isPending)) {
+    return <div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Đang tải mã QR từ hệ thống...</div>;
+  }
+
+  if (qr.isError || binaryQuery.isError || !blobUrl) {
+    const error = qr.isError ? qr.error : binaryQuery.error;
+    return <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+      <p role="alert" className="text-sm text-slate-700">{error ? documentFormError(error) : 'Chưa tải được ảnh mã QR từ hệ thống.'}</p>
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={() => { if (qr.isError) void qr.refetch(); else void binaryQuery.refetch(); }}>Tải lại mã QR</Button>
+        {onOpenDossierDetail && <Button onClick={() => onOpenDossierDetail(dossier)}>Xem chi tiết hồ sơ</Button>}
+      </div>
+      <p className="text-xs text-slate-500">Duyệt tiền kiểm không thay thế việc tiếp nhận hồ sơ chính thức. Cán bộ sẽ đối chiếu giấy tờ khi bạn đến.</p>
+    </div>;
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
@@ -307,7 +309,7 @@ function ApprovedQr({
         <div className="md:col-span-5 flex flex-col items-center">
           <div className="rounded-2xl border-2 border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:shadow-md">
             <img
-              src={qrImageSrc}
+              src={blobUrl}
               alt={`ma-qr-${applicationId}.png`}
               className="size-52 sm:size-56 object-contain"
             />
