@@ -44,8 +44,14 @@ export type ChatCompletionDto = z.infer<typeof chatCompletionSchema>;
 export interface ChatMessageInput {
   message: string;
   conversationId?: string | null;
-  wardCode?: string | null;
+  wardCode: string;
 }
+
+export const chatInputSchema = z.object({
+  message: z.string().trim().min(1, 'Vui lòng nhập câu hỏi.').max(4000, 'Câu hỏi không được vượt quá 4.000 ký tự.'),
+  conversationId: z.string().uuid('Mã cuộc hội thoại không hợp lệ.').refine(value => value !== '00000000-0000-0000-0000-000000000000', 'Mã cuộc hội thoại không hợp lệ.').nullish(),
+  wardCode: z.string().trim().regex(/^[A-Za-z0-9_-]{1,50}$/, 'Vui lòng chọn phường/xã hợp lệ.'),
+});
 
 export const aiOcrApi = {
   extractCccd: async (frontImage: File, backImage?: File, signal?: AbortSignal): Promise<CccdExtractionDto> => {
@@ -90,14 +96,13 @@ export const aiOcrApi = {
   },
 
   chat: async (input: ChatMessageInput, signal?: AbortSignal): Promise<ChatCompletionDto> => {
+    const validation = chatInputSchema.safeParse(input);
+    if (!validation.success) throw new Error(validation.error.issues[0].message);
+    const body = validation.data;
     try {
       const response = await api.post(
         aiPath('/api/v1/ai/chat/completions'),
-        {
-          message: input.message.trim(),
-          conversationId: input.conversationId || null,
-          wardCode: input.wardCode || 'WARD_001',
-        },
+        { ...body, conversationId: body.conversationId ?? null },
         { signal, suppressSessionExpiry: true },
       );
 
@@ -108,6 +113,10 @@ export const aiOcrApi = {
         if (status === 401) {
           throw new Error('Trợ lý AI chưa được xác thực (HTTP 401). Vui lòng thử lại sau.');
         }
+        if (status === 429) throw new Error('Trợ lý đang nhận quá nhiều yêu cầu. Vui lòng chờ rồi thử lại.');
+        if (!status || status >= 500) throw new Error('Chưa thể kết nối trợ lý AI. Câu hỏi được giữ lại để bạn thử lại.');
+        const title = err.response?.data?.title;
+        if (typeof title === 'string' && title.trim()) throw new Error(title.slice(0, 500));
       }
       throw err;
     }
