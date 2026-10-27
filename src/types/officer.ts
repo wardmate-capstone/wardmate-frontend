@@ -11,6 +11,7 @@ export type OfficerSection =
   | 'profile';
 
 export type ApplicationStatus =
+  | 'UNKNOWN'              // Không suy trạng thái lạ thành hồ sơ được phép xử lý
   | 'DRAFT'                // Bản nháp công dân chưa gửi
   | 'SUBMITTED_FOR_REVIEW' // Chờ tiền kiểm
   | 'UNDER_REVIEW'         // Đang kiểm tra

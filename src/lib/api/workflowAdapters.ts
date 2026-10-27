@@ -104,7 +104,7 @@ function mapStatus(status?: string | null, resubmitCount = 0): ApplicationStatus
   if (s === 'REJECTED') return 'REJECTED';
   // Không để hồ sơ đã hủy rơi vào "Chờ tiền kiểm": nút Nhận xử lý sẽ luôn bị BE trả 409.
   if (s === 'CANCELLED') return 'CANCELLED';
-  return 'SUBMITTED_FOR_REVIEW';
+  return 'UNKNOWN';
 }
 
 function humanizeFieldName(key: string): string {
@@ -269,7 +269,7 @@ export function mapSummaryDtoToOfficerApplication(
     submittedAt: formatDateTime(summary.submittedAt || summary.createdAt),
     submittedAtUtc: summary.submittedAt || summary.createdAt,
     status,
-    urgency: summary.dueAtUtc && Date.parse(summary.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' ? 'overdue' : 'normal',
+    urgency: summary.dueAtUtc && Date.parse(summary.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' && status !== 'UNKNOWN' ? 'overdue' : 'normal',
     dueAtUtc: summary.dueAtUtc,
     deadlineStatus: summary.deadlineStatus,
     assignedOfficer,
@@ -378,7 +378,7 @@ export function mapApplicationDtoToOfficerApplication(
     reviewStartedAt: dto.assignedOfficerId ? formatDateTime(dto.updatedAt) : undefined,
     reviewedBy: dto.assignedOfficerId ? officerDisplayName : undefined,
     status,
-    urgency: dto.dueAtUtc && Date.parse(dto.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' ? 'overdue' : 'normal',
+    urgency: dto.dueAtUtc && Date.parse(dto.dueAtUtc) < Date.now() && status !== 'DOCUMENTS_READY' && status !== 'OFFICIALLY_RECEIVED' && status !== 'REJECTED' && status !== 'CANCELLED' && status !== 'UNKNOWN' ? 'overdue' : 'normal',
     dueAtUtc: dto.dueAtUtc,
     deadlineStatus: dto.deadlineStatus,
     assignedOfficer: officerDisplayName,
@@ -407,7 +407,7 @@ export function mapApplicationDtoToOfficerApplication(
 
 export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): CitizenDossier {
   const s = (summary.status || '').toUpperCase();
-  let status: CitizenDossier['status'] = 'Bản nháp';
+  let status: CitizenDossier['status'] = 'Chưa xác định trạng thái';
   if (s === 'DRAFT') status = 'Bản nháp';
   // Giống trang chi tiết: hồ sơ gửi lại sau yêu cầu bổ sung phải vào mục "Đã gửi lại".
   else if (s === 'SUBMITTED') status = (summary.resubmitCount ?? 0) > 0 ? 'Đã gửi lại' : 'Chờ tiền kiểm';
@@ -439,7 +439,7 @@ export function mapApplicationDtoToCitizenDossier(
   lookup?: OfficerLookup
 ): CitizenDossier {
   const s = (dto.status || '').toUpperCase();
-  let status: CitizenDossier['status'] = 'Bản nháp';
+  let status: CitizenDossier['status'] = 'Chưa xác định trạng thái';
   if (s === 'DRAFT') status = 'Bản nháp';
   else if (s === 'SUBMITTED') status = dto.resubmitCount > 0 ? 'Đã gửi lại' : 'Chờ tiền kiểm';
   else if (s === 'UNDER_REVIEW') status = 'Chờ tiền kiểm';

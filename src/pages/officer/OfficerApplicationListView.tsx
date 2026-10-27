@@ -241,7 +241,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </span>
         );
       default:
-        return null;
+        return <span className="text-xs text-slate-600">Chưa xác định trạng thái</span>;
     }
   }
 

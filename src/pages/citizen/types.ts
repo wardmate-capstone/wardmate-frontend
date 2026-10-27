@@ -30,6 +30,7 @@ export interface CitizenDossier {
   createdAt: string;
   updatedAt: string;
   status:
+    | 'Chưa xác định trạng thái'
     | 'Bản nháp'
     | 'Chờ tiền kiểm'
     | 'Cần chỉnh sửa'
