@@ -49,14 +49,15 @@ export function useNotificationHub(enabled: boolean) {
 
     const start = async () => {
       if (disposed) return;
+      window.clearTimeout(timer);
       setStatus('connecting');
       try {
         if (attempt > 0) await ensureFreshAccessToken();
-        await connection.start();
+        if (!isConnected(connection)) await connection.start();
         attempt = 0;
         if (disposed) return;
-        setStatus('connected');
         await load();
+        if (!disposed) setStatus('connected');
       } catch {
         if (disposed) return;
         setStatus('offline');
@@ -76,8 +77,7 @@ export function useNotificationHub(enabled: boolean) {
     // Sau khi kết nối lại, tải lại để không sót thông báo phát ra lúc mất kết nối.
     connection.onreconnected(() => {
       if (disposed) return;
-      setStatus('connected');
-      void load().catch(() => undefined);
+      void start();
     });
     connection.onclose(() => {
       if (disposed) return;
@@ -97,9 +97,10 @@ export function useNotificationHub(enabled: boolean) {
 
   const markRead = useCallback(async (id: string) => {
     const connection = connectionRef.current;
-    if (!isConnected(connection)) return;
+    if (!isConnected(connection)) throw new Error('Chưa kết nối máy chủ thông báo.');
     await connection!.invoke('MarkRead', id);
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    await connection!.invoke<number>('GetUnreadCount').then(value => { if (connectionRef.current === connection) setUnreadCount(value); }).catch(() => undefined);
   }, []);
 
   // BE chưa có MarkAllRead: đánh dấu lần lượt các thông báo chưa đọc đang hiển thị.
@@ -110,6 +111,7 @@ export function useNotificationHub(enabled: boolean) {
     const results = await Promise.allSettled(unread.map((id) => connection!.invoke('MarkRead', id)));
     const done = new Set(unread.filter((_, i) => results[i].status === 'fulfilled'));
     setItems((prev) => prev.map((n) => (done.has(n.id) ? { ...n, isRead: true } : n)));
+    await connection!.invoke<number>('GetUnreadCount').then(value => { if (connectionRef.current === connection) setUnreadCount(value); }).catch(() => undefined);
     if (done.size < unread.length) throw new Error('Một số thông báo chưa đánh dấu được. Vui lòng thử lại.');
   }, [items]);
 
