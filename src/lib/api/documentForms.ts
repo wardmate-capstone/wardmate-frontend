@@ -227,16 +227,8 @@ export const documentFormApi = {
     return parseOfficerDecision(response.data, submissionId);
   },
   officerConfirmReadiness: async (submissionId: string) => {
-    try {
-      const response = await api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/confirm-readiness`), {});
-      return parseOfficerDecision(response.data, submissionId);
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        const fallback = await api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/approve`), {});
-        return parseOfficerDecision(fallback.data, submissionId);
-      }
-      throw error;
-    }
+    const response = await api.post(documentPath(`/api/v1/officer/submissions/${submissionId}/confirm-readiness`), {});
+    return parseOfficerDecision(response.data, submissionId);
   },
 };
 

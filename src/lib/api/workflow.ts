@@ -347,16 +347,8 @@ export const workflowApi = {
   },
 
   confirmReadiness: async (id: string) => {
-    try {
-      const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/confirm-readiness`));
-      return reviewResultDtoSchema.parse(res.data);
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        const fallback = await api.post(workflowPath(`/api/v1/officer/applications/${id}/approve`));
-        return reviewResultDtoSchema.parse(fallback.data);
-      }
-      throw error;
-    }
+    const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/confirm-readiness`));
+    return reviewResultDtoSchema.parse(res.data);
   },
 
   officiallyReceiveApplication: async (id: string, input: OfficialReceiptInput) => {
@@ -387,7 +379,7 @@ export const workflowApi = {
 
   getApplication: async (id: string, signal?: AbortSignal) => {
     const res = await api.get(workflowPath(`/api/v1/applications/${id}`), { signal });
-    return applicationDtoSchema.parse(res.data);
+    return applicationDtoSchema.refine(value => value.id.toLowerCase() === id.toLowerCase(), 'Dữ liệu không thuộc hồ sơ đang mở.').parse(res.data);
   },
 
   updateChecklist: async (id: string, checklistId: string, input: UpdateChecklistInput) => {
