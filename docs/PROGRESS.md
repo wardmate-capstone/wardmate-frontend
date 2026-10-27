@@ -4,6 +4,45 @@ Cập nhật: 27/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Chốt 8 commit hướng dẫn, giao diện công khai và email — 27/10/2026
+
+- Theo yêu cầu người dùng, chia toàn bộ thay đổi từ `d35365c` thành đúng **8 commit**: dữ liệu hướng dẫn, trang/route hướng dẫn, menu/header, hướng dẫn landing, trang tra cứu, email hồ sơ, kiểm thử và tài liệu bàn giao. Các mục bên dưới là lịch sử triển khai; dòng “chưa commit/push” của từng lượt không còn mô tả trạng thái hiện tại.
+- 7 commit code/test: `b26af13`, `d4fc7af`, `9df2b20`, `768ad8f`, `2a16c66`, `e591b96`, `66e916c`. Đã push và xác minh `origin/main` bằng `git ls-remote` tại `66e916cb62d6bd15117177c565b777649ef5a517`. Commit chứa mục bàn giao này là commit thứ 8; xác nhận SHA cuối sau push bằng Git, không ghi trước kết quả chưa thực hiện.
+- Kiểm tra mới nhất trên trạng thái code cuối: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` đạt. Build còn cảnh báo annotation Zod/SignalR và chunk lớn. Chỉnh hai locator “Chứng thực” để chọn đúng bộ lọc lĩnh vực, tránh trùng gợi ý tìm kiếm.
+- Playwright `guide-profile-email`, `landing`, `procedures-ui`, `auth-recovery`: **23/23 đạt**, chạy Edge ngoài sandbox, có tổng kết exit 0; không dùng các lượt bị dừng trước đây làm bằng chứng đạt. Kiểm thử dùng mock, không gửi OTP thật hoặc nghiệm thu SMTP/API Azure. Không thay đổi auth/core hay backend; không chạy lại toàn suite hoặc kiểm thử từng commit độc lập.
+- File sinh tự động `auth-otp-diagnosis-tests.log` giữ ở máy, không stage/commit. Không đổi dependency. Báo cáo chi tiết: [GUIDE_AND_EMAIL_REVIEW_2026-10-27.md](GUIDE_AND_EMAIL_REVIEW_2026-10-27.md). Còn chờ nghiệm thu môi trường thật khi có yêu cầu.
+
+## Đưa nội dung banner hướng dẫn lên trên — 27/10/2026
+
+- `GuidePage.tsx`: bỏ căn giữa dọc (`justify-center`), căn nội dung từ trên; giảm padding đầu xuống 24px mobile/32px từ màn hình sm. Breadcrumb, tiêu đề và thẻ chuẩn bị dịch lên gần menu; giữ chiều cao banner và ảnh phủ kín theo yêu cầu trước.
+- Kiểm tra: `npm run typecheck`, ESLint riêng `GuidePage.tsx`, `git diff --check` đạt. Thay đổi khoảng cách thuần túy; không chạy lại build/Playwright, chưa xác minh ảnh trình duyệt lượt này. Chưa commit/push.
+
+## Mở rộng banner và làm lại đầu trang thủ tục — 27/10/2026
+
+- `GuidePage.tsx`: banner cao tối thiểu 640px desktop/600px màn hình nhỏ, ảnh phủ kín; nền kem tiếp tục xuống nội dung và bỏ padding đầu khối sau banner để không còn dải trắng ngắt quãng.
+- `ProceduresPage.tsx`, `globals.css`: bỏ khung bo viền đỏ và khoảng đệm bên ngoài đầu trang công khai. Hero trải ngang sát menu, nền kem, breadcrumb, H1 hiển thị và mô tả rõ tiền kiểm; bỏ các badge phụ. Giữ tìm kiếm/lĩnh vực/phân trang/API hiện có; bản nhúng trong cổng công dân vẫn gọn trong workspace.
+- Kiểm tra: typecheck/lint/build, `git diff --check` đạt; build còn cảnh báo annotation Zod/SignalR và chunk lớn. Đã xem screenshot hướng dẫn desktop, trang thủ tục desktop/mobile; Playwright mock đã tạo ảnh thủ tục công khai và nhúng ở 1440/390px, qua kiểm tra reflow 1440/768/390/360px. Các tiến trình `guide-profile-email` (2 ca UI) và `procedures-ui` (ca bố cục) chưa trả tổng kết sau chụp ảnh nên đã dừng, không khẳng định suite đạt. Script xem trang riêng trả timeout khi chờ H1, không dùng làm bằng chứng UI đạt. Chưa xác minh API thật; chưa commit/push.
+
+## Đồng bộ màu thanh menu với nút Tìm kiếm — 27/10/2026
+
+- `MainLayout.tsx`: đổi nền thanh điều hướng desktop từ gradient đỏ sẫm sang `bg-red-700`, cùng token với nút Tìm kiếm (`Button` primary) ở trang thủ tục. Giữ chữ trắng, hover và gạch vàng của mục đang chọn.
+- Kiểm tra: `npm run build` (gồm typecheck), ESLint riêng `MainLayout.tsx` và `git diff --check` đạt. Build còn cảnh báo annotation Zod/SignalR và chunk lớn như trước. Không chạy lại Playwright cho thay đổi màu thuần túy. Không thay đổi API; chưa commit/push.
+
+## Banner trang hướng dẫn và nút đăng nhập — 27/10/2026
+
+- Dùng ảnh có sẵn `public/hero-architecture-bg.jpg` làm nền banner `/huong-dan` trong `GuidePage.tsx`; phủ sáng để giữ nội dung dễ đọc, tăng lớp phủ trên màn hình nhỏ.
+- `MainLayout.tsx`: nút Đăng nhập desktop đỏ đậm/chữ trắng, hover đỏ sẫm; sửa co giãn thương hiệu/header để nút menu không bị đẩy ra ngoài viewport 320px. Giữ nguyên các thay đổi chưa commit có sẵn, không sửa backend/API.
+- Kiểm tra cuối: typecheck/lint/build và `git diff --check` đạt; build còn cảnh báo annotation Zod/SignalR và chunk lớn. Đã xem ảnh desktop/mobile 320px. Playwright mock chạy lại `guide-profile-email`: hai ca hướng dẫn desktop/mobile hoàn tất và chuyển sang ca profile, nhưng tiến trình chưa trả tổng kết nên đã dừng; không khẳng định toàn suite đạt. Lượt `guide-profile-email` + `landing` trước đó phát hiện lỗi menu 320px (đã sửa) và lỗi locator hai nút “Chứng thực” ở trang thủ tục đang có thay đổi ngoài phạm vi task; lượt đó cũng đã dừng khi chưa trả tổng kết. Chưa commit/push.
+
+## Trang hướng dẫn, menu giữa và email hồ sơ — 27/10/2026
+
+- Bắt đầu từ `d35365c`, working tree sạch. Yêu cầu mới: xây lại Hướng dẫn thực hiện, căn giữa menu landing, đọc BE quên mật khẩu email và giải thích thiếu email trong hồ sơ.
+- Thêm `/huong-dan` (`GuidePage.tsx`) với mục lục, 6 bước và hỗ trợ OTP/QR; dữ liệu chung ở `src/data/preparationGuide.ts`. Menu desktop căn giữa, có active state; menu mobile/footer mở route mới. HomePage cập nhật phần hướng dẫn chi tiết 6 bước, link theo từng mục; anchor `/#quy-trinh` cũ vẫn dùng được. JourneySteps hiện có vẫn tóm tắt 4 giai đoạn tổng quát.
+- CitizenProfileView hiện Email đăng ký từ `useAuthStore.user.email`, chỉ đọc vì ProfileInput BE không có email. Email không đi vào payload cập nhật hồ sơ. BE bắt buộc email khi đăng ký; chưa thấy hợp đồng tự đổi email trong các controller đã rà soát.
+- Đọc source IAM: AuthController/PasswordOtpService/IamEmailSender đã có request OTP email và verify-and-change cho FORGOT_PASSWORD; 6 số, 5 phút, giới hạn gửi/thử, thu hồi phiên sau thành công. Gửi tới email User; thiếu cấu hình email trả 503. 202 là thông báo chung, không chứng minh SMTP đã gửi/khách đã nhận. Không gọi gửi email thật, không sửa BE.
+- Báo cáo đối chiếu và file kiểm tra: [GUIDE_AND_EMAIL_REVIEW_2026-10-27.md](GUIDE_AND_EMAIL_REVIEW_2026-10-27.md).
+- Kiểm tra: typecheck/lint/build đạt (cảnh báo chunk DOCX/annotation Zod cũ); Playwright `guide-profile-email`, `landing`, `auth-recovery`, `full-audit` **31/31 đạt** bằng mock; đã xem ảnh desktop/mobile. Không chạy lại toàn bộ suite hoặc gửi OTP Azure thật. Chưa commit/push; yêu cầu push của task trước không áp dụng cho task này.
+
 ## Chốt 20 commit và kiểm tra trước push main — 27/10/2026
 
 - Theo yêu cầu người dùng, toàn bộ đợt thay đổi từ `789587a` được chia thành **20 commit** theo hạng mục: profile/validation, chat/AI/OCR, quyết định và trạng thái hồ sơ, QR, tài liệu, thủ tục, lớp hiển thị, thông báo, kiểm thử và báo cáo. Không sửa backend, không đổi dependency.
