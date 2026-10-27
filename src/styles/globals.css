@@ -123,8 +123,9 @@
   .brand-wordmark.is-inverse > strong > span { @apply text-white; }
   .brand-wordmark.is-inverse > small { @apply text-red-100/60; }
   .mobile-menu-button { @apply grid size-12 shrink-0 place-items-center rounded-xl border border-red-200 bg-white text-red-800 hover:bg-red-50; }
-  .main-nav-link { @apply relative inline-flex min-h-12 items-center px-5 text-sm font-semibold text-white/90 hover:bg-red-900 hover:text-white; }
-  .main-nav-link.is-active::after { content: ""; @apply absolute inset-x-5 bottom-0 h-0.5 bg-gold-400; }
+  .main-nav-link { @apply relative inline-flex min-h-[50px] items-center gap-2 px-6 text-sm font-semibold tracking-wide text-white/85 transition-all duration-150 hover:bg-white/[0.08] hover:text-white; }
+  .main-nav-link.is-active { @apply text-white font-bold bg-white/[0.08]; }
+  .main-nav-link.is-active::after { content: ""; @apply absolute inset-x-5 bottom-0 h-[3px] rounded-t-full bg-gradient-to-r from-amber-300 via-amber-400 to-amber-300 shadow-[0_-1px_8px_rgba(251,191,36,0.5)]; }
   .mobile-nav-link { @apply flex min-h-14 items-center justify-between border-b border-slate-100 text-base font-semibold text-slate-800 hover:text-red-800; }
   .footer-link { @apply inline-flex min-h-9 items-center hover:text-gold-300; }
 
