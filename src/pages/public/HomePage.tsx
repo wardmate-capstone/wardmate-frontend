@@ -11,9 +11,9 @@ import {
 import { Button } from '@/components/ui/Button';
 import { CardGridSkeleton, ListSkeleton } from '@/components/ui';
 import { JourneySteps } from '@/components/home/JourneySteps';
-import { preparationSteps } from '@/data/landing';
+import { guideSteps as preparationSteps } from '@/data/preparationGuide';
 
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { procedureError } from '@/lib/api/procedures';
 import { useProcedureCategories, usePublicProcedureList, useFeaturedProcedures } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
@@ -157,13 +157,13 @@ export function HomePage() {
 
       <section id="quy-trinh" className="scroll-mt-36 bg-[#f8f5ef] py-20 sm:py-24">
         <div className="mx-auto max-w-[1240px] px-5 sm:px-8">
-          <m.div {...reveal} className="mx-auto max-w-3xl text-center"><p className="section-label justify-center">Quy trình chuẩn bị</p><h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Bốn bước để hồ sơ sẵn sàng</h2><p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">Mỗi bước đều có hướng dẫn, trạng thái lưu và hành động tiếp theo rõ ràng.</p></m.div>
-          <div className="relative mt-12 grid gap-5 lg:grid-cols-4">
-            <div className="absolute left-[12.5%] right-[12.5%] top-9 hidden h-px bg-red-200 lg:block" aria-hidden="true" />
+          <m.div {...reveal} className="mx-auto max-w-3xl text-center"><p className="section-label justify-center">Hướng dẫn thực hiện</p><h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Từ tra cứu đến giấy tờ sẵn sàng</h2><p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">Theo dõi sáu bước chuẩn bị, gửi tiền kiểm và bổ sung hồ sơ trên WardMate.</p></m.div>
+          <div className="relative mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {preparationSteps.map(({ icon: Icon, ...step }, index) => (
               <m.article {...reveal} transition={{ duration: 0.4, delay: index * 0.07 }} key={step.number} className="process-card">
                 <div className="relative z-10 flex items-center justify-between"><span className="process-icon"><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span><span className="text-3xl font-bold text-red-100">{step.number}</span></div>
                 <h3 className="mt-6 text-lg font-bold text-slate-950">{step.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p>
+                <Link to={'/huong-dan#' + step.id} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-red-800 hover:underline">Xem hướng dẫn bước {step.number}<ArrowRight size={17} aria-hidden="true" /></Link>
               </m.article>
             ))}
           </div>
