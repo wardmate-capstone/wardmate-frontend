@@ -1,5 +1,5 @@
 import { copyToClipboard } from '@/lib/clipboard';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
   IdentificationCard,
@@ -73,6 +73,7 @@ export function CitizenProfileView({
   const [isEditing, setIsEditing] = useState(false);
   const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
 
   const isPristine =
     formData.fullName === (initialProfile?.fullName || '') &&
@@ -131,6 +132,7 @@ export function CitizenProfileView({
 
   async function handleSaveProfile(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (saveLock.current) return;
 
     // 1. Client-side validation chặt chẽ bằng Zod schema
     const validation = validateProfile(formData);
@@ -144,6 +146,7 @@ export function CitizenProfileView({
       return;
     }
 
+    saveLock.current = true;
     setSaving(true);
     try {
       // 2. Chuẩn hóa payload trước khi gửi lên API
@@ -168,7 +171,7 @@ export function CitizenProfileView({
         const serverErrors = error.response.data.errors as Record<string, string[]>;
         const newErrors: ProfileFieldErrors = {};
         for (const [key, msgs] of Object.entries(serverErrors)) {
-          const lower = key.toLowerCase();
+          const lower = key.split('.').at(-1)?.toLowerCase();
           const msg = Array.isArray(msgs) ? msgs[0] : String(msgs);
           if (lower === 'fullname') newErrors.fullName = msg;
           else if (lower === 'identitynumber') newErrors.identityNumber = msg;
@@ -186,6 +189,7 @@ export function CitizenProfileView({
       }
       toast.error(authErrorMessage(error));
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   }
