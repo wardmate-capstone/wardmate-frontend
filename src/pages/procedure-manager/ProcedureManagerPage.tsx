@@ -191,6 +191,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
           ) : section === "categories" ? (
             categories.loading
               ? <CardGridSkeleton />
+              : categories.error ? <ProcedureFeedback error={categories.error} retry={categories.refresh} />
               : <ProcedureCategoriesView categories={categories.data ?? []} onChange={categories.refresh} />
           ) : section === "dashboard" ? (
             <>
