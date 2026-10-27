@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useNotificationHub } from '@/hooks/useNotificationHub';
+import { useAuthStore } from '@/stores/authStore';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
@@ -45,7 +47,7 @@ import {
 } from '@phosphor-icons/react';
 
 // Types & Views
-import type { CitizenDossier, CitizenSectionId, CitizenNotification } from './types';
+import type { CitizenDossier, CitizenSectionId } from './types';
 import { CitizenDashboardView } from './views/CitizenDashboardView';
 import { CitizenDossiersView } from './views/CitizenDossiersView';
 import { CitizenDossierDetailView } from './views/CitizenDossierDetailView';
@@ -168,7 +170,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   // State Modal Preview Form và Editor Form
 
   // Thông báo
-  const [notifications, setNotifications] = useState<CitizenNotification[]>([]);
+  const userId = useAuthStore(state => state.user?.id);
+  const notificationHub = useNotificationHub(Boolean(userId));
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [selectedFeedbackDossier, setSelectedFeedbackDossier] = useState<{ procedure: string; code?: string; id?: string }>({
@@ -350,7 +353,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     }
   }, [urlSection, urlDossierCode, dossiers]);
 
-  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+  const unreadNotificationsCount = notificationHub.unreadCount;
 
   const meta = sectionTitles[activeSection] || { title: 'Cổng dịch vụ công dân' };
 
@@ -547,10 +550,15 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
           {activeSection === 'notifications' && (
             <CitizenNotificationsView
-              notifications={notifications}
-              onMarkAllRead={() => {
-                setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-                toast.info('Đã đánh dấu đã đọc tất cả thông báo.');
+              notifications={notificationHub.items}
+              connectionStatus={notificationHub.status}
+              onMarkAllRead={notificationHub.markAllRead}
+              onMarkRead={notificationHub.markRead}
+              onOpenApplication={async id => {
+                const dto = await workflowApi.getApplication(id);
+                setSelectedDossierDetail(mapApplicationDtoToCitizenDossier(dto));
+                setActiveSection('dossier_detail');
+                setSearchParams({ section: 'dossier_detail', dossierCode: dto.applicationCode || '' });
               }}
             />
           )}
