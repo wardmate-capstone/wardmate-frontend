@@ -41,6 +41,10 @@ try {
     ['/api/v1/applications/app/generated-documents?submissionId=form', 'document'],
     ['/api/v1/applications/app/generate-pdf', 'document'],
     ['/api/v1/officer/submissions/by-application/app', 'document'],
+    // AI OCR falls back to the DocumentForm/gateway origin when VITE_AI_OCR_API_URL is unset.
+    ['/api/v1/ai/chat/sessions?pageNumber=1', 'document'],
+    ['/api/v1/ai/knowledge/documents?pageNumber=1&pageSize=20', 'document'],
+    ['/api/v1/ai/knowledge/index-status', 'document'],
     ['/api/v1/applications/app', 'workflow'],
     ['/api/v1/applications/app/submit', 'workflow'],
     ['/api/v1/officer/applications/pending?Page=1', 'workflow'],

@@ -16,7 +16,7 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
     'iam.profile.read', 'iam.profile.write',
     ...(roles.includes('IT_ADMIN') ? ['iam.manage', 'iam.accounts.read', 'iam.accounts.manage', 'iam.wards.read', 'iam.wards.manage', 'iam.rbac.manage', 'iam.audit.read'] : []),
     ...(roles.includes('MANAGER') ? ['iam.accounts.read', 'iam.accounts.manage', 'iam.wards.read'] : []),
-    ...(roles.includes('PROCEDURE_MANAGER') || roles.includes('IT_ADMIN') ? ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status', 'procedure.versions.read', 'procedure.rollback', 'procedure.source.read', 'procedure.categories.manage', 'procedure.drafts.read', 'procedure.drafts.upload', 'procedure.drafts.update', 'procedure.drafts.extract', 'procedure.drafts.publish', 'procedure.drafts.delete', 'document.templates.read', 'document.templates.manage'] : []),
+    ...(roles.includes('PROCEDURE_MANAGER') || roles.includes('IT_ADMIN') ? ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status', 'procedure.versions.read', 'procedure.rollback', 'procedure.source.read', 'procedure.categories.manage', 'procedure.drafts.read', 'procedure.drafts.upload', 'procedure.drafts.update', 'procedure.drafts.extract', 'procedure.drafts.publish', 'procedure.drafts.delete', 'document.templates.read', 'document.templates.manage', 'knowledge.manage'] : []),
     ...(roles.includes('REGISTERED_CITIZEN') ? ['document.submissions.read', 'document.submissions.write', 'document.submissions.submit', 'document.submissions.download'] : []),
   ];
   const userPermissions = grantedPermissions ?? defaultPermissions;

@@ -49,6 +49,7 @@ import type { ManagerProfileItem } from '@/pages/manager/types';
 import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
+import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
 import { CreateStaffAccountModal } from './CreateStaffAccountModal';
 
@@ -84,7 +85,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
         id: "knowledge",
         label: "Dữ liệu kiến thức AI",
         icon: Books,
-        fallbackRoles: ['IT_ADMIN'],
+        permissions: ['knowledge.manage'],
       },
     ],
   },
@@ -418,7 +419,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
           {activeSection === "analytics-jobs" && <AnalyticsJobsView />}
           {activeSection === "knowledge" && (
-            <KnowledgeView onAction={demoAction} />
+            <KnowledgeBaseView />
           )}
           {activeSection === "profile" && <UnifiedSelfProfileView />}
           {activeSection === "users" && (
@@ -790,21 +791,6 @@ function SearchBar({
         placeholder={placeholder}
       />
     </label>
-  );
-}
-
-function KnowledgeView({ onAction }: { onAction: (message: string) => void }) {
-  void onAction;
-  return (
-    <section className="admin-card admin-content-card p-8">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Books size={40} className="text-slate-300 mb-2" />
-        <h2 className="text-base font-bold text-slate-800">Dữ liệu kiến thức AI & RAG</h2>
-        <p className="mt-2 text-xs text-slate-400 italic">
-          ⚠️ API quản lý nguồn tri thức và đồng bộ RAG sẽ được tích hợp sau.
-        </p>
-      </div>
-    </section>
   );
 }
 

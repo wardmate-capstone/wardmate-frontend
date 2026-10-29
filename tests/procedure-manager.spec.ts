@@ -291,7 +291,7 @@ test('403 is shown without fake data or redirect; unsupported features contain n
   await page.goto('/procedure-manager');
   await expect(page.getByRole('alert').first()).toContainText('không có quyền');
   await expect(page).toHaveURL(/procedure-manager/);
-  await page.getByRole('button', { name: 'Dữ liệu kiến thức AI', exact: true }).click();
+  await page.getByRole('button', { name: 'Văn bản pháp lý', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Chưa có kết nối cho chức năng này' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Đồng bộ lại' })).toHaveCount(0);
 });

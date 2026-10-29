@@ -54,7 +54,7 @@ export function UnifiedProcedureSidebar({ currentSection, onSelectSection, isOpe
       { id: 'forms', label: 'Danh sách biểu mẫu', icon: FileText, permissions: ['document.templates.read', 'document.templates.manage'] },
       { id: 'form-versions', label: 'Phiên bản biểu mẫu', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'attach-forms', label: 'Gắn biểu mẫu vào thủ tục', icon: LinkSimple, fallbackRoles: role },
     ] },
-    { title: 'Pháp lý & AI', items: [{ id: 'legal-docs', label: 'Văn bản pháp lý', icon: Scales, fallbackRoles: role }, { id: 'procedure-legal-links', label: 'Liên kết thủ tục - VB', icon: LinkBreak, fallbackRoles: role }, { id: 'ai-knowledge', label: 'Dữ liệu kiến thức AI', icon: Brain, fallbackRoles: role }] },
+    { title: 'Pháp lý & AI', items: [{ id: 'legal-docs', label: 'Văn bản pháp lý', icon: Scales, fallbackRoles: role }, { id: 'procedure-legal-links', label: 'Liên kết thủ tục - VB', icon: LinkBreak, fallbackRoles: role }, { id: 'ai-knowledge', label: 'Dữ liệu kiến thức AI', icon: Brain, permissions: ['knowledge.manage'] }] },
     { title: 'Hệ thống', items: [{ id: 'audit-logs', label: 'Lịch sử cập nhật', icon: ClockCounterClockwise, permissions: ['procedure.versions.read'] }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];
   return <WorkspaceSidebar workspace="procedure-manager" subtitle="Quản lý thủ tục" activeSection={currentSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpenMobile} onClose={onCloseMobile} isCompact={isCollapsedDesktop} />;

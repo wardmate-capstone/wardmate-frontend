@@ -30,6 +30,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { getGreeting } from "@/lib/utils";
 import { FormsView } from '@/pages/admin/FormsView';
+import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
 import { ProcedureValidationError } from '@/lib/procedureValidation';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
@@ -212,6 +213,8 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
             </>
           ) : section === "forms" || section === "upload-form" ? (
             <FormsView />
+          ) : section === "ai-knowledge" ? (
+            <KnowledgeBaseView />
           ) : section === "procedures" ? (
             <ProcedureApiList
               categories={categories.data ?? []}
@@ -237,9 +240,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                           ? "Chức năng quản lý kho biểu mẫu đang được hoàn thiện."
                           : section === "audit-logs"
                             ? "Bạn có thể xem lịch sử của từng thủ tục tại Danh sách thủ tục. Hiện chưa có lịch sử tổng hợp."
-                            : section === "legal-docs"
-                              ? "Căn cứ pháp lý được quản lý trong từng thủ tục. Hiện chưa có kho văn bản riêng."
-                              : "Chức năng quản lý nguồn kiến thức đang được hoàn thiện."}
+                            : "Căn cứ pháp lý được quản lý trong từng thủ tục. Hiện chưa có kho văn bản riêng."}
               </p>
               <Button variant="outline" onClick={() => navigate("procedures")}>
                 Mở danh sách thủ tục

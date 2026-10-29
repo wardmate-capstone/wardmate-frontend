@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
   if (aiOcr) {
     proxy['/api/v1/ai-ocr'] = aiOcr;
     proxy['/api/v1/ai/chat'] = aiOcr;
+    proxy['/api/v1/ai/knowledge'] = aiOcr;
   }
   if (catalog) {
     proxy['/api/v1/procedures'] = catalog;
