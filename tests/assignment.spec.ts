@@ -46,7 +46,8 @@ test.describe('Cán bộ: hàng đợi theo lĩnh vực', () => {
 
     await expect(page.getByRole('tab', { name: 'Lĩnh vực của tôi' })).toHaveAttribute('aria-selected', 'true');
     await expect.poll(() => urls.at(-1)?.searchParams.get('Scope')).toBe('my-categories');
-    expect(urls.at(-1)?.searchParams.get('Status')?.split(',')).not.toContain('DRAFT');
+    // BE tự loại bản nháp (WORKFLOW-FE-1026) nên FE không gửi Status mặc định nữa.
+    expect(urls.at(-1)?.searchParams.has('Status')).toBe(false);
 
     await expect(page.getByText('Không có hồ sơ mới trong lĩnh vực của bạn.')).toBeVisible();
     await page.getByRole('button', { name: 'Xem hồ sơ toàn phường' }).click();
@@ -174,4 +175,63 @@ test.describe('Manager: giám sát, giao/chuyển và lịch sử phân công', 
     await expect(history.getByRole('listitem')).toHaveCount(2);
     await expect(history.getByRole('listitem').first()).toContainText('Lý do: Cân bằng công việc');
   });
+
+  test('số liệu giám sát lấy từ assignment-summary, không gọi danh sách pageSize=1', async ({ page }) => {
+    const urls = await mockOfficerList(page, () => []);
+    await page.route('**/api/v1/manager/applications/assignment-summary', route => authReply(route, { json: {
+      unassignedSubmitted: 4, overdue: 2, officers: [{ officerId: OFFICER_A, activeCount: 3, overdueCount: 1 }],
+    } }));
+    await page.goto('/manager');
+    await page.getByRole('button', { name: 'Giám sát hồ sơ' }).click();
+
+    await expect(page.getByRole('button', { name: /Chờ tiền kiểm, chưa có người nhận\s*4/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Đang quá hạn tiền kiểm\s*2/ })).toBeVisible();
+    const workload = page.getByRole('region', { name: 'Khối lượng đang xử lý theo cán bộ' });
+    // Cán bộ không có trong officers[] được hiểu là 0.
+    await expect(workload.getByRole('button', { name: /Nguyễn Văn An\s*3/ })).toBeVisible();
+    await expect(workload.getByRole('button', { name: /Trần Thị Mai Hương\s*0/ })).toBeVisible();
+    expect(urls.some(url => url.searchParams.get('PageSize') === '1')).toBe(false);
+    expect(urls.every(url => !url.searchParams.has('Status'))).toBe(true);
+
+    // Bấm chip chỉ lọc hồ sơ đang xử lý của cán bộ đó, khớp với số trên chip.
+    await workload.getByRole('button', { name: /Nguyễn Văn An/ }).click();
+    await expect.poll(() => urls.at(-1)?.searchParams.get('Assignee')).toBe(OFFICER_A);
+    expect(urls.at(-1)?.searchParams.get('Status')).toBe('SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY');
+    await expect(page.getByLabel('Lọc theo trạng thái')).toHaveValue('SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY');
+  });
+});
+
+test('Cán bộ: lịch sử xử lý lấy từ server và lọc hành động ở server', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await mockWorkspaceAuth(page, ['FRONT_DESK_OFFICER']);
+  await mockOfficerList(page, () => []);
+  const urls: URL[] = [];
+  await page.route('**/api/v1/officer/activity?**', route => {
+    const url = new URL(route.request().url());
+    urls.push(url);
+    const items = url.searchParams.get('action') === 'NEED_REVISION'
+      ? [{ id: 'a2', source: 'STATUS', action: 'NEED_REVISION', applicationId: 'aaaaaaaa-0000-4000-8000-000000000005', applicationCode: 'HS-LS-02',
+          procedureTitle: 'Thủ tục đăng ký khai tử', applicantName: 'Nguyễn Đức Anh', reason: 'Thiếu chữ ký', createdAt: '2026-10-24T11:29:00Z' }]
+      : [{ id: 'a1', source: 'ASSIGNMENT', action: 'CLAIM', applicationId: 'aaaaaaaa-0000-4000-8000-000000000006', applicationCode: 'HS-LS-01',
+          procedureTitle: 'Đăng ký khai sinh', applicantName: null, reason: null, createdAt: '2026-10-24T10:00:00Z' }];
+    return authReply(route, { json: { items, page: 1, pageSize: 20, total: items.length } });
+  });
+  await page.goto('/officer');
+  await page.getByRole('button', { name: 'Lịch sử xử lý', exact: true }).click();
+
+  const table = page.getByRole('table', { name: 'Lịch sử thao tác của cán bộ' });
+  const claim = table.getByRole('row').filter({ hasText: 'HS-LS-01' });
+  await expect(claim).toContainText('Nhận xử lý hồ sơ');
+  await expect(claim).toContainText('Công dân');
+  // Danh sách không còn CCCD nên ô tìm kiếm không hứa tìm theo CCCD.
+  await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
+  await expect(page.getByPlaceholder('Tìm mã hồ sơ, họ tên người dân...')).toBeVisible();
+  await page.getByRole('button', { name: 'Lịch sử xử lý', exact: true }).click();
+  expect(urls[0]?.searchParams.get('pageSize')).toBe('20');
+
+  await page.getByLabel('Lọc theo hành động').selectOption('NEED_REVISION');
+  await expect.poll(() => urls.at(-1)?.searchParams.get('action')).toBe('NEED_REVISION');
+  const revision = table.getByRole('row').filter({ hasText: 'HS-LS-02' });
+  await expect(revision).toContainText('Nguyễn Đức Anh');
+  await expect(revision).toContainText('Lý do: Thiếu chữ ký');
 });

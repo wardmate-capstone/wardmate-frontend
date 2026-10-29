@@ -88,6 +88,8 @@ export const applicationDtoSchema = z.object({
   receiptNumber: z.string().nullish(),
   receivedAt: z.string().nullish(),
   appointmentDate: z.string().nullish(),
+  // Snapshot họ tên IAM lúc nộp/nộp lại (WORKFLOW-FE-1026); hồ sơ cũ là null.
+  applicantName: z.string().nullish(),
 });
 
 export const applicationSummaryDtoSchema = z.object({
@@ -117,6 +119,37 @@ export const applicationSummaryDtoSchema = z.object({
 
 export const applicationPageSchema = z.object({
   items: z.array(applicationSummaryDtoSchema).nullish(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+// GET /manager/applications/assignment-summary: cán bộ không có trong officers[] nghĩa là 0 hồ sơ.
+export const assignmentSummaryDtoSchema = z.object({
+  unassignedSubmitted: z.number().int().nonnegative(),
+  overdue: z.number().int().nonnegative(),
+  officers: z.array(z.object({
+    officerId: z.string(),
+    activeCount: z.number().int().nonnegative(),
+    overdueCount: z.number().int().nonnegative(),
+  })),
+});
+
+// GET /officer/activity: STATUS có action là trạng thái đích, ASSIGNMENT có action CLAIM/RELEASE/ASSIGN/TRANSFER.
+export const officerActivityDtoSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  action: z.string(),
+  applicationId: z.string(),
+  applicationCode: z.string().nullish(),
+  procedureTitle: z.string().nullish(),
+  applicantName: z.string().nullish(),
+  reason: z.string().nullish(),
+  createdAt: z.string(),
+});
+
+export const officerActivityPageSchema = z.object({
+  items: z.array(officerActivityDtoSchema),
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
@@ -173,6 +206,9 @@ export type CommentDto = z.infer<typeof commentDtoSchema>;
 export type VersionDto = z.infer<typeof versionDtoSchema>;
 export type FieldDiffDto = z.infer<typeof fieldDiffDtoSchema>;
 export type ReviewResultDto = z.infer<typeof reviewResultDtoSchema>;
+export type AssignmentSummaryDto = z.infer<typeof assignmentSummaryDtoSchema>;
+export type OfficerActivityDto = z.infer<typeof officerActivityDtoSchema>;
+export type OfficerActivityPage = z.infer<typeof officerActivityPageSchema>;
 
 // Input Types
 export type CreateApplicationInput = {
@@ -239,8 +275,19 @@ export type OfficerListInput = {
   sort?: 'submittedAt' | '-submittedAt' | 'dueAt';
 };
 
-// Hàng đợi cán bộ/Manager không hiển thị bản nháp công dân chưa gửi (BE ListAll vẫn trả DRAFT khi không lọc).
-export const OFFICER_VISIBLE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY,OFFICIALLY_RECEIVED,CANCELLED';
+export const OFFICER_ACTIVITY_ACTIONS = ['CLAIM', 'RELEASE', 'ASSIGN', 'TRANSFER', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY', 'OFFICIALLY_RECEIVED', 'CANCELLED'] as const;
+export type OfficerActivityAction = typeof OFFICER_ACTIVITY_ACTIONS[number];
+
+export type OfficerActivityInput = {
+  page?: number;
+  /** 1–100; BE giới hạn page × pageSize ≤ 5000. */
+  pageSize?: number;
+  from?: string;
+  to?: string;
+  action?: OfficerActivityAction;
+  /** Chỉ Manager được truyền cán bộ khác; mặc định là người gọi. */
+  officerId?: string;
+};
 
 export const reasonSchema = z.string().trim().min(5, 'Lý do cần ít nhất 5 ký tự.').max(500, 'Lý do tối đa 500 ký tự.');
 
@@ -323,6 +370,23 @@ export const workflowApi = {
     if (typeof input.expectedAssignmentVersion === 'number') body.expectedAssignmentVersion = input.expectedAssignmentVersion;
     const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/release`), body);
     return reviewResultDtoSchema.parse(res.data);
+  },
+
+  // Lịch sử thao tác của cán bộ (đổi trạng thái + phân công), mới nhất trước, chỉ trong phường hiện tại.
+  listOfficerActivity: async (input: OfficerActivityInput = {}, signal?: AbortSignal) => {
+    const params: Record<string, unknown> = { page: input.page ?? 1, pageSize: input.pageSize ?? 20 };
+    if (input.from) params.from = input.from;
+    if (input.to) params.to = input.to;
+    if (input.action) params.action = input.action;
+    if (input.officerId) params.officerId = input.officerId;
+    const res = await api.get(workflowPath('/api/v1/officer/activity'), { params, signal });
+    return officerActivityPageSchema.parse(res.data);
+  },
+
+  // Một request cho số liệu "Giám sát hồ sơ" của Manager (phường lấy từ IAM, không gửi từ FE).
+  getAssignmentSummary: async (signal?: AbortSignal) => {
+    const res = await api.get(workflowPath('/api/v1/manager/applications/assignment-summary'), { signal });
+    return assignmentSummaryDtoSchema.parse(res.data);
   },
 
   // Manager giao (hồ sơ SUBMITTED chưa có người) hoặc chuyển (đã có người phụ trách).
@@ -464,6 +528,9 @@ export function workflowError(error: unknown): string {
       }
       if (code === 'workflow.not_assignee') {
         return 'Bạn không còn là cán bộ phụ trách hồ sơ này. Vui lòng tải lại danh sách.';
+      }
+      if (code === 'workflow.forbidden') {
+        return 'Chỉ Manager được xem lịch sử thao tác của cán bộ khác.';
       }
       if (code === 'application.forbidden' || error.response?.status === 403) {
         return 'Bạn không có quyền thực hiện thao tác trên hồ sơ này (khác phường/xã hoặc không đúng thẩm quyền).';

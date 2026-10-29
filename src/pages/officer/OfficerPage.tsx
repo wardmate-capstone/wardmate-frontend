@@ -4,7 +4,6 @@ import { toast } from '@/components/ui/Toast';
 import type {
   OfficerApplication,
   OfficerSection,
-  OfficerAuditLog,
   OfficerNotification,
   OfficerReviewComment,
 } from '@/types/officer';
@@ -29,14 +28,12 @@ import {
 import {
   mapSummaryDtoToOfficerApplication,
   mapApplicationDtoToOfficerApplication,
-  parseFormData,
-  extractCitizenInfoFromFormData,
   type OfficerLookup,
 } from '@/lib/api/workflowAdapters';
 import { getManagerOfficers, refreshAssignedCategories } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useNotificationHub } from '@/hooks/useNotificationHub';
-import { workflowError, workflowApi, OFFICER_VISIBLE_STATUSES } from '@/lib/api/workflow';
+import { workflowError, workflowApi } from '@/lib/api/workflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
 import { Button, Modal } from '@/components/ui';
 import type { QueueTab } from './OfficerApplicationListView';
@@ -92,7 +89,8 @@ export const OfficerPage: React.FC = () => {
   const officerApplicationsQuery = useOfficerApplications({
     page: queuePage,
     pageSize: 50,
-    status: SECTION_STATUS[activeSection] ?? OFFICER_VISIBLE_STATUSES,
+    // Không chọn trạng thái: BE tự loại bản nháp và hồ sơ chưa từng nộp.
+    status: SECTION_STATUS[activeSection],
     submittedFrom: rangeValid ? dayBoundary(submittedRange.from, false) : undefined,
     submittedTo: rangeValid ? dayBoundary(submittedRange.to, true) : undefined,
     // Tổng quan giữ toàn phường (BE đã xếp lĩnh vực của cán bộ lên trước); bộ lọc chỉ áp cho danh sách.
@@ -122,8 +120,6 @@ export const OfficerPage: React.FC = () => {
   const [applications, setApplications] = useState<OfficerApplication[]>([]);
   // Danh bạ tên cán bộ trong phường
   const [officerDirectory, setOfficerDirectory] = useState<Record<string, string>>({});
-  // Nhật ký hoạt động
-  const [auditLogs, setAuditLogs] = useState<OfficerAuditLog[]>([]);
   // Thông báo
   // Thông báo thật từ NotificationHub (giao/chuyển hồ sơ, hồ sơ mới cần tiếp nhận…).
   const notificationHub = useNotificationHub(Boolean(user?.id));
@@ -170,66 +166,13 @@ export const OfficerPage: React.FC = () => {
     };
   }, [user?.id, officerName, officerDirectory]);
 
-  // Cache thông tin công dân theo id hồ sơ để hiển thị ngay trên bảng
-  const [citizenInfoMap, setCitizenInfoMap] = useState<Record<string, { fullName: string; citizenId: string }>>({});
-
-  // Tự động nạp ngầm (auto-enrich) thông tin công dân cho danh sách hồ sơ khi summary chưa có applicantName
-  useEffect(() => {
-    if (!activeData?.items || activeData.items.length === 0) return;
-
-    // Lọc ra các hồ sơ chưa có tên người dân và chưa được cache
-    const needEnrich = activeData.items.filter(
-      (item) => (!item.applicantName || item.applicantName.trim() === '') && !citizenInfoMap[item.id]
-    );
-
-    if (needEnrich.length === 0) return;
-
-    let isMounted = true;
-    Promise.allSettled(
-      needEnrich.map(async (item) => {
-        const detail = await workflowApi.getOfficerApplication(item.id);
-        const parsed = parseFormData(detail.formData);
-        const info = extractCitizenInfoFromFormData(parsed);
-        return { id: item.id, fullName: info.fullName, citizenId: info.citizenId };
-      })
-    ).then((results) => {
-      if (!isMounted) return;
-      const updates: Record<string, { fullName: string; citizenId: string }> = {};
-      results.forEach((res) => {
-        if (res.status === 'fulfilled' && res.value.fullName && res.value.fullName !== 'Công dân') {
-          updates[res.value.id] = {
-            fullName: res.value.fullName,
-            citizenId: res.value.citizenId,
-          };
-        }
-      });
-      if (Object.keys(updates).length > 0) {
-        setCitizenInfoMap((prev) => ({ ...prev, ...updates }));
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeData?.items, citizenInfoMap]);
-
-  // Cập nhật applications khi có dữ liệu từ backend (kết hợp với citizenInfoMap)
+  // Tên người nộp lấy từ applicantName của danh sách (snapshot lúc nộp); hồ sơ cũ chưa có tên hiển thị "Công dân".
+  // CCCD/SĐT không có trong danh sách theo thiết kế BE, chỉ xem trong chi tiết hồ sơ.
   useEffect(() => {
     if (activeData?.items) {
-      const mapped = activeData.items.map((item) => {
-        const base = mapSummaryDtoToOfficerApplication(item, officerLookup);
-        const cached = citizenInfoMap[item.id];
-        if (cached) {
-          base.citizen.fullName = cached.fullName;
-          if (cached.citizenId && cached.citizenId !== '—') {
-            base.citizen.citizenId = cached.citizenId;
-          }
-        }
-        return base;
-      });
-      setApplications(mapped);
+      setApplications(activeData.items.map((item) => mapSummaryDtoToOfficerApplication(item, officerLookup)));
     }
-  }, [activeData, officerLookup, citizenInfoMap]);
+  }, [activeData, officerLookup]);
 
   // Sidebar Layout States
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -266,19 +209,6 @@ export const OfficerPage: React.FC = () => {
       const result = await assignMutation.mutateAsync(appId);
       toast.success(`Đã nhận xử lý hồ sơ ${appNumber}. Đang mở không gian thẩm định.`);
       const mappedApp = mapApplicationDtoToOfficerApplication(result.application, [], officerLookup);
-
-      // Thêm audit log
-      const newLog: OfficerAuditLog = {
-        id: `log-${Date.now()}`,
-        time: new Date().toLocaleTimeString('vi-VN'),
-        applicationNumber: mappedApp.applicationNumber,
-        citizenName: mappedApp.citizen.fullName,
-        action: 'Nhận xử lý hồ sơ',
-        details: 'Chuyển trạng thái sang ĐANG KIỂM TRA và mở workspace thẩm định',
-        officerName,
-        badgeTone: 'info',
-      };
-      setAuditLogs((prev) => [newLog, ...prev]);
       setReviewingApp(mappedApp);
     } catch (err) {
       toast.error(workflowError(err));
@@ -297,24 +227,10 @@ export const OfficerPage: React.FC = () => {
   };
 
   // ACTION: Yêu cầu bổ sung
-  const handleRequestRevision = async (appId: string, notes: string, issues: string[], submissionId?: string) => {
+  const handleRequestRevision = async (appId: string, notes: string, _issues: string[], submissionId?: string) => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
       await requestRevisionMutation.mutateAsync({ id: appId, input: { reason: notes }, submissionId });
-
-      // Audit Log
-      const newLog: OfficerAuditLog = {
-        id: `log-${Date.now()}`,
-        time: new Date().toLocaleTimeString('vi-VN'),
-        applicationNumber: appNumber,
-        citizenName: targetApp?.citizen.fullName || 'Công dân',
-        action: 'Yêu cầu bổ sung',
-        details: notes || `Yêu cầu chỉnh sửa ${issues.length} mục`,
-        officerName,
-        badgeTone: 'warning',
-      };
-      setAuditLogs((prev) => [newLog, ...prev]);
-
       toast.warning(`Đã gửi yêu cầu bổ sung hồ sơ ${appNumber} đến công dân.`);
       setReviewingApp(null);
       setActiveSection('apps-need-revision');
@@ -326,20 +242,6 @@ export const OfficerPage: React.FC = () => {
     const targetApp = applications.find((a) => a.id === appId);
     const appNumber = targetApp?.applicationNumber || appId;
       await readinessMutation.mutateAsync({ id: appId, submissionId });
-
-      // Audit Log
-      const newLog: OfficerAuditLog = {
-        id: `log-${Date.now()}`,
-        time: new Date().toLocaleTimeString('vi-VN'),
-        applicationNumber: appNumber,
-        citizenName: targetApp?.citizen.fullName || 'Công dân',
-        action: 'Xác nhận giấy tờ sẵn sàng',
-        details: 'Giấy tờ sẵn sàng để người dân tải và mang đến phường',
-        officerName,
-        badgeTone: 'success',
-      };
-      setAuditLogs((prev) => [newLog, ...prev]);
-
       toast.success(`Hồ sơ ${appNumber} đã được xác nhận giấy tờ sẵn sàng.`);
       // Ở lại workspace (đã khóa sửa) để cán bộ tạo PDF; mục bên trái chuyển sang Giấy tờ sẵn sàng.
       setActiveSection('apps-approved');
@@ -389,9 +291,13 @@ export const OfficerPage: React.FC = () => {
     }
   };
 
-  // Mở hồ sơ từ thông báo: hồ sơ có thể không nằm trong trang danh sách đang tải nên lấy chi tiết theo id.
+  // Mở hồ sơ theo id (thông báo, lịch sử xử lý): hồ sơ có thể không nằm trong trang danh sách đang tải.
   const handleOpenFromNotification = async (notificationId: string, applicationId: string) => {
     void notificationHub.markRead(notificationId).catch(() => undefined);
+    await handleOpenById(applicationId);
+  };
+
+  const handleOpenById = async (applicationId: string) => {
     const inList = applications.find((a) => a.id.toLowerCase() === applicationId.toLowerCase());
     if (inList) return handleOpenReview(inList);
     try {
@@ -524,11 +430,8 @@ export const OfficerPage: React.FC = () => {
               {/* SECTION 4: LỊCH SỬ XỬ LÝ (AUDIT LOG) */}
               {activeSection === 'audit-log' && (
                 <OfficerAuditLogView
-                  logs={auditLogs}
-                  onSelectApplication={(appNum) => {
-                    const target = applications.find((a) => a.applicationNumber === appNum);
-                    if (target) handleOpenReview(target);
-                  }}
+                  officerName={officerName}
+                  onOpenApplication={(applicationId) => void handleOpenById(applicationId)}
                 />
               )}
 

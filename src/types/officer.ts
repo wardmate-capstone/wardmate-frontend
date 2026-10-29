@@ -169,17 +169,6 @@ export interface OfficerApplication {
   deadlineStatus?: string | null;
 }
 
-export interface OfficerAuditLog {
-  id: string;
-  time: string;
-  applicationNumber: string;
-  citizenName: string;
-  action: string;
-  details: string;
-  officerName: string;
-  badgeTone: 'info' | 'success' | 'warning' | 'danger';
-}
-
 export interface OfficerNotification {
   id: string;
   time: string;

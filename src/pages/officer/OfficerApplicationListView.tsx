@@ -138,14 +138,12 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         if (statusFilter !== 'ALL' && app.status !== statusFilter) {
           return false;
         }
-        // Search query (Mã HS, Họ tên, CCCD, SĐT)
+        // Tìm theo mã hồ sơ và họ tên. Danh sách không chứa CCCD/SĐT (BE chỉ trả trong chi tiết hồ sơ).
         if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
+          const q = searchQuery.trim().toLowerCase();
           const matchCode = app.applicationNumber.toLowerCase().includes(q);
           const matchName = app.citizen.fullName.toLowerCase().includes(q);
-          const matchId = app.citizen.citizenId.includes(q);
-          const matchPhone = app.citizen.phoneNumber.includes(q);
-          if (!matchCode && !matchName && !matchId && !matchPhone) return false;
+          if (!matchCode && !matchName) return false;
         }
         // Procedure filter
         if (selectedProcedure !== 'ALL' && app.procedureName !== selectedProcedure) {
@@ -295,7 +293,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm mã hồ sơ, họ tên người dân, CCCD, SĐT..."
+              placeholder="Tìm mã hồ sơ, họ tên người dân..."
               className="w-full rounded-xl border border-slate-300 bg-slate-50/50 py-2.5 pl-10 pr-9 text-xs sm:text-sm text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:bg-white focus:outline-none focus:ring-3 focus:ring-red-100"
             />
             {searchQuery && (
@@ -558,7 +556,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     {/* Người dân */}
                     <td className="px-4 py-3.5">
                       <strong className="block font-bold text-slate-900">{app.citizen.fullName}</strong>
-                      <span className="block text-[11px] text-slate-500 font-mono">{app.citizen.citizenId}</span>
+                      {app.citizen.citizenId !== '—' && (
+                        <span className="block text-[11px] text-slate-500 font-mono">{app.citizen.citizenId}</span>
+                      )}
                     </td>
 
                     {/* Thủ tục */}

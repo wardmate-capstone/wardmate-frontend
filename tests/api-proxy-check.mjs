@@ -50,6 +50,8 @@ try {
     ['/api/v1/officer/applications/pending?Page=1', 'workflow'],
     ['/api/v1/officer/applications/app/release', 'workflow'],
     ['/api/v1/manager/applications/app/assignee', 'workflow'],
+    ['/api/v1/manager/applications/assignment-summary', 'workflow'],
+    ['/api/v1/officer/activity?page=1&pageSize=20', 'workflow'],
     ['/api/v1/manager/officers?assignedCategory=1', 'iam'],
     ['/api/v1/procedures?pageNumber=1', 'catalog'],
     ['/api/v1/users/me', 'iam'],

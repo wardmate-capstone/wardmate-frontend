@@ -1,41 +1,52 @@
 # Yêu cầu Backend còn tồn đọng (bản gộp duy nhất)
 
-*Cập nhật 26/10/2026 · Frontend Team gửi Backend · Đối chiếu source BE `main` = `091b169` (24/10)*
+*Cập nhật 29/10/2026 · Frontend Team gửi Backend · Đối chiếu source BE `main` = `15a7fee` (29/10)*
 
-File này **thay thế** các yêu cầu cũ. BE chỉ cần đọc file này.
+File này **thay thế** bản ngày 26/10. BE chỉ cần đọc file này.
 
-**Các việc đã xong, không cần làm thêm:**
-- Tạo tài khoản Manager / Procedure-manager.
-- Phân công hồ sơ theo lĩnh vực:
-  - field `categoryId/categoryName/assignedOfficer*/assignmentVersion`;
-  - bộ lọc `categoryIds/scope/assignee/overdue/sort`;
-  - trả hồ sơ, Manager giao/chuyển.
-- `resubmitCount` trong danh sách.
-- OTP quên mật khẩu / đổi mật khẩu.
+**FE đã đối chiếu source, các mục này đã đúng yêu cầu, không cần sửa code:**
+- Mục 2 cũ `applicantName` trong danh sách và chi tiết hồ sơ.
+- Mục 3 cũ: danh sách cán bộ/Manager loại bản nháp và hồ sơ chưa từng nộp.
+- Mục 4 cũ: `GET /api/v1/manager/applications/assignment-summary`.
+- Mục 5 cũ: `GET /api/v1/officer/activity`, kèm route gateway `officer-activity-v1`.
+
+FE đã bỏ workaround cho 4 mục trên trong source. FE **chỉ deploy sau khi BE xong mục 1 dưới đây**. Nếu FE lên trước thì danh sách hiện "Công dân" thay cho tên, bản nháp lọt vào hàng đợi, còn màn "Giám sát hồ sơ" và "Lịch sử xử lý" báo lỗi 404.
 
 ## Tóm tắt
 
-| # | Việc | Service | Ưu tiên | FE đang làm tạm |
-|---|---|---|---|---|
-| 1 | Bật thông báo trên Azure (RabbitMQ + worker) | Hạ tầng, Workflow, Analytics | **Cao** | Hub đã kết nối nhưng không nhận được thông báo |
-| 2 | Thêm `applicantName` vào danh sách hồ sơ | ApplicationWorkflow | **Cao** | Gọi chi tiết từng dòng, tối đa 50 request mỗi trang |
-| 3 | Loại bản nháp khỏi danh sách cán bộ/Manager | ApplicationWorkflow | Trung bình | Tự gửi `Status=…` |
-| 4 | API thống kê phân công cho Manager | ApplicationWorkflow | Trung bình | 2 + số cán bộ request `pageSize=1` |
-| 5 | API lịch sử thao tác của cán bộ | ApplicationWorkflow | Trung bình | Chỉ lưu tạm trên trình duyệt, tải lại là mất |
-| 6 | Giảm độ trễ (cache, hạ tầng) | Workflow, DocumentForm, IAM, hạ tầng | Trung bình | Không làm được ở FE |
-| 7 | Xác nhận bản đang chạy trên Azure | Tất cả | Cần trước khi nghiệm thu | — |
-
-FE giữ nguyên workaround cho tới khi BE deploy. Khi BE xong, FE chỉ bỏ workaround, không đổi luồng nghiệp vụ.
+| # | Việc | Service | Ưu tiên |
+|---|---|---|---|
+| 1 | Chạy migration và deploy các thay đổi ngày 29/10 | Workflow, Gateway | **Cao, chặn FE deploy** |
+| 2 | Bật thông báo trên Azure (RabbitMQ + worker) | Hạ tầng, Workflow, Analytics | **Cao** |
+| 3 | Giảm độ trễ (cache, hạ tầng) | Workflow, DocumentForm, IAM, hạ tầng | Trung bình |
+| 4 | Xác nhận bản đang chạy trên Azure | Tất cả | Cần trước khi nghiệm thu |
 
 ---
 
-## 1. Bật thông báo trên Azure
+## 1. Chạy migration và deploy thay đổi ngày 29/10
+
+Theo `PROGRESS.md` của BE (WORKFLOW-FE-1026), code đã build đạt nhưng **chưa apply DB, chưa deploy**.
+
+**Cần làm:**
+1. Chạy `docs/sql/workflow-applicant-name-activity.sql` (migration `20261029005650_ApplicantNameAndActivity`) trên DB Workflow Azure. Script yêu cầu `CategoryAssignment` đã chạy trước. Image `15a7fee` có thêm `20261029010912_CommentWithdrawal` (`docs/sql/workflow-comment-withdrawal.sql`), nên chạy luôn trong cùng đợt.
+2. Deploy image Workflow có commit `15a7fee` (hoặc mới hơn).
+3. Deploy Gateway có commit `73a48a4`, gồm route `/api/v1/officer/activity` trong `appsettings.Production.json`.
+4. Báo lại tag image và ngày deploy vào bảng "Xong" cuối file.
+
+**Kiểm thử sau deploy:**
+- `GET /api/v1/officer/applications` không gửi `status`: không có hồ sơ `DRAFT`. Có hồ sơ mới nộp thì kèm `applicantName`.
+- `GET /api/v1/manager/applications/assignment-summary` bằng tài khoản Manager trả 200.
+- `GET /api/v1/officer/activity?page=1&pageSize=20` bằng tài khoản cán bộ trả 200 qua gateway, không bị 404.
+
+**Tùy chọn, không bắt buộc:** hồ sơ cũ có `applicantName = null` cho đến lần nộp lại. Nếu có cách backfill an toàn (ví dụ script một lần đọc họ tên từ IAM theo `UserId`), danh sách sẽ đỡ hiện "Công dân". Không làm được thì FE giữ nguyên cách hiển thị "Công dân".
+
+## 2. Bật thông báo trên Azure
 
 **Hiện tượng (test tay trên Azure ngày 24/10):**
 - FE kết nối hub `/api/analytics-system/hubs/notifications` thành công.
 - `GetNotifications` trả rỗng với tài khoản cán bộ, kể cả sau khi Manager chuyển hồ sơ cho cán bộ đó hoặc công dân nộp hồ sơ.
 
-**Nguyên nhân theo code:** luồng thông báo đã có (commit `87cbbb0`), nhưng các cờ bật **mặc định tắt**:
+**Nguyên nhân theo code (vẫn đúng ở `15a7fee`):** luồng thông báo đã có (commit `87cbbb0`), nhưng các cờ bật **mặc định tắt**:
 - `RabbitOptions.Enabled = false` (`WorkflowEvent.cs:9`);
 - base `appsettings.json` của Workflow và Analytics không có mục `RabbitMq`;
 - trong docker-compose, `RabbitMq__Enabled` và `Notifications__WorkersEnabled` đều lấy `${NOTIFICATIONS_ENABLED:-false}`.
@@ -50,112 +61,38 @@ FE giữ nguyên workaround cho tới khi BE deploy. Khi BE xong, FE chỉ bỏ 
 - Manager chuyển hồ sơ cho cán bộ B: B nhận `ReceiveNotification`.
 - Bảng outbox của Workflow không còn dòng `PublishedAt IS NULL` bị kẹt.
 
-## 2. `applicantName` trong danh sách hồ sơ
+## 3. Giảm độ trễ
 
-**Vấn đề:**
-- `GET /api/v1/officer/applications` và `/pending` không có tên người nộp.
-- FE phải gọi `GET /officer/applications/{id}` cho từng dòng để lấy tên. Trang 50 dòng có thể sinh 50 request, mỗi request khoảng 2 giây trên Azure.
-
-**Cần làm:**
-- Thêm cột `applicant_name` (nullable) vào `applications`. Lưu snapshot họ tên khi công dân nộp (`SUBMITTED`), lấy từ IAM profile hoặc claim `name`, giống cách lưu `AssignedOfficerName`.
-- Thêm `string? ApplicantName = null` vào **cuối** `ApplicationSummaryDto` (`WorkflowContracts.cs:50-51`).
-- Truyền giá trị ở `ApplicationReviewStore.Pending` (:43), `ListAll` (:99) và `ApplicationStore.List` (:25).
-- Backfill hồ sơ cũ theo `UserId` nếu được; không được thì để `null` (FE hiện "Công dân").
-- **Không** đưa CCCD hay số điện thoại vào summary.
-
-**Response mong muốn:**
-```json
-{ "id": "…", "applicationCode": "HS-20261024-00000037", "status": "SUBMITTED", "applicantName": "Nguyễn Đức Anh" }
-```
-
-## 3. Loại bản nháp khỏi danh sách cán bộ/Manager
-
-**Vấn đề:**
-- `ListAll` (`ApplicationReviewStore.cs:51-52`) chỉ lọc theo phường và loại người gọi, nên trả cả `DRAFT` của công dân khác.
-- FE chặn bằng cách tự gửi `Status=…`, nhưng bản nháp công dân tự hủy (`CANCELLED`, chưa từng nộp) vẫn lọt.
-
-**Cần làm:** thêm điều kiện mặc định trong `ListAll`:
-```csharp
-q = q.Where(x => x.Status != ApplicationStates.Draft && x.SubmittedAt != null);
-```
-Nếu `SubmittedAt` không phải mốc nộp lần đầu thì dùng `FirstSubmittedAtUtc`.
-
-**Kiểm thử:** công dân tạo nháp rồi tự hủy; cán bộ gọi danh sách không có `status` thì không thấy hồ sơ đó.
-
-## 4. API thống kê phân công cho Manager
-
-**Vấn đề:**
-- Màn "Giám sát hồ sơ" cần 3 nhóm số: số hồ sơ chưa phân công, số quá hạn, và số hồ sơ đang xử lý của từng cán bộ.
-- FE đang lấy bằng nhiều request `pageSize=1`. Phường có 20 cán bộ thì mỗi lần mở là 22 request.
-
-**Cần làm:** `GET /api/v1/manager/applications/assignment-summary`
-- Quyền: `workflow.assign.manage` (hoặc `workflow.queue.read`), chỉ trong phường của Manager.
-- `activeCount` đếm hồ sơ `UNDER_REVIEW`, `NEED_REVISION`, `DOCUMENTS_READY` có `AssignedOfficerId = officerId`.
-- `overdue` dùng cùng quy tắc với bộ lọc `Overdue=true` hiện có.
-- Chỉ trả cán bộ có hồ sơ; cán bộ không có trong mảng thì FE hiểu là 0.
-- Lỗi: 401, 403, 503 `workflow.iam_unavailable`.
-
-**Response:**
-```json
-{ "unassignedSubmitted": 4, "overdue": 2, "officers": [ { "officerId": "…", "activeCount": 3, "overdueCount": 1 } ] }
-```
-
-## 5. API lịch sử thao tác của cán bộ
-
-**Vấn đề:**
-- BE đã có dữ liệu trong `ApplicationStatusHistory` (`ChangedBy`, `FromStatus`, `ToStatus`, `Reason`) và `ApplicationAssignmentHistory` (`ActorId`, `Action`, `Reason`).
-- Nhưng chỉ trả theo từng hồ sơ, nên màn "Lịch sử xử lý" của cán bộ không có dữ liệu thật.
-
-**Cần làm:** `GET /api/v1/officer/activity?page=1&pageSize=20&from=&to=&action=`
-- Quyền: `workflow.queue.read`. Chỉ trả thao tác của người gọi. Manager có thể truyền `officerId` để xem cán bộ trong phường mình (tùy chọn).
-- Gộp 2 nguồn trên, sắp `createdAt` giảm dần, phân trang ở server.
-- `source`: `STATUS` | `ASSIGNMENT`.
-- `action`: giá trị `ToStatus`, hoặc `CLAIM`/`RELEASE`/`ASSIGN`/`TRANSFER`.
-- `applicantName` có sau khi làm mục 2; chưa có thì bỏ trường này.
-
-**Response:**
-```json
-{
-  "items": [
-    { "id": "…", "source": "STATUS", "action": "NEED_REVISION", "applicationId": "…",
-      "applicationCode": "HS-20261024-00000035", "procedureTitle": "Thủ tục đăng ký khai tử",
-      "applicantName": "Nguyễn Đức Anh", "reason": "Thiếu chữ ký", "createdAt": "2026-10-24T11:29:00Z" }
-  ],
-  "page": 1, "pageSize": 20, "total": 37
-}
-```
-
-## 6. Giảm độ trễ
-
-**Số đo:**
+**Số đo (Azure, 24–26/10):**
 
 | Request | Thời gian |
 |---|---|
 | `GET /applications/{id}/contents` (DocumentForm) | 3,9–6,2 s |
 | `submit` / `resubmit` | 4–5,5 s |
 | Danh sách / chi tiết Workflow | 2,2–2,8 s |
-| IAM, cả endpoint đơn giản `GET /api/v1/wards` (đo ngày 26/10) | 0,7–1 s |
+| IAM, cả endpoint đơn giản `GET /api/v1/wards` | 0,7–1 s |
 
 **Cần làm:**
 1. **Hạ tầng:** `minReplicas ≥ 1` cho `wardmate-application-workflow`, `wardmate-documentform`, `wardmate-iam` để tránh khởi động nguội. Kiểm tra vùng của database có gần `japaneast` không.
-2. **Workflow `WorkflowAccessMiddleware.cs:18`:** đang gọi IAM `access-context` ở **mọi** request. Đề xuất cache theo token khoảng 30 giây.
-   - FE đã tự tải lại lĩnh vực mỗi 60 giây, nên cache ngắn không ảnh hưởng nghiệp vụ.
-   - Đánh đổi: khóa tài khoản sẽ có hiệu lực chậm tối đa bằng TTL. Không chấp nhận được thì bỏ qua đề xuất này.
-3. **DocumentForm `ApplicationAccess.cs:34-37`:** mỗi lần kiểm tra quyền đều gọi sang Workflow. Đề xuất cache 15–30 giây **chỉ cho thao tác đọc**, khóa `(userId, applicationId)`.
+2. **Workflow `WorkflowAccessMiddleware.cs`:** vẫn gọi IAM `access-context` ở **mọi** request. Đề xuất cache theo token khoảng 30 giây.
+   - BE ghi nhận đề xuất này trái quy tắc hiện tại "không cache, fail closed", đang chờ chủ dự án quyết định.
+   - Đánh đổi: khóa tài khoản sẽ có hiệu lực chậm tối đa bằng TTL. Không chấp nhận được thì bỏ qua đề xuất này, chỉ làm phần hạ tầng.
+3. **DocumentForm `ApplicationAccess.cs`:** mỗi lần kiểm tra quyền đều gọi sang Workflow. Đề xuất cache 15–30 giây **chỉ cho thao tác đọc**, khóa `(userId, applicationId)`.
 4. Bật Application Insights cho các endpoint chậm nhất để biết thời gian nằm ở DB, ở lời gọi giữa service hay ở khởi động nguội.
 
-## 7. Xác nhận bản đang chạy trên Azure
-
-- `PROGRESS.md` / `CLAUDE_HANDOFF.md` của BE ghi các tính năng 23–24/10 "chưa apply migration, chưa deploy". Image Workflow gần nhất ghi là `workflow-20261017-01`.
-- Nhưng FE đã test được phân công trên Azure ngày 24/10.
+## 4. Xác nhận bản đang chạy trên Azure
 
 Nhờ BE xác nhận:
 - Commit/image đang chạy của **IAM, Workflow, Analytics, DocumentForm, Gateway**.
-- Đã apply migration `20261023173500_CategoryAssignment` (Workflow) và `20261024010000_ManagerAssignmentPermission` (IAM) chưa.
+- Đã apply các migration sau chưa:
+  - `20261023173500_CategoryAssignment` (Workflow);
+  - `20261024010000_ManagerAssignmentPermission` (IAM);
+  - `20261029005650_ApplicantNameAndActivity` (Workflow, mục 1 ở trên);
+  - `20261029010912_CommentWithdrawal` (Workflow, `docs/sql/workflow-comment-withdrawal.sql`). Migration này có timestamp sau migration của mục 1. Nếu deploy image `15a7fee` thì cần chạy cả hai.
 - Endpoint tạo Manager / Procedure-manager (`POST /api/v1/accounts/manager`, `/procedure-manager`) đã có trên Azure chưa.
 
 ---
-*Khi xong mục nào, BE ghi commit/image vào cột "Xong" bên dưới để FE bỏ workaround tương ứng.*
+*Khi xong mục nào, BE ghi commit/image vào cột "Xong" bên dưới để FE deploy hoặc bỏ workaround tương ứng.*
 
 | # | Xong (commit/image, ngày) |
 |---|---|
@@ -163,6 +100,3 @@ Nhờ BE xác nhận:
 | 2 | |
 | 3 | |
 | 4 | |
-| 5 | |
-| 6 | |
-| 7 | |

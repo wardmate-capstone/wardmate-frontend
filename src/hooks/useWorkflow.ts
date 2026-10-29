@@ -11,6 +11,7 @@ import {
   type UpdateChecklistInput,
   type ReleaseApplicationInput,
   type ManageAssigneeInput,
+  type OfficerActivityInput,
 } from '@/lib/api/workflow';
 import { documentFormApi } from '@/lib/api/documentForms';
 import { useAuthStore } from '@/stores/authStore';
@@ -54,11 +55,40 @@ export function useOfficerApplications(filters: OfficerListInput = {}) {
   });
 }
 
+// Lịch sử thao tác lấy từ server (thay nhật ký tạm trên trình duyệt).
+export function useOfficerActivity(input: OfficerActivityInput = {}, enabled = true) {
+  const userId = useAuthStore((state) => state.user?.id);
+  return useQuery({
+    queryKey: ['workflow', 'officer', 'activity', userId, input],
+    queryFn: ({ signal }) => workflowApi.listOfficerActivity(input, signal),
+    enabled: enabled && Boolean(userId),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useAssignmentSummary() {
+  const userId = useAuthStore((state) => state.user?.id);
+  return useQuery({
+    queryKey: ['workflow', 'manager', 'assignment-summary', userId],
+    queryFn: ({ signal }) => workflowApi.getAssignmentSummary(signal),
+    enabled: Boolean(userId),
+  });
+}
+
+// Mọi thao tác đổi trạng thái/phân công đều làm lệch số liệu tóm tắt và lịch sử thao tác.
+function invalidateDerived(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'activity'] }),
+    queryClient.invalidateQueries({ queryKey: ['workflow', 'manager', 'assignment-summary'] }),
+  ]);
+}
+
 export function useAssignOfficerMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => workflowApi.assignOfficer(id),
     onSuccess: (_, id) => {
+      void invalidateDerived(queryClient);
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
@@ -86,6 +116,7 @@ export function useRequestRevisionMutation() {
     mutationFn: async ({ id, input, submissionId }: { id: string; input: RequestRevisionInput; submissionId?: string }) =>
       { await (submissionId ? documentFormApi.officerRequestRevision(submissionId, input.reason) : workflowApi.requestRevision(id, input)); },
     onSettled: (_, _error, { id }) => Promise.all([
+      invalidateDerived(queryClient),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
@@ -100,6 +131,7 @@ export function useConfirmReadinessMutation() {
     mutationFn: async ({ id, submissionId }: { id: string; submissionId?: string }) =>
       { await (submissionId ? documentFormApi.officerConfirmReadiness(submissionId) : workflowApi.confirmReadiness(id)); },
     onSettled: (_, _error, { id }) => Promise.all([
+      invalidateDerived(queryClient),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
@@ -111,6 +143,7 @@ export function useConfirmReadinessMutation() {
 // Phân công đổi cả danh sách và chi tiết; làm mới kể cả khi lỗi (409 nghĩa là dữ liệu đã khác).
 function invalidateAssignment(queryClient: ReturnType<typeof useQueryClient>, id: string) {
   return Promise.all([
+    invalidateDerived(queryClient),
     queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] }),
     queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] }),
     queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] }),
@@ -139,6 +172,7 @@ export function useOfficiallyReceiveMutation() {
     mutationFn: ({ id, input }: { id: string; input: OfficialReceiptInput }) =>
       workflowApi.officiallyReceiveApplication(id, input),
     onSuccess: (_, { id }) => {
+      void invalidateDerived(queryClient);
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'officer', 'applications'] });
       queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });

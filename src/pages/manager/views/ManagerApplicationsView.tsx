@@ -1,22 +1,23 @@
 import { useMemo, useState } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowsClockwise, ClockCounterClockwise, MagnifyingGlass, UserSwitch, UserPlus } from '@phosphor-icons/react';
 import { Button, Modal, TableSkeletonRows, toast } from '@/components/ui';
 import { AssignOfficerModal, type AssignTarget, type AssignableOfficer } from '@/components/workflow/AssignmentModals';
-import { useOfficerApplications, useManagerAssigneeMutation } from '@/hooks/useWorkflow';
+import { useOfficerApplications, useManagerAssigneeMutation, useAssignmentSummary } from '@/hooks/useWorkflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
 import { authErrorMessage, getManagerOfficers } from '@/lib/api';
-import { workflowApi, workflowError, OFFICER_VISIBLE_STATUSES, type ApplicationSummaryDto, type OfficerListInput } from '@/lib/api/workflow';
+import { workflowApi, workflowError, type ApplicationSummaryDto, type OfficerListInput } from '@/lib/api/workflow';
 import { UNKNOWN_CATEGORY_LABEL, mapAssignmentHistoryToTimelineItem, type OfficerLookup } from '@/lib/api/workflowAdapters';
 import { useAuthStore } from '@/stores/authStore';
 
 const PAGE_SIZE = 20;
-// Trạng thái còn đang xử lý; dùng để đếm khối lượng của từng cán bộ.
-const ACTIVE_STATUSES = 'UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY';
 const TRANSFERABLE = ['UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'];
+// Cùng nhóm trạng thái BE dùng để đếm activeCount trong assignment-summary.
+const ACTIVE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
+  { value: ACTIVE_STATUSES, label: 'Đang xử lý (chưa xong)' },
   { value: 'SUBMITTED', label: 'Chờ tiền kiểm' },
   { value: 'UNDER_REVIEW', label: 'Đang kiểm tra' },
   { value: 'NEED_REVISION', label: 'Cần bổ sung' },
@@ -99,7 +100,8 @@ export function ManagerApplicationsView() {
   const filters: OfficerListInput = {
     page,
     pageSize: PAGE_SIZE,
-    status: status || OFFICER_VISIBLE_STATUSES,
+    // BE tự loại bản nháp và hồ sơ chưa từng nộp khỏi danh sách cán bộ/Manager.
+    status: status || undefined,
     categoryIds: categoryId ? [categoryId] : undefined,
     assignee: assignee || undefined,
     overdue: overdue || undefined,
@@ -114,23 +116,15 @@ export function ManagerApplicationsView() {
     staleTime: 60_000,
   });
 
-  // Số liệu tóm tắt: dùng total của các truy vấn pageSize=1 (BE chưa có API thống kê phân công riêng).
+  // Số liệu tóm tắt từ một request assignment-summary; cán bộ vắng trong officers[] là 0 hồ sơ.
   const officerItems = useMemo(() => officers.data?.items.filter((o) => o.isActive) ?? [], [officers.data]);
-  const countFilters: OfficerListInput[] = [
-    { page: 1, pageSize: 1, status: 'SUBMITTED', assignee: 'unassigned' },
-    { page: 1, pageSize: 1, overdue: true },
-    ...officerItems.map((o) => ({ page: 1, pageSize: 1, status: ACTIVE_STATUSES, assignee: o.id })),
-  ];
-  const counts = useQueries({
-    queries: countFilters.map((f) => ({
-      queryKey: ['workflow', 'officer', 'applications', userId, f],
-      queryFn: ({ signal }: { signal: AbortSignal }) => workflowApi.listOfficerApplications(f, signal),
-      enabled: Boolean(userId),
-    })),
-  });
-  const unassignedCount = counts[0]?.data?.total;
-  const overdueCount = counts[1]?.data?.total;
-  const workload = new Map(officerItems.map((o, index) => [o.id.toLowerCase(), counts[index + 2]?.data?.total]));
+  const summary = useAssignmentSummary();
+  const unassignedCount = summary.data?.unassignedSubmitted;
+  const overdueCount = summary.data?.overdue;
+  const workload = useMemo(() => {
+    const active = new Map((summary.data?.officers ?? []).map((o) => [o.officerId.toLowerCase(), o.activeCount]));
+    return new Map(officerItems.map((o) => [o.id.toLowerCase(), summary.data ? active.get(o.id.toLowerCase()) ?? 0 : undefined]));
+  }, [summary.data, officerItems]);
 
   const username = useAuthStore((st) => st.user?.username);
   const historyLookup = useMemo<OfficerLookup>(() => ({
@@ -204,18 +198,25 @@ export function ManagerApplicationsView() {
       {officerItems.length > 0 && (
         <section aria-labelledby="workload-title" className="admin-card p-4">
           <h2 id="workload-title" className="text-sm font-bold text-slate-900">Khối lượng đang xử lý theo cán bộ</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Hồ sơ Đang kiểm tra, Cần bổ sung và Giấy tờ sẵn sàng. Bấm để lọc danh sách.</p>
+          <p className="mt-0.5 text-xs text-slate-500">Hồ sơ Đang kiểm tra, Cần bổ sung, Giấy tờ sẵn sàng và hồ sơ công dân đã gửi lại. Bấm để lọc danh sách.</p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {officerItems.map((o) => (
               <li key={o.id}>
                 <button
                   type="button"
                   aria-pressed={assignee === o.id}
-                  onClick={() => { setAssignee(assignee === o.id ? '' : o.id); setStatus(''); resetPage(); }}
+                  onClick={() => {
+                    // Lọc đúng nhóm hồ sơ đang xử lý để số dòng khớp với con số trên chip.
+                    const selecting = assignee !== o.id;
+                    setAssignee(selecting ? o.id : '');
+                    setStatus(selecting ? ACTIVE_STATUSES : '');
+                    setOverdue(false);
+                    resetPage();
+                  }}
                   className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-800 ${assignee === o.id ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                 >
                   <span>{o.fullName?.trim() || o.username}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{workload.get(o.id.toLowerCase()) ?? '…'}</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{workload.get(o.id.toLowerCase()) ?? (summary.isError ? '—' : '…')}</span>
                 </button>
               </li>
             ))}
@@ -259,7 +260,7 @@ export function ManagerApplicationsView() {
           </label>
           <button
             type="button"
-            onClick={() => void Promise.all([list.refetch(), officers.refetch(), ...counts.map((c) => c.refetch())])}
+            onClick={() => void Promise.all([list.refetch(), officers.refetch(), summary.refetch()])}
             disabled={list.isFetching}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
           >
@@ -273,6 +274,11 @@ export function ManagerApplicationsView() {
             <p>{workflowError(list.error)}</p>
             <Button size="small" variant="outline" onClick={() => void list.refetch()}>Thử lại</Button>
           </div>
+        )}
+        {summary.isError && (
+          <p role="alert" className="mx-4 my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Chưa tải được số liệu phân công: {workflowError(summary.error)}
+          </p>
         )}
         {officers.isError && (
           <p role="alert" className="mx-4 my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
