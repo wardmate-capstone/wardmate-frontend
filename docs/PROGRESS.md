@@ -1,8 +1,25 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 27/10/2026.
+Cập nhật: 29/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Bỏ workaround theo BE WORKFLOW-FE-1026 (mục 2–5 của BE_REQUESTS_PENDING) — 29/10/2026
+
+- Đối chiếu BE `main` = `15a7fee` (commit `66209c2` docs, `c61e6cc` assignment-summary, `b5249f9` officer activity, `73a48a4` gateway). BE build pass nhưng **chưa apply migration `20261029005650_ApplicantNameAndActivity` và chưa deploy Workflow + Gateway**. Mục 1, 6, 7 BE chưa làm (hạ tầng/Azure).
+- Mục 2 `applicantName`: bỏ vòng gọi `GET /officer/applications/{id}` cho từng dòng trong `OfficerPage.tsx`; tên lấy từ summary, null hiển thị "Công dân". `applicationDtoSchema` thêm `applicantName`. Danh sách không còn CCCD lấy từ formData (theo thiết kế BE, CCCD chỉ xem trong chi tiết).
+- Mục 3: bỏ `OFFICER_VISIBLE_STATUSES`; cán bộ (Tổng quan/Tất cả hồ sơ) và Manager không gửi `Status` mặc định nữa.
+- Mục 4: `workflowApi.getAssignmentSummary` + `useAssignmentSummary`; `ManagerApplicationsView` dùng 1 request thay cho 2 + N request `pageSize=1`. Cán bộ vắng trong `officers[]` hiển thị 0. Mô tả khối lượng ghi rõ có cả hồ sơ gửi lại (BE đếm `SUBMITTED` có người phụ trách).
+- Mục 5: `workflowApi.listOfficerActivity` + `useOfficerActivity`; `OfficerAuditLogView` đọc `GET /officer/activity` (lọc action và phân trang ở server, tìm nhanh trong trang, mở hồ sơ theo `applicationId`). Bỏ nhật ký tạm trong state và type `OfficerAuditLog`. Mã lỗi `workflow.forbidden` có thông báo riêng.
+- Mutation đổi trạng thái/phân công làm mới thêm `['workflow','officer','activity']` và `['workflow','manager','assignment-summary']`. Proxy Vite thêm `/api/v1/officer/activity` → Workflow; `tests/api-proxy-check.mjs` thêm 2 ca (**28/28 đạt**). Hosting production cần reverse proxy tương đương.
+- Kiểm tra: tsc riêng các file đã sửa và ESLint đạt. `npm run typecheck` toàn repo đang lỗi cú pháp ở `src/components/ai/AiChatWidget.tsx:465` thuộc thay đổi AI đang staged của task khác, không phải phần này. Thêm 2 ca Playwright mock trong `tests/assignment.spec.ts` (assignment-summary, lịch sử xử lý) và sửa ca kiểm tra không gửi `Status`; **chưa chạy Playwright** trong lượt này.
+- Đối chiếu lại source BE (29/10): mục 2–5 BE làm đủ; mục 1, 6, 7 chưa làm. Đã sửa nhãn `ASSIGN` trong Lịch sử xử lý thành "Giao hồ sơ cho cán bộ" (mọi dòng là thao tác của chính người xem). Đã xem UI bằng Playwright mock trong worktree tạm (vì `AiChatWidget.tsx` staged đang làm app lỗi biên dịch): `assignment`, `officer`, `manager` + kịch bản xem UI **22/22 đạt**. Trạng thái lỗi `assignment-summary` hiện "—" ở chip cán bộ.
+- `BE_REQUESTS_PENDING.md` đã viết lại ngày 29/10, chỉ còn việc BE: (1) chạy migration + deploy Workflow/Gateway, (2) bật thông báo Azure, (3) giảm độ trễ, (4) xác nhận bản Azure.
+- **Hai việc FE đã sửa (29/10, không cần BE):**
+  - Giám sát hồ sơ: bấm chip cán bộ nay gửi `Assignee` + `Status=SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY` (cùng nhóm BE đếm `activeCount`), bỏ lọc quá hạn. Bộ lọc trạng thái thêm lựa chọn "Đang xử lý (chưa xong)" để thấy bảng đang lọc gì. Trước đây chip lọc mọi trạng thái nên số dòng lệch với số trên chip.
+  - Danh sách cán bộ (`OfficerApplicationListView.tsx`): ô tìm kiếm chỉ tìm theo mã hồ sơ và họ tên (bỏ CCCD/SĐT vì summary không có), placeholder "Tìm mã hồ sơ, họ tên người dân...". Ẩn dòng "—" dưới tên khi không có CCCD.
+  - Kiểm tra: tsc riêng file sửa + ESLint đạt; Playwright `assignment`, `officer`, `manager` **19/19 đạt** (mock, chạy trong worktree tạm).
+- **Thứ tự deploy:** deploy FE này sau khi BE đã chạy migration và deploy Workflow + Gateway. Deploy FE trước sẽ làm: tên người nộp hiện "Công dân", bản nháp lọt vào danh sách, Giám sát hồ sơ và Lịch sử xử lý báo lỗi 404. Chưa commit.
 
 ## Chốt 8 commit hướng dẫn, giao diện công khai và email — 27/10/2026
 
@@ -214,6 +231,56 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Gửi BE:** gộp mọi việc còn tồn đọng (6 mục A–F cũ + xác nhận deploy) vào **một file duy nhất** `docs/BE_REQUESTS_PENDING.md`. Các file yêu cầu cũ đã gắn nhãn "ĐÃ GỘP" / "ĐÃ XONG – không cần gửi lại".
 - **UI:** làm lại màn chặn truy cập trong `ProtectedRoute.tsx` (đang khôi phục phiên / lỗi xác minh / không đủ quyền): logo WardMate, thẻ bo góc như trang đăng nhập, nút Thử lại, Về trang chủ, Đăng nhập lại; responsive.
 - **Deploy:** PROGRESS của BE chưa ghi image Azure nào cho phân công, nhưng FE đã test tay trên Azure ngày 24/10 (Manager chuyển cán bộ được). Cần BE xác nhận phiên bản đang chạy và migration.
+
+## Kho kiến thức AI và chatbot có dẫn nguồn (BE TASK-28/29) — 24/10/2026
+
+- **Nguồn hợp đồng:** BE chưa liên lạc được. Đã đọc commit KhaNguyen454 ngày 24/10 trong `D:/wardmate-backend`: `docs/api-guide.md` mục TASK-28/29, `docs/system-constraints.md` KB-01/KB-02, cùng `KnowledgeController.cs`, `AssistantController.cs`, `AssistantContracts.cs`, `KnowledgeContracts.cs`, `KnowledgeRetrievalContracts.cs`, `ChatService.cs`. Theo BE: chưa apply DB, chưa deploy, `Knowledge:EmbeddingEnabled`/`RagEnabled` mặc định tắt (khi tắt, chat trả `grounded:false`, `citations:null`).
+- **Quyết định người dùng:**
+  - Làm cả chat có nguồn và màn quản lý kho.
+  - Màn quản lý dùng chung cho Quản lý thủ tục và Admin.
+  - Có "Tìm thử" (mỗi lần gọi tốn phí).
+  - Lịch sử chat theo API BE.
+  - Không đụng thông báo/SMS.
+- **Đã làm:**
+  - Proxy `vite.config.ts`: thêm `/api/v1/ai/knowledge` → AIOCR. `tests/api-proxy-check.mjs` thêm 3 route.
+  - `src/lib/api/aiOcr.ts`:
+    - Schema Zod cho `citations`, `grounded`, `relatedProcedures {procedureId,title}` (bỏ qua phần tử sai dạng), phiên và tin nhắn chat.
+    - `knowledgeApi` gọi toàn bộ API knowledge.
+    - `aiError` map mã `knowledge.*`/`chat.*`/`ai.*`, 403, 429.
+  - `src/hooks/useAiKnowledge.ts`: query có user ID, chỉ bật khi có `knowledge.manage`; mutation invalidate cả khi lỗi; `search` là mutation nên không tự gọi lại.
+  - `AiChatWidget`:
+    - `[n]` thành nút dẫn tới khối "Nguồn tham khảo" (tiêu đề, mục, loại nguồn, "Xem thủ tục" → `/thu-tuc/:id`).
+    - Không hiện `score`. "Thủ tục liên quan" bỏ mục trùng với nguồn.
+    - Nút "Lịch sử": chỉ gọi khi bấm; nếu quá 50 tin thì tải trang cuối và có ghi chú.
+    - Khách chưa đăng nhập thấy lời nhắc đăng nhập, không gọi API.
+    - `wardCode` giữ `WARD_001`: BE chỉ dùng làm gợi ý trong prompt, không lọc nguồn theo phường; đổi giữa phiên sẽ bị 409 `chat.ward_mismatch`.
+  - `src/components/ai/KnowledgeBaseView.tsx` + `KnowledgeModals.tsx`:
+    - Thẻ index-status kèm hướng dẫn thứ tự bật (FE không bật công tắc).
+    - Danh sách có tìm kiếm, lọc, phân trang; chi tiết kèm tab các đoạn đã chia.
+    - Thêm văn bản/FAQ (RHF/Zod); tải PDF (chặn ở UI nếu không phải PDF hoặc quá 10 MB; hiện `warnings`).
+    - Sửa: PDF chỉ đổi tiêu đề, nguồn PROCEDURE không có nút sửa; gặp 409 giữ form và có nút "Tải bản mới nhất".
+    - Ngừng dùng/dùng lại, chia đoạn lại, tạo lại vector đều gửi `expectedRevision`.
+    - Đồng bộ một thủ tục hoặc tất cả; cảnh báo khi `complete:false` hoặc có thủ tục lỗi.
+    - Tìm thử có cảnh báo phí.
+  - Gắn vào workspace:
+    - `ProcedureManagerPage` (mục `ai-knowledge`) và `AdminPage` (mục `knowledge`, thay placeholder `KnowledgeView`).
+    - Sidebar cả hai nơi chỉ hiện khi có `knowledge.manage`.
+    - Không thêm vào `PermissionFeatures`, vì panel `?feature=` đã bị gỡ khỏi menu.
+- **Test (mock):**
+  - Mới: `tests/fixtures/aiKnowledge.ts`, `tests/ai-chat.spec.ts` (4 test), `tests/ai-knowledge.spec.ts` (8 test).
+  - `tests/fixtures/auth.ts`: thêm `knowledge.manage` vào quyền mặc định của PROCEDURE_MANAGER/IT_ADMIN (khớp seed BE).
+  - `procedure-manager.spec.ts`: test placeholder chuyển sang mục "Văn bản pháp lý".
+- **Kiểm tra:**
+  - `node_modules` máy này lệch lockfile (thiếu `@docx-editor.dev/*` và `.bin`); đã chạy `npm install`, lockfile không đổi.
+  - typecheck, lint, build: đạt.
+  - Proxy check: 23/23.
+  - Playwright ai-chat, ai-knowledge, landing, procedure-manager, admin-rbac, workspace-sidebar, design-system (`--workers=2`): 63/64. Lỗi còn lại `procedure-manager.spec.ts:125` (skeleton) chạy riêng thì đạt, nên là lỗi chập chờn khi tải nặng.
+  - **Chưa tích hợp thật:** BE chưa deploy, chưa gọi Azure, chưa gọi chat/search thật (có phí).
+- **Việc chờ:**
+  - BE apply `aiocr-knowledge-base.sql`, `aiocr-knowledge-retrieval.sql`, `iam-knowledge-permission.sql`, deploy AIOCR và route gateway `/api/v1/ai/knowledge`.
+  - Bật embedding → kiểm tra bằng "Tìm thử" → bật RAG, rồi kiểm tra lại chat thật.
+  - Hosting production cần reverse proxy `/api/v1/ai/knowledge` nếu dùng proxy.
+  - Hỏi BE mã phường thật cho chat (hiện `WARD_001`).
 
 ## Tích hợp phân công theo lĩnh vực (FE bước 1–3) — 24/10/2026
 
