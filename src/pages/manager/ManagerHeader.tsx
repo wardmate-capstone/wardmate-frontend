@@ -8,6 +8,10 @@ import {
 import { ManagerSectionId } from './types';
 
 export const managerSectionTitles: Record<ManagerSectionId, { title: string; subtitle?: string }> = {
+  dispatch: { title: 'Điều phối hồ sơ' },
+  shifts: { title: 'Lịch ca làm' },
+  leaves: { title: 'Duyệt nghỉ phép' },
+  consultations: { title: 'Tham vấn chuyên môn' },
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
   applications: { title: 'Giám sát hồ sơ', subtitle: 'Theo dõi hồ sơ toàn phường, giao và chuyển cán bộ phụ trách' },
   'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
