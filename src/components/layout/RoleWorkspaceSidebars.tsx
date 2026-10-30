@@ -12,6 +12,10 @@ export function UnifiedManagerSidebar({ currentSection, onSelectSection, isOpenM
   const groups: WorkspaceNavGroup<ManagerSectionId>[] = [
     { title: 'Điều hành', items: [
       { id: 'overview', label: 'Tổng quan', icon: House, fallbackRoles: role },
+      { id: 'dispatch', label: 'Điều phối hồ sơ', icon: ListChecks, permissions: ['workflow.dispatch.read'] },
+      { id: 'shifts', label: 'Lịch ca làm', icon: ClockCounterClockwise, permissions: ['workflow.staffing.read'] },
+      { id: 'leaves', label: 'Duyệt nghỉ phép', icon: IdentificationCard, permissions: ['workflow.staffing.read'] },
+      { id: 'consultations', label: 'Tham vấn chuyên môn', icon: UsersThree, permissions: ['workflow.consultation.read'] },
       { id: 'applications', label: 'Giám sát hồ sơ', icon: ListChecks, permissions: ['workflow.queue.read'], fallbackRoles: role },
     ] },
     { title: 'Thống kê hệ thống', items: [
