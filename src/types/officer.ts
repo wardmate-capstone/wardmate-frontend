@@ -1,4 +1,7 @@
 export type OfficerSection =
+  | 'shifts'
+  | 'leaves'
+  | 'consultations'
   | 'dashboard'
   | 'apps-all'
   | 'apps-pending'
