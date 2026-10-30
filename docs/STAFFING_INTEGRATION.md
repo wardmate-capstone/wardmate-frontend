@@ -33,6 +33,12 @@ node tests/staffing-live-check.mjs
 
 Các giá trị trên trỏ tới instance local đã kiểm tra. Khi dùng môi trường khác, đặt origin/OpenAPI URL thật tương ứng; không thêm đường dẫn Swagger vào VITE_WORKFLOW_API_URL. Hosting production phải định tuyến /api/v1/staffing và các API Workflow tới đúng service/gateway; Vite proxy chỉ áp dụng cho phát triển.
 
+## Cập nhật kiểm tra trước push main — 30/10/2026
+
+Môi trường đã được người dùng publish. Lượt chia commit/push hiện tại không áp dụng lại cấu hình cũ và không publish thêm. Gateway Swagger đã truy cập HTTP 200, đối chiếu có đủ 18 operation. Giới hạn mạng CONNECT 403 phía trên mô tả lượt triển khai trước; không còn là blocker hiện tại.
+
+Chạy lại typecheck, lint, build và kiểm tra whitespace trên cây mã cuối: đạt, còn cảnh báo bundle/annotation hiện hữu. Chỉ đọc Swagger Azure, không gửi dữ liệu ghi hoặc dùng tài khoản giả; chưa kiểm chứng lại các luồng có đăng nhập. Bộ 18/18 local ở phần trước là kết quả lượt triển khai, không được trình bày là vừa chạy lại. Giai đoạn này chỉ chia phần thay đổi sẵn có thành 20 commit có ý nghĩa (bao gồm bàn giao), không chế tạo 25 commit từ các thay đổi không tồn tại.
+
 ## Điểm cần BE xử lý / xác nhận
 
 1. DOCX tham vấn: DocumentForm ApplicationAccess.Read hỗ trợ fallback consultation/document-access, nhưng OfficerSubmissionsController.DownloadDocx gọi ApplicationAccess.OfficerSubmission → Check(officer: true), vẫn bắt AssignedOfficerId là người tải. FE đã nối request thật và hiển thị lỗi, không mở quyền hoặc giả lập tải thành công. Muốn chuyên viên tải DOCX đầy đủ cần BE bổ sung kiểm tra read-only tham vấn cho đường tải này. Không được mở fallback cho write/annotate/decide.
@@ -42,4 +48,4 @@ Các giá trị trên trỏ tới instance local đã kiểm tra. Khi dùng môi
 
 ## Nghiệm thu tiếp
 
-Sau khi cấu hình mạng được áp dụng, đối chiếu lại Swagger Azure và đăng nhập tài khoản Manager/Officer được cấp quyền thật. Kiểm tra phân công, trùng ca/nghỉ, tự hủy đơn, bàn giao, tham vấn/thu hồi quyền và hai phiên cập nhật đồng thời. Không nhập mật khẩu/token vào tài liệu hoặc chat; đăng nhập qua giao diện ứng dụng. Chỉ thử thao tác ghi trên hồ sơ được phép dùng để nghiệm thu.
+Swagger Azure đã đọc được trong lượt kiểm tra trước push. Bước tiếp theo là đăng nhập tài khoản Manager/Officer được cấp quyền thật. Kiểm tra phân công, trùng ca/nghỉ, tự hủy đơn, bàn giao, tham vấn/thu hồi quyền và hai phiên cập nhật đồng thời. Không nhập mật khẩu/token vào tài liệu hoặc chat; đăng nhập qua giao diện ứng dụng. Chỉ thử thao tác ghi trên hồ sơ được phép dùng để nghiệm thu.
