@@ -1,3 +1,5 @@
+import { StaffingView } from '@/components/staffing/StaffingView';
+import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/Toast';
 // INITIAL_OFFICER_APPLICATIONS, INITIAL_OFFICER_AUDIT_LOGS, INITIAL_OFFICER_NOTIFICATIONS đã được xóa — dữ liệu hồ sơ, audit, thông báo sẽ lấy từ API sau.
@@ -543,6 +545,9 @@ export const OfficerPage: React.FC = () => {
               )}
 
               {/* SECTION 6: HỒ SƠ CÁ NHÂN & QUẦY TRỰC */}
+              {activeSection === 'shifts' && <StaffingView mode="shifts" />}
+              {activeSection === 'leaves' && <StaffingView mode="leaves" />}
+              {activeSection === 'consultations' && <ConsultationsView />}
               {activeSection === 'profile' && <UnifiedSelfProfileView />}
             </>
           )}
