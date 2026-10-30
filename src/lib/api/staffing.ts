@@ -10,9 +10,11 @@ const assignmentSchema = z.object({ id, applicationId: id, fromOfficerId: id.nul
 const shiftSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), cancelledAtUtc: z.string().nullish(), cancellationReason: z.string().nullish() });
 const leaveSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), reason: z.string(), status: z.string(), version, decisionReason: z.string().nullish() });
 const historySchema = z.object({ id, actorId: id, version, fromStatus: z.string(), toStatus: z.string(), reason: z.string(), createdAtUtc: z.string() });
+const consultationSchema = z.object({ id, applicationId: id, specialistId: id, requestedBy: id, applicationVersion: version, assignmentVersion: version, question: z.string(), answer: z.string().nullish(), status: z.string(), version, createdAtUtc: z.string(), closeReason: z.string().nullish() });
 const page = <T extends z.ZodType>(item: T) => z.object({ items: z.array(item), page: z.number().int(), pageSize: z.number().int(), total: z.number().int() });
 const root = '/api/v1/staffing';
 const manager = '/api/v1/manager/applications';
+const consult = (applicationId: string) => `/api/v1/applications/${applicationId}/consultations`;
 async function get<T extends z.ZodType>(path: string, schema: T, params?: Record<string, unknown>, signal?: AbortSignal): Promise<z.infer<T>> {
   return schema.parse((await api.get(servicePath(serviceUrls.workflow, path), { params, signal })).data);
 }
@@ -20,6 +22,7 @@ async function post<T extends z.ZodType>(path: string, schema: T, input: unknown
   return schema.parse((await api.post(servicePath(serviceUrls.workflow, path), input)).data);
 }
 export type DispatchApplication = z.infer<typeof dispatchSchema>;
+export type Consultation = z.infer<typeof consultationSchema>;
 export type Leave = z.infer<typeof leaveSchema>;
 export type Shift = z.infer<typeof shiftSchema>;
 export type AssignmentInput = { officerId: string; expectedAssignmentVersion: number; reasonCode: string; reason: string };
@@ -36,4 +39,10 @@ export const staffingApi = {
   decide: (leave: string, expectedVersion: number, decision: string, reason: string) => post(`${root}/leaves/${leave}/decision`, leaveSchema, { expectedVersion, decision, reason }),
   impact: (leave: string, signal?: AbortSignal) => get(`${root}/leaves/${leave}/impact`, z.array(dispatchSchema), undefined, signal),
   leaveHistory: (leave: string, signal?: AbortSignal) => get(`${root}/leaves/${leave}/history`, z.array(historySchema), undefined, signal),
+  inbox: (p: number, signal?: AbortSignal) => get(`${root}/consultations`, page(consultationSchema), { page: p, pageSize: 20 }, signal),
+  consultations: (app: string, signal?: AbortSignal) => get(consult(app), z.array(consultationSchema), undefined, signal),
+  createConsultation: (app: string, input: { specialistId: string; expectedAssignmentVersion: number; question: string }) => post(consult(app), consultationSchema, input),
+  answer: (item: Consultation, text: string) => post(`${consult(item.applicationId)}/${item.id}/answer`, consultationSchema, { expectedVersion: item.version, text }),
+  close: (item: Consultation, text: string) => post(`${consult(item.applicationId)}/${item.id}/close`, consultationSchema, { expectedVersion: item.version, text }),
+  documentAccess: (app: string, signal?: AbortSignal) => get(`${consult(app)}/document-access`, z.object({ allowed: z.boolean(), applicationId: id, version }), undefined, signal),
 };
