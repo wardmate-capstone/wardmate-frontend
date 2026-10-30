@@ -1,3 +1,4 @@
+import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -48,7 +49,7 @@ const reasonSchema = z.object({
   reason: z.string().trim().min(1, 'Nhập lý do.').max(4000, 'Lý do tối đa 4.000 ký tự.'),
 });
 
-type Tab = 'info' | 'documents' | 'comments' | 'versions' | 'timeline' | 'pdf';
+type Tab = 'consultations' | 'info' | 'documents' | 'comments' | 'versions' | 'timeline' | 'pdf';
 
 const QUICK_COMMENT_TEMPLATES = [
   'Ảnh chụp/bản scan chưa rõ nét, vui lòng chụp lại góc thẳng đủ 4 góc.',
@@ -140,6 +141,7 @@ export function OfficerReviewWorkspaceView({
     { id: 'documents', label: 'Bản khai & giấy tờ', count: submissions.data?.length, icon: <FileCheck className="h-4 w-4" /> },
     { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <AlertTriangle className="h-4 w-4" /> },
     { id: 'versions', label: 'Phiên bản & so sánh', icon: <GitCompare className="h-4 w-4" /> },
+    ...(user?.permissions.includes('workflow.consultation.read') ? [{ id: 'consultations' as const, label: 'Tham vấn chuyên môn', icon: <FileText className="h-4 w-4" /> }] : []),
     { id: 'timeline', label: 'Lịch sử', icon: <History className="h-4 w-4" /> },
     { id: 'pdf', label: 'PDF sau tiền kiểm', icon: <ShieldCheck className="h-4 w-4" /> },
   ];
@@ -578,6 +580,8 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         )}
 
         {/* Tab 2: Documents Panel */}
+        {tab === 'consultations' && <ApplicationConsultations applicationId={application.id} />}
+
         {tab === 'documents' && (
           <OfficerDocumentsPanel
             applicationId={application.id}

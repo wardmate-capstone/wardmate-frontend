@@ -1,4 +1,8 @@
 export type ManagerSectionId =
+  | 'dispatch'
+  | 'shifts'
+  | 'leaves'
+  | 'consultations'
   | 'overview'
   | 'applications'
   | 'stats-dossiers'

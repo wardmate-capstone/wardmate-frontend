@@ -18,6 +18,9 @@ interface OfficerHeaderProps {
 }
 
 const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string }> = {
+  shifts: { title: 'Lịch ca làm của tôi' },
+  leaves: { title: 'Nghỉ phép của tôi' },
+  consultations: { title: 'Tham vấn chuyên môn' },
   dashboard: { title: 'Tổng quan công việc Cán bộ Một cửa' },
   'apps-all': { title: 'Tất cả hồ sơ' },
   'apps-pending': { title: 'Hồ sơ chờ tiền kiểm' },

@@ -1,25 +1,48 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 29/10/2026.
+Cập nhật: 30/10/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
-## Bỏ workaround theo BE WORKFLOW-FE-1026 (mục 2–5 của BE_REQUESTS_PENDING) — 29/10/2026
+## Chốt commit tích hợp Staffing/Workflow để push main — 30/10/2026
 
-- Đối chiếu BE `main` = `15a7fee` (commit `66209c2` docs, `c61e6cc` assignment-summary, `b5249f9` officer activity, `73a48a4` gateway). BE build pass nhưng **chưa apply migration `20261029005650_ApplicantNameAndActivity` và chưa deploy Workflow + Gateway**. Mục 1, 6, 7 BE chưa làm (hạ tầng/Azure).
-- Mục 2 `applicantName`: bỏ vòng gọi `GET /officer/applications/{id}` cho từng dòng trong `OfficerPage.tsx`; tên lấy từ summary, null hiển thị "Công dân". `applicationDtoSchema` thêm `applicantName`. Danh sách không còn CCCD lấy từ formData (theo thiết kế BE, CCCD chỉ xem trong chi tiết).
-- Mục 3: bỏ `OFFICER_VISIBLE_STATUSES`; cán bộ (Tổng quan/Tất cả hồ sơ) và Manager không gửi `Status` mặc định nữa.
-- Mục 4: `workflowApi.getAssignmentSummary` + `useAssignmentSummary`; `ManagerApplicationsView` dùng 1 request thay cho 2 + N request `pageSize=1`. Cán bộ vắng trong `officers[]` hiển thị 0. Mô tả khối lượng ghi rõ có cả hồ sơ gửi lại (BE đếm `SUBMITTED` có người phụ trách).
-- Mục 5: `workflowApi.listOfficerActivity` + `useOfficerActivity`; `OfficerAuditLogView` đọc `GET /officer/activity` (lọc action và phân trang ở server, tìm nhanh trong trang, mở hồ sơ theo `applicationId`). Bỏ nhật ký tạm trong state và type `OfficerAuditLog`. Mã lỗi `workflow.forbidden` có thông báo riêng.
-- Mutation đổi trạng thái/phân công làm mới thêm `['workflow','officer','activity']` và `['workflow','manager','assignment-summary']`. Proxy Vite thêm `/api/v1/officer/activity` → Workflow; `tests/api-proxy-check.mjs` thêm 2 ca (**28/28 đạt**). Hosting production cần reverse proxy tương đương.
-- Kiểm tra: tsc riêng các file đã sửa và ESLint đạt. `npm run typecheck` toàn repo đang lỗi cú pháp ở `src/components/ai/AiChatWidget.tsx:465` thuộc thay đổi AI đang staged của task khác, không phải phần này. Thêm 2 ca Playwright mock trong `tests/assignment.spec.ts` (assignment-summary, lịch sử xử lý) và sửa ca kiểm tra không gửi `Status`; **chưa chạy Playwright** trong lượt này.
-- Đối chiếu lại source BE (29/10): mục 2–5 BE làm đủ; mục 1, 6, 7 chưa làm. Đã sửa nhãn `ASSIGN` trong Lịch sử xử lý thành "Giao hồ sơ cho cán bộ" (mọi dòng là thao tác của chính người xem). Đã xem UI bằng Playwright mock trong worktree tạm (vì `AiChatWidget.tsx` staged đang làm app lỗi biên dịch): `assignment`, `officer`, `manager` + kịch bản xem UI **22/22 đạt**. Trạng thái lỗi `assignment-summary` hiện "—" ở chip cán bộ.
-- `BE_REQUESTS_PENDING.md` đã viết lại ngày 29/10, chỉ còn việc BE: (1) chạy migration + deploy Workflow/Gateway, (2) bật thông báo Azure, (3) giảm độ trễ, (4) xác nhận bản Azure.
-- **Hai việc FE đã sửa (29/10, không cần BE):**
-  - Giám sát hồ sơ: bấm chip cán bộ nay gửi `Assignee` + `Status=SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY` (cùng nhóm BE đếm `activeCount`), bỏ lọc quá hạn. Bộ lọc trạng thái thêm lựa chọn "Đang xử lý (chưa xong)" để thấy bảng đang lọc gì. Trước đây chip lọc mọi trạng thái nên số dòng lệch với số trên chip.
-  - Danh sách cán bộ (`OfficerApplicationListView.tsx`): ô tìm kiếm chỉ tìm theo mã hồ sơ và họ tên (bỏ CCCD/SĐT vì summary không có), placeholder "Tìm mã hồ sơ, họ tên người dân...". Ẩn dòng "—" dưới tên khi không có CCCD.
-  - Kiểm tra: tsc riêng file sửa + ESLint đạt; Playwright `assignment`, `officer`, `manager` **19/19 đạt** (mock, chạy trong worktree tạm).
-- **Thứ tự deploy:** deploy FE này sau khi BE đã chạy migration và deploy Workflow + Gateway. Deploy FE trước sẽ làm: tên người nộp hiện "Công dân", bản nháp lọt vào danh sách, Giám sát hồ sơ và Lịch sử xử lý báo lỗi 404. Chưa commit.
+- Yêu cầu hiện tại cho phép commit/push trực tiếp frontend lên `origin/main`, không force push. Đối chiếu ban đầu: nhánh cloud `work` và `origin/main` cùng `1635a0e`; chuyển sang nhánh local `main` theo dõi `origin/main`, giữ nguyên thay đổi.
+- Nội dung yêu cầu nêu cả mốc 20 và mục tiêu 25; chọn **20 commit có ý nghĩa** từ thay đổi thực, không tạo commit rỗng, không thêm tính năng hoặc viết lại lịch sử để đủ số. Gồm 19 commit triển khai/tài liệu và commit bàn giao này. Không khẳng định từng commit trung gian build độc lập; kiểm tra áp dụng trên cây mã cuối.
+- Kiểm tra mới trong môi trường đã publish: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` đạt; build còn cảnh báo annotation thư viện và chunk lớn. Không sửa mã sản phẩm, lockfile hoặc backend trong lượt chia commit; không thêm mock dữ liệu và không chạy lại suite dùng mock.
+- Swagger Azure qua gateway đã trả HTTP 200 và có đủ 18 operation. Ghi chú CONNECT 403 ở lượt trước là lịch sử, không còn là trạng thái truy cập hiện tại. Lượt này chỉ đọc Swagger, không tạo dữ liệu hoặc thử thao tác ghi trên Azure; chưa nghiệm thu luồng có đăng nhập.
+- Fetch lại trước push: remote chưa có commit mới ngoài gốc `1635a0e`. Không thay đổi cấu hình môi trường hoặc publish thêm. Kết quả push và HEAD cuối phải xác minh bằng `git ls-remote origin refs/heads/main`; không xem việc tạo commit là bằng chứng đã push.
+- Thời điểm kiểm tra/chốt: 2026-10-30T11:36:26+07:00. Giới hạn DOCX tham vấn và lịch sử lý do BE ở báo cáo tích hợp vẫn còn.
+- 19 commit trước commit bàn giao này:
+
+  - `d048e12a11` — feat(api): add validated dispatch and assignment services
+  - `d47a706781` — feat(api): add shift leave and handover services
+  - `2c510ef141` — feat(api): add versioned consultation services
+  - `0697a09421` — feat(staffing): add permission-aware queries and validated action forms
+  - `8de33388b2` — feat(assignments): select eligible officers for assignments and transfers
+  - `7f34d168a7` — feat(consultations): add inbox replies and read-only document review
+  - `4b746c8adf` — feat(dispatch): add paginated coordination and assignment history
+  - `edb221b3de` — feat(staffing): add shift leave and handover screens
+  - `56cd33cfbf` — feat(manager): define staffing workspace sections and titles
+  - `75a911e4ac` — feat(manager): integrate staffing screens into the workspace
+  - `3b1c529b06` — feat(officer): define schedule leave and consultation sections
+  - `f264fb44fd` — feat(officer): integrate personal staffing and consultation views
+  - `e8971a4063` — feat(review): show permission-gated application consultations
+  - `570f416e7a` — feat(navigation): gate manager staffing actions by permissions
+  - `75afcf5496` — feat(navigation): expose officer staffing and consultation menus
+  - `1eb7422483` — refactor(assignments): use dispatch APIs in dossier supervision
+  - `d793e902de` — fix(proxy): route staffing requests to Workflow before IAM
+  - `69810c7d82` — test(staffing): verify real OpenAPI and unauthenticated routes
+  - `1249e4bb83` — docs(staffing): explain integration validation and backend limits
+
+## Tích hợp 18 API Staffing/Workflow — 30/10/2026
+
+- Theo yêu cầu người dùng: triển khai kế hoạch điều phối, ca làm, nghỉ phép và tham vấn; **không mock dữ liệu**. Hoàn tất thay đổi FE lúc 2026-10-30T11:26:06+07:00.
+- Thêm `src/lib/api/staffing.ts` (18 API, schema response), `src/components/staffing/{shared,DispatchView,StaffingView,ConsultationsView}.tsx`; bổ sung menu/title/section Manager và Officer, tab Tham vấn trong chi tiết cán bộ, Vite proxy `/api/v1/staffing`. Nút giao/chuyển ở màn Giám sát cũ dùng API mới; giữ bộ lọc giám sát hiện hữu.
+- Form dùng RHF/Zod và UI chung; version lấy từ dữ liệu API, xử lý 409/422 bằng tải lại và xác nhận lại, không retry ghi; nhập/hiển thị giờ Việt Nam, role/permission theo BE, tài liệu tham vấn chỉ đọc. Không sửa BE, auth/token hoặc lockfile; không thêm dữ liệu mẫu/fake response.
+- Validation lượt này: `npm run build` (gồm typecheck), `npm run lint`, `git diff --check` đạt. Build còn cảnh báo annotation thư viện/chunk lớn. `tests/staffing-live-check.mjs` **18/18 đạt** trên Swagger/Workflow .NET thật và request qua Vite → gateway → Workflow: tất cả trả 401 ProblemDetails đúng code khi không token. Không tạo bản ghi/tài khoản, không chạy test mock; **chưa chứng minh luồng có đăng nhập hoặc thao tác ghi đạt**, chưa QA responsive bằng tài khoản thật.
+- Azure Swagger hiện bị proxy môi trường chặn CONNECT 403. Đã lưu thêm domain gateway vào draft network, chưa áp dụng/publish. Cần review/save cấu hình mạng và nghiệm thu tài khoản Manager/Officer thật.
+- Giới hạn BE xác minh từ source: tải DOCX của chuyên viên tham vấn vẫn bị `OfficerSubmission -> Check(officer: true)` yêu cầu cán bộ phụ trách chính; không giả lập tải thành công. Lý do phân công BE lưu lịch sử tối đa 500 ký tự gồm mã; UI giới hạn phần nội dung 470. Endpoint điều phối chỉ có phân trang, không giả bộ lọc toàn bộ trên một trang. Danh sách chọn chuyên viên lấy IAM thật, điều kiện cuối cùng do BE xác minh.
+- Báo cáo chi tiết, cách kiểm tra lại và điểm cần BE xử lý: `docs/STAFFING_INTEGRATION.md`. Chưa commit/push. Gợi ý commit: `feat(staffing): integrate dispatch scheduling leave and consultation APIs`.
 
 ## Chốt 8 commit hướng dẫn, giao diện công khai và email — 27/10/2026
 

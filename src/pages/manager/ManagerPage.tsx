@@ -1,3 +1,6 @@
+import { StaffingView } from '@/components/staffing/StaffingView';
+import { ConsultationsView } from '@/components/staffing/ConsultationsView';
+import { DispatchView } from '@/components/staffing/DispatchView';
 import React, { useState, useEffect, useCallback } from 'react';
 import { UnifiedManagerSidebar as ManagerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
 import { ManagerHeader, managerSectionTitles } from './ManagerHeader';
@@ -309,6 +312,10 @@ export const ManagerPage: React.FC = () => {
             setCurrentSection(section);
             setSelectedProfile(null);
           }} />}
+          {currentSection === 'dispatch' && <DispatchView />}
+          {currentSection === 'shifts' && <StaffingView mode="shifts" />}
+          {currentSection === 'leaves' && <StaffingView mode="leaves" />}
+          {currentSection === 'consultations' && <ConsultationsView />}
           {currentSection === 'applications' && <ManagerApplicationsView />}
           {currentSection === 'profiles' && (
             selectedProfile ? (
