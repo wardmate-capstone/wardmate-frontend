@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowsClockwise, ClockCounterClockwise, MagnifyingGlass, UserSwitch, UserPlus } from '@phosphor-icons/react';
 import { Button, Modal, TableSkeletonRows, toast } from '@/components/ui';
-import { AssignOfficerModal, type AssignTarget, type AssignableOfficer } from '@/components/workflow/AssignmentModals';
-import { useOfficerApplications, useManagerAssigneeMutation } from '@/hooks/useWorkflow';
+import { AssignDialog } from '@/components/staffing/DispatchView';
+import type { DispatchApplication } from '@/lib/api/staffing';
+import { useOfficerApplications } from '@/hooks/useWorkflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
 import { authErrorMessage, getManagerOfficers } from '@/lib/api';
 import { workflowApi, workflowError, OFFICER_VISIBLE_STATUSES, type ApplicationSummaryDto, type OfficerListInput } from '@/lib/api/workflow';
@@ -94,7 +95,8 @@ export function ManagerApplicationsView() {
   const [codeInput, setCodeInput] = useState('');
   const [code, setCode] = useState('');
   const [historyItem, setHistoryItem] = useState<ApplicationSummaryDto | null>(null);
-  const [target, setTarget] = useState<(AssignTarget & { id: string; version: number }) | null>(null);
+  const [target, setTarget] = useState<DispatchApplication | null>(null);
+  const canDispatch = useAuthStore(s => s.user?.permissions.includes('workflow.dispatch.read') && s.user?.permissions.includes('workflow.dispatch.write'));
 
   const filters: OfficerListInput = {
     page,
@@ -144,35 +146,16 @@ export function ManagerApplicationsView() {
     return found?.fullName?.trim() || found?.username || `Cán bộ (${id.slice(0, 8)})`;
   };
 
-  const assignable: AssignableOfficer[] = officerItems.map((o) => ({
-    id: o.id,
-    name: o.fullName?.trim() || o.username,
-    categoryIds: o.assignedCategories ?? [],
-    activeCount: workload.get(o.id.toLowerCase()),
-  }));
-
-  const assignMutation = useManagerAssigneeMutation();
-  const handleAssign = async (officerId: string, reason: string) => {
-    if (!target) return;
-    await assignMutation.mutateAsync({ id: target.id, input: { officerId, reason, expectedAssignmentVersion: target.version } });
-    toast.success(`${target.isTransfer ? 'Đã chuyển' : 'Đã giao'} hồ sơ ${target.applicationNumber} cho ${officerName(officerId)}.`);
-    setTarget(null);
-  };
-
   const openAssign = (item: ApplicationSummaryDto) => {
     if (typeof item.assignmentVersion !== 'number') {
       toast.error('Hồ sơ chưa có thông tin phiên bản phân công. Vui lòng làm mới danh sách.');
       return;
     }
     setTarget({
-      id: item.id,
-      version: item.assignmentVersion,
-      applicationNumber: item.applicationCode || `HS-${item.id.slice(0, 8).toUpperCase()}`,
-      categoryId: item.categoryId ?? null,
-      categoryName: item.categoryName?.trim() || UNKNOWN_CATEGORY_LABEL,
-      assignedOfficerId: item.assignedOfficerId,
-      assignedOfficerName: item.assignedOfficerId ? officerName(item.assignedOfficerId, item.assignedOfficerName) : undefined,
-      isTransfer: Boolean(item.assignedOfficerId),
+      id: item.id, applicationCode: item.applicationCode, procedureId: item.procedureId,
+      procedureTitle: item.procedureTitle || 'Thủ tục hành chính', status: item.status || '',
+      assignedOfficerId: item.assignedOfficerId, assignmentVersion: item.assignmentVersion,
+      procedureCategoryId: item.categoryId,
     });
   };
 
@@ -332,12 +315,12 @@ export function ManagerApplicationsView() {
                       >
                         <ClockCounterClockwise size={16} aria-hidden="true" />
                       </Button>
-                      {canAssign && (
+                      {canAssign && canDispatch && (
                         <Button size="small" className="gap-1.5" onClick={() => openAssign(item)}>
                           <UserPlus size={14} aria-hidden="true" /> Giao cán bộ
                         </Button>
                       )}
-                      {canTransfer && (
+                      {canTransfer && canDispatch && (
                         <Button size="small" variant="outline" className="gap-1.5" onClick={() => openAssign(item)}>
                           <UserSwitch size={14} aria-hidden="true" /> Chuyển cán bộ
                         </Button>
@@ -361,14 +344,7 @@ export function ManagerApplicationsView() {
       </section>
 
       <AssignmentHistoryModal item={historyItem} lookup={historyLookup} onClose={() => setHistoryItem(null)} />
-      <AssignOfficerModal
-        open={Boolean(target)}
-        onOpenChange={(open) => !open && setTarget(null)}
-        target={target}
-        officers={assignable}
-        officersError={officers.isError ? authErrorMessage(officers.error) : undefined}
-        onConfirm={handleAssign}
-      />
+      {target && <AssignDialog application={target} onClose={() => setTarget(null)} />}
     </div>
   );
 }
