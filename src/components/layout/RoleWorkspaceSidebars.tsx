@@ -40,7 +40,7 @@ export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, 
       { id: 'apps-reviewing', label: 'Đang kiểm tra', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'apps-need-revision', label: 'Cần bổ sung', icon: WarningCircle, fallbackRoles: role },
       { id: 'apps-resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, fallbackRoles: role }, { id: 'apps-approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, fallbackRoles: role },
     ] }] },
-    { title: 'Hệ thống & Ca trực', items: [{ id: 'audit-log', label: 'Lịch sử xử lý', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
+    { title: 'Hệ thống & Ca trực', items: [{ id: 'shifts', label: 'Lịch ca làm', icon: ClockCounterClockwise, permissions: ['workflow.staffing.read'] }, { id: 'leaves', label: 'Nghỉ phép cá nhân', icon: IdentificationCard, permissions: ['workflow.staffing.read'] }, { id: 'consultations', label: 'Hộp thư tham vấn', icon: UsersThree, permissions: ['workflow.consultation.read'] }, { id: 'audit-log', label: 'Lịch sử xử lý', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: role }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];
   return <WorkspaceSidebar workspace="officer" subtitle="Cán bộ Một cửa" activeSection={activeSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpen} onClose={onClose} isCompact={isCompact} />;
 }
