@@ -1,4 +1,5 @@
 export type OfficerSection =
+  | 'closures'
   | 'shifts'
   | 'leaves'
   | 'consultations'
