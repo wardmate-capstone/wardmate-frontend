@@ -1,13 +1,14 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import axios from 'axios';
 import { Button, Modal, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
-import { workflowError } from '@/lib/api/workflow';
+import { staffingError } from '@/lib/api/staffingError';
 import { getManagerOfficers } from '@/lib/api';
+import { staffingFormSchema } from '@/lib/staffingValidation';
+export { validatePeriod, vietnamIso } from '@/lib/staffingValidation';
 
 export const fieldClass = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white p-2.5 text-sm';
 export const dateText = (value: string) => new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -36,7 +37,7 @@ export function useStaffDirectory(enabled: boolean) {
 }
 export function QueryState({ query, empty }: { query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown }; empty?: boolean }) {
   if (query.isPending) return <p role="status">Đang tải dữ liệu…</p>;
-  if (query.isError) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800"><p>{workflowError(query.error)}</p><Button variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div>;
+  if (query.isError) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800"><p>{staffingError(query.error)}</p><Button variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div>;
   return empty ? <p className="py-6 text-sm text-slate-500">Chưa có dữ liệu trong phạm vi đang xem.</p> : null;
 }
 export function Pager({ page, total, setPage }: { page: number; total: number; setPage: (page: number) => void }) {
@@ -52,9 +53,12 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
   const lock = useRef(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
-  const shape = Object.fromEntries(fields.map(f => [f.name, z.string().trim().min(1, 'Vui lòng nhập thông tin.').max(f.max ?? 2000, `Tối đa ${f.max ?? 2000} ký tự.`)]));
-  const form = useForm<Record<string, string>>({ resolver: zodResolver(z.object(shape)), defaultValues: Object.fromEntries(fields.map(f => [f.name, ''])) });
+  const pendingFocus = useRef<string | null>(null);
+  const form = useForm<Record<string, string>>({ resolver: zodResolver(staffingFormSchema(fields)), defaultValues: Object.fromEntries(fields.map(f => [f.name, ''])) });
   const busy = form.formState.isSubmitting;
+  useEffect(() => {
+    if (!busy && pendingFocus.current) { form.setFocus(pendingFocus.current); pendingFocus.current = null; }
+  }, [busy, form]);
   const handle = form.handleSubmit(async values => {
     if (lock.current || conflict) return;
     const message = validate?.(values);
@@ -72,29 +76,26 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
         const errors: unknown = e.response?.data?.errors;
         if (errors && typeof errors === 'object') {
           for (const [key, messages] of Object.entries(errors)) {
-            const name = fields.find(f => f.name.toLowerCase() === key.toLowerCase())?.name;
-            if (name && Array.isArray(messages) && typeof messages[0] === 'string') form.setError(name, { message: messages[0] });
+            const name = fields.find(f => f.name.toLowerCase() === key.replace(/^\$\./, '').toLowerCase())?.name;
+            if (name && Array.isArray(messages) && typeof messages[0] === 'string') {
+              form.setError(name, { message: messages[0] });
+              pendingFocus.current ??= name;
+            }
           }
         }
       }
-      if (status === 409 || status === 422) {
-        await Promise.all(['staffing', 'workflow', 'document-form'].map(key => client.invalidateQueries({ queryKey: [key] })));
+      const uncertain = status === undefined || status >= 500;
+      const review = [403, 404, 409, 422].includes(status ?? 0) || uncertain;
+      if (review) {
         setConflict(true);
+        await Promise.all(['staffing', 'workflow', 'document-form'].map(key => client.invalidateQueries({ queryKey: [key] })));
       }
-      setError(status === 409 ? 'Dữ liệu hoặc trạng thái đã thay đổi/trùng lịch. Đã tải lại dữ liệu; đóng hộp thoại và kiểm tra trước khi thao tác lại.' : workflowError(e));
+      setError(status === 409 ? 'Dữ liệu hoặc trạng thái đã thay đổi/trùng lịch. Đã tải lại dữ liệu; đóng hộp thoại và kiểm tra trước khi thao tác lại.' : `${staffingError(e)}${review ? ' Đóng hộp thoại và kiểm tra dữ liệu mới nhất trước khi thao tác lại.' : ''}`);
     } finally { lock.current = false; }
   });
   return <Modal open onOpenChange={open => !open && !busy && onClose()} title={title} description={description} footer={<><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" form={formId} disabled={busy || conflict}>{busy ? 'Đang lưu…' : 'Xác nhận'}</Button></>}>
     {children}<form id={formId} onSubmit={e => void handle(e)} noValidate className="grid gap-4">{fields.map(f => <label key={f.name} className="grid gap-1 text-sm font-medium">{f.label}<span className="sr-only"> (bắt buộc)</span>
-      {f.type === 'textarea' ? <textarea rows={4} maxLength={f.max ?? 2000} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} /> : f.type === 'select' ? <select className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])}><option value="">Chọn…</option>{f.options?.map(o => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select> : <input type={f.type ?? 'text'} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} />}
-      {form.formState.errors[f.name] && <span role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}</label>)}{error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}</form>
+      {f.type === 'textarea' ? <textarea rows={4} maxLength={f.max ?? 2000} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} /> : f.type === 'select' ? <select className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined}><option value="">Chọn…</option>{f.options?.map(o => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select> : <input type={f.type ?? 'text'} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} />}
+      {form.formState.errors[f.name] && <span id={`${formId}-${f.name}-error`} role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}</label>)}{error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}</form>
   </Modal>;
-}
-// Controls explicitly use Vietnam time even when the browser's timezone differs.
-export const vietnamIso = (value: string) => new Date(`${value}+07:00`).toISOString();
-export function validatePeriod(v: Record<string, string>, shift = false) {
-  const start = Date.parse(`${v.startsAt}+07:00`), end = Date.parse(`${v.endsAt}+07:00`);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 'Thời gian kết thúc phải sau thời gian bắt đầu.';
-  if (end - start > (shift ? 1 : 93) * 86400000) return shift ? 'Ca làm tối đa 24 giờ.' : 'Khoảng nghỉ tối đa 93 ngày.';
-  if (shift ? start < Date.now() : end <= Date.now()) return shift ? 'Ca làm phải bắt đầu trong tương lai.' : 'Khoảng nghỉ chưa được kết thúc.';
 }
