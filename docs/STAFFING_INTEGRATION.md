@@ -1,5 +1,49 @@
 # Tích hợp điều phối, ca làm, nghỉ phép và tham vấn
 
+## Rà soát lỗi/validation sau tích hợp — 01/11/2026
+
+- Chặn lựa chọn cán bộ/lý do phân công đã biến mất hoặc bị disabled khi danh sách refresh: schema form được tạo lại từ chính options đang hiển thị. Không chỉ kiểm tra ID có tồn tại trong danh bạ. Giữ các giới hạn ký tự và trim trước khi gửi.
+- Tách `src/lib/staffingValidation.ts` để kiểm tra date-only thực, datetime giờ Việt Nam đúng định dạng (không để Date.parse tự chuẩn hóa 30/02), thứ tự/khoảng/giới hạn 24 giờ và 93 ngày. Khoảng GET staffing <=93 ngày gồm hai đầu; calendar vẫn <=400.
+- Form staffing không cho gửi lại khi kết quả ghi chưa xác định hoặc 403/404/409/422; invalidate dữ liệu và yêu cầu đóng/xem lại. Các trường lỗi nối aria-describedby; lỗi trường BE có focus sau khi hết disabled. Calendar hủy chỉ gửi khi GET mới nhất còn bản ghi được phép hủy, khóa khi refetch; context danh tính/phường/quyền đổi thì ẩn hộp thoại cũ.
+- Contents tham vấn cache theo application version, tệp chọn gắn version và dùng revision binary riêng cho consultation. Khi version đổi, không mở tiếp tệp đã chọn trên dữ liệu cũ. Đây không sửa giới hạn cấp quyền DOCX phía DocumentForm.
+- Kết quả mới: typecheck/lint/build/diff check đạt; build chạy ngoài sandbox vì quyền dist và còn cảnh báo thư viện/chunk lớn. **32/32** kiểm tra ngày calendar, **56/56** validation staffing/form/API input không mạng, **11/11** tương tác ActionForm độc lập trên Edge. Edge kiểm tra form rỗng, lựa chọn bị loại sau refresh, khóa gửi lại sau lỗi không xác định, chặn double-submit/Escape khi đang lưu, đóng sau thành công, aria-describedby và không tràn ngang ở 360px; lượt cuối 0 API request/0 runtime error. Callback form được điều khiển trong harness, không giả lập tài khoản/response nghiệp vụ BE. Không dùng kết quả này để khẳng định luồng đăng nhập hay responsive toàn workspace đã đạt.
+- Các lượt harness thất bại ban đầu đã được sửa cấu hình/cô lập cache và route; chỉ lượt cuối exit 0 được tính đạt. Không chạy lại 22 API Azure trong lượt rà soát này; không thay backend hoặc auth/core.
+
+```sh
+node --experimental-strip-types tests/calendar-rules-check.mjs
+node tests/staffing-validation-check.mjs
+node tests/staffing-form-check.mjs
+```
+
+## Bổ sung lịch đóng cửa/ngày lễ — 01/11/2026
+
+- Đã đối chiếu lại source BE mới tại `E:/wardmate-backend`: CalendarClosuresController, CalendarContracts, CalendarClosureService, WorkflowSecurity, ReviewDeadline, DI staffing/calendar và migration IAM/Workflow. Swagger Azure có 22 operation bàn giao; bộ lọc rộng có 24 vì thêm assignment-summary và PUT assignee đã tồn tại.
+- Client `src/lib/api/calendarClosures.ts` nối GET closures, POST closures, POST closures/national và POST closures/{id}/cancel qua JWT client/Workflow hiện có. Kiểm tra response bằng Zod; GET trả mảng, POST trả `{closure,rescheduledApplications}`. Không gửi wardCode, người tạo hoặc hạn tự tính.
+- `CalendarClosuresView.tsx` dùng chung cho ba workspace: Manager xem lịch phường/toàn quốc và tạo/hủy lịch phường; Officer chỉ xem; IT_ADMIN có workflow.calendar.manage quản lý lịch toàn quốc. Với tài khoản đa vai trò có quyền calendar.manage, phạm vi GET ưu tiên toàn quốc đúng BE. `/users/me` chỉ có wardId, nên FE dựa vào phạm vi GET do BE trả về, không giả định wardId là wardCode. BE xác minh lại quyền/phạm vi khi ghi.
+- UI có khoảng ngày, bộ lọc phạm vi/trạng thái trên toàn bộ mảng trong khoảng GET, chi tiết khai báo/hủy, form RHF/Zod, Modal/Toast chung; giữ bản ghi đã hủy. Ngày date-only theo Việt Nam; timestamp UTC hiển thị UTC+07. Xem tối đa 400 ngày gồm hai đầu; tạo hôm nay..+366; lý do trim 1–500; chỉ hủy ngày sau hôm nay. Đồng hồ ngày cập nhật mỗi 30 giây/khi focus và kiểm tra lại khi submit.
+- Tạo/hủy thành công hiển thị chính xác rescheduledApplications (kể cả 0), invalidate staffing/workflow/analytics; đưa bộ lọc về tất cả và chuyển khoảng xem nếu ngày vừa lưu nằm ngoài khoảng cũ. Không tự hủy ca, bàn giao hoặc tính deadline FE. Hạn là hạn tiền kiểm nội bộ.
+- Xử lý 403 kể cả body rỗng, 404/409 và 503 bằng thông báo tiếng Việt. Không retry mutation; khi xung đột hoặc kết quả ghi chưa chắc chắn (mạng/5xx/response sai), tải lại dữ liệu, khóa gửi trong hộp thoại và yêu cầu đóng/xem lại. GET lịch refetch khi focus/reconnect.
+- Rà soát 18 API: giữ hợp đồng hiện có; dùng thông báo staffing chung, hướng dẫn chọn lại khi 422; cho phép chọn chuyên viên khi hồ sơ chưa có category để BE tra Catalog thay vì FE loại hết; kiểm tra quyền tài liệu tham vấn khi focus/reconnect ngoài chu kỳ 15 giây. Lý do phân công vẫn giới hạn 470 vì BE cắt lịch sử ở 500 gồm mã. DOCX tham vấn vẫn bị kiểm tra cán bộ chính ở OfficerSubmission trong source mới, chưa được BE sửa.
+- Kiểm tra lượt này: `node --experimental-strip-types tests/calendar-rules-check.mjs` đạt **32/32** (biên UTC+07 ở ba timezone, ngày nhuận/ngày sai, khoảng 400 ngày, tạo +366/+367, hủy khi qua ngày); không gọi API hoặc tạo dữ liệu nghiệp vụ. `npm run lint` đạt.
+- `tests/staffing-live-check.mjs` cập nhật 18 → 22; chạy với Swagger và API origin **Gateway Azure trực tiếp**, đạt **22/22** không token, HTTP 401 ProblemDetails code auth.unauthorized. Không chạy qua Vite trong lượt này, không đăng nhập hoặc ghi bản ghi thật; không coi 401 là nghiệm thu nghiệp vụ.
+- `npm run build` (gồm TypeScript) đạt khi chạy ngoài sandbox, còn cảnh báo annotation SignalR/Zod và chunk lớn hiện hữu. Các lần trong sandbox lỗi EPERM khi xóa/ghi dist/.gitkeep; thử giữ output cũng bị chặn ghi, không thay cấu hình build để né lỗi. `git diff --check` đạt. Chưa QA trình duyệt/responsive hoặc luồng có tài khoản Manager/Officer/IT_ADMIN thật, chưa chạy suite mock. Không đổi backend, auth/core, dependency hoặc cấu hình môi trường; chưa commit/push.
+
+Lệnh kiểm tra biên ngày không cần backend:
+
+```sh
+node --experimental-strip-types tests/calendar-rules-check.mjs
+```
+
+Kiểm tra 22 route thật không token (đặt STAFFING_API_ORIGIN là Vite nếu muốn kiểm tra thêm reverse proxy):
+
+```powershell
+$env:STAFFING_OPENAPI_URL='https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/application-workflow/swagger/v1/swagger.json'
+$env:STAFFING_API_ORIGIN='https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io'
+node tests/staffing-live-check.mjs
+```
+
+Các phần ngày 30/10 bên dưới là lịch sử; kiểm tra 18/18 hoặc proxy ở đó không phải kết quả chạy lại ngày 01/11.
+
 Ngày: 30/10/2026, múi giờ Asia/Bangkok.
 
 ## Phạm vi đã triển khai
