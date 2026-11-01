@@ -1,4 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
+import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import { DispatchView } from '@/components/staffing/DispatchView';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -314,6 +315,7 @@ export const ManagerPage: React.FC = () => {
           }} />}
           {currentSection === 'dispatch' && <DispatchView />}
           {currentSection === 'shifts' && <StaffingView mode="shifts" />}
+          {currentSection === 'closures' && <CalendarClosuresView />}
           {currentSection === 'leaves' && <StaffingView mode="leaves" />}
           {currentSection === 'consultations' && <ConsultationsView />}
           {currentSection === 'applications' && <ManagerApplicationsView />}

@@ -1,4 +1,5 @@
 export type ManagerSectionId =
+  | 'closures'
   | 'dispatch'
   | 'shifts'
   | 'leaves'

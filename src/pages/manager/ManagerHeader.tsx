@@ -10,6 +10,7 @@ import { ManagerSectionId } from './types';
 export const managerSectionTitles: Record<ManagerSectionId, { title: string; subtitle?: string }> = {
   dispatch: { title: 'Điều phối hồ sơ' },
   shifts: { title: 'Lịch ca làm' },
+  closures: { title: 'Lịch ngày nghỉ' },
   leaves: { title: 'Duyệt nghỉ phép' },
   consultations: { title: 'Tham vấn chuyên môn' },
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
