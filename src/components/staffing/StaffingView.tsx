@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal } from '@/components/ui';
 import { staffingApi, type Leave, type Shift, type DispatchApplication } from '@/lib/api/staffing';
 import { AssignDialog } from './DispatchView';
+import { validStaffingRange } from '@/lib/staffingValidation';
 import { ActionForm, dateText, fieldClass, QueryState, statusText, useStaffAccess, useStaffDirectory, useStaffQuery, validatePeriod, vietnamIso } from './shared';
 
 function LeaveDetail({ item, onClose }: { item: Leave; onClose: () => void }) {
@@ -23,8 +24,9 @@ export function StaffingView({ mode }: { mode: 'shifts' | 'leaves' }) {
   const [to, setTo] = useState(today.slice(0, 7) + '-' + new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0).getDate());
   const [action, setAction] = useState<Action>();
   const [detail, setDetail] = useState<Leave>();
-  const start = Date.parse(`${from}T00:00:00+07:00`), end = Date.parse(`${to}T23:59:59.999+07:00`);
-  const valid = Number.isFinite(start) && Number.isFinite(end) && end > start && end - start <= 93 * 86400000;
+  const start = Date.parse(`${from}T00:00:00+07:00`);
+  const end = Date.parse(`${to}T23:59:59.999+07:00`);
+  const valid = validStaffingRange(from, to);
   const enabled = can('workflow.staffing.read') && valid;
   const shifts = useStaffQuery(['shifts', from, to], signal => staffingApi.shifts(new Date(start).toISOString(), new Date(end).toISOString(), signal), enabled && mode === 'shifts');
   const leaves = useStaffQuery(['leaves', from, to], signal => staffingApi.leaves(new Date(start).toISOString(), new Date(end).toISOString(), signal), enabled && mode === 'leaves');
