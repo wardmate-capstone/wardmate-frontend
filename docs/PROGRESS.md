@@ -1,8 +1,35 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 30/10/2026.
+Cập nhật: 01/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Bàn giao 15 commit calendar/staffing để push main — 01/11/2026
+
+- Người dùng yêu cầu chia toàn bộ thay đổi tích hợp/rà soát thành đúng **15 commit** và push lên main. Remote đã kiểm tra: `https://github.com/wardmate-capstone/wardmate-frontend.git`; nhánh local `main` theo dõi `origin/main`. Fetch trước khi chia xác nhận cùng gốc `3f583c999583eb7078b13e04bcd8dcd204f15f82`, không có commit remote mới tại thời điểm đó.
+- Đã nhóm 15 commit có nội dung thực: **7 feat, 5 fix, 1 test, 2 docs** (gồm commit bàn giao này). Không tạo commit rỗng, sửa mã sản phẩm để tăng số commit, viết lại lịch sử đã push, đổi backend/auth/core/dependency/môi trường hoặc stage test-results/dist/secrets. Script và message tạm nằm trong test-results bị ignore, không thuộc bản phát hành.
+- 14 commit trước commit bàn giao này: `61971a3` quy tắc ngày Việt Nam; `9653570` 4 API closures; `d80159f` thông báo lỗi staffing; `1e27b8f` validation lựa chọn/ngày giờ; `259e1d8` chặn gửi lại không xác định; `8203821` UI calendar; `e53bfda` Manager; `93400da` Officer; `8d3179d` Admin; `3e2ae14` menu; `bfde549` khoảng ngày staffing/nhãn lý do; `3b99f0d` cache tham vấn; `9f9546e` kiểm thử; `8dc15ef` tài liệu tích hợp.
+- Kiểm tra chạy lại trong lượt chia commit: ngày calendar **32/32**, validation **56/56**, `git diff --check` đạt. Không sửa code sản phẩm trong lượt chia commit. Typecheck/lint/build và **11/11 Edge** ở mục rà soát bên dưới là kết quả lượt trước, không phải vừa chạy lại và không khẳng định từng commit trung gian đã build độc lập. Build còn cảnh báo thư viện/chunk lớn; luồng đăng nhập/ghi production và responsive cả workspace chưa nghiệm thu.
+- Mục này được ghi trước push. Chỉ kết luận đã push sau khi lệnh push thành công và SHA từ `git ls-remote origin refs/heads/main` khớp HEAD; không force push. SHA cuối của commit bàn giao tra bằng Git, không tự ghi SHA vào chính commit đó. Các dòng “chưa commit/push” trong hai mục triển khai/rà soát bên dưới là lịch sử trước lần chia commit này.
+
+## Rà soát lỗi và validation staffing/calendar — 01/11/2026
+
+- Theo yêu cầu kiểm tra/sửa lỗi sau tích hợp: giữ nguyên toàn bộ thay đổi chưa commit của lượt trước; không đổi BE, auth/core, dependency hoặc môi trường.
+- `src/lib/staffingValidation.ts` và `shared.tsx`: validate lựa chọn theo options hiện tại, loại mục disabled/đã biến mất; giữ trim/giới hạn độ dài; chặn datetime không tồn tại/không đúng định dạng, giờ 24:00/phút 60 và khoảng đảo/ngang/vượt giới hạn. `StaffingView.tsx` kiểm tra date-only thực và khoảng xem <=93 ngày gồm hai đầu. Lỗi form liên kết aria-describedby; lỗi 400 từ BE đưa focus về trường sau khi hết trạng thái đang gửi.
+- Form staffing chung khóa gửi và tải lại cache khi 403/404/409/422, lỗi mạng/5xx hoặc kết quả không xác định; không cho gửi lại ngay sau timeout có thể đã lưu phía BE. Calendar hủy dựa vào bản ghi GET mới nhất, khóa khi đang refetch/đã hủy/đã bắt đầu/không còn bản ghi; hộp thoại cũ không dùng lại khi danh tính/phường/quyền/phạm vi đổi. Calendar cũng focus trường có lỗi BE sau khi fieldset mở lại.
+- `ConsultationsView.tsx`: cache contents và tệp chọn gắn phiên bản hồ sơ; đổi phiên bản ẩn preview cũ, buộc chọn lại. Binary dùng revision riêng cho ngữ cảnh tham vấn để tránh dùng chung cache với màn nghiệp vụ khác. `staffingError.ts` chỉ lấy mã lỗi có trong chính bảng thông báo, không lấy thuộc tính prototype.
+- Kiểm tra mới: `npm run typecheck`, `npm run lint`, `git diff --check` đạt; `npm run build` ngoài sandbox đạt, còn cảnh báo annotation thư viện/chunk lớn. Ngày/giờ **32/32**, validation request/form **56/56**, tương tác ActionForm độc lập trên Edge **11/11** đạt. Lượt Edge cuối không request API, không runtime error; xem ảnh form 360px tại test-results/staffing-validation-mobile.png, không tràn ngang. Chỉ form độc lập có callback điều khiển để kiểm tra lỗi/chờ; không giả lập response BE hoặc tài khoản, không phải nghiệm thu 3 workspace thật.
+- Mới: `tests/staffing-validation-check.mjs`, `tests/staffing-form-check.mjs`. Các lượt harness ban đầu chưa đạt do cache/quyền Vite, route bị SPA fallback, target ES2022 và chặn nhầm import /src/lib/api; đã sửa harness, chỉ dùng lượt cuối exit 0 làm bằng chứng. Lượt fallback từng thử bootstrap refresh không token và bị môi trường chặn; lượt cuối 0 API request. Không chạy lại bộ 22/22 Azure ở lượt này; kết quả đó thuộc lượt tích hợp trước.
+- Còn chờ nghiệm thu nghiệp vụ bằng tài khoản thật và responsive cả workspace. Giới hạn DOCX tham vấn/lý do phân công phía BE vẫn như mục trước. Chưa commit/push. Chi tiết và lệnh chạy tại docs/STAFFING_INTEGRATION.md.
+
+## Tích hợp lịch đóng cửa/ngày lễ và rà soát staffing — 01/11/2026
+
+- Theo kế hoạch đã được người dùng yêu cầu triển khai: bổ sung 4 API lịch đóng cửa, tổng 22 API bàn giao; đọc lại source BE mới tại E:/wardmate-backend và Swagger Azure trước khi sửa. Không đổi backend, auth/core, dependency hoặc môi trường.
+- Mới: `src/lib/calendarRules.ts`, `src/lib/api/calendarClosures.ts`, `src/lib/api/staffingError.ts`, `src/components/staffing/CalendarClosuresView.tsx`, `tests/calendar-rules-check.mjs`. Gắn menu/section/title vào Manager, Officer và Admin; giữ UI dùng chung, form RHF/Zod, cache TanStack Query, Modal/Toast hiện có.
+- Lịch có phạm vi/trạng thái/chi tiết hủy; date-only VN, xem <=400 ngày gồm hai đầu, tạo hôm nay..+366, lý do trim 1–500, hủy tương lai trong phạm vi BE. POST hiển thị số hồ sơ đổi hạn từ BE và tải lại staffing/workflow/analytics; không tính hạn hoặc tự chuyển cán bộ. Xử lý 403 body rỗng, xung đột và kết quả ghi chưa chắc chắn; không tự retry ghi.
+- Rà soát API cũ: sửa danh sách chuyên viên bị rỗng khi hồ sơ thiếu category (để BE tra Catalog); quyền đọc tham vấn refetch khi focus/reconnect; bổ sung lỗi staffing tiếng Việt/422 và giữ giới hạn lý do phân công 470. Source BE mới vẫn chặn DOCX tham vấn qua OfficerSubmission và vẫn cắt lịch sử lý do ở 500 ký tự gồm mã.
+- Kiểm tra mới: ngày/giờ thuần **32/32** đạt, lint và `git diff --check` đạt; `npm run build` (gồm TypeScript) đạt ngoài sandbox sau các lần sandbox lỗi EPERM ở dist/.gitkeep. Build còn cảnh báo annotation thư viện/chunk lớn hiện hữu. Swagger + ranh giới auth trên Gateway Azure trực tiếp **22/22** trả 401 ProblemDetails auth.unauthorized không token. Không tạo bản ghi/tài khoản, không chạy mock; không kiểm tra proxy Vite trong lượt này.
+- Còn chờ: QA trình duyệt/responsive và nghiệp vụ đăng nhập bằng tài khoản Manager/Officer/IT_ADMIN thật trên dữ liệu được phép thử; đặc biệt tạo/hủy và cập nhật hạn, 403/409, lịch toàn quốc/phường trùng, quyền DOCX tham vấn. Không dùng các kết quả build/test cũ bên dưới làm kết quả lượt này. Chi tiết/lệnh kiểm tra tại `docs/STAFFING_INTEGRATION.md`. Chưa commit/push.
 
 ## Chốt commit tích hợp Staffing/Workflow để push main — 30/10/2026
 
