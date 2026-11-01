@@ -50,9 +50,11 @@ import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRoles
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
+import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { CreateStaffAccountModal } from './CreateStaffAccountModal';
 
 type SectionId =
+  | "closures"
   | "analytics-jobs"
   | "overview"
   | "procedures"
@@ -100,6 +102,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
     title: "Vận hành hệ thống",
     items: [
       { id: "analytics-jobs", label: "Job thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
+      { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
       { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
       { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, permissions: ['iam.audit.read'] },
       { id: "backup", label: "Bảo mật & sao lưu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
@@ -113,6 +116,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 
 
 const sectionMeta: Record<SectionId, { title: string }> = {
+  closures: { title: 'Lịch ngày lễ toàn quốc' },
   'analytics-jobs': { title: 'Quản lý job thống kê' },
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
@@ -417,6 +421,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <AdminProceduresView />
           )}
           {activeSection === "analytics-jobs" && <AnalyticsJobsView />}
+          {activeSection === "closures" && <CalendarClosuresView />}
           {activeSection === "knowledge" && (
             <KnowledgeView onAction={demoAction} />
           )}
