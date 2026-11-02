@@ -5,7 +5,6 @@ import {
   BookOpen,
   CaretRight as ChevronRight,
   ChatsTeardrop,
-  CheckCircle,
   Clock,
   Files,
   Headset as Headphones,
@@ -75,10 +74,6 @@ export function MainLayout() {
               <BrandMark className="brand-mark transition-transform duration-200 group-hover:scale-105" size={54} />
               <BrandWordmark subtitle="Dịch vụ công xã - phường" />
             </Link>
-            <div className="hidden xl:flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50/70 px-3 py-1 text-[11px] font-semibold text-amber-900 shadow-2xs">
-              <CheckCircle size={14} weight="fill" className="text-amber-600" />
-              <span>Cổng tiền kiểm điện tử</span>
-            </div>
           </div>
 
           <div className="hidden items-center gap-3.5 lg:flex">

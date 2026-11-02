@@ -14,7 +14,7 @@ const routes = Object.entries(spec.paths).flatMap(([path, methods]) => {
   if (!(path.startsWith('/api/v1/staffing/') || path.includes('/consultations') || path === '/api/v1/manager/applications' || path.includes('/assignment-candidates') || path.endsWith('/assignments'))) return [];
   return Object.entries(methods).filter(([method]) => ['get', 'post'].includes(method)).map(([method, operation]) => ({ path, method, operation }));
 });
-assert.equal(routes.length, 18, 'Expected all 18 staffing operations in actual OpenAPI.');
+assert.equal(routes.length, 22, 'Expected all 22 staffing/calendar operations in actual OpenAPI.');
 for (const { path, method, operation } of routes) {
   assert(operation.security?.length || spec.security?.length, `${method} ${path} must require authentication`);
   // These IDs select no stored data: the real auth boundary must reject before any handler runs.
@@ -31,4 +31,4 @@ for (const { path, method, operation } of routes) {
   assert.equal(problem.code, 'auth.unauthorized');
   console.log(`PASS ${method.toUpperCase()} ${path}: actual Workflow auth boundary reached`);
 }
-console.log('18/18 real OpenAPI + unauthenticated proxy checks passed. Authenticated workflows were not tested.');
+console.log(`${routes.length}/${routes.length} real OpenAPI + unauthenticated route checks passed. Authenticated workflows were not tested.`);

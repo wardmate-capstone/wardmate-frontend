@@ -1,4 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
+import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -460,6 +461,7 @@ export const OfficerPage: React.FC = () => {
 
               {/* SECTION 6: HỒ SƠ CÁ NHÂN & QUẦY TRỰC */}
               {activeSection === 'shifts' && <StaffingView mode="shifts" />}
+              {activeSection === 'closures' && <CalendarClosuresView />}
               {activeSection === 'leaves' && <StaffingView mode="leaves" />}
               {activeSection === 'consultations' && <ConsultationsView />}
               {activeSection === 'profile' && <UnifiedSelfProfileView />}

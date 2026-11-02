@@ -53,9 +53,11 @@ import { AdminProceduresView } from './AdminProceduresView';
 import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
 import { NotificationDeliveriesView } from './NotificationDeliveriesView';
+import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { CreateStaffAccountModal } from './CreateStaffAccountModal';
 
 type SectionId =
+  | "closures"
   | "analytics-jobs"
   | "overview"
   | "procedures"
@@ -105,6 +107,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
     items: [
       { id: "analytics-jobs", label: "Job thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "notification-deliveries", label: "Phát thông báo", icon: Broadcast, permissions: ['notifications.deliveries.read'], fallbackRoles: ['IT_ADMIN'] },
+      { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
       { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
       { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, permissions: ['iam.audit.read'] },
       { id: "backup", label: "Bảo mật & sao lưu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
@@ -118,6 +121,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 
 
 const sectionMeta: Record<SectionId, { title: string }> = {
+  closures: { title: 'Lịch ngày lễ toàn quốc' },
   'analytics-jobs': { title: 'Quản lý job thống kê' },
   'notification-deliveries': { title: 'Quản trị phát thông báo' },
   overview: { title: "Tổng quan" },
@@ -424,6 +428,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
           {activeSection === "analytics-jobs" && <AnalyticsJobsView />}
           {activeSection === "notification-deliveries" && <NotificationDeliveriesView />}
+          {activeSection === "closures" && <CalendarClosuresView />}
           {activeSection === "knowledge" && (
             <KnowledgeBaseView />
           )}
