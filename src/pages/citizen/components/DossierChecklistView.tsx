@@ -11,6 +11,7 @@ import { documentFormApi, documentFormError, documentQuantitySchema, downloadBlo
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
+import { DocumentAiVerificationCard } from '@/components/documents/DocumentAiVerificationCard';
 import { downloadFormTemplateDocx } from '@/lib/api/formTemplates';
 
 const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
@@ -23,6 +24,11 @@ interface Props {
 }
 const copyLabels: Record<string, string> = { ORIGINAL: 'bản chính', CERTIFIED_COPY: 'bản sao chứng thực', REGULAR_COPY: 'bản sao thường' };
 const quantitySchema = z.object({ quantity: documentQuantitySchema });
+
+function isSupportedAiDocument(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return lower.endsWith('.pdf') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
+}
 
 export function DossierChecklistView({ procedureName, checklist, applicationId, dossierStatus, onUpdateChecklistItem, onBusyChange }: Props) {
   const user = useAuthStore(s => s.user);
@@ -94,7 +100,13 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
         <label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-red-700 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
           <UploadSimple size={20} className="shrink-0 text-slate-500" aria-hidden />
           <span className="min-w-0">
-            <span className="block text-xs font-semibold text-slate-800">{item.formTemplateId ? 'Tải lên tệp Word đã điền' : 'Chọn tệp đính kèm'}</span>
+            <span className="block text-xs font-semibold text-slate-800">
+              {item.formTemplateId
+                ? submissions.length
+                  ? 'Chọn tệp Word mới để thay thế'
+                  : 'Tải lên tệp Word đã điền'
+                : 'Chọn tệp đính kèm'}
+            </span>
             <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp .docx (tối đa 20 MiB)' : 'PDF, JPG/PNG hoặc Word · Tối đa 20 MiB'}</span>
           </span>
           <input
@@ -216,31 +228,44 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
 
             {/* Supporting documents list */}
             {documents.map(x => (
-              <div key={x.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/40 p-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Paperclip size={18} className="shrink-0 text-slate-500" aria-hidden />
-                  <div className="min-w-0">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 break-all text-left text-xs sm:text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 hover:text-red-700"
-                      onClick={() => void download(x.id, false, x.fileName)}
-                    >
-                      <span>{x.fileName}</span>
-                      <DownloadSimple size={14} className="shrink-0 text-slate-400" aria-hidden />
-                    </button>
-                    <p className="text-[11px] text-slate-500">{x.quantity} bản{x.fileExists ? ' · Đã tải lên' : ' · Không tìm thấy tệp'}</p>
+              <div key={x.id} className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Paperclip size={18} className="shrink-0 text-slate-500" aria-hidden />
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 break-all text-left text-xs sm:text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 hover:text-red-700"
+                        onClick={() => void download(x.id, false, x.fileName)}
+                      >
+                        <span>{x.fileName}</span>
+                        <DownloadSimple size={14} className="shrink-0 text-slate-400" aria-hidden />
+                      </button>
+                      <p className="text-[11px] text-slate-500">{x.quantity} bản{x.fileExists ? ' · Đã tải lên' : ' · Không tìm thấy tệp'}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="small" variant="outline" onClick={() => setPreview({ id: x.id, name: x.fileName, form: false })}>
+                      Xem giấy tờ
+                    </Button>
+                    {editable && (
+                      <Button variant="ghost" size="small" className="text-slate-400 hover:text-red-700 text-xs" disabled={busy} onClick={() => setRemoving({ id: x.id, name: x.fileName, item })}>
+                        Xóa {x.fileName}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button size="small" variant="outline" onClick={() => setPreview({ id: x.id, name: x.fileName, form: false })}>
-                    Xem giấy tờ
-                  </Button>
-                  {editable && (
-                    <Button variant="ghost" size="small" className="text-slate-400 hover:text-red-700 text-xs" disabled={busy} onClick={() => setRemoving({ id: x.id, name: x.fileName, item })}>
-                      Xóa {x.fileName}
-                    </Button>
-                  )}
-                </div>
+                {applicationId && x.id && editable && isSupportedAiDocument(x.fileName) && (
+                  <div className="pt-2 border-t border-slate-200/60">
+                    <DocumentAiVerificationCard
+                      applicationId={applicationId}
+                      documentId={x.id}
+                      fileName={x.fileName}
+                      expectedType={item.itemName}
+                      disabled={busy}
+                    />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -275,7 +300,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
               {editable && (
                 <details className="group py-0.5" open={Boolean(errors[item.checklistId]) || undefined}>
                   <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-red-700">
-                    <span>Đã điền bằng Word? Tải tệp lên</span>
+                    <span>{submissions.length ? 'Thay tệp Word khác' : 'Đã điền bằng Word? Tải tệp lên'}</span>
                     <CaretDown size={13} className="transition group-open:rotate-180" aria-hidden />
                   </summary>
                   <div className="pt-2 pb-2">

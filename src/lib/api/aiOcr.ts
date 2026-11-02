@@ -36,6 +36,72 @@ export const cccdExtractionSchema = z.preprocess(
 
 export type CccdExtractionDto = z.infer<typeof cccdExtractionSchema>;
 
+export const documentVerificationSchema = z.object({
+  isValid: z.boolean(),
+  documentTypeDetected: z.string(),
+  qualityIssues: z.array(z.string()),
+  confidence: z.number(),
+  checklistId: z.string().nullish(),
+  expectedType: z.string().nullish(),
+});
+
+export type DocumentVerificationDto = z.infer<typeof documentVerificationSchema>;
+
+export interface VerifyDocumentInput {
+  applicationId: string;
+  documentId: string;
+  expectedType?: string | null;
+}
+
+export const dossierAssistFileSchema = z.object({
+  kind: z.string(), // "SUBMISSION" | "SUPPORTING_DOCUMENT"
+  id: z.string(),
+  checklistId: z.string().nullish(),
+  checklistTitle: z.string().nullish(),
+  fileName: z.string(),
+  analyzed: z.boolean(),
+  skipReason: z.string().nullish(),
+});
+
+export const dossierAssistExtractedFieldSchema = z.object({
+  name: z.string(),
+  value: z.string().nullish(),
+  source: z.string().nullish(),
+});
+
+export const dossierAssistCrossCheckSchema = z.object({
+  field: z.string(),
+  valueInForm: z.string().nullish(),
+  valueInDocument: z.string().nullish(),
+  sourceDocument: z.string().nullish(),
+  result: z.enum(['MATCH', 'MISMATCH', 'NOT_FOUND']),
+  note: z.string().nullish(),
+});
+
+export const dossierAssistResultSchema = z.object({
+  applicationId: z.string(),
+  analyzedAt: z.string(),
+  applicationStatus: z.string(),
+  model: z.string().nullish(),
+  overallAssessment: z.enum(['NO_ISSUES_FOUND', 'NEEDS_ATTENTION', 'INSUFFICIENT_DATA']),
+  summary: z.string(),
+  files: z.array(dossierAssistFileSchema),
+  extractedFields: z.array(dossierAssistExtractedFieldSchema),
+  crossChecks: z.array(dossierAssistCrossCheckSchema),
+  missingItems: z.array(z.string()),
+  issues: z.array(z.string()),
+  suggestedComment: z.string().nullish(),
+  disclaimer: z.string(),
+});
+
+export type DossierAssistResultDto = z.infer<typeof dossierAssistResultSchema>;
+export type DossierAssistCrossCheckDto = z.infer<typeof dossierAssistCrossCheckSchema>;
+
+export interface DossierAssistInput {
+  includeSubmissions?: boolean;
+  includeSupportingDocuments?: boolean;
+}
+
 export const knowledgeSourceTypes = [
   "PROCEDURE",
   "MANUAL_TEXT",
@@ -250,7 +316,7 @@ export const aiOcrApi = {
         const status = err.response?.status;
         if (status === 401) {
           throw new Error(
-            "Dịch vụ AI OCR chưa được ủy quyền hoặc cấu hình xác thực trên server chưa sẵn sàng (HTTP 401). Phiên đăng nhập của bạn vẫn an toàn; vui lòng thử lại sau hoặc nhập thông tin thủ công.",
+            "Dịch vụ nhận diện giấy tờ tự động tạm thời chưa sẵn sàng. Bạn vui lòng thử lại sau hoặc nhập thông tin thủ công vào biểu mẫu.",
           );
         }
         if (status === 413) {
@@ -260,12 +326,12 @@ export const aiOcrApi = {
         }
         if (status === 415) {
           throw new Error(
-            "Định dạng tệp không được hỗ trợ. Vui lòng tải ảnh CCCD định dạng PNG hoặc JPEG (HTTP 415).",
+            "Định dạng tệp không được hỗ trợ. Vui lòng tải ảnh CCCD định dạng PNG hoặc JPEG.",
           );
         }
         if (status === 429) {
           throw new Error(
-            "Hệ thống AI đang bận hoặc bạn thao tác quá nhanh (HTTP 429). Vui lòng đợi 1 phút trước khi quét lại.",
+            "Hệ thống đang tiếp nhận nhiều lượt xử lý. Vui lòng đợi trong giây lát rồi thử lại.",
           );
         }
         if (
@@ -299,7 +365,7 @@ export const aiOcrApi = {
           conversationId: input.conversationId || null,
           wardCode: input.wardCode || "WARD_001",
         },
-        { signal, suppressSessionExpiry: true },
+        { signal, suppressSessionExpiry: true, timeout: 35000 },
       );
 
       return chatCompletionSchema.parse(response.data);
@@ -339,6 +405,103 @@ export const aiOcrApi = {
         )
       ).data,
     ),
+  verifyDocument: async (
+    input: VerifyDocumentInput,
+    signal?: AbortSignal,
+  ): Promise<DocumentVerificationDto> => {
+    try {
+      const response = await api.post(
+        aiPath("/api/v1/ai-ocr/documents/verify"),
+        {
+          applicationId: input.applicationId,
+          documentId: input.documentId,
+          expectedType: input.expectedType || undefined,
+        },
+        { signal, suppressSessionExpiry: true, timeout: 35000 },
+      );
+      return documentVerificationSchema.parse(response.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const code = (err.response?.data)?.code;
+        if (code === "chat.database_unavailable" || status === 502 || status === 503 || status === 504) {
+          throw new Error("Hệ thống tiền kiểm AI đang được bảo trì hoặc nâng cấp máy chủ. Bạn vui lòng đối soát giấy tờ trực tiếp để tiếp tục xử lý hồ sơ.");
+        }
+        if (code === "ai.checklist_required") {
+          throw new Error("Giấy tờ chưa được liên kết với mục trong hồ sơ. Vui lòng tải lại trang.");
+        }
+        if (code === "ai.checklist_mismatch") {
+          throw new Error("Không tìm thấy mục giấy tờ tương ứng trong danh mục hồ sơ.");
+        }
+        if (status === 401 || status === 403) {
+          throw new Error("Bạn không có quyền thực hiện kiểm tra giấy tờ này.");
+        }
+        if (code === "ai.document_not_found" || status === 404) {
+          throw new Error(
+            "Không tìm thấy tệp giấy tờ này trong hồ sơ hoặc bạn chưa được phân quyền truy cập. Vui lòng tải lại trang hoặc kiểm tra lại file đã đính kèm."
+          );
+        }
+        if (status === 413) {
+          throw new Error("Kích thước tệp quá lớn để quét tự động (tối đa 8 MB). Vui lòng nén nhỏ ảnh hoặc đối soát trực tiếp.");
+        }
+        if (status === 429) {
+          throw new Error("Hệ thống đang tiếp nhận nhiều yêu cầu. Vui lòng đợi trong giây lát rồi thử lại.");
+        }
+        const serverMsg =
+          (err.response?.data)?.title ||
+          (err.response?.data)?.message;
+        if (serverMsg) throw new Error(serverMsg);
+      }
+      throw err;
+    }
+  },
+  dossierAssist: async (
+    applicationId: string,
+    input?: DossierAssistInput,
+    signal?: AbortSignal,
+  ): Promise<DossierAssistResultDto> => {
+    try {
+      const response = await api.post(
+        aiPath(`/api/v1/ai-ocr/applications/${applicationId}/dossier-assist`),
+        input ?? { includeSubmissions: true, includeSupportingDocuments: true },
+        { signal, timeout: 65000 },
+      );
+      return dossierAssistResultSchema.parse(response.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const code = err.response?.data?.code;
+        const retryHeader = err.response?.headers?.['retry-after'] || err.response?.headers?.['Retry-After'];
+        const bodyRetry = err.response?.data?.retryAfter;
+        const retryAfterSec = retryHeader ? parseInt(String(retryHeader), 10) : (typeof bodyRetry === 'number' ? bodyRetry : undefined);
+
+        if (status === 429 && code === 'ai.provider_busy') {
+          const waitTime = !isNaN(retryAfterSec ?? NaN) && (retryAfterSec ?? 0) > 0 ? `${retryAfterSec} giây` : 'chốc lát';
+          const errorObj = new Error(`Dịch vụ AI đang bận hoặc quá tải hạn mức. Vui lòng thử lại sau ${waitTime}.`);
+          Object.assign(errorObj, { retryAfter: retryAfterSec, code: 'ai.provider_busy' });
+          throw errorObj;
+        }
+        if (code === 'ai.not_assigned_officer' || status === 403) {
+          throw new Error('Chỉ cán bộ đang trực tiếp thụ lý hồ sơ mới có quyền dùng AI hỗ trợ kiểm tra.');
+        }
+        if (code === 'ai.application_not_under_review' || status === 409) {
+          throw new Error('Hồ sơ cần được cán bộ tiếp nhận (đang thụ lý) trước khi dùng trợ lý AI kiểm tra.');
+        }
+        if (code === 'ai.dossier_empty' || status === 422) {
+          throw new Error('Hồ sơ chưa có tệp bản khai hoặc tài liệu nào hỗ trợ để AI phân tích.');
+        }
+        if (code === 'ai.output_truncated' || status === 502) {
+          throw new Error('Nội dung hồ sơ quá dài khiến câu trả lời bị cắt. Hãy thử kiểm tra từng phần (chỉ bản khai hoặc chỉ giấy tờ).');
+        }
+        if (status === 503 && code === 'ai.provider_unavailable') {
+          throw new Error('Dịch vụ Gemini AI tạm thời không phản hồi. Vui lòng thử lại sau.');
+        }
+        const title = err.response?.data?.title;
+        if (title) throw new Error(title);
+      }
+      throw err;
+    }
+  },
 };
 
 export const knowledgeApi = {
@@ -515,7 +678,35 @@ const aiErrorMessages: Record<string, string> = {
     "Cuộc trò chuyện này thuộc phường khác. Hãy tạo cuộc trò chuyện mới.",
   "chat.not_found": "Không tìm thấy cuộc trò chuyện của bạn.",
   "chat.database_unavailable":
-    "Dịch vụ trợ lý chưa sẵn sàng. Vui lòng thử lại sau.",
+    "Trợ lý AI tạm thời không truy cập được cơ sở dữ liệu. Vui lòng thử lại sau.",
+  "ai.guest_quota_exceeded":
+    "Bạn đã hết lượt hỏi hôm nay. Đăng nhập để hỏi tiếp.",
+  "ai.guest_limit_reached":
+    "Hệ thống đã hết lượt cho khách hôm nay. Đăng nhập hoặc thử lại ngày mai.",
+  "ai.quota_exceeded":
+    "Bạn đã dùng hết 30 lượt hôm nay, thử lại ngày mai.",
+  "ai.daily_limit_reached":
+    "Trợ lý AI tạm hết lượt hôm nay. Vui lòng thử lại ngày mai.",
+  "ai.output_truncated":
+    "Câu hỏi quá rộng, hãy hỏi cụ thể hơn.",
+  "ai.provider_unavailable":
+    "Trợ lý AI tạm thời không phản hồi. Vui lòng thử lại sau.",
+  "ai.provider_busy":
+    "Google Gemini đang quá tải hoặc tạm hết hạn mức phút. Vui lòng chờ đếm ngược rồi thử lại.",
+  "ai.dossier_empty":
+    "Hồ sơ chưa có tệp bản khai hoặc tài liệu nào hỗ trợ để AI phân tích.",
+  "ai.not_assigned_officer":
+    "Chỉ cán bộ đang trực tiếp thụ lý hồ sơ mới có quyền dùng AI hỗ trợ kiểm tra.",
+  "ai.application_not_under_review":
+    "Hồ sơ cần được cán bộ tiếp nhận (đang thụ lý) trước khi dùng trợ lý AI kiểm tra.",
+  "ai.workflow_not_configured":
+    "Hệ thống AI chưa cấu hình kết nối tới dịch vụ quản lý hồ sơ.",
+  "ai.document_service_not_configured":
+    "Hệ thống AI chưa cấu hình kết nối tới dịch vụ tài liệu.",
+  "ai.document_not_found":
+    "Giấy tờ không thuộc danh mục tài liệu minh chứng của hồ sơ này.",
+  "ai.document_access_failed":
+    "Dịch vụ tài liệu không phản hồi hoặc từ chối quyền truy cập.",
   "ai.timeout": "Trợ lý phản hồi quá lâu. Vui lòng thử lại.",
   "ai.dependency_unavailable":
     "Dịch vụ trợ lý tạm thời không kết nối được. Vui lòng thử lại sau.",
@@ -535,22 +726,46 @@ export function aiError(error: unknown): string {
   if (error instanceof z.ZodError)
     return "Dịch vụ AI trả dữ liệu không đúng định dạng.";
   if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { code?: string; title?: string; traceId?: string } | undefined;
     const code = aiErrorCode(error);
-    if (code && aiErrorMessages[code]) return aiErrorMessages[code];
+    const traceId = data?.traceId;
+    const traceSuffix = traceId ? ` (Mã tra cứu hỗ trợ: ${traceId})` : '';
+
+    if (code && aiErrorMessages[code]) return `${aiErrorMessages[code]}${traceSuffix}`;
     const status = error.response?.status;
     if (status === 401)
-      return "Phiên đăng nhập chưa hợp lệ với dịch vụ AI (HTTP 401). Vui lòng đăng nhập lại.";
-    if (status === 403) return aiErrorMessages["knowledge.forbidden"];
+      return "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.";
+    if (status === 403) return `${aiErrorMessages["knowledge.forbidden"]}${traceSuffix}`;
+    if (status === 409 && code === "chat.busy") return aiErrorMessages["chat.busy"];
     if (status === 429)
-      return "Bạn thao tác quá nhanh. Vui lòng đợi khoảng 1 phút rồi thử lại.";
+      return "Vui lòng chờ một chút rồi gửi lại. Bạn đang thao tác quá nhanh.";
     if (!error.response)
-      return "Không kết nối được dịch vụ AI. Vui lòng kiểm tra mạng và thử lại.";
-    const title = (error.response.data as { title?: string } | undefined)
-      ?.title;
-    if (title?.trim()) return title;
-    return `Dịch vụ AI tạm thời chưa phản hồi (HTTP ${status}). Vui lòng thử lại sau.`;
+      return "Không kết nối được dịch vụ hỗ trợ. Vui lòng kiểm tra mạng và thử lại.";
+    const title = data?.title;
+    if (title?.trim()) return `${title}${traceSuffix}`;
+    return `Hệ thống hỗ trợ tạm thời chưa phản hồi. Vui lòng thử lại sau.${traceSuffix}`;
   }
   return error instanceof Error
     ? error.message
     : "Không thể thực hiện thao tác.";
+}
+
+export function getAiRetryAfterSeconds(error: unknown): number | null {
+  if (axios.isAxiosError(error)) {
+    const header = error.response?.headers?.['retry-after'] || error.response?.headers?.['Retry-After'];
+    if (header) {
+      const sec = parseInt(String(header), 10);
+      if (!isNaN(sec) && sec > 0) return sec;
+    }
+    const bodyRetry = error.response?.data?.retryAfter;
+    if (bodyRetry) {
+      const sec = parseInt(String(bodyRetry), 10);
+      if (!isNaN(sec) && sec > 0) return sec;
+    }
+  }
+  if (error && typeof error === 'object' && 'retryAfter' in error) {
+    const sec = Number((error as { retryAfter?: unknown }).retryAfter);
+    if (!isNaN(sec) && sec > 0) return sec;
+  }
+  return null;
 }

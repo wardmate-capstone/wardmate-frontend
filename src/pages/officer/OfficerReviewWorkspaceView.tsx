@@ -1,22 +1,23 @@
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, Input, Modal, Skeleton, toast } from '@/components/ui';
+import { Badge, Button, Modal, Skeleton, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { useAddCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
+import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
 import { formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
 import { ReleaseApplicationModal } from '@/components/workflow/AssignmentModals';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
+import { DossierAiReviewCard } from '@/components/documents/DossierAiReviewCard';
 import { GeneratedDocumentsPanel } from '@/pages/citizen/components/GeneratedDocumentsPanel';
 import { useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormError } from '@/lib/api/documentForms';
-import { aiOcrApi } from '@/lib/api/aiOcr';
+import { aiOcrApi, getAiRetryAfterSeconds, type DossierAssistResultDto } from '@/lib/api/aiOcr';
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
 import {
   ArrowLeft,
@@ -88,6 +89,11 @@ export function OfficerReviewWorkspaceView({
   const diff = useApplicationDiff(application.id, from, to, tab === 'versions');
   const isRefreshing = detail.isFetching || comments.isFetching || submissions.isFetching;
   const addComment = useAddCommentMutation();
+  const withdrawCommentMutation = useWithdrawCommentMutation();
+  const [withdrawingComment, setWithdrawingComment] = useState<{ id: string; fieldLabel?: string | null; commentText?: string | null } | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
   const release = useReleaseApplicationMutation();
   const [releaseOpen, setReleaseOpen] = useState(false);
   const writing = useIsMutating() > 0;
@@ -99,6 +105,10 @@ export function OfficerReviewWorkspaceView({
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
   const [isGeneratingAiReason, setIsGeneratingAiReason] = useState(false);
+  const [dossierAiResult, setDossierAiResult] = useState<DossierAssistResultDto | null>(null);
+  const [dossierAiLoading, setDossierAiLoading] = useState(false);
+  const [dossierAiError, setDossierAiError] = useState<string | null>(null);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
   const decisionLock = useRef(false);
   const commentLock = useRef(false);
   const submissionSelect = useRef<HTMLSelectElement>(null);
@@ -122,6 +132,9 @@ export function OfficerReviewWorkspaceView({
     detail.data.status === 'UNDER_REVIEW' &&
     detail.data.assignedOfficerId === user?.id &&
     detail.data.userId !== user?.id;
+
+  const isManager = Boolean(user?.roles.includes('WARD_MANAGER'));
+  const canVerifyAi = Boolean(detail.data?.assignedOfficerId === user?.id && !isManager);
 
   const openComments = comments.data?.filter(x => x.status === 'OPEN' && x.versionNumber === version) ?? [];
   const checklists = detail.data?.checklists ?? [];
@@ -166,6 +179,33 @@ export function OfficerReviewWorkspaceView({
     reasonForm.reset({ reason: '' });
     setDecision(next);
   }
+
+  useEffect(() => {
+    if (!retryCountdown || retryCountdown <= 0) return;
+    const timer = window.setInterval(() => {
+      setRetryCountdown(prev => (prev && prev > 1 ? prev - 1 : null));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [retryCountdown]);
+
+  const handleRunDossierAi = async () => {
+    if (dossierAiLoading || !canVerifyAi) return;
+    setDossierAiLoading(true);
+    setDossierAiError(null);
+    try {
+      const data = await aiOcrApi.dossierAssist(application.id);
+      setDossierAiResult(data);
+      toast.success('AI đã hoàn tất kiểm tra và đối chiếu hồ sơ.');
+    } catch (err: unknown) {
+      const retrySec = getAiRetryAfterSeconds(err);
+      if (retrySec) {
+        setRetryCountdown(retrySec);
+      }
+      setDossierAiError(err instanceof Error ? err.message : 'Chưa thể kiểm tra hồ sơ bằng AI.');
+    } finally {
+      setDossierAiLoading(false);
+    }
+  };
 
   async function handleGenerateAiReason() {
     if (isGeneratingAiReason || busy) return;
@@ -557,6 +597,18 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {completed && canVerifyAi && (
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            onClick={() => setTab('documents')}
+                            className="gap-1.5 text-xs font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50"
+                            title="Mở tab tài liệu để xem tệp và đối soát AI"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                            <span>Tài liệu & AI</span>
+                          </Button>
+                        )}
                         <Button
                           size="small"
                           variant="outline"
@@ -583,15 +635,33 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         {tab === 'consultations' && <ApplicationConsultations applicationId={application.id} />}
 
         {tab === 'documents' && (
-          <OfficerDocumentsPanel
-            applicationId={application.id}
-            editable={editable && !busy}
-            onComment={id => {
-              commentForm.setValue('targetId', id);
-              setTab('comments');
-            }}
-            referenceData={fields.map(f => ({ label: f.label, value: String(f.value || 'Chưa có thông tin') }))}
-          />
+          <div className="space-y-6">
+            <DossierAiReviewCard
+              result={dossierAiResult}
+              loading={dossierAiLoading}
+              error={dossierAiError}
+              retryCountdown={retryCountdown}
+              onRunReview={() => void handleRunDossierAi()}
+              onApplyComment={suggested => {
+                commentForm.setValue('commentText', suggested);
+                setTab('comments');
+                toast.success('Đã chèn nội dung gợi ý vào ô nhận xét.');
+              }}
+              canReview={canVerifyAi}
+              disabled={busy || writing}
+            />
+
+            <OfficerDocumentsPanel
+              applicationId={application.id}
+              editable={editable && !busy}
+              canVerify={canVerifyAi}
+              onComment={id => {
+                commentForm.setValue('targetId', id);
+                setTab('comments');
+              }}
+              referenceData={fields.map(f => ({ label: f.label, value: String(f.value || 'Chưa có thông tin') }))}
+            />
+          </div>
         )}
 
         {/* Tab 3: Comments & Contextual Review */}
@@ -628,22 +698,61 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <div className="mt-4 space-y-3">
                 {comments.data?.map(x => {
                   const isOpen = x.status === 'OPEN';
+                  const isWithdrawn = x.status === 'WITHDRAWN';
                   return (
                     <div
                       key={x.id}
                       className={`space-y-2 rounded-xl border p-4 transition ${
-                        isOpen ? 'border-amber-200 bg-amber-50/40' : 'border-slate-200 bg-white'
+                        isWithdrawn
+                          ? 'border-slate-200 bg-slate-100/60 opacity-80'
+                          : isOpen
+                          ? 'border-amber-200 bg-amber-50/40'
+                          : 'border-slate-200 bg-white'
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold text-slate-900">{x.fieldLabel}</span>
-                        <Badge variant={isOpen ? 'warning' : 'success'} className="text-xs">
-                          {isOpen ? 'Cần chỉnh sửa' : 'Đã xử lý'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={isWithdrawn ? 'neutral' : isOpen ? 'warning' : 'success'}
+                            className="text-xs"
+                          >
+                            {isWithdrawn ? 'Đã rút nhận xét' : isOpen ? 'Cần chỉnh sửa' : 'Đã xử lý'}
+                          </Badge>
+                          {editable && isOpen && (
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs text-red-700 hover:bg-red-50 hover:text-red-900 font-semibold"
+                              onClick={() => {
+                                setWithdrawingComment({
+                                  id: x.id,
+                                  fieldLabel: x.fieldLabel,
+                                  commentText: x.commentText,
+                                });
+                                setWithdrawReason('');
+                                setWithdrawError('');
+                              }}
+                            >
+                              Rút nhận xét
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <p className="whitespace-pre-wrap break-words text-sm text-slate-700 leading-relaxed">
                         {x.commentText}
                       </p>
+                      {isWithdrawn && x.withdrawReason && (
+                        <div className="mt-1 rounded-lg bg-slate-200/50 p-2 text-xs text-slate-600">
+                          <span className="font-semibold">Lý do rút: </span>
+                          <span>{x.withdrawReason}</span>
+                          {x.withdrawnAt && (
+                            <span className="text-[11px] text-slate-400 block mt-0.5">
+                              Thời gian: {new Date(x.withdrawnAt).toLocaleString('vi-VN')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="text-xs text-slate-400">
                         {new Date(x.createdAt).toLocaleString('vi-VN')}
                       </p>
@@ -749,14 +858,33 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 </div>
               )}
 
-              <Input
-                label="Nội dung nhận xét"
-                maxLength={4000}
-                required
-                disabled={!editable || addComment.isPending}
-                {...commentForm.register('commentText')}
-                error={commentForm.formState.errors.commentText?.message}
-              />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="comment-text-input" className="block text-xs font-bold text-slate-700">
+                    Nội dung nhận xét <span className="text-red-600">*</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {commentForm.watch('commentText')?.length || 0}/4.000 ký tự
+                  </span>
+                </div>
+                <textarea
+                  id="comment-text-input"
+                  rows={4}
+                  maxLength={4000}
+                  required
+                  disabled={!editable || addComment.isPending}
+                  placeholder="Nhập nội dung nhận xét chi tiết gửi cho công dân..."
+                  className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-800 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600 disabled:bg-slate-100 disabled:opacity-75"
+                  aria-invalid={Boolean(commentForm.formState.errors.commentText)}
+                  aria-describedby={commentForm.formState.errors.commentText ? 'comment-text-error' : undefined}
+                  {...commentForm.register('commentText')}
+                />
+                {commentForm.formState.errors.commentText && (
+                  <p id="comment-text-error" role="alert" className="text-xs text-red-700">
+                    {commentForm.formState.errors.commentText.message}
+                  </p>
+                )}
+              </div>
 
               {commentError && (
                 <p role="alert" className="text-xs text-red-700">
@@ -1092,6 +1220,84 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         applicationNumber={application.applicationNumber}
         onConfirm={handleRelease}
       />
+
+      {withdrawingComment && (
+        <Modal
+          open={Boolean(withdrawingComment)}
+          onOpenChange={(open) => { if (!open) setWithdrawingComment(null); }}
+          title="Rút nhận xét khỏi hồ sơ"
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-600 leading-relaxed">
+              Bạn đang rút nhận xét cho mục: <strong className="text-slate-900">{withdrawingComment.fieldLabel}</strong>.
+              Nhận xét đã rút sẽ không còn tính là lỗi chưa giải quyết và không hiển thị cho công dân.
+            </p>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-amber-900">
+              <span className="font-semibold">Nội dung nhận xét:</span>
+              <p className="mt-0.5 whitespace-pre-wrap italic">{withdrawingComment.commentText}</p>
+            </div>
+            <div>
+              <label htmlFor="withdraw-reason" className="font-semibold text-slate-800 block mb-1">
+                Lý do rút nhận xét <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                id="withdraw-reason"
+                rows={3}
+                value={withdrawReason}
+                onChange={e => setWithdrawReason(e.target.value)}
+                placeholder="Nhập lý do rút nhận xét (từ 5 đến 500 ký tự)..."
+                maxLength={500}
+                className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-red-700"
+              />
+              <span className="text-[11px] text-slate-400 block text-right mt-0.5">
+                {withdrawReason.trim().length}/500 ký tự (tối thiểu 5 ký tự)
+              </span>
+            </div>
+            {withdrawError && (
+              <p role="alert" className="text-xs text-red-700 bg-red-50 p-2 rounded-lg border border-red-200">
+                {withdrawError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+              <Button
+                variant="outline"
+                size="small"
+                disabled={withdrawing}
+                onClick={() => setWithdrawingComment(null)}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="primary"
+                size="small"
+                disabled={withdrawing || withdrawReason.trim().length < 5}
+                loading={withdrawing}
+                onClick={async () => {
+                  if (withdrawReason.trim().length < 5) return;
+                  setWithdrawing(true);
+                  setWithdrawError('');
+                  try {
+                    await withdrawCommentMutation.mutateAsync({
+                      id: application.id,
+                      commentId: withdrawingComment.id,
+                      reason: withdrawReason.trim(),
+                    });
+                    toast.success('Đã rút nhận xét thành công.');
+                    setWithdrawingComment(null);
+                    setWithdrawReason('');
+                  } catch (err) {
+                    setWithdrawError(workflowError(err));
+                  } finally {
+                    setWithdrawing(false);
+                  }
+                }}
+              >
+                Xác nhận rút
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {guard.confirmation}
     </article>

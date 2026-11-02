@@ -3,19 +3,27 @@ import { Badge, Button, ListSkeleton } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
+import { DocumentAiVerificationCard } from '@/components/documents/DocumentAiVerificationCard';
 import { toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 
 const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
 
+function isSupportedAiDocument(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return lower.endsWith('.pdf') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
+}
+
 export function OfficerDocumentsPanel({
   applicationId,
   editable,
+  canVerify = false,
   onComment,
   referenceData,
 }: {
   applicationId: string;
   editable: boolean;
+  canVerify?: boolean;
   onComment: (checklistId: string) => void;
   referenceData?: { label: string; value: string }[];
 }) {
@@ -157,6 +165,15 @@ export function OfficerDocumentsPanel({
               )}
             </div>
           </div>
+          {canVerify && item.id && isSupportedAiDocument(item.fileName) && (
+            <div className="pt-2 border-t border-slate-100">
+              <DocumentAiVerificationCard
+                applicationId={applicationId}
+                documentId={item.id}
+                fileName={item.fileName}
+              />
+            </div>
+          )}
 
           {isSelected && (
             <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
