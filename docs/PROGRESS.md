@@ -4,6 +4,27 @@ Cập nhật: 02/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
 
+## Bàn giao Đồng bộ, Tách Commit theo Yêu cầu và Push Thành công lên origin/main — 02/11/2026
+
+- **Trạng thái Git:** Đã pull code mới nhất từ remote origin/main (bao gồm các commit Calendar Closures, Staffing form validation và Logo UI mới).
+- **Phân tách commit:** Toàn bộ công việc đã hoàn thành được chia thành các commit chuẩn ngữ nghĩa theo từng yêu cầu:
+  1. 40090fe docs: add backend requests for AI dossier assistant, worker config and verification handoff
+  2. 9ecba8a feat(ai): enhance guest chat widget with fallback mechanism and bilingual support
+  3. de42d6f feat(workflow): support comment withdrawal and align dossier readiness status
+  4. a568023 feat(admin): add notification deliveries history view and proxy routing
+  5. 5920d0d feat(notifications): add realtime toast subscriber with deduplication and deep links
+  6. fbfcd8e feat(ai-ocr): add dossier assist review card and document verification
+  7. a3b6153 refactor(ui): redesign dispatch view and standardize tech-speak to administrative language
+  8. a6f6e45 docs(handoff): record AI dossier assistant, realtime toast and UI polish progress
+  9. 6f1b982 Merge remote-tracking branch origin/main into main
+- **Xử lý xung đột (Conflict Resolution):** Đã kiểm tra và giải quyết triệt để xung đột nội dung tại 4 tệp (AdminPage.tsx, ConsultationsView.tsx, DispatchView.tsx, PROGRESS.md), giữ toàn vẹn tính năng Lịch ngày lễ toàn quốc (CalendarClosuresView) của remote và tính năng Phát thông báo, chuẩn hóa UI/UX của local.
+- **Kiểm thử nghiệm thu:**
+  - TypeScript npm run typecheck: Đạt 100% (0 lỗi).
+  - ESLint npm run lint: Đạt 100% (0 lỗi, 0 cảnh báo).
+  - npm run build: Build production thành công 100% (8.011 modules transformed).
+  - Test suite: 32/32 calendar rules, 56/56 staffing validation, 9/9 Playwright E2E tests passed 100%.
+- **Trạng thái Remote:** Đã push thành công lên origin/main (c86591e..6f1b982), nhánh đồng bộ hoàn toàn với remote.
+
 ## Rà soát Chuẩn hóa Text Kỹ thuật sang Ngôn ngữ Hành chính & Tối ưu UI/UX Toàn hệ thống — 01/11/2026
 
 - **Phạm vi & Trạng thái thực tế:**
