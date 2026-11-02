@@ -68,7 +68,7 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossiers_pending: { title: 'Hồ sơ chờ tiền kiểm' },
   dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa' },
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
-  dossiers_approved: { title: 'Hồ sơ đã duyệt tiền kiểm' },
+  dossiers_approved: { title: 'Hồ sơ giấy tờ sẵn sàng' },
   dossiers_cancelled: { title: 'Hồ sơ đã hủy' },
   dossier_detail: { title: 'Chi tiết hồ sơ' },
   submissions: {
@@ -88,6 +88,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSection = searchParams.get('section') as CitizenSectionId | null;
   const urlDossierCode = searchParams.get('dossierCode');
+  const urlDossierId = searchParams.get('dossierId');
   const requestedProcedureId = searchParams.get('procedureId');
   const requestedCaseCode = searchParams.get('caseCode');
   const queryClient = useQueryClient();
@@ -345,13 +346,14 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     if (urlSection && urlSection !== activeSection) {
       setActiveSection(urlSection);
     }
-    if (urlDossierCode && dossiers.length > 0) {
-      const found = dossiers.find((d) => d.code === urlDossierCode);
-      if (found && (!selectedDossierDetail || selectedDossierDetail.code !== urlDossierCode)) {
+    const targetIdentifier = urlDossierCode || urlDossierId;
+    if (targetIdentifier && dossiers.length > 0) {
+      const found = dossiers.find((d) => d.code === targetIdentifier || d.id === targetIdentifier);
+      if (found && (!selectedDossierDetail || (selectedDossierDetail.code !== targetIdentifier && selectedDossierDetail.id !== targetIdentifier))) {
         void handleOpenDossierDetail(found);
       }
     }
-  }, [urlSection, urlDossierCode, dossiers]);
+  }, [urlSection, urlDossierCode, urlDossierId, dossiers]);
 
   const unreadNotificationsCount = notificationHub.unreadCount;
 

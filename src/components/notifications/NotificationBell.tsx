@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { getManagementHome } from '@/lib/authRedirect';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell,
@@ -9,7 +9,9 @@ import {
   BellSlash,
   ArrowSquareOut,
 } from '@phosphor-icons/react';
-import { useCitizenNotifications } from '@/hooks/useCitizenNotifications';
+import { useNotificationStore } from '@/stores/notificationStore';
+import type { CitizenNotification } from '@/types/notification';
+import { resolveNotificationUrl } from '@/lib/api/notifications';
 import { NotificationItem } from './NotificationItem';
 
 interface NotificationBellProps {
@@ -22,12 +24,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   isMobileDrawer = false,
 }) => {
   const {
-    notifications,
+    items,
     unreadCount,
-    markAsRead,
-    markAllAsRead,
+    status,
+    markRead,
+    markAllRead,
     deleteNotification,
-  } = useCitizenNotifications();
+  } = useNotificationStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -36,6 +39,37 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(state => state.user);
   const destination = user ? getManagementHome(user.roles, user.permissions) ?? '/citizen?section=dossiers_all' : '/dang-nhap?returnTo=%2Fcitizen%3Fsection%3Ddossiers_all';
+
+  // Map NotificationDto từ store sang định dạng CitizenNotification hiển thị
+  const notifications: CitizenNotification[] = useMemo(() => {
+    return items.map((n) => {
+      const targetUrl = resolveNotificationUrl(n, user?.roles);
+      const codeMatch = n.content.match(/HS-[A-Za-z0-9-]+/);
+      const friendlyCode = codeMatch
+        ? codeMatch[0]
+        : (n.applicationId && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(n.applicationId)
+            ? n.applicationId
+            : undefined);
+
+      return {
+        id: n.id,
+        title: n.title,
+        message: n.content,
+        type: n.type.toLowerCase().includes('revision')
+          ? 'need_revision'
+          : n.type.toLowerCase().includes('approved') || n.title.toLowerCase().includes('sẵn sàng')
+          ? 'approved'
+          : n.type.toLowerCase().includes('submitted')
+          ? 'submitted'
+          : 'info',
+        applicationCode: friendlyCode,
+        createdAt: n.createdAt,
+        isRead: n.isRead,
+        actionUrl: targetUrl,
+        actionLabel: 'Xem chi tiết',
+      };
+    });
+  }, [items, user?.roles]);
 
   // Close on Escape or click outside
   useEffect(() => {
@@ -89,7 +123,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         <Bell size={20} weight={unreadCount > 0 ? 'fill' : 'regular'} className={unreadCount > 0 ? 'text-red-800' : 'text-slate-600'} aria-hidden="true" />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 grid min-w-5 h-5 place-items-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white shadow ring-2 ring-white"
+            className="absolute -top-1 -right-1 grid min-w-5 h-5 place-items-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white shadow ring-2 ring-white animate-in zoom-in-50"
             aria-hidden="true"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -120,7 +154,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={markAllAsRead}
+                onClick={() => void markAllRead()}
                 className="flex items-center gap-1 text-xs font-semibold text-red-800 hover:text-red-950 hover:underline"
                 title="Đánh dấu tất cả là đã đọc"
               >
@@ -165,8 +199,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                 <NotificationItem
                   key={notif.id}
                   notification={notif}
-                  onMarkAsRead={markAsRead}
-                  onDelete={deleteNotification}
+                  onMarkAsRead={(id) => void markRead(id)}
+                  onDelete={(id) => deleteNotification(id)}
                   onItemClick={() => setIsOpen(false)}
                 />
               ))
@@ -182,8 +216,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                 </p>
                 <p className="mt-1 text-xs text-slate-400 max-w-[240px]">
                   {filter === 'unread'
-                    ? 'Chưa có dữ liệu thông báo được xác minh.'
-                    : 'Các cập nhật về tiến độ tiền kiểm hồ sơ sẽ xuất hiện tại đây.'}
+                    ? 'Hiện tại không còn thông báo chưa đọc.'
+                    : 'Các cập nhật về tiến độ tiền kiểm hồ sơ sẽ xuất hiện tại đây theo thời gian thực.'}
                 </p>
               </div>
             )}
@@ -191,7 +225,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
           {/* Footer Actions */}
           <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 bg-slate-50/50 rounded-b-2xl text-xs text-slate-500">
-            <span>Chưa kết nối thông báo.</span>
+            <div className="flex items-center gap-1.5">
+              <span className={`size-2 rounded-full ${status === 'connected' ? 'bg-emerald-500' : status === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-slate-300'}`} />
+              <span className="text-[11px]">{status === 'connected' ? 'Đã kết nối thông báo.' : status === 'connecting' ? 'Đang kết nối thông báo...' : 'Chưa kết nối thông báo.'}</span>
+            </div>
 
             <Link
               to={destination}

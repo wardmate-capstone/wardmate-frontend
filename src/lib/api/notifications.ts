@@ -44,3 +44,47 @@ export async function ensureFreshAccessToken() {
 export function isConnected(connection: HubConnection | null) {
   return connection?.state === HubConnectionState.Connected;
 }
+
+/**
+ * Chuyển đổi actionUrl từ thông báo sang route hợp lệ trong SPA frontend.
+ * Tránh trường hợp Backend gửi URL REST như "/applications/{id}" hoặc "/api/v1/..." làm người dùng bị 404.
+ */
+export function resolveNotificationUrl(
+  notification: { actionUrl?: string | null; applicationId?: string | null },
+  roles?: string[]
+): string {
+  const isOfficer = Boolean(roles?.some((r) => r.includes('OFFICER') || r.includes('FRONT_DESK')));
+  const isManager = Boolean(roles?.some((r) => r.includes('MANAGER')));
+  const appId = notification.applicationId;
+
+  // Nếu actionUrl là đường dẫn nội bộ hợp lệ của Frontend SPA
+  if (
+    notification.actionUrl &&
+    (notification.actionUrl.startsWith('/citizen') ||
+      notification.actionUrl.startsWith('/cong-dan') ||
+      notification.actionUrl.startsWith('/officer') ||
+      notification.actionUrl.startsWith('/can-bo') ||
+      notification.actionUrl.startsWith('/manager') ||
+      notification.actionUrl.startsWith('/quan-ly') ||
+      notification.actionUrl.startsWith('/admin'))
+  ) {
+    return notification.actionUrl;
+  }
+
+  // Cán bộ: vào thẳng workspace thẩm định hồ sơ
+  if (isOfficer && appId) {
+    return `/officer?tab=workspace&applicationId=${encodeURIComponent(appId)}`;
+  }
+
+  // Quản lý: vào mục điều phối/giám sát
+  if (isManager && appId) {
+    return `/manager?section=applications`;
+  }
+
+  // Công dân hoặc người dùng chung: mở danh sách hồ sơ với dossierId
+  if (appId) {
+    return `/citizen?section=dossiers_all&dossierId=${encodeURIComponent(appId)}`;
+  }
+
+  return isOfficer ? '/officer' : isManager ? '/manager' : '/citizen';
+}

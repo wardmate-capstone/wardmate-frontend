@@ -1,6 +1,7 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/components/ui/Toast';
 // INITIAL_OFFICER_APPLICATIONS, INITIAL_OFFICER_AUDIT_LOGS, INITIAL_OFFICER_NOTIFICATIONS đã được xóa — dữ liệu hồ sơ, audit, thông báo sẽ lấy từ API sau.
 import type {
@@ -65,6 +66,9 @@ export const OfficerPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
   const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
   const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
+  const [searchParams] = useSearchParams();
+  const urlApplicationId = searchParams.get('applicationId');
+  const openedUrlAppRef = useRef<string | null>(null);
 
   // TanStack Query & Mutations từ Workflow API
   const [queuePage, setQueuePage] = useState(1);
@@ -309,6 +313,13 @@ export const OfficerPage: React.FC = () => {
       toast.error(workflowError(err));
     }
   };
+
+  useEffect(() => {
+    if (urlApplicationId && openedUrlAppRef.current !== urlApplicationId) {
+      openedUrlAppRef.current = urlApplicationId;
+      void handleOpenById(urlApplicationId);
+    }
+  }, [urlApplicationId]);
 
   // Breadcrumbs builder
   const breadcrumbs = useMemo(() => {

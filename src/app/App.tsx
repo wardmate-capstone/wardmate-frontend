@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/Toast';
+import { NotificationToastSubscriber } from '@/components/notifications/NotificationToastSubscriber';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { HomePage } from '@/pages/public/HomePage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
@@ -86,6 +87,7 @@ export function App() {
                 </Route>
               </Routes>
             </Suspense>
+            <NotificationToastSubscriber />
             <Toaster position="top-right" richColors closeButton />
           </BrowserRouter>
         </UserProfileProvider>
