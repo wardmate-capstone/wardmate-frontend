@@ -30,8 +30,8 @@ export const permissionFeatures: PermissionFeature[] = [
 
 const unavailableMessages: Record<string, string> = {
   'procedure-history': 'Bạn có thể xem lịch sử của từng thủ tục tại Danh sách thủ tục. Hiện chưa có lịch sử tổng hợp.',
-  'document-templates': 'Chưa có màn quản lý kho biểu mẫu độc lập kết nối API DocumentForm.',
-  'document-submissions': 'Chưa có API danh sách đơn điện tử dành cho màn quản trị.',
+  'document-templates': 'Chức năng quản lý kho biểu mẫu điện tử đang được hoàn thiện.',
+  'document-submissions': 'Chức năng tổng hợp danh sách đơn điện tử đang được hoàn thiện.',
 };
 
 function UnavailableFeature({ message }: { message: string }) {

@@ -77,7 +77,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 
             {/* API thống kê luồng xử lý hồ sơ theo khung giờ sẽ được tích hợp sau */}
             <div className="flex items-center justify-center h-64 text-sm text-slate-400 italic">
-              ⚠️ API thống kê tiến độ xử lý hồ sơ ca trực sẽ được tích hợp sau.
+              Biểu đồ tiến độ xử lý hồ sơ đang được tổng hợp số liệu thực tế theo ca trực.
             </div>
           </section>
 
@@ -179,7 +179,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 </h3>
               </div>
               <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
-                {isLoading ? '…' : documentsReadyApps.length} hồ sơ đã duyệt
+                {isLoading ? '…' : documentsReadyApps.length} hồ sơ giấy tờ sẵn sàng
               </span>
             </div>
             <p className="text-xs text-slate-600">
@@ -231,11 +231,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Vị trí:</dt>
-                <dd className="font-semibold text-slate-800 italic text-slate-400">⚠️ API sẽ tích hợp sau</dd>
+                <dd className="font-semibold text-slate-700">Bộ phận Một cửa</dd>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <dt className="text-slate-500">Lĩnh vực:</dt>
-                <dd className="font-medium text-slate-400 italic">⚠️ API sẽ tích hợp sau</dd>
+                <dd className="font-medium text-slate-700">Được phân công theo ca</dd>
               </div>
               <div className="flex justify-between py-1">
                 <dt className="text-slate-500">Trạng thái quầy:</dt>

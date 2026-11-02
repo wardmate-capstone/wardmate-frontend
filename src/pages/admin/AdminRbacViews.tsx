@@ -903,7 +903,7 @@ function AuditDetailModal({
         {log.details && log.details !== "{}" && (
           <details className="group">
             <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-800 select-none">
-              Xem payload JSON gốc
+              Xem dữ liệu kiểm toán gốc
             </summary>
             <pre className="mt-2 max-h-48 overflow-y-auto rounded-xl bg-slate-900 p-3 text-xs font-mono text-emerald-400">
               {JSON.stringify(parsed, null, 2)}
