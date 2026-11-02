@@ -110,6 +110,19 @@ export function useAddCommentMutation() {
   });
 }
 
+export function useWithdrawCommentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, commentId, reason }: { id: string; commentId: string; reason: string }) =>
+      workflowApi.withdrawComment(id, commentId, reason),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id, 'comments'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'application', id] });
+      queryClient.invalidateQueries({ queryKey: ['document-form', 'applications', id] });
+    },
+  });
+}
+
 export function useRequestRevisionMutation() {
   const queryClient = useQueryClient();
   return useMutation({

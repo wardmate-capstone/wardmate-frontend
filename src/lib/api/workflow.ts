@@ -164,9 +164,12 @@ export const commentDtoSchema = z.object({
   targetId: z.string().nullish(),
   fieldLabel: z.string().nullish(),
   commentText: z.string().nullish(),
-  status: z.string().nullish(), // OPEN or RESOLVED
+  status: z.string().nullish(), // OPEN, RESOLVED, or WITHDRAWN
   createdAt: z.string(),
   updatedAt: z.string(),
+  withdrawnBy: z.string().nullish(),
+  withdrawnAt: z.string().nullish(),
+  withdrawReason: z.string().nullish(),
 });
 
 export const versionDtoSchema = z.object({
@@ -402,6 +405,17 @@ export const workflowApi = {
 
   addComment: async (id: string, input: AddCommentInput) => {
     const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/comments`), input);
+    return reviewResultDtoSchema.parse(res.data);
+  },
+
+  withdrawComment: async (id: string, commentId: string, reason: string) => {
+    if (!reason || reason.trim().length < 5 || reason.trim().length > 500) {
+      throw new Error('Cần lý do rút nhận xét từ 5 đến 500 ký tự.');
+    }
+    const res = await api.post(
+      workflowPath(`/api/v1/officer/applications/${id}/comments/${commentId}/withdraw`),
+      { reason: reason.trim() },
+    );
     return reviewResultDtoSchema.parse(res.data);
   },
 

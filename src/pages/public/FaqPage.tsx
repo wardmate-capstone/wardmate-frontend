@@ -22,7 +22,7 @@ const questions = [
   },
   {
     question: 'Khi nào hệ thống tạo mã QR?',
-    answer: 'Mã QR chỉ được tạo sau khi cán bộ duyệt tiền kiểm. Nếu chưa có mã, mở hồ sơ để tạo PDF từ bản khai đã duyệt rồi tải lại mã QR. QR không phải giấy hẹn, số thứ tự hoặc kết quả giải quyết thủ tục.',
+    answer: 'Mã QR chỉ được tạo sau khi cán bộ xác nhận giấy tờ sẵn sàng. Nếu chưa có mã, mở hồ sơ để tạo PDF từ bản khai đã hoàn tất rồi tải lại mã QR. QR không phải giấy hẹn, số thứ tự hoặc kết quả giải quyết thủ tục.',
   },
 ];
 

@@ -167,7 +167,7 @@ export function HomePage() {
               </m.article>
             ))}
           </div>
-          <div className="mt-8 flex items-start gap-3 border-l-4 border-gold-500 bg-white p-5 text-sm leading-7 text-slate-600 shadow-sm"><BadgeCheck className="mt-0.5 shrink-0 text-red-700" size={21} aria-hidden="true" /><p><strong className="text-slate-950">Lưu ý:</strong> Mã QR xác định phiên bản đã duyệt tiền kiểm; QR không phải giấy hẹn, số thứ tự hoặc kết quả giải quyết thủ tục.</p></div>
+          <div className="mt-8 flex items-start gap-3 border-l-4 border-gold-500 bg-white p-5 text-sm leading-7 text-slate-600 shadow-sm"><BadgeCheck className="mt-0.5 shrink-0 text-red-700" size={21} aria-hidden="true" /><p><strong className="text-slate-950">Lưu ý:</strong> Mã QR xác định phiên bản hồ sơ có giấy tờ sẵn sàng; QR không phải giấy hẹn, số thứ tự hoặc kết quả giải quyết thủ tục.</p></div>
         </div>
       </section>
 

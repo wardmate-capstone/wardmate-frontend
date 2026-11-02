@@ -108,7 +108,7 @@ export interface TimelineItem {
 }
 
 export interface OfficerReviewComment {
-  status?: 'OPEN' | 'RESOLVED';
+  status?: 'OPEN' | 'RESOLVED' | 'WITHDRAWN';
   versionNumber?: number;
   targetId?: string;
   id: string;
@@ -117,6 +117,9 @@ export interface OfficerReviewComment {
   content: string;
   createdAt: string;
   officerName: string;
+  withdrawnBy?: string;
+  withdrawnAt?: string;
+  withdrawReason?: string;
 }
 
 export interface OfficialPaperCheckItem {

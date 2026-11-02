@@ -45,7 +45,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
   const openConfirm = () => { setAcknowledged(false); setSendError(''); setConfirmOpen(true); };
   const openComments = comments.filter(comment => comment.status === 'OPEN');
   const resolvedComments = comments.filter(comment => comment.status === 'RESOLVED');
-  const statusLabel = dossier.status === 'Đã duyệt' ? 'Đã duyệt tiền kiểm' : revising ? 'Cần bổ sung' : dossier.status;
+  const statusLabel = dossier.status === 'Đã duyệt' ? 'Giấy tờ sẵn sàng' : revising ? 'Cần bổ sung' : dossier.status;
   const currentStep = preparing ? 0 : approved || dossier.status === 'Đã từ chối' ? 2 : 1;
 
   return <div className="min-w-0 space-y-5 pb-8 [&_button]:min-h-11">

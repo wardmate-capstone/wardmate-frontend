@@ -4,7 +4,7 @@ import { ArrowsClockwise, ClockCounterClockwise, MagnifyingGlass, UserSwitch, Us
 import { Button, Modal, TableSkeletonRows, toast } from '@/components/ui';
 import { AssignDialog } from '@/components/staffing/DispatchView';
 import type { DispatchApplication } from '@/lib/api/staffing';
-import { useOfficerApplications } from '@/hooks/useWorkflow';
+import { useOfficerApplications, useAssignmentSummary } from '@/hooks/useWorkflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
 import { authErrorMessage, getManagerOfficers } from '@/lib/api';
 import { workflowApi, workflowError, type ApplicationSummaryDto, type OfficerListInput } from '@/lib/api/workflow';

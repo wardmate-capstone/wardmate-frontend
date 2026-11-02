@@ -268,7 +268,7 @@ function ApprovedQr({
         <Button variant="outline" onClick={() => { if (qr.isError) void qr.refetch(); else void binaryQuery.refetch(); }}>Tải lại mã QR</Button>
         {onOpenDossierDetail && <Button onClick={() => onOpenDossierDetail(dossier)}>Xem chi tiết hồ sơ</Button>}
       </div>
-      <p className="text-xs text-slate-500">Duyệt tiền kiểm không thay thế việc tiếp nhận hồ sơ chính thức. Cán bộ sẽ đối chiếu giấy tờ khi bạn đến.</p>
+      <p className="text-xs text-slate-500">Tiền kiểm không thay thế việc tiếp nhận hồ sơ chính thức tại UBND cấp xã/phường. Cán bộ sẽ đối chiếu giấy tờ khi bạn đến.</p>
     </div>;
   }
 

@@ -140,9 +140,12 @@ export function mapCommentDtoToOfficerReviewComment(c: CommentDto, officerFallba
     content: c.commentText || '',
     createdAt: formatDateTime(c.createdAt),
     officerName: officerFallback,
-    status: c.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN',
+    status: c.status === 'WITHDRAWN' ? 'WITHDRAWN' : c.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN',
     versionNumber: c.versionNumber,
     targetId: c.targetId || undefined,
+    withdrawnBy: c.withdrawnBy || undefined,
+    withdrawnAt: c.withdrawnAt ? formatDateTime(c.withdrawnAt) : undefined,
+    withdrawReason: c.withdrawReason || undefined,
   };
 }
 
