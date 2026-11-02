@@ -33,6 +33,7 @@ try {
     ['/api/v1/analytics/jobs/rebuild', 'analytics'],
     ['/api/v1/analytics/jobs/123', 'analytics'],
     ['/api/v1/citizen/feedback/app', 'analytics'],
+    ['/api/v1/admin/notification-deliveries?page=1&pageSize=20', 'analytics'],
     ['/api/v1/applications/app/contents', 'document'],
     ['/api/analytics-system/hubs/notifications/negotiate?negotiateVersion=1', 'document'],
     ['/api/v1/applications/app/approved-qr', 'document'],

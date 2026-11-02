@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
   if (analytics) {
     proxy['/api/v1/analytics'] = analytics;
     proxy['/api/v1/citizen/feedback'] = analytics;
+    proxy['/api/v1/admin/notification-deliveries'] = analytics;
   }
 
   if (documentForm) {
