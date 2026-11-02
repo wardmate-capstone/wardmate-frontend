@@ -1,8 +1,14 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 01/11/2026.
+Cập nhật: 02/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Điều chỉnh nhận diện trang chủ — 02/11/2026
+
+- Đã bỏ nhãn “Cổng tiền kiểm điện tử” khỏi header trong `src/components/layout/MainLayout.tsx`; thay quốc huy ở phần giới thiệu trang chủ bằng `BrandMark` dùng logo WardMate hiện có, với tên ảnh “Logo WardMate” trong `src/pages/public/HomePage.tsx`.
+- Đổi class CSS thành `hero-brand-mark` trong `src/styles/globals.css`, giữ kích thước responsive 80/96px và bóng hiện tại.
+- Kiểm tra mới: `npm run typecheck`, `npm run lint`, `git diff --check` đạt; test Playwright Edge kiểm tra không tràn ngang tại 360/390/768/1024/1440px báo `ok` (1 test, Catalog mock), nhưng tiến trình runner chưa thoát sau test nên chưa xác nhận exit code toàn lệnh. Chưa chạy production build, chưa kiểm tra trực quan hoặc zoom 200%; không thay đổi API. Chưa commit/push.
 
 ## Bàn giao 15 commit calendar/staffing để push main — 01/11/2026
 

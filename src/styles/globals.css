@@ -132,7 +132,7 @@
   .hero-main { @apply relative isolate scroll-mt-36 overflow-hidden border-b-4 border-gold-500/80 bg-[#fbf7ee] px-5 py-8 text-slate-900 sm:px-8 sm:py-10 lg:py-12; }
   .hero-main-glow { @apply pointer-events-none absolute left-1/2 top-[-180px] -z-[5] size-[520px] -translate-x-1/2 rounded-full bg-amber-300/20 blur-3xl; }
   .hero-main-content { @apply relative z-10 mx-auto flex min-h-[500px] w-full max-w-[980px] flex-col items-center justify-center text-center; }
-  .hero-national-emblem { @apply h-20 w-auto object-contain drop-shadow-[0_8px_20px_rgba(72,18,23,.18)] sm:h-24; }
+  .hero-brand-mark { @apply size-20 object-contain drop-shadow-[0_8px_20px_rgba(72,18,23,.18)] sm:size-24; }
   .hero-agency { @apply mt-3 text-xs font-bold uppercase tracking-[.18em] text-red-800 sm:text-sm; }
   .hero-main h1 { @apply mt-3 max-w-5xl text-4xl font-bold leading-[1.08] tracking-[-.035em] text-slate-950 sm:text-5xl lg:text-6xl; }
   .hero-description { @apply mt-3 max-w-3xl text-sm font-medium leading-7 text-slate-700 sm:text-lg sm:leading-8; }

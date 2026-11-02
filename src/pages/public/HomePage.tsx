@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { CardGridSkeleton, ListSkeleton } from '@/components/ui';
 import { JourneySteps } from '@/components/home/JourneySteps';
+import { BrandMark } from '@/components/brand/BrandMark';
 import { guideSteps as preparationSteps } from '@/data/preparationGuide';
 
 import { Link, useNavigate } from 'react-router-dom';
@@ -54,7 +55,7 @@ export function HomePage() {
         <div className="national-pattern" aria-hidden="true" />
         <div className="hero-main-glow" aria-hidden="true" />
         <m.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className="hero-main-content">
-          <img className="hero-national-emblem" src="/Quoc-Huy-Viet-Nam.webp" alt="Quốc huy nước Cộng hòa Xã hội Chủ nghĩa Việt Nam" />
+          <BrandMark className="hero-brand-mark" size={96} title="Logo WardMate" />
           <p className="hero-agency">Ủy ban nhân dân cấp xã / phường</p>
           <h1 id="hero-title">Chuẩn bị hồ sơ đúng ngay từ đầu</h1>
           <p className="hero-description">Cổng hỗ trợ tiền kiểm hồ sơ hành chính · Hướng dẫn biểu mẫu và tài liệu trước khi đến cơ quan có thẩm quyền</p>
