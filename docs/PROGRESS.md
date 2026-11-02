@@ -1,8 +1,264 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 30/10/2026.
+Cập nhật: 01/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Rà soát Chuẩn hóa Text Kỹ thuật sang Ngôn ngữ Hành chính & Tối ưu UI/UX Toàn hệ thống — 01/11/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Khắc phục triệt để lỗi ô nhận xét bị co 1 dòng (`OfficerReviewWorkspaceView.tsx`):**
+     - Thay thế `<Input>` 1 dòng bằng `<textarea>` 4 dòng (`rows={4}`), tự động xuống hàng, hiển thị toàn bộ nội dung văn bản dài do AI gợi ý hoặc cán bộ nhập, kèm bộ đếm ký tự `0/4.000 ký tự`.
+  2. **Tái thiết kế UI/UX trang Điều phối hồ sơ của Quản lý (`DispatchView.tsx`):**
+     - Thay thế việc in chuỗi UUID thô của cán bộ bằng việc tự động đối chiếu danh bạ để hiển thị Họ tên thật của cán bộ.
+     - Thiết kế lại thẻ hồ sơ: bo góc `rounded-2xl`, hiển thị mã hồ sơ chuẩn font mono, hệ thống badge màu sắc trực quan (Xanh lá, Xanh lam, Vàng, Đỏ) kèm icon trạng thái Phosphor, bố trí các nút hành động (Phân công, Chuyển cán bộ, Lịch sử, Tham vấn) tinh gọn.
+  3. **Tối ưu hệ thống thông báo & khử trùng lặp Real-time (`notificationStore.ts`, `NotificationToastSubscriber.tsx`):**
+     - Bổ sung bộ lọc de-duplication trong vòng 4 giây: khi máy chủ SignalR phát sự kiện trùng lặp vào nhiều nhóm (User, Ward, Role), client tự lọc và chỉ hiển thị DUY NHẤT 1 Toast popup, triệt tiêu hiện tượng xếp chồng 3 thông báo.
+     - Sửa lỗi click thông báo bị 404: bổ sung hàm `resolveNotificationUrl` chuyển đổi URL REST của backend thành route SPA chuẩn; công dân được dẫn thẳng vào màn hình Chi tiết hồ sơ, cán bộ được dẫn thẳng vào Không gian thẩm định hồ sơ.
+     - Loại bỏ badge UUID `74b0ee66...` trong dropdown chuông thông báo; tự động trích xuất mã hồ sơ thân thiện `HS-2026...` từ nội dung.
+  4. **Rà soát và chuyển hóa toàn bộ thuật ngữ kỹ thuật (Tech-speak) sang ngôn ngữ hành chính công:**
+     - Loại bỏ các từ "BE", "API", "HTTP 401/429/415", "Mã kiểm vết", "payload JSON":
+       + `ConsultationsView.tsx`: "BE kiểm tra..." -> "Hồ sơ ở chế độ tham khảo chuyên môn...", "Hệ thống sẽ chuyển yêu cầu đến chuyên viên cùng lĩnh vực đang trong ca trực để hỗ trợ giải đáp."
+       + `DispatchView.tsx`: "BE xác minh lại điều kiện..." -> "Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu."
+       + `CitizenFeedbackView.tsx`: "chưa có API lịch sử toàn bộ đánh giá..." -> "Hiển thị danh sách đánh giá theo các hồ sơ bạn đã hoàn tất tiền kiểm."
+       + `OfficerDashboardView.tsx`: "⚠️ API sẽ tích hợp sau" -> "Bộ phận Một cửa" / "Được phân công theo ca" / "Biểu đồ tiến độ xử lý hồ sơ đang được tổng hợp số liệu thực tế theo ca trực."
+       + `PermissionFeatures.tsx`: "kết nối API DocumentForm" -> "Chức năng quản lý kho biểu mẫu điện tử đang được hoàn thiện."
+       + `AdminRbacViews.tsx`: "Xem payload JSON gốc" -> "Xem dữ liệu kiểm toán gốc".
+       + `aiOcr.ts`: Bỏ các mã lỗi kỹ thuật "HTTP 401", "HTTP 429", "HTTP 415", chuyển "Mã kiểm vết" -> "Mã tra cứu hỗ trợ".
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: **0 errors**.
+  - `npm run lint`: **0 errors, 0 warnings**.
+  - `npm run build`: **Build production thành công 100%**.
+  - Playwright test: **100% passed** (`officer-dossier-assist`, `realtime-notification-toast`, `officer-notifications`).
+- **Tệp liên quan:**
+  - `src/pages/officer/OfficerReviewWorkspaceView.tsx`
+  - `src/components/staffing/DispatchView.tsx`
+  - `src/stores/notificationStore.ts`
+  - `src/lib/api/notifications.ts`
+  - `src/components/notifications/NotificationBell.tsx`
+  - `src/components/notifications/NotificationToastSubscriber.tsx`
+  - `src/pages/citizen/CitizenPage.tsx`
+  - `src/pages/officer/OfficerPage.tsx`
+  - `src/components/staffing/ConsultationsView.tsx`
+  - `src/pages/citizen/views/CitizenFeedbackView.tsx`
+  - `src/pages/officer/OfficerDashboardView.tsx`
+  - `src/components/layout/PermissionFeatures.tsx`
+  - `src/pages/admin/AdminRbacViews.tsx`
+  - `src/lib/api/aiOcr.ts`
+  - `docs/PROGRESS.md`
+
+## Tích hợp Hoàn tất Tính năng AI Trợ lý Thẩm định Hồ sơ Một cửa (`AI-OFFICER-ASSIST-01`) & Cập nhật Quản trị Thông báo — 01/11/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Tầng API & Zod Schemas (`src/lib/api/aiOcr.ts`):**
+     - Tích hợp endpoint mới `POST /api/v1/ai-ocr/applications/{applicationId}/dossier-assist` (Bearer token, body `{ includeSubmissions: true, includeSupportingDocuments: true }`).
+     - Khai báo đầy đủ các Zod schemas chuẩn theo Backend bàn giao: `dossierAssistFileSchema`, `dossierAssistExtractedFieldSchema`, `dossierAssistCrossCheckSchema`, `dossierAssistResultSchema`.
+     - Xử lý triệt để các mã lỗi từ Backend: `ai.provider_busy` (HTTP 429), `ai.not_assigned_officer` (HTTP 403), `ai.application_not_under_review` (HTTP 409), `ai.dossier_empty` (HTTP 422), `ai.output_truncated` (HTTP 502), `ai.provider_unavailable` (HTTP 503).
+     - Helper `getAiRetryAfterSeconds`: trích xuất số giây từ header `Retry-After` (chuẩn hóa cả chữ hoa/thường lẫn fallback từ body) để kích hoạt đồng hồ đếm ngược.
+  2. **Component Thẩm định AI (`src/components/documents/DossierAiReviewCard.tsx`):**
+     - Đánh giá tổng thể (`overallAssessment`): `NO_ISSUES_FOUND` (Không phát hiện vấn đề), `NEEDS_ATTENTION` (Cần lưu ý kiểm tra đối soát), `INSUFFICIENT_DATA` (Chưa đủ thông tin đối chiếu) kèm tóm tắt (`summary`).
+     - Bảng đối chiếu chéo (`crossChecks`): đối chiếu giữa bản khai DOCX và giấy tờ đính kèm CCCD/Hộ khẩu với 3 trạng thái rõ ràng: Trùng khớp (`MATCH`), Không khớp/Lệch (`MISMATCH`), Chưa có giấy tờ đối chiếu (`NOT_FOUND`).
+     - Danh sách cảnh báo giấy tờ còn thiếu (`missingItems`) và lưu ý sai sót (`issues`).
+     - Gợi ý nhận xét hành chính cho Cán bộ Một cửa (`suggestedComment`) kèm nút hành động "Chèn vào ô nhận xét" để đưa nội dung vào form nhận xét (không tự ý gửi nhận xét).
+     - Danh sách tệp tin đã phân tích (`files`) kèm trạng thái, lý do bỏ qua (`skipReason`) và dòng lưu ý pháp lý (`disclaimer`) luôn hiển thị rõ ràng.
+  3. **Tích hợp Không gian Làm việc Cán bộ (`src/pages/officer/OfficerReviewWorkspaceView.tsx`):**
+     - Nhúng `DossierAiReviewCard` vào tab `Bản khai & giấy tờ`.
+     - Phân quyền chặt chẽ: chỉ cán bộ đang trực tiếp thụ lý hồ sơ (`canVerifyAi` = `assignedOfficerId === user.id` && `!isManager`) mới thấy và chạy được tính năng. Ẩn hoàn toàn với Manager để tuân thủ quyền hạn.
+     - Xử lý đếm ngược thời gian chờ khi gặp lỗi 429 quá tải hạn mức Google Gemini (`retryCountdown`).
+     - Tự động điền nhận xét và chuyển tab `comments` khi bấm "Chèn vào ô nhận xét".
+  4. **Cập nhật Bảng Quản trị Phát thông báo (`src/pages/admin/NotificationDeliveriesView.tsx`):**
+     - Bổ sung 2 trạng thái giao thông báo mới từ Analytics Backend: `Dispatching` (Đang điều phối gửi) và `Unknown` (Không xác định) vào danh sách bộ lọc và badge hiển thị.
+  5. **Kiểm thử tự động Playwright E2E:**
+     - Tạo mới `tests/officer-dossier-assist.spec.ts` kiểm thử toàn diện 2 kịch bản:
+       + Ca 1: Chạy trợ lý AI, đối soát chéo CCCD với bản khai DOCX, hiển thị danh sách giấy tờ thiếu và chèn nhận xét gợi ý vào form.
+       + Ca 2: Xử lý lỗi 429 `ai.provider_busy`, đọc header `Retry-After` và hiển thị đồng hồ đếm ngược.
+     - Cập nhật fixture `tests/fixtures/auth.ts` hỗ trợ expose header `Retry-After` trong CORS reply.
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: **0 errors**.
+  - `npm run lint`: **0 errors, 0 warnings**.
+  - `npm run build`: **thành công 100%** (8011 modules transformed).
+  - Playwright test: **11/11 tests passed** (bao gồm `officer-dossier-assist`, `realtime-notification-toast`, `ai-verify-and-deliveries`, `document-workflow`).
+- **Tệp liên quan:**
+  - `src/lib/api/aiOcr.ts`
+  - `src/components/documents/DossierAiReviewCard.tsx`
+  - `src/pages/officer/OfficerReviewWorkspaceView.tsx`
+  - `src/pages/admin/NotificationDeliveriesView.tsx`
+  - `tests/officer-dossier-assist.spec.ts`
+  - `tests/fixtures/auth.ts`
+  - `docs/PROGRESS.md`
+- **Bước tiếp theo:**
+  - Chờ DevOps/Backend deploy bản build backend AIOCR mới lên môi trường Azure để xác minh thực tế.
+
+
+## Triển khai Hệ thống Thông báo Thời gian thực (Real-time In-App Toast & Hub Sync) — 31/10/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Notification Hub & Store tập trung (`useNotificationStore` - Zustand):**
+     - Đưa kết nối WebSocket/SignalR NotificationHub (`/api/analytics-system/hubs/notifications`) lên cấp độ Store toàn cục ứng dụng.
+     - Đồng bộ trạng thái kết nối (`connecting`, `connected`, `offline`), danh sách thông báo và số lượng chưa đọc (`unreadCount`).
+     - Tự động duy trì kết nối xuyên suốt mọi trang (Trang chủ, Công dân, Cán bộ Một cửa, Quản lý, Quản trị viên).
+  2. **Toast Popup Thông báo Thời gian thực góc trên bên phải (`NotificationToastSubscriber`):**
+     - Lắng nghe sự kiện `ReceiveNotification` từ máy chủ SignalR và kích hoạt Toast Popup nổi trang trọng ở **góc trên bên phải** (`top-right`).
+     - Giao diện Toast gồm: Biểu tượng chuông Một cửa, Tiêu đề hồ sơ, Nội dung tóm tắt, nhãn thời gian "Vừa xong • WardMate", nút đóng nhanh "×" và nút hành động "Xem hồ sơ" (click vào sẽ đánh dấu đã đọc và điều hướng thẳng đến đúng chi tiết hồ sơ).
+     - Không phát âm thanh và không kích hoạt native desktop notification phiền toái theo đúng yêu cầu người dùng.
+  3. **Chuông Thông báo Real-time (`NotificationBell`):**
+     - Thay thế mock hook cô lập cũ; kết nối trực tiếp với `useNotificationStore`.
+     - Badge đỏ trên icon chuông ở Header tự động nhảy số theo thời gian thực khi có thông báo mới.
+     - Dropdown chuông hiển thị danh sách thông báo thật, trạng thái kết nối máy chủ, nút "Đánh dấu tất cả đã đọc" và phân loại Chưa đọc / Tất cả.
+  4. **Tương thích ngược 100%:**
+     - `useNotificationHub` được chuyển sang proxy qua `useNotificationStore`, giúp các trang `CitizenNotificationsView` và `OfficerNotificationView` hoạt động đồng nhất, mượt mà mà không phải sửa cấu trúc logic cũ.
+- **Tệp liên quan:**
+  - `src/stores/notificationStore.ts`
+  - `src/components/notifications/NotificationToastSubscriber.tsx`
+  - `src/components/notifications/NotificationBell.tsx`
+  - `src/hooks/useNotificationHub.ts`
+  - `src/app/App.tsx`
+  - `tests/realtime-notification-toast.spec.ts`
+  - `tests/notifications.spec.ts`
+  - `tests/citizen-notifications.spec.ts`
+  - `tests/officer-notifications.spec.ts`
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 errors).
+  - `npm run lint`: đạt (0 errors, 0 warnings).
+  - `npm run build`: đạt (0 errors, 8010 modules transformed thành công).
+  - Playwright tests: **10/10 tests passed** (bao gồm test mới `realtime-notification-toast.spec.ts`).
+
+## Lập Đặc tả Yêu cầu Kỹ thuật Backend: AI Trợ lý Thẩm định & Phân tích Đơn DOCX (`AI-OFFICER-ASSIST-01`) — 31/10/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Tạo tài liệu bàn giao Backend (`docs/BE_FEATURE_REQUEST_AI_DOSSIER_ASSISTANT.md`):**
+     - Làm rõ nguyên nhân cốt lõi vì sao AI OCR hiện tại từ chối file DOCX: `GeminiAssistant.cs` chỉ nhận MIME PNG, JPEG, PDF; `AuthorizedDocumentSource.cs` chỉ đọc `supporting-documents` chứ không gọi sang `submissions`.
+     - Phân tích chi tiết vì sao bắt buộc phải xử lý ở Backend: Tính toàn vẹn cấu trúc bảng biểu Word (`DocumentFormat.OpenXml`), bảo mật thông tin công dân, phân quyền RBAC và lưu vết kiểm toán pháp lý (Audit Trail).
+     - Đặc tả endpoint mới: `POST /api/v1/ai-ocr/applications/{applicationId}/dossier-assist` cho phép AI phân tích toàn diện bộ hồ sơ, đối chiếu chéo (Cross-check) giữa thông tin trong đơn DOCX với ảnh CCCD/giấy tờ đính kèm, phát hiện mâu thuẫn/bỏ sót và gợi ý sẵn nội dung nhận xét hành chính Một cửa (1-click chèn vào form).
+     - Thống nhất cơ chế bản khai DOCX: Giữ nguyên cơ chế Replace (`PUT /draft`) hiện tại của Backend vì tờ khai là bắt buộc; Frontend đã hoàn thiện nhãn trực quan "Thay tệp Word khác", không cần phát triển thêm endpoint `DELETE`.
+     - Khắc phục lỗi 503 `ai.provider_unavailable`: Phân tích nguyên nhân Google Gemini API Key bị chạm Rate Limit / Quota Exceeded (HTTP 429), đề xuất cơ chế Polly Retry Exponential Backoff và nâng cấp hạn mức quota.
+  2. **Trạng thái mã nguồn Frontend:**
+     - Đã hoàn tất 100% các tinh chỉnh UI/UX: Avatar Cán bộ Một cửa cho Chatbot AI, chuẩn hóa hiển thị danh xưng phường/xã, loại bỏ nút lặp, tối ưu skeleton loading bảng Quản trị phát thông báo, fallback thông minh khi backend gián đoạn.
+     - Typecheck: 0 lỗi.
+     - Lint: 0 lỗi.
+     - Tests: 6/6 passed.
+  3. **Tạo tài liệu cấu hình Azure Worker (`docs/BE_DEVOPS_NOTIFICATION_WORKER_CONFIG.md`):**
+     - Hướng dẫn DevOps Backend bật worker thông báo `AnalyticsSystem` bằng cách đặt `minReplicas = 1` và `Notifications__WorkersEnabled=true` trên Azure Container Apps.
+     - Giúp trang Quản trị Admin tự động nhận dữ liệu thực tế từ sự kiện nộp/tiếp nhận hồ sơ qua RabbitMQ.
+  4. **Bước tiếp theo:**
+     - Người dùng gửi tài liệu `docs/BE_FEATURE_REQUEST_AI_DOSSIER_ASSISTANT.md` cho đội Backend và DevOps.
+     - Chờ Backend triển khai xong các endpoint trên máy chủ, Frontend sẽ tiến hành cắm tích hợp toàn diện giao diện và kiểm thử E2E.
+
+## Hoàn thành bàn giao Backend và Chuẩn hóa hệ thống — 31/10/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Tính năng Rút nhận xét (`WORKFLOW-COMMENT-01`):**
+     - Bổ sung `withdrawComment(id, commentId, reason)` gọi `DELETE /api/v1/applications/{id}/comments/{commentId}` kèm lý do 5-500 ký tự.
+     - Cập nhật schema: `commentDtoSchema` hỗ trợ trạng thái `OPEN`, `RESOLVED`, `WITHDRAWN`, lưu vết `withdrawnBy`, `withdrawnAt`, `withdrawReason`.
+     - Phía Cán bộ: chỉ cán bộ đang thụ lý được quyền rút nhận xét `OPEN` khi hồ sơ ở trạng thái `UNDER_REVIEW`. Hiển thị badge xám "Đã rút nhận xét" kèm thời gian và lý do.
+     - Phía Công dân: trong `CitizenDossierDetailView.tsx`, nhận xét đã rút hoàn toàn bị ẩn, không còn là blocker chặn nộp lại hồ sơ hay chặn chuyển trạng thái.
+  2. **Nâng cấp Chatbot AI Công khai (`AI-GUEST-01`) & Mã lỗi ProblemDetails:**
+     - Bổ sung xử lý toàn bộ mã lỗi theo hợp đồng Backend: `ai.guest_quota_exceeded`, `ai.guest_limit_reached`, `ai.quota_exceeded`, `ai.daily_limit_reached`, `ai.output_truncated`, `ai.provider_unavailable`, `chat.busy`, `chat.database_unavailable`, `ai.document_not_found`, `ai.document_access_failed`.
+     - Hiển thị `traceId` trong banner lỗi để người dùng báo cáo kỹ thuật. Cấu hình timeout 35s cho trường hợp cold start.
+     - Tự động lưu và khôi phục `conversationId` cùng lịch sử tin nhắn của khách vào `localStorage`. Khi gặp sự cố máy chủ hoặc ngoại tuyến, hệ thống kích hoạt bộ cẩm nang tư vấn nghiệp vụ công dự phòng thông minh cho khách.
+  3. **Chuẩn hóa Tiền kiểm AI và Phân quyền:**
+     - Khắc phục triệt để lỗi 404 `ai.document_not_found`: Backend AI OCR chỉ hỗ trợ file tài liệu đính kèm `supportingDocuments` (.pdf, .png, .jpg, .jpeg); đã gỡ bỏ nút verify khỏi danh sách bản khai biểu mẫu `submissions`.
+     - Phân quyền: Nút tiền kiểm chỉ hiển thị cho cán bộ đang thụ lý (`isAssignedOfficer`) và công dân sở hữu hồ sơ khi còn quyền sửa (`editable`). Ẩn hoàn toàn với Manager và cán bộ không phụ trách theo đúng phân quyền Backend.
+  4. **Chuẩn hóa Thuật ngữ Giao diện (Mục 3.8):**
+     - Loại bỏ các từ ngữ "phê duyệt hồ sơ", "duyệt tiền kiểm" khỏi giao diện vì WardMate là cổng chuẩn bị tiền kiểm trước quầy Một cửa, không thay thế tiếp nhận hành chính.
+     - `DOCUMENTS_READY` chuẩn hóa thành "Giấy tờ sẵn sàng"; `OFFICIALLY_RECEIVED` chuẩn hóa thành "Đã tiếp nhận tại quầy".
+     - Cập nhật text tại: `NotificationDeliveriesView.tsx`, `OfficerDashboardView.tsx`, `CitizenPage.tsx`, `CitizenDossierDetailView.tsx`, `CitizenQrCodeView.tsx`, `HomePage.tsx`, `FaqPage.tsx`.
+  5. **Giải đáp màn hình Quản trị phát thông báo Admin (Ảnh gửi từ người dùng):**
+     - Thanh tìm kiếm Network tab của DevTools đang bật bộ lọc `cookie-domain:cms.ptxsolution.com`, vô tình lọc hết mọi request (0 / 249 requests displayed). Xóa chuỗi lọc này trong DevTools sẽ thấy các request API /api/v1/... bình thường.
+     - Bảng phát thông báo báo 200 OK nhưng tổng số = 0 vì chưa có sự kiện nộp/tiếp nhận nào được đẩy qua RabbitMQ trên máy chủ.
+- **Tệp liên quan:**
+  - `src/lib/api/workflow.ts`
+  - `src/lib/api/workflowAdapters.ts`
+  - `src/hooks/useWorkflow.ts`
+  - `src/types/officer.ts`
+  - `src/pages/officer/OfficerReviewWorkspaceView.tsx`
+  - `src/pages/officer/OfficerDocumentsPanel.tsx`
+  - `src/pages/officer/OfficerDashboardView.tsx`
+  - `src/pages/citizen/components/DossierChecklistView.tsx`
+  - `src/pages/citizen/views/CitizenDossierDetailView.tsx`
+  - `src/pages/citizen/views/CitizenQrCodeView.tsx`
+  - `src/pages/citizen/CitizenPage.tsx`
+  - `src/pages/admin/NotificationDeliveriesView.tsx`
+  - `src/pages/public/HomePage.tsx`
+  - `src/pages/public/FaqPage.tsx`
+  - `src/components/ai/AiChatWidget.tsx`
+  - `src/lib/api/aiOcr.ts`
+  - `tests/ai-verify-and-deliveries.spec.ts`
+  - `tests/guest-chat-and-ai-fallback.spec.ts`
+  - `docs/BE_HANDOVER_ISSUES_2026-10-30.md`
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 errors).
+  - `npm run lint`: đạt (0 errors, 0 warnings).
+  - `npm run build`: đạt (0 errors, bundle 8009 modules thành công trong 22s).
+  - Playwright test:
+    - `tests/ai-verify-and-deliveries.spec.ts`: 4/4 passed (13.7s).
+    - `tests/guest-chat-and-ai-fallback.spec.ts`: 2/2 passed (9.2s).
+- **Trạng thái:** Sẵn sàng kiểm thử và bàn giao.
+
+## Hoàn thiện 4 hạng mục theo phản hồi người dùng — 30/10/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Nghiệp vụ nút Tiền kiểm AI khi đã nộp hồ sơ:**
+     - Đã thống nhất và triển khai trong `DossierChecklistView.tsx`: Nút `✨ Tiền kiểm AI` chỉ hiển thị khi hồ sơ đang chuẩn bị hoặc bổ sung (`editable === true`). Khi công dân đã chính thức nộp hồ sơ (`!editable`), nút tự động ẩn đi vì hồ sơ đã ở chế độ chỉ đọc, không thể thay đổi giấy tờ.
+     - Cán bộ Một cửa (`Officer`) vẫn có nút tiền kiểm để đối soát khi thụ lý hồ sơ.
+  2. **Xử lý lỗi 404 `ai.document_not_found` & Lỗi 503 `chat.database_unavailable`:**
+     - Phân tích mã nguồn backend `AuthorizedDocumentSource.cs` (dòng 16-20) cho thấy `Download` gọi sang DocumentForm service với URL nội bộ và chỉ đọc supporting-documents (chưa hỗ trợ submissions).
+     - Đã tạo tệp báo cáo kỹ thuật chi tiết: `docs/BE_HANDOVER_ISSUES_2026-10-30.md` để gửi trực tiếp cho đội ngũ Backend & DevOps cấu hình PostgreSQL, RabbitMQ và liên kết nội bộ giữa các microservices trên Azure.
+     - Cập nhật `AiChatWidget.tsx`: khi người dùng đã đăng nhập gặp lỗi 503 từ BE, hệ thống tự động kích hoạt fallback tư vấn nghiệp vụ công chuẩn mực kèm thông báo bảo trì, không làm gián đoạn trải nghiệm người dùng.
+  1. **Xử lý lỗi 503 `chat.database_unavailable` ở nút Tiền kiểm AI:**
+     - Backend AIOCR phụ thuộc PostgreSQL AI chưa chạy migration/kết nối DB trên Azure. Phía FE: `src/lib/api/aiOcr.ts` bắt mã lỗi `chat.database_unavailable` và HTTP 503.
+     - `DocumentAiVerificationCard.tsx` hiển thị banner cảnh báo amber thân thiện, nêu rõ máy chủ AI đang bảo trì hoặc chưa sẵn sàng DB, đồng thời hướng dẫn cán bộ/công dân đối soát giấy tờ thủ công để không làm tắc nghẽn quy trình nộp hay duyệt hồ sơ.
+  2. **Hiển thị đầy đủ nút Tiền kiểm AI cho Officer:**
+     - Trong `OfficerDocumentsPanel.tsx`: loại bỏ ràng buộc `item.fileExists &&`, chỉ cần `Boolean(item.id)` là hiển thị nút `✨ Tiền kiểm AI` cho toàn bộ tài liệu đính kèm.
+     - Bổ sung nút `✨ Tiền kiểm AI` cho cả phần bản khai đã nộp (`submissions`) của cán bộ Một cửa và công dân.
+     - Trong `OfficerReviewWorkspaceView.tsx`: thêm nút tắt `✨ Tài liệu & AI` tại tab Tổng quan (`overview`) dưới mỗi mục giấy tờ đã chuẩn bị, giúp cán bộ mở nhanh tab tài liệu để đối soát AI.
+  3. **Mở khóa Chatbot AI cho Khách vãng lai (không cần đăng nhập):**
+     - Trong `AiChatWidget.tsx`: bỏ chặn `if (!authenticated)`, mở khóa form nhập câu hỏi, nút gửi, bộ chọn phường/xã và gợi ý câu hỏi phổ biến (`QUICK_SUGGESTIONS`) cho mọi người dùng.
+     - Xây dựng cơ chế tư vấn tự động nghiệp vụ thủ tục hành chính công một cửa (CCCD, Đăng ký kết hôn, Khai sinh, Chứng thực bản sao, Đăng ký cư trú) cho khách, kèm lời nhắc đăng nhập nếu muốn lưu phiên và dùng tiền kiểm AI trực tuyến.
+  4. **Cải thiện màn hình Admin "Quản trị phát thông báo":**
+     - Thiết kế lại Empty State giàu thông tin khi bảng rỗng: biểu tượng phát thanh, giải thích rõ cơ chế phát sinh bản ghi delivery qua sự kiện và broker RabbitMQ, hiển thị badge xác nhận kết nối máy chủ HTTP 200 OK và nút làm mới dữ liệu.
+     - Phân tích nguyên nhân tab Network của người dùng bị trống do filter DevTools `cookie-domain:cms...` vô tình ẩn requests.
+- **Tệp liên quan:**
+  - `src/lib/api/aiOcr.ts`
+  - `src/components/documents/DocumentAiVerificationCard.tsx`
+  - `src/pages/officer/OfficerDocumentsPanel.tsx`
+  - `src/pages/officer/OfficerReviewWorkspaceView.tsx`
+  - `src/pages/citizen/components/DossierChecklistView.tsx`
+  - `src/components/ai/AiChatWidget.tsx`
+  - `src/pages/admin/NotificationDeliveriesView.tsx`
+  - `tests/guest-chat-and-ai-fallback.spec.ts`
+  - `tests/ai-verify-and-deliveries.spec.ts`
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 errors).
+  - `npm run lint`: đạt (0 errors, 0 warnings).
+  - `npm run build`: đạt (0 errors, 8009 modules transformed).
+  - Playwright test:
+    - `tests/ai-verify-and-deliveries.spec.ts`: 3/3 passed.
+    - `tests/guest-chat-and-ai-fallback.spec.ts`: 2/2 passed.
+    - Tổng cộng 5/5 passed (16.7s).
+- **Trạng thái:** Toàn bộ thay đổi ở frontend, không can thiệp backend.
+
+## Tích hợp AI Tiền kiểm giấy tờ, Lịch sử Chat AI và Quản trị Delivery Thông báo — 30/10/2026
+
+- **Phạm vi:** Hoàn thiện 3 hạng mục API còn thiếu theo đối chiếu mã nguồn Backend mới nhất (`WardMate.Services.AIOCR` và `WardMate.Services.AnalyticsSystem`):
+  1. **AI Tiền kiểm giấy tờ (`POST /api/v1/ai-ocr/documents/verify`)**:
+     - Thêm `documentVerificationSchema`, `DocumentVerificationDto`, `VerifyDocumentInput`, `verifyDocument` trong `src/lib/api/aiOcr.ts`.
+     - Thêm component `DocumentAiVerificationCard.tsx` hiển thị badge hợp lệ, cảnh báo lỗi chất lượng (mờ/lóa/thiếu trang), độ tin cậy và lý do chi tiết từ AI.
+     - Tích hợp vào màn chuẩn bị hồ sơ công dân (`DossierChecklistView.tsx`) và màn thẩm định của cán bộ Một cửa (`OfficerDocumentsPanel.tsx`).
+  2. **Lịch sử phiên trò chuyện AI (`GET /api/v1/ai/chat/sessions` và `GET .../messages`)**:
+     - Cập nhật `AiChatWidget.tsx`: thêm nút Lịch sử, Drawer xem danh sách các phiên chat gần đây, chuyển đổi giữa các phiên cũ và tải lại đầy đủ tin nhắn.
+  3. **Quản trị Delivery Thông báo cho IT Admin (`GET /api/v1/admin/notification-deliveries`, audit, replay)**:
+     - Tạo `src/lib/api/notificationAdmin.ts` với Zod schema và API client.
+     - Tạo view `NotificationDeliveriesView.tsx` trong Admin workspace, hỗ trợ lọc trạng thái, kênh phát, xem chi tiết, lịch sử kiểm toán (audit) và modal Replay an toàn.
+     - Bổ sung định tuyến `proxy['/api/v1/admin/notification-deliveries']` trong `vite.config.ts` và test proxy trong `tests/api-proxy-check.mjs`.
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 lỗi).
+  - `npm run lint`: đạt (0 lỗi).
+  - `node tests/api-proxy-check.mjs`: 29/29 route đạt.
+  - `npm run build`: đạt (0 lỗi).
+  - Playwright `tests/ai-verify-and-deliveries.spec.ts`: 3/3 passed.
+  - `git diff --check`: đạt.
+- **Trạng thái:** Chưa commit/push. Không can thiệp Backend.
 
 ## Chốt commit tích hợp Staffing/Workflow để push main — 30/10/2026
 
