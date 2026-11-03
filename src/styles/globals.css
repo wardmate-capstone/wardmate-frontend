@@ -287,36 +287,12 @@
   .faq-toggle-icon svg { @apply transition-transform group-data-[state=open]:rotate-180; }
   .faq-page-answer { @apply overflow-hidden text-slate-600; }
   .faq-page-answer p { @apply border-t border-slate-100 px-5 py-5 text-sm leading-7 sm:px-6 sm:text-base sm:leading-8; }
-  .faq-main { @apply mx-auto grid max-w-[1240px] items-start gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[1.12fr_.88fr]; }
+  .faq-main { @apply mx-auto grid max-w-[960px] items-start gap-10 px-5 py-14 sm:px-8 sm:py-20; }
   .faq-list-column { @apply min-w-0; }
   .faq-list-heading { @apply mb-6 border-b border-slate-200 pb-5; }
   .faq-list-heading p { @apply text-xs font-bold uppercase tracking-[.14em] text-red-700; }
   .faq-list-heading h2 { @apply mt-1 text-2xl font-bold text-slate-950 sm:text-3xl; }
   .faq-question-number { @apply text-xs font-bold tabular-nums text-red-400; }
-  .faq-question-column { @apply min-w-0 lg:sticky lg:top-[150px]; }
-  .question-form { @apply rounded-3xl border border-red-100 bg-white p-5 shadow-[0_18px_50px_rgba(72,18,23,.09)] sm:p-7; }
-  .question-form-heading { @apply flex items-start gap-4 border-b border-slate-100 pb-5; }
-  .question-form-heading > span { @apply grid size-11 shrink-0 place-items-center rounded-xl bg-red-800 text-gold-300; }
-  .question-form-heading p { @apply text-[10px] font-bold uppercase tracking-[.14em] text-red-600; }
-  .question-form-heading h2 { @apply mt-1 text-xl font-bold leading-7 text-slate-950; }
-  .question-field { @apply mt-5; }
-  .question-field label { @apply mb-2 block text-sm font-bold text-slate-800; }
-  .question-field label span { @apply font-normal text-slate-500; }
-  .question-field select, .question-field textarea, .question-field input { @apply w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
-  .question-field select, .question-field input { @apply min-h-12; }
-  .question-field textarea { @apply resize-y py-3 leading-7; }
-  .question-field > small { @apply mt-2 block text-xs leading-5 text-slate-500; }
-  .question-contact-input { @apply relative; }
-  .question-contact-input > svg { @apply absolute left-4 top-1/2 -translate-y-1/2 text-slate-400; }
-  .question-contact-input input { @apply pl-11; }
-  .question-submit { @apply mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-800 px-5 text-sm font-bold text-white shadow-sm hover:bg-red-900; }
-  .question-form-success { @apply rounded-3xl border border-red-100 bg-white p-7 text-center shadow-[0_18px_50px_rgba(72,18,23,.09)]; }
-  .question-form-success > span { @apply mx-auto grid size-14 place-items-center rounded-full bg-green-50 text-green-700; }
-  .question-form-success > p { @apply mt-5 text-xs font-bold uppercase tracking-[.14em] text-green-700; }
-  .question-form-success h2 { @apply mt-2 text-2xl font-bold text-slate-950; }
-  .question-form-success > div { @apply mt-3 text-sm leading-7 text-slate-600; }
-  .question-form-success button { @apply mx-auto mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-red-800; }
-
   .profile-page { @apply bg-[#f8f6f2] pb-20; }
   .profile-page-header { @apply relative isolate overflow-hidden bg-red-900 px-5 py-10 text-white sm:px-8 sm:py-12; }
   .profile-header-pattern { @apply pointer-events-none absolute inset-0 -z-10 opacity-30; background-image: linear-gradient(90deg, rgba(121,27,23,.86), rgba(121,27,23,.45)), url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; }
@@ -475,7 +451,8 @@
   .procedure-result-labels > span { @apply text-xs text-slate-500; }
   .procedure-result-copy strong { @apply mt-3 block text-base font-semibold leading-7 text-slate-950 sm:text-lg; }
   .procedure-result-meta { @apply mt-3 flex flex-col gap-x-7 gap-y-2 text-sm leading-6 text-slate-500 sm:flex-row sm:flex-wrap; }
-  .procedure-result-meta > span { @apply flex min-w-0 items-start gap-2; }
+  .procedure-result-meta > span { @apply flex min-w-0 max-w-full items-start gap-2; }
+  .procedure-result-meta > span > span { @apply min-w-0 whitespace-normal break-words [overflow-wrap:anywhere]; }
   .procedure-result-meta svg { @apply mt-0.5 shrink-0 text-slate-400; }
   .procedure-result-meta b { @apply font-medium text-slate-700; }
   .procedure-result-action { @apply flex min-h-11 items-center justify-end gap-2 border-t border-slate-100 pt-3 text-sm font-semibold text-red-800; }
