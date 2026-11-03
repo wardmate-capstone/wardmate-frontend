@@ -1,9 +1,44 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 03/11/2026.
-Cập nhật: 03/11/2026.
+## Chia 15 commit và đẩy main — 04/11/2026
+
+- **Phạm vi được yêu cầu:** toàn bộ 23 path chưa commit của hai task dọn UI và sửa tìm kiếm/lệ phí/PDF/chatbot. Đã fetch, main và origin/main đồng bộ tại 4658dbaf56a0a05ea59a9d3c5bf5bf9831c55093 trước khi đóng gói.
+- Chia thành **15 commit**: 6 refactor theo workspace/FAQ, 3 fix styles/tìm kiếm/chi tiết thủ tục, 3 feat PDF/chatbot/trang công khai, 1 test hồi quy và 2 docs (gồm commit bàn giao này). Không tạo commit rỗng, không thêm chức năng ngoài phạm vi. Commit trung gian có phụ thuộc; các kiểm tra triển khai áp dụng cho cây tích hợp cuối.
+- **Đã push và xác minh 14 commit đầu** lên origin/main tại ff4db6a891d491fd0ca093be56bfa5d591319c84 bằng git ls-remote; không force push. Commit chứa mục này là commit thứ 15, sau đó push riêng và xác minh HEAD/remote, tổng số commit từ baseline và working tree sạch. Kết quả xác minh cuối được báo trong phản hồi hoàn tất, không ghi trước rằng commit chưa tạo đã push.
+- Đã đối chiếu đúng 23 path và SHA-256 trước/sau khi chia 14 commit; nội dung triển khai/tài liệu giữ nguyên, riêng PROGRESS được bổ sung bàn giao. git diff --check đạt; không đưa env, token, dist, ảnh chụp hoặc dữ liệu thật vào commit.
+- Không chạy lại typecheck/lint/build/Playwright chỉ để chia commit. Kết quả ở bước triển khai: typecheck/lint/build đạt; dọn UI có 60 ca mock khác nhau đạt qua các lượt, phần công khai/chat có 49 ca khác nhau đạt qua các lượt. Hai tập có ca trùng, không cộng thành tổng 109. Chi tiết bên dưới và trong hai tài liệu task.
+- **Giới hạn còn lại:** full-audit cũ lỗi import chatInputSchema, chưa nghiệm thu API Azure hay PDF thật; push Git không chứng minh CI/CD/deployment thành công. Không thay BE.
+
+
+## Tìm kiếm công khai, lệ phí, PDF nguồn và chatbot 24 giờ — hoàn tất 04/11/2026
+
+- **Đã làm (FE):** tìm kiếm và gợi ý trang chủ đi tới /thu-tuc?q=..., trang danh sách gọi catalog theo keyword; sửa xuống dòng lệ phí và cuộn bảng trong khung mobile, chuẩn hóa VND thành “đồng”. Gộp văn bản nguồn vào một thẻ gọn; chỉ lấy URL PDF khi mở modal xem trước, giữ mở tab mới và xử lý lỗi của PdfSource.
+- Chatbot dùng chung trên trang chủ, danh sách/chi tiết thủ tục (kể cả alias), hướng dẫn và hỏi đáp; logo mở/header/avatar trợ lý dùng BrandMark của trang. Giữ chatbot workspace công dân.
+- Khách: lưu phiên có timestamp/expiry, conversationId và phường/xã trong trình duyệt tối đa 24 giờ kể từ tin cuối; reload không gia hạn. Hết hạn xóa dữ liệu/ID và mở hội thoại mới; dữ liệu cũ chỉ migrate khi còn hạn, dữ liệu sai bỏ; storage bị chặn vẫn chat RAM. Chỉ lưu tối đa 100 tin gần nhất; không ghi tin người đã đăng nhập vào bộ lưu khách. Trình duyệt đóng thì dọn khi mở lại, không thay chính sách lưu BE.
+- File và diễn giải chi tiết: [PUBLIC_SEARCH_CHAT_UPDATE_2026-11-03.md](PUBLIC_SEARCH_CHAT_UPDATE_2026-11-03.md), bắt đầu ngày 03/11 và hoàn tất ngày 04/11. Source chính: HomePage, ProcedureDetailPage, MainLayout, AiChatWidget, guestChatStorage, PdfSource và globals.css.
+- **Kiểm tra vừa chạy:** typecheck, lint và build đạt (build còn cảnh báo annotation dependency/chunk lớn hiện có); git diff --check đạt. Playwright Edge có **49 ca khác nhau đạt qua các lượt chạy**: lượt đầu 45/47, sửa hai dữ liệu/assertion kiểm thử mới rồi lượt sau 10/10, gồm hai ca bổ sung. Phạm vi landing, procedures-ui, procedure-manager, public-search-chat và riêng lịch sử chat của ai-verify-and-deliveries. Đã xem ảnh modal PDF mock 375px, không tràn ngang; không coi PDF giả là nghiệm thu nội dung tệp thật.
+- **Giới hạn:** full-audit không thu thập được vì import chatInputSchema không còn export trong API hiện tại; không tính là đạt, cần cập nhật bộ test lịch sử riêng. Chưa kiểm tra API/deployment thật. Không sửa BE. Phần này và dọn UI đã được đóng gói theo yêu cầu 15 commit ở mục bàn giao mới nhất phía trên.
+
+Cập nhật: 04/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Rà soát và xóa UI thừa trên FE — 03/11/2026
+
+- **Phạm vi/trạng thái:** Hoàn tất dọn các UI thừa xác định được sau khảo sát route, năm workspace, trang công khai và component dùng chung. Baseline `4658dba`, working tree sạch trước task. Kiểm kê 116 file pages/components, quét AST trên 173 file TS/TSX với 582 button/Button; lần theo nơi sử dụng trước khi xóa. Chi tiết quyết định tại `docs/UI_CLEANUP_REVIEW_2026-11-03.md`.
+- **Admin:** Bỏ 3 KPI không có số liệu, biểu đồ lưu lượng chờ, thẻ health cũ báo chưa tích hợp và 5 phím tắt trùng sidebar. Giữ tổng tài khoản thật, phân quyền gần đây và toàn bộ màn/29 thao tác Analytics đã gắn. Audit không còn bị bó vào cột của thẻ health rỗng.
+- **Công dân:** Bỏ khối biểu đồ hoạt động chờ và code phím tắt đã comment. Giữ thống kê hồ sơ thực, danh sách/bổ sung/đánh giá/QR và hướng dẫn.
+- **Cán bộ:** Bỏ chart/hiệu suất chờ và thẻ thông tin quầy tĩnh ghi “Đang nhận tiếp dân” không có dữ liệu ca trực. Bỏ V2 cố định và câu khẳng định đã nhận PDF/QR ở thẻ không có bằng chứng đó; giữ hàng đợi gửi lại, xem nhanh/thẩm định và hồ sơ sẵn sàng. Cập nhật heading sau khi bỏ chart.
+- **Quản lý thủ tục:** Bỏ KPI bản nháp không có số, 3 cảnh báo thiếu thống kê và 2 vùng tổng hợp trống. Bỏ 7 menu chỉ mở trang hướng dẫn/chưa kết nối: thành phần hồ sơ, quy trình, phiên bản biểu mẫu, gắn mẫu, văn bản pháp lý, liên kết pháp lý, lịch sử tổng hợp. Giữ chức năng thật trong từng thủ tục/biểu mẫu, danh sách, bản nháp/PDF, danh mục và AI; giữ kiểu section/fallback cũ cho tương thích caller.
+- **Công khai:** Xóa `src/components/faq/QuestionForm.tsx` vì form bị khóa toàn bộ, bỏ nơi render và CSS riêng; FAQ một cột vẫn có accordion và link tra cứu. Không xóa hướng dẫn tiền kiểm/QR, validation/quyền/xác nhận, cảnh báo Verify BE hoặc các biểu đồ Manager có dữ liệu thật.
+- **File:** `src/pages/admin/AdminPage.tsx`, `src/pages/citizen/views/CitizenDashboardView.tsx`, `src/pages/officer/OfficerDashboardView.tsx`, `src/pages/procedure-manager/{ProcedureDashboardView,ProcedureManagerPage}.tsx`, `src/components/layout/RoleWorkspaceSidebars.tsx`, `src/pages/public/FaqPage.tsx`, `src/styles/globals.css`; cập nhật 4 file test hiện có theo UI và skeleton thực tế. Không sửa endpoint, auth core, cache, dependency hoặc BE.
+- **Kiểm tra thực chạy:**
+  - `npm run typecheck`: đạt; `npm run lint`: đạt (đã chạy lại sau cập nhật test).
+  - `npm run build`: đạt, exit 0, 8026 modules; còn cảnh báo annotation SignalR/Zod và chunk lớn hiện có.
+  - Playwright Edge: bộ `landing`, `officer`, `procedure-manager`, `workspace-sidebar`, `admin-rbac`, `citizen-dossier-ui`, `manager`: **60 ca khác nhau đã đạt qua các lượt chạy**. Lượt đầy đủ sau build có 57/60 đạt; cập nhật 3 assertion cũ (KPI đã xóa, chuông trùng tên, skeleton bảng) rồi chạy lại riêng 3/3 đạt, exit 0. Một lượt đầu bị timeout khi tải lazy workspace trong lúc build và đã dừng; không coi đó là kết quả đạt. Rerun dùng timeout 60 giây qua CLI, không sửa timeout repo hoặc bỏ assertion nghiệp vụ.
+  - Đã xem ảnh mock mobile `test-results/officer-dashboard-cleanup-mobile.png`; không tràn ngang. Các ca mobile công khai, công dân, Admin, Manager và editor cũng đạt.
+  - `git diff --check`: đạt. Không tạo test chỉ để đo số dòng bị xóa.
+- **Giới hạn/Git:** Rà soát source/kiểm thử mock, không nghiệm thu dữ liệu Azure thật. Phần dọn UI được đưa vào đợt 15 commit theo yêu cầu mới ngày 04/11/2026 (xem mục bàn giao phía trên). Không còn phần code bắt buộc đang chờ trong phạm vi dọn UI này.
 
 ## Chia đúng 30 commit và bàn giao lên main theo yêu cầu — 03/11/2026
 
