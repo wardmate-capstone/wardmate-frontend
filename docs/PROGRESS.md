@@ -1,8 +1,61 @@
 # Tiến độ và bàn giao WardMate
 
-Cập nhật: 02/11/2026.
+Cập nhật: 03/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Rà soát và Chuẩn hóa Toàn bộ Skeleton UI/UX Bảng Danh sách (5 Roles) — 03/11/2026
+
+- **Phạm vi & Trạng thái thực tế:**
+  1. **Khắc phục lỗi Skeleton trang Lịch sử xử lý của cán bộ (`OfficerAuditLogView.tsx`):**
+     - Sửa lỗi thẻ `<td>` không có padding do thiếu `cellClassName`, khiến các hàng skeleton bị bẹp rúm còn 16px và dính mép trái, lệch cột so với header.
+     - Cung cấp padding chuẩn `px-4 py-3.5 first:pl-5 last:pr-5`, độ rộng tương ứng từng cột (Thời gian font-mono, Mã hồ sơ, Công dân, Hành động, Chi tiết thao tác dài w-64, Cán bộ thực hiện căn phải).
+  2. **Nâng cấp nền tảng `TableSkeletonRows` & `TableSkeleton` (`Skeleton.tsx`):**
+     - Bổ sung fallback padding mặc định `px-4 py-3.5` để bảo vệ mọi bảng khỏi nguy cơ bẹp dòng khi không có `.admin-table-wrap`.
+     - Hỗ trợ `columnWidths?: (string | undefined)[]` cho phép từng bảng cấu hình độ rộng trực quan khớp chính xác với cột thực tế.
+     - Hỗ trợ `lastCellClassName?: string` để căn phải (`text-right`) hoặc ghim cố định (`sticky right-0`) cột thao tác khi bảng cuộn ngang.
+     - Phân bổ độ rộng tự nhiên, đan xen khi không chỉ định cấu hình riêng thay vì vệt w-24 cụt lủn hàng loạt.
+  3. **Rà soát & tối ưu toàn bộ các role:**
+     - **Role Frontdesk (Cán bộ một cửa):**
+       + `OfficerAuditLogView.tsx`: Cấu hình 6 cột skeleton chuẩn, căn phải cột cán bộ.
+       + `OfficerApplicationListView.tsx`: Cấu hình 7 cột skeleton, cột thao tác có `sticky right-0 bg-white text-right shadow-...` khớp chuẩn với header sticky.
+     - **Role Citizen (Công dân):**
+       + `CitizenDossiersView.tsx`: Cấu hình 6 cột skeleton chuẩn, cột thủ tục w-56, ghi chú w-48, thao tác căn phải.
+       + `CitizenFeedbackView.tsx`: Thay thông báo text tải bằng `ListSkeleton rows={3}` mượt mà.
+     - **Role Manager (Lãnh đạo phường):**
+       + `ManagerApplicationsView.tsx`: Cấu hình 6 cột skeleton, cột thao tác sticky right căn phải.
+       + `ManagerProfilesView.tsx`: Cấu hình 4 cột skeleton, cột cán bộ w-44, lĩnh vực w-48, thao tác căn phải.
+     - **Role Procedure Manager (Quản lý thủ tục):**
+       + `ProcedureApiList.tsx`: Triệt tiêu lỗi giấu card và thead khi tải (Zero Layout Shift). Header 5/6 cột luôn hiển thị cố định, skeleton mượt mà trong tbody.
+       + `ProcedureDraftWorkspace.tsx`: Giữ nguyên card và thead bản nháp gần đây, skeleton 3 cột chuẩn.
+     - **Role Admin (Quản trị hệ thống):**
+       + `AdminPage.tsx`: Gộp 2 bảng Users trùng lặp thành 1 bảng chuẩn duy nhất với thead cố định, skeleton 4 cột; tối ưu bảng Wards 4 cột.
+       + `AdminRbacViews.tsx`: Giữ nguyên toolbar tìm kiếm và thead Roles, thead Audit Logs cố định không bị giấu khi tải.
+       + `FormsView.tsx`: Giữ nguyên thead biểu mẫu Word, bỏ lồng `.admin-card`, skeleton 4 cột chuẩn.
+       + `NotificationDeliveriesView.tsx`: Tối ưu độ rộng skeleton 7 cột nhật ký gửi thông báo.
+     - **Component AI:**
+       + `KnowledgeBaseView.tsx`: Tối ưu độ rộng skeleton 7 cột kho kiến thức.
+- **Commit liên quan:** `f84e572` fix(ui): standardize table list skeletons and eliminate layout shift across all roles
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: **0 errors**.
+  - `npm run lint`: **0 errors, 0 warnings**.
+  - `npm run build`: **Build production thành công 100%** (8.016 modules transformed).
+- **Tệp liên quan:**
+  - `src/components/ui/Skeleton.tsx`
+  - `src/pages/officer/OfficerAuditLogView.tsx`
+  - `src/pages/officer/OfficerApplicationListView.tsx`
+  - `src/pages/citizen/views/CitizenDossiersView.tsx`
+  - `src/pages/citizen/views/CitizenFeedbackView.tsx`
+  - `src/pages/manager/views/ManagerApplicationsView.tsx`
+  - `src/pages/manager/views/ManagerProfilesView.tsx`
+  - `src/pages/procedure-manager/ProcedureApiList.tsx`
+  - `src/pages/procedure-manager/ProcedureDraftWorkspace.tsx`
+  - `src/pages/admin/AdminPage.tsx`
+  - `src/pages/admin/AdminRbacViews.tsx`
+  - `src/pages/admin/FormsView.tsx`
+  - `src/pages/admin/NotificationDeliveriesView.tsx`
+  - `src/components/ai/KnowledgeBaseView.tsx`
+  - `docs/PROGRESS.md`
 
 ## Bàn giao Đồng bộ, Tách Commit theo Yêu cầu và Push Thành công lên origin/main — 02/11/2026
 
