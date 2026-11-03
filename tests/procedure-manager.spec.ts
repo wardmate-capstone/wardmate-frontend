@@ -49,7 +49,11 @@ test('public detail supports case switching, no fake download, source and mobile
   await expect(page.locator('#thanh-phan-ho-so input[type=checkbox]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Tải mẫu', exact: true })).toHaveCount(0);
   await expect(page.locator('#can-cu-phap-luat script')).toHaveCount(0);
+  await expect(page.getByTitle('PDF nguồn thủ tục')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Xem trước tệp', exact: true }).click();
   await expect(page.getByTitle('PDF nguồn thủ tục')).toHaveAttribute('src', 'https://example.test/source.pdf');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -134,9 +138,10 @@ test('loading states never render empty category or draft content underneath ske
 
   state.draftListDelay = 800;
   await page.getByRole('button', { name: 'PDF và bản nháp', exact: true }).click();
-  await expect(page.getByRole('status', { name: 'Đang tải danh sách' })).toHaveCount(1);
-  await expect(page.getByText('Bản nháp gần đây')).toHaveCount(0);
-  await expect(page.getByText('Bản nháp gần đây')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bản nháp gần đây' })).toBeVisible();
+  await expect(page.locator('tbody tr[aria-hidden="true"]').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mở bản nháp' }).first()).toBeVisible();
+  await expect(page.locator('tbody tr[aria-hidden="true"]')).toHaveCount(0);
 });
 
 test('manager deletes an unused draft through administration API', async ({ page }) => {
@@ -285,14 +290,13 @@ test('preview publishes reviewed payload without uploading the source PDF', asyn
   expect(calls.map(r => r.path)).toEqual(['/api/v1/procedure-manager/drafts/extract-preview', '/api/v1/procedure-manager/procedures/publish']);
 });
 
-test('403 is shown without fake data or redirect; unsupported features contain no mock', async ({ page }) => {
+test('403 is shown without fake data or redirect and unsupported navigation is hidden', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); await mockCatalog(page);
   await page.route('**/api/v1/procedure-manager/procedures?*', route => route.request().method() === 'OPTIONS' ? catalogReply(route, { status: 204 }) : catalogReply(route, { status: 403, json: { title: 'Bạn không có quyền quản lý thủ tục.' } }));
   await page.goto('/procedure-manager');
   await expect(page.getByRole('alert').first()).toContainText('không có quyền');
   await expect(page).toHaveURL(/procedure-manager/);
-  await page.getByRole('button', { name: 'Văn bản pháp lý', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Chưa có kết nối cho chức năng này' })).toBeVisible();
+  await expect(page.locator('aside').getByRole('button', { name: 'Văn bản pháp lý', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Đồng bộ lại' })).toHaveCount(0);
 });
 
@@ -329,13 +333,13 @@ test('public search waits for a pause instead of requesting each keystroke', asy
   expect(state.requests.filter(r => r.query.has('keyword'))[0].query.get('keyword')).toBe('khai sinh');
 });
 
-test('dashboard restores overview sections without a duplicate procedure table or fake metrics', async ({ page }) => {
+test('dashboard retains actual metrics and recent procedures without empty placeholder sections', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
-  await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(3);
-  await expect(page.getByRole('heading', { name: 'Hạng mục cần chú ý hoàn thiện' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Biểu mẫu cập nhật gần đây' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Hạng mục cần chú ý hoàn thiện' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Biểu mẫu cập nhật gần đây' })).toHaveCount(0);
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect.poll(() => state.requests.some(r => r.query.get('sortBy') === 'UpdatedAt' && r.query.get('isAscending') === 'false')).toBe(true);
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
