@@ -1,8 +1,64 @@
 # Tiến độ và bàn giao WardMate
 
 Cập nhật: 03/11/2026.
+Cập nhật: 03/11/2026.
 Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quyết định đã thống nhất.
 Đọc cùng `../AGENTS.md`; luôn xác minh lại bằng code và Git trước khi hành động.
+
+## Chia đúng 30 commit và bàn giao lên main theo yêu cầu — 03/11/2026
+
+- Người dùng yêu cầu chia các thay đổi frontend thành **đúng 30 commit** và push `main`. Phạm vi là 32 file của TASK-34 và phần API Analytics còn thiếu; gộp hai test hồi quy IAM thành một commit, cấu hình proxy và test định tuyến thành một commit. Nhóm còn lại tách theo hạng mục: **13 feat, 3 fix, 8 test, 6 docs** (tính cả commit bàn giao này).
+- Đã fetch và xác minh `main` bắt đầu đồng bộ tại `461a5ff6a5ffda74ccf8aa50844cd3d6b3ab6c76`. Đã push **29 commit triển khai/tài liệu đầu tiên** tới `origin/main`, không force push; xác minh bằng `git ls-remote` rằng remote khớp local tại **`6ceda9971df5e9e6f37bd8b5ec2f38ac9fd6e16e`** trước khi ghi mục này.
+- Commit chứa mục bàn giao này là **commit thứ 30**, ghi nhận kết quả push đã xác minh; bước sau commit là push commit bàn giao và kiểm tra lại HEAD/remote cùng working tree. Kết quả xác minh cuối chuỗi được báo trong phản hồi kết thúc phiên, tránh ghi trước rằng commit chưa tạo đã push thành công.
+- Kiểm tra đóng gói: đối chiếu đúng 32 path; kiểm tra hash SHA-256 xác nhận chia staging/commit không đổi nội dung file; `git diff --check` đạt; không đưa env, token, artifact build hoặc screenshot vào commit. Không thay đổi BE và giữ lịch sử remote hiện có.
+- Không chạy lại typecheck/lint/build/Playwright chỉ để tách commit. Kết quả chạy ở bước triển khai ngay trước đó: typecheck/lint/build đạt, 45 tuyến proxy đạt, 62 ca mock/hồi quy khác nhau đạt qua các lượt chạy; chi tiết ở mục dưới. Các commit trung gian có quan hệ phụ thuộc, kiểm tra áp dụng cho cây tích hợp hoàn chỉnh.
+- Giới hạn giữ nguyên: chưa xác minh Azure với phiên IT_ADMIN thật; Verify chưa nghiệm thu bảo đảm toàn vẹn/khôi phục trước khi BE sửa. Push Git không chứng minh CI/CD hoặc deployment đã hoàn tất.
+
+## Hoàn thiện 9 thao tác Analytics còn thiếu: health, backups và delivery detail — 03/11/2026
+
+- **Phạm vi mới:** Người dùng yêu cầu đọc BE/FE, lập kế hoạch, xây UI và gắn hết API còn lại. Đã đối chiếu Swagger đang chạy: **29 thao tác nghiệp vụ** và GET `/` nhận diện service. Hiện **29/29 thao tác nghiệp vụ có adapter và luồng UI gọi**, không tính endpoint gốc là nghiệp vụ.
+- **Quyết định người dùng:** **Chỉ làm FE**, ghi lại lỗi Verify để đội BE sửa trước nghiệm thu. Không sửa/build BE, không tạo endpoint giả hoặc tự thử mutation production.
+- **UI/API mới:** `src/lib/api/systemOperations.ts`, `src/pages/admin/{ServiceHealthView,SystemBackupsView,SystemOperationsShared}.tsx`; AdminPage thay 2 placeholder bằng **Giám sát dịch vụ** và **Sao lưu dữ liệu**. Gắn GET danh sách/chi tiết/history health + POST check-now; GET list/detail backups + POST create/verify. Query theo user/ID/filters/page có AbortSignal; quyền IT_ADMIN và root key tách theo danh tính.
+- **Luồng vận hành:** Health hỗ trợ Unknown/not_checked/stale; không hiển thị năm 0001 hoặc 0ms thành phép đo thật. Check-now202 chỉ xếp hàng, đọc lại sau 3 giây. Backup create202 mở chi tiết, theo dõi Queued/Running tối đa 20 lần cách 3 giây và dừng khi lỗi/kết thúc/đóng modal. Verify đọc lại trước thao tác, không tự retry; lỗi vẫn refetch để nhận errorCode đã lưu. UI ghi trạng thái máy chủ và giới hạn, không bảo đảm file toàn vẹn/restore.
+- **Sửa phát thông báo:** `src/lib/api/notificationAdmin.ts`, `src/pages/admin/NotificationDeliveriesView.tsx`. Modal đã gọi GET detail thật, không dùng dòng list làm dữ liệu mới nhất; audit phân trang độc lập và có lỗi riêng. Sửa nhãn default list là nhóm cần xử lý, bỏ Failed không hợp đồng, thêm Blocked/Sandbox. Replay chỉ Dead/Blocked, khác SMS, role IT_ADMIN + quyền read/manage, lý do trim 5–500 không ký tự điều khiển và xác nhận rủi ro; dùng revision mới đọc, 202 chỉ xếp hàng, lỗi giữ nháp và khóa gửi đến khi đọc lại. Giữ thao tác sao chép ID và skeleton bảng.
+- **Validation:** RHF/Zod cho form; ngày Việt Nam chuyển UTC Z, from≤to, đúng giới hạn page/pageSize/service/reason/GUID/ID response; kiểm tra status202, response/page/nullable, số nguyên an toàn. Lỗi 403/409/503, thiếu target/runner và checksum có thông báo riêng; không biến lỗi thành dữ liệu rỗng thành công. Tái sử dụng validation ngày và phần UI chung, không đổi auth core hoặc thêm dependency.
+- **Kiểm tra thực chạy:**
+  - `npm run typecheck`: đạt, exit 0.
+  - `npm run lint`: đạt, exit 0.
+  - `npm run build`: đạt, exit 0; có cảnh báo annotation dependency SignalR/Zod và chunk lớn, không tuyên bố 0 cảnh báo build.
+  - `node tests/api-proxy-check.mjs`: **45/45 tuyến đạt**, thêm đủ 9 tuyến còn thiếu và giữ method/path/query; chỉ HTTP local.
+  - Playwright Edge: **52/52 ca đạt** trong `admin-system-operations`, `admin-notification-deliveries`, `admin-system-audit`, `admin-system-settings`, `analytics`, `feedback` (18 ca mới, 34 ca hồi quy).
+  - Hồi quy `admin-rbac`, `admin-provisioning`: **9/9 ca đạt**. Một ca phát thông báo cũ ở `ai-verify-and-deliveries` đã cập nhật GUID/trạng thái/detail mock và sửa selector trùng option/cell; chạy lại riêng **1/1 đạt**, exit 0. Tổng 62 ca khác nhau đã có kết quả đạt qua các lượt chạy, không khẳng định chạy cả suite toàn repo.
+  - Đã xem ảnh mobile 375px `test-results/admin-backup-mobile.png`; artifact mock không commit. `git diff --check` đạt.
+- **Tài liệu:** kế hoạch `docs/ANALYTICS_REMAINING_APIS_PLAN_2026-11-03.md`; bảng đủ 29 API → UI tại `docs/ANALYTICS_API_COVERAGE_2026-11-03.md`; yêu cầu BE tại `docs/BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md`; cập nhật `docs/FRONTEND_SETUP.md`.
+- **Giới hạn/bước tiếp:** chưa có phiên IT_ADMIN thật để xác minh Azure, cờ Enabled/targets/runner/Blob/worker hoặc CORS. Verify **chưa nghiệm thu bảo đảm phía BE**: có nhánh Verified không đọc file, kiểm tra header chưa đủ, worker có thể Succeeded khi không upload. Không có API restore/download/backup-target discovery/health-request completion nên không bịa chức năng đó. Cần BE sửa/deploy và kiểm tra thật theo tài liệu bàn giao. Chưa commit/push; giữ nguyên các thay đổi TASK-34 đang staged và thay đổi của người dùng.
+
+## Triển khai Admin TASK-34: cấu hình và audit tập trung — 03/11/2026
+
+- **Đã làm:** Người dùng yêu cầu triển khai kế hoạch. Admin có mục **Cấu hình hệ thống** và 3 tab **Nghiệp vụ toàn hệ thống / Thay đổi cấu hình / Phân quyền**. Gắn đủ 7 method API TASK-34; tổng quan “Phân quyền gần đây” mở đúng tab IAM; lịch sử từ cấu hình mở đúng tab thay đổi cấu hình. TASK-35/36 vẫn ngoài phạm vi.
+- **API/Query:** `src/lib/api/systemAdministration.ts`, `src/hooks/useSystemAdministration.ts`. Dùng HTTP client/JWT và analytics URL sẵn có; Zod kiểm tra request/response, ID chi tiết, trang, số nguyên an toàn cho version. Query riêng tư theo user/bộ lọc/trang/ID, có AbortSignal, không retry tự động; đổi danh tính đóng modal và tách dữ liệu.
+- **UI:** `src/pages/admin/{AdminAuditView,BusinessAuditEventsView,SystemAuditLogsView,SystemAuditShared,SystemSettingsView}.tsx`; sửa `AdminPage.tsx`, mô tả giới hạn bộ lọc IAM ở `AdminRbacViews.tsx`. Bộ lọc audit mới chạy phía server; ngày Việt Nam chuyển UTC; không thêm action query/hash thiếu hợp đồng; không suy actor/IP bị thiếu, giải thích dữ liệu che.
+- **Cấu hình:** RHF/Zod kiểm tra số nguyên 1–366, lý do trim 3–500 ký tự. Mở form đọc chi tiết mới nhất; PUT giữ snapshot version. Conflict/timeout/kết quả không chắc chắn giữ nháp, khóa lưu đến khi đọc lại; người dùng chủ động lưu lần mới. Không tự tạo job thống kê. Lỗi validation ở trường có focus, modal dùng Radix chung.
+- **Proxy:** `vite.config.ts` thêm `/api/v1/system` trước `/api` IAM. `tests/api-proxy-check.mjs` kiểm tra đủ 7 thao tác mới và giữ path/query/method.
+- **Kiểm tra đã chạy phiên triển khai:**
+  - `npm run typecheck`: đạt (exit 0).
+  - `npm run lint`: đạt (exit 0).
+  - `npm run build`: đã build thành công; có cảnh báo annotation ở dependency SignalR/Zod và chunk lớn từ thư viện/editor hiện có, không tuyên bố 0 cảnh báo build.
+  - `node tests/api-proxy-check.mjs`: **36/36 tuyến đạt**, chỉ HTTP local.
+  - Playwright Edge: `tests/admin-system-audit.spec.ts`, `tests/admin-system-settings.spec.ts`, `tests/admin-rbac.spec.ts`, `tests/admin-provisioning.spec.ts`: **25/25 ca đạt**, exit 0, gồm 16 ca mới và 9 ca hồi quy. Lần chạy sandbox mắc bước teardown Windows sau khi báo đủ ca; lần chạy lại ngoài sandbox kết thúc bình thường. Đã xem ảnh mobile 375px `test-results/admin-system-audit-mobile.png` (artifact kiểm thử, không commit).
+- **Giới hạn:** Chưa có phiên IT_ADMIN để kiểm tra API nghiệp vụ thật trên Azure; kết quả hiện là mock và proxy local. Chưa xác minh production hosting `/api/v1/system`, cờ quản trị, migrations/relay hoặc refresh/CORS thật. Route Admin có quyền IAM ủy quyền; TASK-34 kiểm tra role IT_ADMIN riêng, không đổi auth core. Phát hiện Verify backup ở ghi chú kế hoạch vẫn ngoài phạm vi.
+- **Bàn giao:** cập nhật `docs/FRONTEND_SETUP.md` và `docs/ADMIN_SYSTEM_AUDIT_INTEGRATION_PLAN_2026-11-03.md`. Không sửa BE, không thêm dependency, chưa commit/push. Bước tiếp: dùng phiên kiểm thử hợp lệ và xác nhận môi trường/cờ BE để nghiệm thu dữ liệu thật; không tự đổi cấu hình production chỉ để thử.
+
+## Lập kế hoạch Admin TASK-34: cấu hình và audit tập trung — 03/11/2026
+
+- Người dùng chốt phạm vi **TASK-34: audit tập trung + cấu hình và nhật ký cấu hình**; giám sát/sao lưu TASK-35 và tối ưu DB TASK-36 ngoài phạm vi. Yêu cầu bàn giao kế hoạch Markdown trước khi sửa code.
+- Đã tạo `docs/ADMIN_SYSTEM_AUDIT_INTEGRATION_PLAN_2026-11-03.md`: nghiệp vụ ba nguồn nhật ký, bảng 7 thao tác API → UI, menu/tab/modal dự kiến, validation, quyền, proxy, danh sách file và tiêu chí kiểm thử.
+- Đã đọc source BE tại `E:/wardmate-backend`, FE hiện tại và file bàn giao `fe-handoff-task34-35-36-management-portal.md`; đã tải Swagger JSON công khai của Analytics trong phiên. Chưa đăng nhập hoặc xác minh API nghiệp vụ thật; chưa sửa code ứng dụng/BE.
+- Phát hiện TASK-34: API audit tập trung không có lọc `action` hoặc trường `payloadHash`; bàn giao bỏ sót GET chi tiết nhật ký cấu hình; Vite chưa có proxy `/api/v1/system`. Giữ nhật ký phân quyền IAM hiện có, không coi nó là audit toàn hệ thống.
+- Ghi nhận ngoài phạm vi: nhánh `SystemBackups.Verify` có thể đi tới Verified khi không đọc file nếu runner được đánh dấu đã cấp nhưng không có Blob client/file local; cần BE xử lý trước nghiệm thu TASK-35. Chi tiết và giới hạn trong kế hoạch.
+- Kiểm tra phiên này: đối chiếu controller/DTO/service/Swagger, nội dung tài liệu và diff. Không chạy typecheck/lint/build/Playwright vì chỉ thêm tài liệu; kết quả test các mục cũ không phải kết quả phiên này.
+- Git FE lúc khảo sát: HEAD `142a6fd`, working tree sạch, local báo sau `origin/main` 3 commit; chưa fetch/pull/commit/push. Không suy remote mới nhất từ thông tin tracking local.
+- Kế hoạch sau đó đã được người dùng yêu cầu triển khai; trạng thái mới nhất ở mục **Triển khai Admin TASK-34** phía trên. Phần còn chờ là nghiệm thu môi trường thật, không phải phần UI/client.
 
 ## Rà soát và Chuẩn hóa Toàn bộ Skeleton UI/UX Bảng Danh sách (5 Roles) — 03/11/2026
 
