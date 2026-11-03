@@ -46,6 +46,7 @@ test('admin audit uses IAM data and does not invent IP addresses', async ({ page
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await page.goto('/admin');
   await page.locator('aside').getByRole('button', { name: 'Nhật ký hoạt động' }).click();
+  await page.getByRole('tab', { name: 'Phân quyền', exact: true }).click();
   await expect(page.getByRole('cell', { name: /^Gán vai trò$/ })).toBeVisible();
   await expect(page.getByText('@admin.audit')).toBeVisible();
   await expect(page.getByText('@nguyenvanan')).toBeVisible();

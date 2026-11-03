@@ -96,6 +96,7 @@ test('nhật ký hiện nhãn tiếng Việt cho thao tác tạo tài khoản L�
   ], page: 1, pageSize: 20, total: 2 } }));
   await page.goto('/admin');
   await page.locator('aside').getByRole('button', { name: 'Nhật ký hoạt động' }).click();
+  await page.getByRole('tab', { name: 'Phân quyền', exact: true }).click();
   await expect(page.getByRole('cell', { name: /^Tạo tài khoản Lãnh đạo UBND$/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: /^Tạo tài khoản Quản lý thủ tục$/ })).toBeVisible();
   await expect(page.getByText('account.manager_created', { exact: true })).toHaveCount(0);
