@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, LinkBreak, LinkSimple, ListChecks, Path, Scales, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Bell, Brain, CheckCircle, ClipboardText, ClockCounterClockwise, FilePdf, FileText, Files, FolderSimple, House, Hourglass, IdentificationCard, ListChecks, ThumbsUp, UserCircle, UsersThree, WarningCircle } from '@phosphor-icons/react';
 import type { OfficerSection } from '@/types/officer';
 import type { ManagerSectionId } from '@/pages/manager/types';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from './WorkspaceSidebar';
@@ -53,14 +53,12 @@ export function UnifiedProcedureSidebar({ currentSection, onSelectSection, isOpe
     { title: 'Thủ tục hành chính', items: [
       { id: 'procedures', label: 'Danh sách thủ tục', icon: ClipboardText, permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'] },
       { id: 'drafts', label: 'PDF và bản nháp', icon: FilePdf, permissions: ['procedure.drafts.'] }, { id: 'categories', label: 'Danh mục thủ tục', icon: FolderSimple, permissions: ['procedure.categories.manage'] },
-      { id: 'checklists', label: 'Thành phần hồ sơ', icon: ListChecks, fallbackRoles: role }, { id: 'steps', label: 'Quy trình thực hiện', icon: Path, fallbackRoles: role },
     ] },
     { title: 'Biểu mẫu', items: [
       { id: 'forms', label: 'Danh sách biểu mẫu', icon: FileText, permissions: ['document.templates.read', 'document.templates.manage'] },
-      { id: 'form-versions', label: 'Phiên bản biểu mẫu', icon: ClockCounterClockwise, fallbackRoles: role }, { id: 'attach-forms', label: 'Gắn biểu mẫu vào thủ tục', icon: LinkSimple, fallbackRoles: role },
     ] },
-    { title: 'Pháp lý & AI', items: [{ id: 'legal-docs', label: 'Văn bản pháp lý', icon: Scales, fallbackRoles: role }, { id: 'procedure-legal-links', label: 'Liên kết thủ tục - VB', icon: LinkBreak, fallbackRoles: role }, { id: 'ai-knowledge', label: 'Dữ liệu kiến thức AI', icon: Brain, permissions: ['knowledge.manage'] }] },
-    { title: 'Hệ thống', items: [{ id: 'audit-logs', label: 'Lịch sử cập nhật', icon: ClockCounterClockwise, permissions: ['procedure.versions.read'] }, { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
+    { title: 'Kiến thức AI', items: [{ id: 'ai-knowledge', label: 'Dữ liệu kiến thức AI', icon: Brain, permissions: ['knowledge.manage'] }] },
+    { title: 'Tài khoản', items: [{ id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }] },
   ];
   return <WorkspaceSidebar workspace="procedure-manager" subtitle="Quản lý thủ tục" activeSection={currentSection} groups={groups} onSelectSection={onSelectSection} isOpen={isOpenMobile} onClose={onCloseMobile} isCompact={isCollapsedDesktop} />;
 }

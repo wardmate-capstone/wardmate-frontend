@@ -9,10 +9,14 @@ test('manager sidebar does not restore the removed permission feature menu', asy
   await expect(page.locator('aside').getByText('Chức năng được cấp')).toHaveCount(0);
 });
 
-test('role keeps placeholder menu items that do not have API permissions yet', async ({ page }) => {
+test('procedure navigation only exposes working workspaces', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   await page.goto('/procedure-manager');
-  await expect(page.getByRole('button', { name: 'Thành phần hồ sơ' })).toBeVisible();
+  for (const name of ['Thành phần hồ sơ', 'Quy trình thực hiện', 'Phiên bản biểu mẫu', 'Gắn biểu mẫu vào thủ tục', 'Văn bản pháp lý', 'Liên kết thủ tục - VB', 'Lịch sử cập nhật']) {
+    await expect(page.locator('aside').getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await expect(page.locator('aside').getByRole('button', { name: 'Danh sách thủ tục', exact: true })).toBeVisible();
+  await expect(page.locator('aside').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Dữ liệu kiến thức AI' })).toBeVisible();
 });
 
@@ -43,7 +47,7 @@ test('removed permission feature panel does not open from the sidebar', async ({
   await expect(page.locator('aside').getByRole('button', { name: 'PDF & bản nháp' })).toHaveCount(0);
   await expect(page.locator('[data-permission-feature-panel]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thu gọn thanh điều hướng' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Thông báo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Thông báo', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Menu tài khoản' })).toBeVisible();
 });
 
