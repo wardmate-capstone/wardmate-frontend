@@ -220,7 +220,12 @@ export function KnowledgeBaseView() {
             </thead>
             <tbody>
               {documents.isPending ? (
-                <TableSkeletonRows columns={7} />
+                <TableSkeletonRows
+                  columns={7}
+                  rows={5}
+                  columnWidths={['w-56', 'w-28', 'w-24', 'w-20', 'w-20', 'w-28', 'ml-auto w-24']}
+                  lastCellClassName="sticky right-0 bg-white text-right"
+                />
               ) : documents.data?.items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-slate-600">

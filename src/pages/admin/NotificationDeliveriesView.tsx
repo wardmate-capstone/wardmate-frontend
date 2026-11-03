@@ -226,7 +226,15 @@ export function NotificationDeliveriesView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading && <TableSkeletonRows columns={7} rows={6} cellClassName="px-4 py-3.5" />}
+              {loading && (
+                <TableSkeletonRows
+                  columns={7}
+                  rows={6}
+                  cellClassName="px-4 py-3.5"
+                  columnWidths={['w-32 font-mono', 'w-24', 'w-28', 'w-16 mx-auto', 'w-36', 'w-60', 'ml-auto w-20']}
+                  lastCellClassName="text-right"
+                />
+              )}
 
               {!loading && data?.items.length === 0 && (
                 <tr>

@@ -11,7 +11,7 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { Button, Input, ListSkeleton, Modal, TableSkeleton } from "@/components/ui";
+import { Button, Input, ListSkeleton, Modal, TableSkeletonRows } from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
 import {
   rbacApi,
@@ -188,43 +188,47 @@ export function AdminRolesView() {
   return (
     <div className="space-y-5">
       <ErrorBox error={error} retry={() => void load()} />
-      {loading ? (
-        <TableSkeleton columns={5} />
-      ) : (
-        <section className="admin-card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-            <label className="relative min-w-64 flex-1">
-              <MagnifyingGlass
-                className="absolute left-3 top-3 text-slate-400"
-                size={17}
-              />
-              <input
-                aria-label="Tìm vai trò"
-                value={roleSearch}
-                onChange={(event) => setRoleSearch(event.target.value)}
-                placeholder="Tìm vai trò..."
-                className="min-h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm"
-              />
-            </label>
-            <Button onClick={() => open(null)}>
-              <Plus size={18} /> Thêm vai trò
-            </Button>
-          </div>
-          <div className="admin-table-wrap max-h-[34rem] overflow-auto">
-            <table className="min-w-[720px]">
-              <thead className="sticky top-0 z-10 bg-slate-50">
-                <tr>
-                  <th>Vai trò</th>
-                  <th>Loại</th>
-                  <th>Mô tả</th>
-                  <th>Quyền hạn</th>
-                  <th>
-                    <span className="sr-only">Mở chi tiết</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRoles.map((role) => {
+      <section className="admin-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+          <label className="relative min-w-64 flex-1">
+            <MagnifyingGlass
+              className="absolute left-3 top-3 text-slate-400"
+              size={17}
+            />
+            <input
+              aria-label="Tìm vai trò"
+              value={roleSearch}
+              onChange={(event) => setRoleSearch(event.target.value)}
+              placeholder="Tìm vai trò..."
+              className="min-h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm"
+            />
+          </label>
+          <Button onClick={() => open(null)}>
+            <Plus size={18} /> Thêm vai trò
+          </Button>
+        </div>
+        <div className="admin-table-wrap max-h-[34rem] overflow-auto">
+          <table className="min-w-[720px]">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr>
+                <th>Vai trò</th>
+                <th>Loại</th>
+                <th>Mô tả</th>
+                <th>Quyền hạn</th>
+                <th>
+                  <span className="sr-only">Mở chi tiết</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableSkeletonRows
+                  columns={5}
+                  rows={5}
+                  columnWidths={['w-36', 'w-24', 'w-56', 'w-32', 'ml-auto w-12']}
+                />
+              ) : (
+                visibleRoles.map((role) => {
                   const percent = permissions.length
                     ? Math.round(
                         (role.permissions.length / permissions.length) * 100,
@@ -278,17 +282,16 @@ export function AdminRolesView() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
-          {!visibleRoles.length && (
+          {!loading && !visibleRoles.length && (
             <p className="p-8 text-center text-sm text-slate-500">
               Không tìm thấy vai trò.
             </p>
           )}
         </section>
-      )}
       {selectedRole && (
         <div
           className="fixed inset-0 z-50"
@@ -1099,8 +1102,7 @@ export function AdminRbacAuditView() {
         </div>
       </div>
       <ErrorBox error={error} retry={() => void load()} />
-      {loading && <TableSkeleton columns={6} />}
-      {!loading && !error && (
+      {!error && (
         <div className="admin-table-wrap">
           <table>
             <thead>
@@ -1114,7 +1116,15 @@ export function AdminRbacAuditView() {
               </tr>
             </thead>
             <tbody>
-              {visible.map((log) => {
+              {loading ? (
+                <TableSkeletonRows
+                  columns={6}
+                  rows={6}
+                  columnWidths={['w-32', 'w-28', 'w-36', 'w-40', 'w-48', 'ml-auto w-16']}
+                  lastCellClassName="text-right pr-4"
+                />
+              ) : (
+                visible.map((log) => {
                 const targetRole = log.roleId
                   ? rolesMap[log.roleId]
                   : undefined;
@@ -1194,10 +1204,10 @@ export function AdminRbacAuditView() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
-          {visible.length === 0 && (
+          {!loading && visible.length === 0 && (
             <p className="p-8 text-center text-sm text-slate-500">
               Không có nhật ký phù hợp trên trang này.
             </p>

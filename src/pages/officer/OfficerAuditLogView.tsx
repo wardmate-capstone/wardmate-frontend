@@ -146,7 +146,13 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {activity.isPending ? (
-                <TableSkeletonRows columns={6} rows={5} />
+                <TableSkeletonRows
+                  columns={6}
+                  rows={6}
+                  cellClassName="px-4 py-3.5 first:pl-5 last:pr-5"
+                  columnWidths={['w-28 font-mono', 'w-32 font-mono', 'w-24', 'w-32', 'w-64', 'ml-auto w-28']}
+                  lastCellClassName="text-right"
+                />
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-10 text-center text-slate-500">

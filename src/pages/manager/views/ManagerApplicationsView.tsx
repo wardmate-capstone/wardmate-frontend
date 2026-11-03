@@ -283,7 +283,12 @@ export function ManagerApplicationsView() {
             </thead>
             <tbody>
               {list.isPending ? (
-                <TableSkeletonRows columns={6} rows={5} />
+                <TableSkeletonRows
+                  columns={6}
+                  rows={5}
+                  columnWidths={['w-28 font-mono', 'w-60', 'w-24', 'w-28', 'w-36', 'ml-auto w-24']}
+                  lastCellClassName="sticky right-0 z-10 bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]"
+                />
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-xs text-slate-500">Không có hồ sơ nào phù hợp với bộ lọc hiện tại.</td>

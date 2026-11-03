@@ -498,7 +498,13 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {isLoading ? (
-                <TableSkeletonRows columns={7} rows={6} cellClassName="px-4 py-3.5 first:pl-5 last:pr-5" />
+                <TableSkeletonRows
+                  columns={7}
+                  rows={6}
+                  cellClassName="px-4 py-3.5 first:pl-5 last:pr-5"
+                  columnWidths={['w-28 font-mono', 'w-32', 'w-56', 'w-24', 'w-28', 'w-28', 'ml-auto w-24']}
+                  lastCellClassName="sticky right-0 z-10 bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]"
+                />
               ) : filteredApps.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-500">

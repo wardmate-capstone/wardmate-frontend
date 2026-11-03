@@ -994,34 +994,8 @@ function UsersView({
         </div>
       )}
 
-      {/* Skeleton loading */}
-      {loading && (
-        <div className="admin-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Người dùng</th>
-                <th>Vai trò & Đơn vị</th>
-                <th>Trạng thái</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  <td><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
-                  <td><div className="h-4 w-28 animate-pulse rounded bg-slate-200" /></td>
-                  <td><div className="h-6 w-20 animate-pulse rounded-full bg-slate-200" /></td>
-                  <td><div className="h-8 w-20 animate-pulse rounded-lg bg-slate-200" /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Bảng dữ liệu thật (API 54) */}
-      {!loading && !error && (
+      {/* Bảng danh sách người dùng */}
+      {!error && (
         <div className="admin-table-wrap">
           <table>
             <thead>
@@ -1033,7 +1007,15 @@ function UsersView({
               </tr>
             </thead>
             <tbody>
-              {displayUsers.map((item) => {
+              {loading ? (
+                <TableSkeletonRows
+                  columns={4}
+                  rows={5}
+                  columnWidths={['w-40', 'w-36', 'w-20', 'ml-auto w-24']}
+                  lastCellClassName="text-right"
+                />
+              ) : (
+                displayUsers.map((item) => {
                 const isToggling = togglingId === item.id;
                 const hasCustomName = Boolean(item.profile?.fullName && item.profile.fullName.trim() !== item.username);
                 const displayName = hasCustomName ? item.profile!.fullName : item.username;
@@ -1160,7 +1142,7 @@ function UsersView({
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -1303,7 +1285,12 @@ function WardsView({
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows columns={4} rows={5} />
+              <TableSkeletonRows
+                columns={4}
+                rows={5}
+                columnWidths={['w-24 font-mono', 'w-48', 'w-36', 'ml-auto w-20']}
+                lastCellClassName="text-right"
+              />
             ) : (
               filteredWards.map((w) => {
                 const count = staffCounts[w.id];

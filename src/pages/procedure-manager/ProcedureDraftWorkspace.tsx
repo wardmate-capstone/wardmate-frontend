@@ -15,7 +15,7 @@ import {
   UploadSimple,
   Warning,
 } from "@phosphor-icons/react";
-import { Button, ConfirmDeleteModal, Modal, TableSkeleton } from "@/components/ui";
+import { Button, ConfirmDeleteModal, Modal, TableSkeletonRows } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import {
   procedureApi,
@@ -819,21 +819,29 @@ export function ProcedureDraftWorkspace({
             error={list.error}
             retry={list.refresh}
           />
-          {list.loading ? <TableSkeleton columns={3} /> : <div className="admin-card overflow-hidden">
+          <div className="admin-card overflow-hidden">
             <div className="border-b border-slate-200 px-5 py-4">
               <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
             </div>
             <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr>
+                <tr className="border-b border-slate-200 bg-slate-50/60 text-slate-600">
                   <th className="p-4">PDF</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
+                  <th className="p-4">Trạng thái</th>
+                  <th className="p-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody>
-                {list.data?.map((row) => (
+              <tbody className="divide-y divide-slate-100">
+                {list.loading ? (
+                  <TableSkeletonRows
+                    columns={3}
+                    rows={4}
+                    cellClassName="p-4"
+                    columnWidths={['w-64 font-medium', 'w-28', 'ml-auto w-32']}
+                    lastCellClassName="text-right"
+                  />
+                ) : list.data?.map((row) => (
                   <tr key={row.id} className="border-t">
                     <td className="p-4 font-medium text-slate-900">
                       {row.pdfFileName}
@@ -869,11 +877,11 @@ export function ProcedureDraftWorkspace({
                 ))}
               </tbody>
             </table>
-            {list.data?.length === 0 && (
+            {!list.loading && list.data?.length === 0 && (
               <div className="px-5 py-12 text-center"><FilePdf size={32} className="mx-auto text-slate-300" /><p className="mt-3 font-semibold text-slate-700">Chưa có bản nháp</p></div>
             )}
             </div>
-          </div>}
+          </div>
           {!list.loading && <div className="flex items-center gap-3">
             <Button
               variant="outline"

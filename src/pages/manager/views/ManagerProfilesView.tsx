@@ -245,7 +245,12 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           </thead>
           <tbody>
             {isLoading && filteredProfiles.length === 0 ? (
-              <TableSkeletonRows columns={4} rows={5} />
+              <TableSkeletonRows
+                columns={4}
+                rows={5}
+                columnWidths={['w-44', 'w-48', 'w-24', 'ml-auto w-36']}
+                lastCellClassName="text-right"
+              />
             ) : filteredProfiles.map((item) => (
               <tr key={item.userId || item.identityNumber}>
                 <td>

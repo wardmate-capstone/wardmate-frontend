@@ -147,7 +147,12 @@ export function CitizenDossiersView({
           </thead>
           <tbody>
             {isLoading ? (
-              <TableSkeletonRows columns={6} rows={6} />
+              <TableSkeletonRows
+                columns={6}
+                rows={6}
+                columnWidths={['w-28 font-mono', 'w-56', 'w-28', 'w-24', 'w-48', 'ml-auto w-24']}
+                lastCellClassName="text-right"
+              />
             ) : (
               filteredDossiers.map((item) => (
                 <tr key={item.code}>

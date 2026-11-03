@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowsClockwise, UploadSimple } from '@phosphor-icons/react';
-import { Button, Input, Modal, Badge, TableSkeleton } from '@/components/ui';
+import { Button, Input, Modal, Badge, TableSkeletonRows } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { useAuthStore } from '@/stores/authStore';
@@ -83,9 +84,37 @@ export function FormsView() {
         </form>
         <label className="grid gap-2 text-sm font-semibold">Trạng thái<select className="min-h-12 rounded-xl border border-slate-300 bg-white px-4" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}><option value="ALL">Tất cả</option><option value="ACTIVE">Đang hoạt động</option><option value="INACTIVE">Tạm dừng</option></select></label>
       </div>
-      {list.isPending ? <TableSkeleton columns={4} rows={5} /> : list.isError ? <div role="alert" className="space-y-3 text-red-800"><p>{formTemplateErrorMessage(list.error)}</p><Button variant="outline" onClick={() => void list.refetch()}>Thử lại</Button></div> : <>
-        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><caption className="sr-only">Danh sách phôi biểu mẫu Word</caption><thead><tr className="border-b bg-slate-50">{['Mã / Tên biểu mẫu', 'Tệp Word', 'Trạng thái', 'Thao tác'].map(label => <th key={label} scope="col" className="p-3">{label}</th>)}</tr></thead><tbody>
-          {list.data.items.map(item => <tr key={item.id} className="border-b border-slate-100">
+      {list.isError ? (
+        <div role="alert" className="space-y-3 text-red-800">
+          <p>{formTemplateErrorMessage(list.error)}</p>
+          <Button variant="outline" onClick={() => void list.refetch()}>Thử lại</Button>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <caption className="sr-only">Danh sách phôi biểu mẫu Word</caption>
+              <thead>
+                <tr className="border-b bg-slate-50">
+                  {['Mã / Tên biểu mẫu', 'Tệp Word', 'Trạng thái', 'Thao tác'].map((label, idx) => (
+                    <th key={label} scope="col" className={cn('p-3', idx === 3 && 'text-right')}>
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {list.isPending ? (
+                  <TableSkeletonRows
+                    columns={4}
+                    rows={5}
+                    cellClassName="p-3"
+                    columnWidths={['w-48', 'w-24', 'w-24', 'ml-auto w-32']}
+                    lastCellClassName="text-right"
+                  />
+                ) : (
+                  list.data.items.map((item) => (
+                    <tr key={item.id} className="border-b border-slate-100">
             <td className="min-w-44 p-3"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
             <td className="p-3"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có DOCX' : 'Chưa có tệp'}</Badge></td>
             <td className="p-3">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
@@ -95,11 +124,34 @@ export function FormsView() {
                 {item.fileDocxUrl ? 'Thay đổi' : 'Tải lên'}
               </Button>} />
             </td>
-          </tr>)}
-          {list.data.items.length === 0 && <tr><td colSpan={4} className="p-6 text-center">Không tìm thấy biểu mẫu phù hợp.</td></tr>}
-        </tbody></table></div>
-        <nav aria-label="Phân trang biểu mẫu" className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">{list.data.totalCount} biểu mẫu · Trang {page}/{totalPages}</p><div className="flex gap-2"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trang trước</Button><Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Trang sau</Button></div></nav>
-      </>}
+          </tr>
+                  ))
+                )}
+                {!list.isPending && list.data.items.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-slate-500">
+                      Không tìm thấy biểu mẫu phù hợp.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {!list.isPending && (
+            <nav aria-label="Phân trang biểu mẫu" className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm">{list.data.totalCount} biểu mẫu · Trang {page}/{totalPages}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>
+                  Trang trước
+                </Button>
+                <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)}>
+                  Trang sau
+                </Button>
+              </div>
+            </nav>
+          )}
+        </>
+      )}
     </section>
     <Modal open={createOpen && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setCreateOpen(false)); }} title="Tạo phôi biểu mẫu" description="Tạo mã và tên trước, sau đó tải lên file Word gốc.">
       <form onSubmit={submitCreate} className="space-y-4" noValidate>

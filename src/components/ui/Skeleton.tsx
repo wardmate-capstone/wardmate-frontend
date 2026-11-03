@@ -5,24 +5,70 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLSpanE
   return <span aria-hidden="true" className={cn('block animate-pulse rounded-md bg-slate-200/80', className)} {...props} />;
 }
 
-// cellClassName: bảng không nằm trong .admin-table-wrap cần tự thêm padding cho ô.
-export function TableSkeletonRows({ columns, rows = 5, cellClassName }: { columns: number; rows?: number; cellClassName?: string }) {
+export interface TableSkeletonRowsProps {
+  columns: number;
+  rows?: number;
+  cellClassName?: string;
+  columnWidths?: (string | undefined)[];
+  lastCellClassName?: string;
+}
+
+// cellClassName: bảng không nằm trong .admin-table-wrap cần tự thêm padding cho ô. Mặc định px-4 py-3.5 để tránh bẹp dòng.
+export function TableSkeletonRows({
+  columns,
+  rows = 5,
+  cellClassName = 'px-4 py-3.5',
+  columnWidths,
+  lastCellClassName,
+}: TableSkeletonRowsProps) {
   return Array.from({ length: rows }, (_, row) => (
     <tr key={row} aria-hidden="true">
-      {Array.from({ length: columns }, (__, column) => (
-        <td key={column} className={cellClassName}>
-          <Skeleton className={cn('h-4', column === 0 ? 'w-32' : column === columns - 1 ? 'ml-auto w-20' : 'w-24')} />
-        </td>
-      ))}
+      {Array.from({ length: columns }, (__, column) => {
+        const isFirst = column === 0;
+        const isLast = column === columns - 1;
+
+        // Ưu tiên độ rộng chỉ định nếu có
+        const customWidth = columnWidths?.[column];
+        const defaultWidth = isFirst
+          ? 'w-32'
+          : isLast
+          ? 'ml-auto w-20'
+          : columns > 4 && column === 2
+          ? 'w-48'
+          : 'w-24';
+
+        const finalWidth = customWidth ?? defaultWidth;
+        const tdClass = isLast && lastCellClassName ? cn(cellClassName, lastCellClassName) : cellClassName;
+
+        return (
+          <td key={column} className={tdClass}>
+            <Skeleton className={cn('h-4', finalWidth)} />
+          </td>
+        );
+      })}
     </tr>
   ));
 }
 
-export function TableSkeleton({ columns, rows = 5, className }: { columns: number; rows?: number; className?: string }) {
+export function TableSkeleton({
+  columns,
+  rows = 5,
+  className,
+  cellClassName,
+  columnWidths,
+}: {
+  columns: number;
+  rows?: number;
+  className?: string;
+  cellClassName?: string;
+  columnWidths?: (string | undefined)[];
+}) {
   return (
     <div role="status" aria-label="Đang tải danh sách" className={cn('admin-card admin-table-wrap overflow-hidden', className)}>
       <table>
-        <tbody><TableSkeletonRows columns={columns} rows={rows} /></tbody>
+        <tbody>
+          <TableSkeletonRows columns={columns} rows={rows} cellClassName={cellClassName} columnWidths={columnWidths} />
+        </tbody>
       </table>
     </div>
   );

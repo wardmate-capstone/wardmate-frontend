@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MagnifyingGlass, Funnel, ClockCounterClockwise, ArrowSquareOut } from '@phosphor-icons/react';
-import { Button, TableSkeleton } from '@/components/ui';
+import { Button, TableSkeletonRows } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, type Category, type ProcedureSummary } from '@/lib/api/procedures';
@@ -204,10 +204,10 @@ export function ProcedureApiList({
       </div>
 
       <ProcedureFeedback error={result.error} retry={result.refresh} />
-      {result.loading && <TableSkeleton columns={onSelect ? 6 : 5} />}
+
 
       {/* Procedure Table */}
-      {result.data && (
+      {!result.error && (
         <div className="admin-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -222,7 +222,23 @@ export function ProcedureApiList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {result.data.items.map((row) => (
+                {result.loading ? (
+                  <TableSkeletonRows
+                    columns={onSelect ? 6 : 5}
+                    rows={6}
+                    cellClassName="px-4 py-3.5"
+                    columnWidths={[
+                      'w-28 font-mono',
+                      'w-64',
+                      'w-32',
+                      'w-24',
+                      'w-16 mx-auto',
+                      onSelect ? 'ml-auto w-24' : undefined,
+                    ]}
+                    lastCellClassName={onSelect ? 'text-right' : undefined}
+                  />
+                ) : (
+                  (result.data?.items ?? []).map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-4 py-3.5 font-mono text-xs font-bold text-red-900 whitespace-nowrap">
                       {row.procedureCode}
@@ -281,19 +297,20 @@ export function ProcedureApiList({
                       </div>
                     </td>}
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
 
-          {!result.data.items.length && (
+          {!result.loading && result.data && !result.data.items.length && (
             <div className="py-12 text-center text-slate-500 text-sm">
               Không tìm thấy thủ tục nào phù hợp với bộ lọc hiện tại.
             </div>
           )}
 
           {/* Pagination */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 bg-slate-50/50">
+          {result.data && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 bg-slate-50/50">
             <span className="text-xs text-slate-600">
               Tổng số <strong>{result.data.totalCount}</strong> thủ tục · Trang{' '}
               <strong>{result.data.currentPage}</strong> / {Math.max(1, result.data.totalPages)}
@@ -316,7 +333,8 @@ export function ProcedureApiList({
                 Sau
               </Button>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
