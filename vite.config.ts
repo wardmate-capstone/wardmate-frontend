@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
   const aiOcr = proxyTo(env.VITE_AI_OCR_API_URL) || documentForm;
   const proxy: Record<string, ProxyOptions> = {};
   if (analytics) {
+    proxy['/api/v1/system'] = analytics;
     proxy['/api/v1/analytics'] = analytics;
     proxy['/api/v1/citizen/feedback'] = analytics;
     proxy['/api/v1/admin/notification-deliveries'] = analytics;

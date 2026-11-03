@@ -9,7 +9,7 @@ try {
   for (const name of ['iam', 'catalog', 'workflow', 'document', 'analytics']) {
     const server = createHttpServer((request, response) => {
       response.setHeader('Content-Type', 'application/json');
-      response.end(JSON.stringify({ service: name, path: request.url }));
+      response.end(JSON.stringify({ service: name, path: request.url, method: request.method }));
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     targets.push({ server, name, url: `http://127.0.0.1:${server.address().port}` });
@@ -29,6 +29,22 @@ try {
   await vite.listen();
   const base = `http://127.0.0.1:${vite.httpServer.address().port}`;
   const cases = [
+    ['/api/v1/system/health/services', 'analytics'],
+    ['/api/v1/system/health/services/iam', 'analytics'],
+    ['/api/v1/system/health/history?service=iam&page=2&pageSize=20', 'analytics'],
+    ['/api/v1/system/health/check-now', 'analytics', 'POST'],
+    ['/api/v1/system/backups?service=iam&status=Succeeded&page=1&pageSize=20', 'analytics'],
+    ['/api/v1/system/backups', 'analytics', 'POST'],
+    ['/api/v1/system/backups/11111111-1111-1111-1111-111111111111', 'analytics'],
+    ['/api/v1/system/backups/11111111-1111-1111-1111-111111111111/verify', 'analytics', 'POST'],
+    ['/api/v1/admin/notification-deliveries/11111111-1111-1111-1111-111111111111', 'analytics'],
+    ['/api/v1/system/settings', 'analytics'],
+    ['/api/v1/system/settings/analytics.lookbackDays', 'analytics'],
+    ['/api/v1/system/settings/analytics.lookbackDays', 'analytics', 'PUT'],
+    ['/api/v1/system/audit-logs?from=2026-11-02T17%3A00%3A00.000Z&page=2&pageSize=20', 'analytics'],
+    ['/api/v1/system/audit-logs/11111111-1111-1111-1111-111111111111', 'analytics'],
+    ['/api/v1/system/audit-events?source=workflow&entity=applications&page=1&pageSize=20', 'analytics'],
+    ['/api/v1/system/audit-events/11111111-1111-1111-1111-111111111111', 'analytics'],
     ['/api/v1/analytics/overview?from=2026-10-01&to=2026-10-23', 'analytics'],
     ['/api/v1/analytics/jobs/rebuild', 'analytics'],
     ['/api/v1/analytics/jobs/123', 'analytics'],
@@ -60,12 +76,13 @@ try {
     ['/api/v1/accounts/manager', 'iam'],
     ['/api/v1/admin/users?role=MANAGER', 'iam'],
   ];
-  for (const [path, service] of cases) {
-    const response = await fetch(base + path);
+  for (const [path, service, method = 'GET'] of cases) {
+    const response = await fetch(base + path, { method });
     assert.equal(response.status, 200, path);
     const result = await response.json();
     assert.equal(result.service, service, path);
     assert.equal(result.path, path, 'Proxy must preserve request path and query');
+    assert.equal(result.method, method, 'Proxy must preserve HTTP method');
   }
   console.log(`PASS: ${cases.length} real Vite proxy routes`);
 } finally {
