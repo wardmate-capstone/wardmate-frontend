@@ -6,7 +6,7 @@ import {
   House,
 } from '@phosphor-icons/react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { buttonVariants } from '@/components/ui';
+import { Button, Modal, buttonVariants } from '@/components/ui';
 import { procedureError, type ProcedureSummary } from '@/lib/api/procedures';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
@@ -20,6 +20,7 @@ export function ProcedureDetailPage() {
   const result = usePublicProcedureDetail(procedureId);
   const procedure = result.data;
   const heading = useRef<HTMLHeadingElement>(null);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const listUrl = '/thu-tuc' + search;
 
   // Catalog trả danh sách công khai, không có số liệu xếp hạng lượt tìm kiếm.
@@ -31,6 +32,7 @@ export function ProcedureDetailPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     heading.current?.focus({ preventScroll: true });
+    setSourceOpen(false);
   }, [procedureId, procedure?.id]);
 
   if (result.isPending || result.isError) {
@@ -135,33 +137,18 @@ export function ProcedureDetailPage() {
               Chuẩn bị hồ sơ
             </Link>
           </div>
-
-          {/* PDF Source Icon under Title */}
-          {procedure.originalPdfUrl ? (
-            <a
-              href={procedure.originalPdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2.5 inline-flex items-center gap-2 text-red-600 hover:text-red-700 group transition-colors"
-              title="Xem tệp PDF công bố gốc"
-            >
-              <FilePdf size={32} weight="fill" className="text-red-600 group-hover:scale-105 transition-transform" />
-              <span className="text-xs font-semibold underline text-slate-600 group-hover:text-red-700">
-                {procedure.pdfFileName || 'Tệp văn bản công bố thủ tục (PDF)'}
-              </span>
-            </a>
-          ) : (
-            <div className="mt-2.5 inline-flex items-center gap-1.5 text-slate-500 text-xs">
-              <FilePdf size={28} weight="fill" className="text-red-600" />
-              <span>Văn bản điện tử trích lục</span>
-            </div>
-          )}
         </div>
+
+        {(procedure.pdfFileName || procedure.originalPdfUrl) && <section aria-label="Văn bản nguồn công bố" className="mb-6 flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3"><FilePdf size={28} weight="fill" className="shrink-0 text-red-700" /><div className="min-w-0"><h2 className="text-sm font-semibold text-slate-900">Văn bản nguồn công bố</h2><p title={procedure.pdfFileName || undefined} className="mt-1 line-clamp-2 break-all text-sm text-slate-600">{procedure.pdfFileName || 'Tệp công bố thủ tục (PDF)'}</p></div></div>
+          <Button variant="outline" onClick={() => setSourceOpen(true)}>Xem trước tệp</Button>
+          <Modal open={sourceOpen} onOpenChange={setSourceOpen} title="Xem trước văn bản nguồn" description="Tệp PDF công bố thủ tục. Có thể mở trong tab mới để xem rộng hơn." className="sm:max-w-6xl" bodyClassName="p-0"><div className="h-[70dvh] min-h-64 min-w-0">{sourceOpen && <PdfSource id={procedure.id} allowFullscreen={false} />}</div></Modal>
+        </section>}
 
         {/* 2-Column Split: Left Column (70%) & Right Column (30%) */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
           {/* CỘT TRÁI: Nội dung chi tiết thủ tục (8/12 cột = ~67%) */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="min-w-0 lg:col-span-8 space-y-6">
             {/* 1. BẢNG THÔNG TIN CHUNG (Grid table kẻ viền xám theo mẫu Cổng DVCQG) */}
             <div className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-2xs">
               <table className="w-full border-collapse text-xs sm:text-sm">
@@ -324,7 +311,7 @@ export function ProcedureDetailPage() {
               </h2>
 
               <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
-                <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <table aria-label="Cách thức thực hiện và lệ phí" className="w-full min-w-[560px] table-fixed border-collapse text-left text-xs sm:text-sm [&_td]:align-top [&_td]:whitespace-normal [&_td]:break-words [&_td]:[overflow-wrap:anywhere]">
                   <thead>
                     <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
                       <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4">Hình thức nộp</th>
@@ -348,7 +335,7 @@ export function ProcedureDetailPage() {
                           <td className="p-2.5 border-r border-slate-200 text-slate-700">
                             {method.feeAmount === 0
                               ? 'Miễn phí'
-                              : `${method.feeAmount.toLocaleString('vi-VN')} ${method.feeUnit}`}
+                              : `${method.feeAmount.toLocaleString('vi-VN')} ${/^(VND|VNĐ|Đ)$/i.test(method.feeUnit.trim()) ? 'đồng' : method.feeUnit}`}
                           </td>
                           <td className="p-2.5 text-slate-600">
                             {method.note || ''}
@@ -534,24 +521,7 @@ export function ProcedureDetailPage() {
               </section>
             )}
 
-            {/* 8. PDF NGUỒN CÔNG BỐ */}
-            {procedure.pdfFileName && (
-              <section className="space-y-2">
-                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
-                  Tệp văn bản nguồn công bố
-                </h2>
-                <div className="rounded-md border border-slate-200 bg-white p-4 shadow-2xs">
-                  <div className="flex items-center justify-between gap-4 mb-3">
-                    <span className="text-xs font-semibold text-slate-700 truncate">
-                      {procedure.pdfFileName}
-                    </span>
-                  </div>
-                  <div className="h-[450px] w-full rounded border border-slate-200 overflow-hidden">
-                    <PdfSource id={procedure.id} />
-                  </div>
-                </div>
-              </section>
-            )}
+
           </div>
 
           {/* CỘT PHẢI: SIDEBAR TIỆN ÍCH (4/12 cột = ~33%) */}
