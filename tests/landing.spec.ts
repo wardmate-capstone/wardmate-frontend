@@ -9,8 +9,9 @@ test('hiển thị thông điệp chính và tìm kiếm tiếng Việt không d
   await expect(page.getByRole('heading', { name: 'Chuẩn bị hồ sơ đúng ngay từ đầu' })).toBeVisible();
   await page.getByLabel('Tra cứu thủ tục hành chính').fill('khai sinh');
   await page.getByRole('button', { name: 'Tìm kiếm' }).click();
-  await expect(page.getByRole('button', { name: /Đăng ký khai sinh/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Đăng ký kết hôn/ })).toHaveCount(0);
+  await expect(page).toHaveURL('/thu-tuc?q=khai+sinh');
+  await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toHaveValue('khai sinh');
+  await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
 });
 
 test('ô tìm kiếm trống có thông báo hướng dẫn', async ({ page }) => {
@@ -76,15 +77,15 @@ test('trang không tìm thấy có lối quay về rõ ràng và không tràn ng
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('trang hỏi đáp mở câu trả lời và giải thích chức năng gửi chưa khả dụng', async ({ page }) => {
+test('trang hỏi đáp giữ câu trả lời và tra cứu, không có form gửi bị khóa', async ({ page }) => {
   await page.goto('/hoi-dap');
   await expect(page.getByRole('heading', { name: 'Câu hỏi thường gặp' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' })).toBeVisible();
   await page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' }).click();
-  await expect(page.getByText('Mã QR chỉ được tạo sau khi cán bộ duyệt tiền kiểm.')).toBeVisible();
+  await expect(page.getByText('Mã QR chỉ được tạo sau khi cán bộ xác nhận giấy tờ sẵn sàng.', { exact: false })).toBeVisible();
 
-  await expect(page.getByRole('status')).toContainText('Chức năng gửi câu hỏi chưa khả dụng');
-  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Tra cứu thủ tục', exact: false }).last()).toHaveAttribute('href', '/thu-tuc');
   await expect(page.getByRole('heading', { name: 'Cảm ơn bạn đã gửi thắc mắc' })).toHaveCount(0);
 
 });
@@ -120,7 +121,8 @@ test('trang quản trị hiển thị tổng quan và menu mobile không tràn n
   await page.goto('/admin');
 
   await expect(page.getByRole('heading', { name: 'Tổng quan' })).toBeVisible();
-  await expect(page.getByText('Thủ tục đang áp dụng', { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Chỉ số tổng quan' })).toContainText('Tài khoản nội bộ');
+  await expect(page.getByText('Thủ tục đang áp dụng', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Mở menu quản trị' }).click();
   await expect(page.getByRole('dialog', { name: /Điều hướng/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
