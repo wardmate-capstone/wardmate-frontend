@@ -9,7 +9,6 @@ import {
   ClockCounterClockwise,
   Plus,
   CaretLeft,
-  UserCheck,
 } from '@phosphor-icons/react';
 import { aiOcrApi, type ChatSession } from '@/lib/api/aiOcr';
 import { useQuery } from '@tanstack/react-query';
@@ -18,16 +17,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui';
-
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'assistant';
-  text: string;
-  timestamp: Date;
-}
-
-const GUEST_MESSAGES_KEY = 'wardmate_guest_chat_messages';
-const GUEST_CONV_KEY = 'wardmate_guest_conv_id';
+import { BrandMark } from '@/components/brand/BrandMark';
+import { clearGuestChat, GUEST_CHAT_KEY, loadGuestChat, saveGuestChat, type ChatMessage } from '@/lib/guestChatStorage';
 
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
@@ -133,24 +124,6 @@ function getWardDisplayName(code?: string | null, wardsList?: Array<{ code: stri
   return clean.replace(/_/g, ' ');
 }
 
-function loadInitialMessages(authenticated: boolean): ChatMessage[] {
-  if (authenticated) return [WELCOME_MESSAGE];
-  try {
-    const raw = localStorage.getItem(GUEST_MESSAGES_KEY);
-    if (!raw) return [WELCOME_MESSAGE];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((m: { id: string; sender: 'user' | 'assistant'; text: string; timestamp: string }) => ({
-        ...m,
-        timestamp: new Date(m.timestamp),
-      }));
-    }
-  } catch {
-    // ignore parsing error
-  }
-  return [WELCOME_MESSAGE];
-}
-
 export const AiChatWidget: React.FC = () => {
   const userId = useAuthStore(state => state.status === 'authenticated' ? state.user?.id : undefined);
   return <ChatPanel key={userId ?? 'guest'} authenticated={Boolean(userId)} />;
@@ -160,18 +133,15 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'chat' | 'history'>('chat');
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadInitialMessages(authenticated));
+  const [initialGuest] = useState(() => authenticated ? null : loadGuestChat());
+  const [messages, setMessages] = useState<ChatMessage[]>(() => initialGuest?.messages ?? [{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
+  const [expiresAt, setExpiresAt] = useState<number | null>(initialGuest?.expiresAt ?? null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(() => {
-    if (!authenticated) {
-      return localStorage.getItem(GUEST_CONV_KEY) || null;
-    }
-    return null;
-  });
+  const [conversationId, setConversationId] = useState<string | null>(initialGuest?.conversationId ?? null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [wardCode, setWardCode] = useState('');
+  const [wardCode, setWardCode] = useState(initialGuest?.wardCode ?? '');
   const wards = useQuery({
     queryKey: ['wards', 'public'],
     queryFn: getPublicWards,
@@ -180,6 +150,39 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
   });
   const requestRef = useRef<AbortController | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+
+  function persistGuest(nextMessages: ChatMessage[], id: string | null, selectedWard: string) {
+    setExpiresAt(saveGuestChat(nextMessages, id, Date.now(), selectedWard)?.expiresAt ?? null);
+  }
+
+  useEffect(() => {
+    if (authenticated) return;
+    const restoreOrExpire = () => {
+      const stored = loadGuestChat();
+      if (stored && stored.expiresAt > Date.now()) {
+        if (stored.expiresAt !== expiresAt) {
+          setMessages(stored.messages); setConversationId(stored.conversationId); setExpiresAt(stored.expiresAt);
+          if (stored.wardCode) setWardCode(stored.wardCode);
+        }
+        return;
+      }
+      if (expiresAt === null || expiresAt > Date.now()) return;
+      requestRef.current?.abort(); requestRef.current = null;
+      setLoading(false); setMessages([{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
+      setConversationId(null); setExpiresAt(null); setError(null);
+    };
+    const timer = expiresAt === null ? undefined : window.setTimeout(restoreOrExpire, Math.max(0, expiresAt - Date.now()));
+    const onStorage = (event: StorageEvent) => { if (event.key === GUEST_CHAT_KEY || event.key === null) restoreOrExpire(); };
+    window.addEventListener('focus', restoreOrExpire);
+    document.addEventListener('visibilitychange', restoreOrExpire);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener('focus', restoreOrExpire);
+      document.removeEventListener('visibilitychange', restoreOrExpire);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [authenticated, expiresAt]);
 
   useEffect(() => {
     if (!wardCode && wards.data && wards.data.length > 0) {
@@ -251,15 +254,12 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
       timestamp: new Date(),
     };
 
-    const nextMessages = [...messages, userMessage];
+    const expired = !authenticated && expiresAt !== null && expiresAt <= Date.now();
+    const activeConversationId = expired ? null : conversationId;
+    if (expired) { clearGuestChat(); setConversationId(null); }
+    const nextMessages = [...(expired ? [{ ...WELCOME_MESSAGE, timestamp: new Date() }] : messages), userMessage];
     setMessages(nextMessages);
-    if (!authenticated) {
-      try {
-        localStorage.setItem(GUEST_MESSAGES_KEY, JSON.stringify(nextMessages));
-      } catch {
-        // ignore storage error
-      }
-    }
+    if (!authenticated) persistGuest(nextMessages, activeConversationId, targetWardCode);
     setInputValue('');
     setError(null);
     setLoading(true);
@@ -274,20 +274,13 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
 
       const res = await aiOcrApi.chat({
         message: text,
-        conversationId,
+        conversationId: activeConversationId,
         wardCode: targetWardCode,
       }, controller.signal);
       if (controller.signal.aborted) return;
 
       if (res.conversationId) {
         setConversationId(res.conversationId);
-        if (!authenticated) {
-          try {
-            localStorage.setItem(GUEST_CONV_KEY, res.conversationId);
-          } catch {
-            // ignore storage error
-          }
-        }
       }
 
       const assistantMessage: ChatMessage = {
@@ -299,13 +292,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
 
       const finalMessages = [...nextMessages, assistantMessage];
       setMessages(finalMessages);
-      if (!authenticated) {
-        try {
-          localStorage.setItem(GUEST_MESSAGES_KEY, JSON.stringify(finalMessages));
-        } catch {
-          // ignore storage error
-        }
-      }
+      if (!authenticated) persistGuest(finalMessages, res.conversationId || activeConversationId, targetWardCode);
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
       const msg = err instanceof Error ? err.message : '';
@@ -329,13 +316,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
         };
         const finalMessages = [...nextMessages, assistantMessage];
         setMessages(finalMessages);
-        if (!authenticated) {
-          try {
-            localStorage.setItem(GUEST_MESSAGES_KEY, JSON.stringify(finalMessages));
-          } catch {
-            // ignore storage error
-          }
-        }
+        if (!authenticated) persistGuest(finalMessages, activeConversationId, targetWardCode);
         return;
       }
       setMessages(prev => prev.filter(message => message.id !== userMessage.id));
@@ -357,14 +338,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
     setError(null);
     setViewMode('chat');
     setMessages([WELCOME_MESSAGE]);
-    if (!authenticated) {
-      try {
-        localStorage.removeItem(GUEST_MESSAGES_KEY);
-        localStorage.removeItem(GUEST_CONV_KEY);
-      } catch {
-        // ignore storage error
-      }
-    }
+    if (!authenticated) { clearGuestChat(); setExpiresAt(null); }
   };
 
   const loadSessions = useCallback(async () => {
@@ -452,10 +426,10 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
           aria-label="Mở trợ lý hỗ trợ thủ tục"
         >
           <div className="relative grid size-7 place-items-center rounded-full bg-white/20">
-            <User size={18} weight="bold" />
+            <BrandMark size={28} className="size-7 object-contain" />
             <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 ring-2 ring-red-800" />
           </div>
-          <span className="hidden text-xs font-bold tracking-wide sm:inline">Trợ lý Một cửa</span>
+          <span className="hidden text-xs font-bold tracking-wide sm:inline">Hỏi Đáp AI</span>
         </button>
       )}
 
@@ -480,7 +454,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                 </button>
               ) : (
                 <div className="relative grid size-8 place-items-center rounded-full bg-white/15 text-white">
-                  <User size={18} weight="bold" />
+                  <BrandMark size={28} className="size-7 object-contain" />
                   <span className="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-400 ring-1.5 ring-red-800" />
                 </div>
               )}
@@ -645,7 +619,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                         className="grid size-6 shrink-0 place-items-center rounded-full bg-red-800 text-white shadow-xs ring-1 ring-red-900/20 mt-0.5"
                         title="Cán bộ hỗ trợ Một cửa"
                       >
-                        <UserCheck size={13} weight="bold" />
+                        <BrandMark size={20} className="size-5 object-contain" />
                       </div>
                     )}
                     <div
@@ -715,7 +689,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                       className="grid size-6 shrink-0 place-items-center rounded-full bg-red-800 text-white shadow-xs ring-1 ring-red-900/20"
                       title="Cán bộ hỗ trợ Một cửa"
                     >
-                      <UserCheck size={13} weight="bold" />
+                      <BrandMark size={20} className="size-5 object-contain" />
                     </div>
                     <div className="rounded-2xl rounded-bl-xs bg-white border border-slate-200 p-2.5 shadow-2xs flex items-center gap-1.5">
                       <span className="size-1.5 rounded-full bg-red-700 animate-bounce" />
@@ -765,7 +739,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                 </form>
                 {!authenticated ? (
                   <p className="text-[10px] text-slate-500 text-center flex flex-wrap items-center justify-center gap-1">
-                    <span className="inline-block px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">Chế độ khách</span>
+                    <span className="inline-block px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">Chế độ khách · Lưu trên trình duyệt trong 24 giờ</span>
                     <span>·</span>
                     <Link
                       to={'/dang-nhap?returnTo=' + encodeURIComponent(location.pathname + location.search + location.hash)}
