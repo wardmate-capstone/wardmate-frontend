@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockWorkspaceAuth } from './fixtures/auth';
+import { authReply, mockWorkspaceAuth } from './fixtures/auth';
 
 test('AI document verification: hiển thị nút và quét giấy tờ trả về kết quả', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
@@ -159,7 +159,12 @@ test('Trợ lý AI: mở lịch sử cuộc trò chuyện và xem các phiên c�
 test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal Replay', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN'], ['notifications.deliveries.read', 'notifications.deliveries.manage']);
 
-  const deliveryId = 'delivery-test-1111';
+  const deliveryId = 'aaaaaaaa-0000-0000-0000-000000000001';
+  await page.route('**/api/v1/admin/notification-deliveries/' + deliveryId, route => authReply(route, { json: {
+    id: deliveryId, notificationId: 'aaaaaaaa-0000-0000-0000-000000000002', channel: 'EMAIL', state: 'Dead', attempts: 3,
+    nextAttemptAt: '2026-10-30T12:00:00Z', errorCode: 'smtp.connection_timeout', sentAt: null, provider: 'SMTP', externalMessageId: null,
+    isSandbox: false, revision: 'aaaaaaaa-0000-0000-0000-000000000003', updatedAt: '2026-10-30T10:30:00Z', providerRequestId: 'req-1',
+  } }));
 
   // Mock delivery list
   await page.route('**/api/v1/admin/notification-deliveries*', route => {
@@ -171,9 +176,9 @@ test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal 
           items: [
             {
               id: deliveryId,
-              notificationId: 'notif-1',
+              notificationId: 'aaaaaaaa-0000-0000-0000-000000000002',
               channel: 'EMAIL',
-              state: 'Failed',
+              state: 'Dead',
               attempts: 3,
               nextAttemptAt: '2026-10-30T12:00:00Z',
               errorCode: 'smtp.connection_timeout',
@@ -181,7 +186,7 @@ test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal 
               provider: 'SMTP',
               externalMessageId: null,
               isSandbox: false,
-              revision: 'rev-001',
+              revision: 'aaaaaaaa-0000-0000-0000-000000000003',
               updatedAt: '2026-10-30T10:30:00Z',
               providerRequestId: 'req-1',
             },
@@ -202,10 +207,10 @@ test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal 
   await expect(tab).toBeVisible();
   await tab.click();
 
-  // Table should show Failed delivery
-  await expect(page.getByText('delivery...')).toBeVisible();
-  await expect(page.getByText('Thư điện tử (Email)')).toBeVisible();
-  await expect(page.getByText('Gửi thất bại')).toBeVisible();
+  // Dead is an actionable state supported by the backend replay contract.
+  await expect(page.getByText('aaaaaaaa...')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Thư điện tử (Email)', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Ngừng thử', exact: true })).toBeVisible();
 
   // Open Replay modal
   const replayBtn = page.getByRole('button', { name: 'Replay' });
@@ -213,6 +218,7 @@ test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal 
   await replayBtn.click();
 
   await expect(page.getByText('Cảnh báo gửi lặp thông báo')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Xác nhận gửi lại' })).toBeEnabled();
 });
 
 test('Rút nhận xét: Cán bộ One-Stop có thể rút nhận xét OPEN khi đang thụ lý hồ sơ', async ({ page }) => {
