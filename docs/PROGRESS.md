@@ -35,7 +35,10 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
        + `NotificationDeliveriesView.tsx`: Tối ưu độ rộng skeleton 7 cột nhật ký gửi thông báo.
      - **Component AI:**
        + `KnowledgeBaseView.tsx`: Tối ưu độ rộng skeleton 7 cột kho kiến thức.
-- **Commit liên quan:** `f84e572` fix(ui): standardize table list skeletons and eliminate layout shift across all roles
+- **Trạng thái Git:** Đã commit và push thành công lên `origin/main` (`142a6fd..6c628e8`).
+- **Commits:**
+  1. `f84e572` fix(ui): standardize table list skeletons and eliminate layout shift across all roles
+  2. `6c628e8` docs(handoff): record table skeleton ui audit and polish progress across all roles
 - **Kiểm tra đã chạy:**
   - `npm run typecheck`: **0 errors**.
   - `npm run lint`: **0 errors, 0 warnings**.
