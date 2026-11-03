@@ -208,7 +208,6 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                 statsLoading={stats.loading}
                 onNavigateSection={navigate}
                 onSelectProcedure={setSelected}
-                onOpenDrafts={() => setParams({ section: "drafts" })}
               />
             </>
           ) : section === "forms" || section === "upload-form" ? (
