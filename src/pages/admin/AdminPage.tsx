@@ -10,7 +10,6 @@ import {
   Books,
   Broadcast,
   Buildings,
-  CaretDown,
   ClipboardText,
   Database,
   House,
@@ -19,15 +18,12 @@ import {
   MagnifyingGlass,
   Plus,
   ClockCounterClockwise,
-  Robot,
-  ShieldCheck,
   SidebarSimple,
   Stack,
   UserCircle,
   Users,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
-// Recharts đã được gỡ bỏ do mock chart đã xóa
 import { Modal, Skeleton, TableSkeletonRows } from "@/components/ui";
 import {
   getAdminUsers,
@@ -122,7 +118,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   },
 ];
 
-// services và chartData mock đã được xóa — dữ liệu giám sát dịch vụ & lưu lượng sẽ lấy từ API sau.
+
 
 
 
@@ -642,67 +638,20 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
     void getAdminUsers({ page: 1, pageSize: 1 }).then(({ total }) => setUserCount(total)).catch(() => setUserCount(undefined));
   }, [loadAuditLogs]);
 
-  const stats = [
-    {
-      label: "Thủ tục đang áp dụng",
-      value: "—",
-      icon: ClipboardText,
-      tone: "info",
-    },
-    { label: "Tài khoản nội bộ", value: userCount?.toLocaleString("vi-VN") ?? "—", icon: Users, tone: "success" },
-    { label: "Nguồn tri thức AI", value: "—", icon: Robot, tone: "warning" },
-    {
-      label: "Cảnh báo hệ thống",
-      value: "—",
-      icon: ShieldCheck,
-      tone: "danger",
-    },
-  ];
-  const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> =
-    [
-      { id: "procedures", title: "Danh sách thủ tục", icon: ClipboardText },
-      { id: "knowledge", title: "Dữ liệu kiến thức AI", icon: Books },
-      { id: "users", title: "Người dùng", icon: Users },
-      { id: "roles", title: "Phân quyền", icon: Key },
-      { id: "integrations", title: "Tích hợp", icon: Stack },
-    ];
   return (
     <>
-      <section className="admin-stat-grid" aria-label="Chỉ số tổng quan">
-        {stats.map(({ label, value, icon: Icon, tone }) => (
-          <article key={label} className={`admin-stat-card is-${tone}`}>
+      <section className="grid max-w-sm gap-4" aria-label="Chỉ số tổng quan">
+          <article className="admin-stat-card is-success">
             <div>
               <span>
-                <Icon size={24} weight="duotone" />
+                <Users size={24} weight="duotone" />
               </span>
-              <small>{label}</small>
+              <small>Tài khoản nội bộ</small>
             </div>
-            <strong>{value}</strong>
+            <strong>{userCount?.toLocaleString("vi-VN") ?? "—"}</strong>
           </article>
-        ))}
       </section>
-      <UsageChart />
-      <section className="admin-card admin-module-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Phân hệ quản trị</h2>
-          </div>
-        </div>
-        <div className="admin-module-grid">
-          {shortcuts.map(({ id, title, icon: Icon }) => (
-            <button key={id} type="button" onClick={() => onSelect(id)}>
-              <span>
-                <Icon size={22} weight="duotone" />
-              </span>
-              <div>
-                <strong>{title}</strong>
-              </div>
-              <CaretDown size={16} />
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="admin-insight-grid">
+      <section>
         <article className="admin-card">
           <div className="admin-card-heading">
             <div>
@@ -755,36 +704,9 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
             )}
           </div>
         </article>
-        <article className="admin-card">
-          <div className="admin-card-heading">
-            <div>
-              <h2>Tình trạng dịch vụ</h2>
-            </div>
-          </div>
-          <div className="flex items-center justify-center p-8 text-xs text-slate-400 italic">
-            ⚠️ API giám sát trạng thái dịch vụ hệ thống sẽ được tích hợp sau.
-          </div>
-        </article>
+
       </section>
     </>
-  );
-}
-
-function UsageChart() {
-  return (
-    <section
-      className="admin-card admin-chart-card p-6"
-      aria-labelledby="usage-chart-title"
-    >
-      <div className="admin-chart-heading mb-4">
-        <div>
-          <h2 id="usage-chart-title">Xu hướng sử dụng hệ thống</h2>
-        </div>
-      </div>
-      <div className="flex items-center justify-center py-12 text-sm text-slate-400 italic">
-        ⚠️ API thống kê lưu lượng sử dụng hệ thống sẽ được tích hợp sau.
-      </div>
-    </section>
   );
 }
 
