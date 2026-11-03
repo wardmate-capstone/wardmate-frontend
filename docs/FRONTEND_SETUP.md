@@ -1,5 +1,23 @@
 # Nền tảng FE Web
 
+## Analytics: hoàn thiện health/backups/delivery detail — 03/11/2026
+
+- Đã gắn 29/29 thao tác nghiệp vụ trong Swagger Analytics vào luồng UI. Bảng method/path → màn hình ở `ANALYTICS_API_COVERAGE_2026-11-03.md`; GET `/` chỉ nhận diện service, không phải API nghiệp vụ.
+- Admin có **Giám sát dịch vụ** và **Sao lưu dữ liệu** thay placeholder. API tại `src/lib/api/systemOperations.ts`, UI `ServiceHealthView.tsx`, `SystemBackupsView.tsx`, bộ lọc dùng RHF/Zod và Query/cache theo danh tính. Status 202 chỉ là xếp hàng; health đọc lại sau 3 giây, backup theo dõi Queued/Running tối đa 20 lần cách 3 giây, đóng modal/lỗi/trạng thái kết thúc thì dừng.
+- Backup targets chưa có endpoint discovery: nhập mã dịch vụ theo cấu hình, không đồng nhất mã health (có thể procedure-catalog) với mã backup (có thể catalog). Server xác nhận target tồn tại; FE không đưa connection string vào form.
+- Phát thông báo đã đọc GET detail mới nhất, audit có phân trang, gửi lại dùng revision mới đọc. Mặc định list là nhóm cần xử lý, không phải tất cả; trạng thái BE không có Failed. Replay chỉ Dead/Blocked, khác SMS, cần role IT_ADMIN + quyền read/manage, lý do 5–500 ký tự và xác nhận rủi ro gửi trùng. Mutation lỗi giữ nháp, cần đọc lại trước lần gửi mới.
+- **Theo lựa chọn người dùng: không sửa BE.** Verify đã gắn nhưng chưa nghiệm thu bảo đảm kiểm tra file vì lỗi BE; xem `BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md`. UI chỉ ghi trạng thái máy chủ, không khẳng định có thể khôi phục. Không có API restore/download để dựng nút tương ứng.
+- Kiểm tra mới tại `tests/admin-system-operations.spec.ts`, `tests/admin-notification-deliveries.spec.ts`; proxy test 45 tuyến gồm 9 thao tác bổ sung. Chưa xác minh Azure/runner/Blob với tài khoản thật.
+
+## Admin: cấu hình và audit tập trung TASK-34 — 03/11/2026
+
+- Menu **Cấu hình hệ thống** đọc/sửa `analytics.lookbackDays` (số ngày tác vụ tổng hợp lại, 1–366); cần lý do trim 3–500 ký tự, PUT gửi `expectedVersion` từ chi tiết mới nhất. Xung đột 409 hoặc kết quả lưu không chắc chắn giữ nháp và khóa lưu đến khi người dùng đọc lại; không tự retry PUT, không tự tạo job thống kê.
+- **Nhật ký hoạt động** có tab Nghiệp vụ toàn hệ thống, Thay đổi cấu hình và Phân quyền IAM. Hai tab mới và cấu hình chỉ dùng role `IT_ADMIN`; IAM giữ quyền `iam.audit.read`. Route Admin hiện có còn cho phép quyền IAM được ủy quyền, không suy rằng vào route là đủ quyền gọi Analytics.
+- API/validation tại `src/lib/api/systemAdministration.ts`, hook Query tại `src/hooks/useSystemAdministration.ts`: đủ 7 method đọc/sửa cấu hình, danh sách/chi tiết audit. Query key có user ID, loại dữ liệu, bộ lọc/trang/ID; AbortSignal và không tự retry; dữ liệu và modal tách theo danh tính.
+- Audit mới lọc/phân trang phía server; ngày chọn theo Việt Nam được chuyển UTC có Z, không áp giới hạn kỳ 366 ngày của thống kê sang audit. `action` không có query hỗ trợ và `payloadHash` không có trong response nên không dựng bộ lọc/cột đó. Actor/IP thiếu không được suy đoán; `[REDACTED]` là dữ liệu đã che tại nguồn.
+- Vite định tuyến `/api/v1/system` tới `VITE_ANALYTICS_API_URL` hoặc Gateway fallback trước `/api` của IAM. Hosting bật proxy phải có tuyến tương đương, không trả SPA HTML cho API; `vercel.json` hiện chưa cấu hình reverse proxy production.
+- Kiểm thử mock tại `tests/admin-system-audit.spec.ts`, `tests/admin-system-settings.spec.ts`; proxy bằng `node tests/api-proxy-check.mjs`. Các test này không xác minh Azure, migrations, cờ quản trị hoặc relay thật. Chi tiết phạm vi/nghiệp vụ ở `ADMIN_SYSTEM_AUDIT_INTEGRATION_PLAN_2026-11-03.md`.
+
 ## Danh sách thủ tục trong Admin — 23/10/2026
 
 - Admin dùng `AdminProceduresView` với `ProcedureApiList` không truyền `onSelect`/`onViewVersions`: chỉ danh sách, tìm kiếm, bộ lọc và phân trang; không cột thao tác, chi tiết, liên kết công khai hoặc lịch sử. Số bản lưu chỉ hiển thị tĩnh. Chỉ gọi danh mục và danh sách quản lý để vẫn xem được thủ tục ngừng công khai; không mount workspace quản lý hoặc đọc tham số bản nháp từ URL. Áp dụng cả tài khoản đa vai trò.
