@@ -47,7 +47,11 @@ import {
 import { ManagerProfileDetailView } from '@/pages/manager/views/ManagerProfileDetailView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import type { ManagerProfileItem } from '@/pages/manager/types';
-import { actionLabels, roleLabels, AdminRbacAuditView, AdminRolesView, UserRolesModal } from './AdminRbacViews';
+import { actionLabels, roleLabels, AdminRolesView, UserRolesModal } from './AdminRbacViews';
+import { AdminAuditView, type AdminAuditTab } from './AdminAuditView';
+import { SystemSettingsView } from './SystemSettingsView';
+import { ServiceHealthView } from './ServiceHealthView';
+import { SystemBackupsView } from './SystemBackupsView';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
 import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
@@ -57,6 +61,7 @@ import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView
 import { CreateStaffAccountModal } from './CreateStaffAccountModal';
 
 type SectionId =
+  | "system-settings"
   | "closures"
   | "analytics-jobs"
   | "overview"
@@ -108,9 +113,10 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
       { id: "analytics-jobs", label: "Job thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "notification-deliveries", label: "Phát thông báo", icon: Broadcast, permissions: ['notifications.deliveries.read'], fallbackRoles: ['IT_ADMIN'] },
       { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
-      { id: "integrations", label: "Dịch vụ tích hợp", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
-      { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, permissions: ['iam.audit.read'] },
-      { id: "backup", label: "Bảo mật & sao lưu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
+      { id: "integrations", label: "Giám sát dịch vụ", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
+      { id: "system-settings", label: "Cấu hình hệ thống", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
+      { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, fallbackRoles: ['IT_ADMIN'] },
+      { id: "backup", label: "Sao lưu dữ liệu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
       { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ],
   },
@@ -121,6 +127,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 
 
 const sectionMeta: Record<SectionId, { title: string }> = {
+  'system-settings': { title: 'Cấu hình hệ thống' },
   closures: { title: 'Lịch ngày lễ toàn quốc' },
   'analytics-jobs': { title: 'Quản lý job thống kê' },
   'notification-deliveries': { title: 'Quản trị phát thông báo' },
@@ -130,14 +137,15 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   users: { title: "Người dùng hệ thống" },
   wards: { title: "Quản lý đơn vị Phường / Xã" },
   roles: { title: "Vai trò & quyền hạn" },
-  integrations: { title: "Dịch vụ tích hợp" },
+  integrations: { title: "Giám sát dịch vụ" },
   audit: { title: "Nhật ký hoạt động" },
-  backup: { title: "Bảo mật & sao lưu" },
+  backup: { title: "Sao lưu dữ liệu" },
   profile: { title: "Hồ sơ cá nhân" },
 };
 
 export function AdminPage({ embedded = false, initialSection = "overview" }: { embedded?: boolean; initialSection?: SectionId } = {}) {
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
+  const [auditTab, setAuditTab] = useState<AdminAuditTab>('events');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [query, setQuery] = useState("");
@@ -361,10 +369,6 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
     setSidebarOpen(false);
   }
 
-  function demoAction(message: string) {
-    toast.success(message);
-  }
-
 
   return (
     <div className={embedded ? "" : "admin-layout"}>
@@ -421,13 +425,13 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
 
           {activeSection === "overview" && (
-            <Overview onSelect={selectSection} />
+            <Overview onSelect={id => { if (id === 'audit') setAuditTab('iam'); selectSection(id); }} />
           )}
           {activeSection === "procedures" && (
             <AdminProceduresView />
           )}
           {activeSection === "analytics-jobs" && <AnalyticsJobsView />}
-          {activeSection === "notification-deliveries" && <NotificationDeliveriesView />}
+          {activeSection === "notification-deliveries" && <NotificationDeliveriesView key={user?.id} />}
           {activeSection === "closures" && <CalendarClosuresView />}
           {activeSection === "knowledge" && (
             <KnowledgeBaseView />
@@ -526,10 +530,11 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
           {activeSection === "roles" && <AdminRolesView />}
           {activeSection === "integrations" && (
-            <IntegrationsView onAction={demoAction} />
+            user?.roles.includes('IT_ADMIN') ? <ServiceHealthView key={user.id} /> : <p role="alert">Bạn không có quyền giám sát dịch vụ.</p>
           )}
-          {activeSection === "audit" && <AdminRbacAuditView />}
-          {activeSection === "backup" && <BackupView onAction={demoAction} />}
+          {activeSection === "audit" && <AdminAuditView key={user?.id} tab={auditTab} onTab={setAuditTab} />}
+          {activeSection === "system-settings" && user?.roles.includes('IT_ADMIN') && <SystemSettingsView key={user.id} onHistory={() => { setAuditTab('settings'); selectSection('audit'); }} />}
+          {activeSection === "backup" && (user?.roles.includes('IT_ADMIN') ? <SystemBackupsView key={user.id} /> : <p role="alert">Bạn không có quyền quản lý sao lưu.</p>)}
         </main>
       </div>
       {canCreateStaff && (
@@ -701,7 +706,7 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
         <article className="admin-card">
           <div className="admin-card-heading">
             <div>
-              <h2>Hoạt động quản trị gần đây</h2>
+              <h2>Phân quyền gần đây</h2>
             </div>
             <button type="button" onClick={() => onSelect("audit")}>
               Xem nhật ký
@@ -1393,40 +1398,6 @@ function WardsView({
           </form>
         </Modal>
       )}
-    </section>
-  );
-}
-
-function IntegrationsView({
-  onAction,
-}: {
-  onAction: (message: string) => void;
-}) {
-  void onAction;
-  return (
-    <section className="admin-card admin-content-card p-8">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Stack size={40} className="text-slate-300 mb-2" />
-        <h2 className="text-base font-bold text-slate-800">Dịch vụ tích hợp hệ thống</h2>
-        <p className="mt-2 text-xs text-slate-400 italic">
-          ⚠️ API cấu hình và giám sát dịch vụ tích hợp sẽ được tích hợp sau.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function BackupView({ onAction }: { onAction: (message: string) => void }) {
-  void onAction;
-  return (
-    <section className="admin-card admin-content-card p-8">
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Database size={40} className="text-slate-300 mb-2" />
-        <h2 className="text-base font-bold text-slate-800">Bảo mật & Sao lưu dữ liệu</h2>
-        <p className="mt-2 text-xs text-slate-400 italic">
-          ⚠️ API quản lý sao lưu và bảo mật hệ thống sẽ được tích hợp sau.
-        </p>
-      </div>
     </section>
   );
 }
