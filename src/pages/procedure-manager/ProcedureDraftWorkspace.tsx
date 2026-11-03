@@ -88,10 +88,12 @@ export function PdfSource({
   id,
   draft = false,
   versionId,
+  allowFullscreen = true,
 }: {
   id: string;
   draft?: boolean;
   versionId?: string;
+  allowFullscreen?: boolean;
 }) {
   const [source, setSource] = useState<{ url: string; expires: number }>();
   const [error, setError] = useState("");
@@ -156,15 +158,16 @@ export function PdfSource({
               <span>Mở tab mới</span>
             </a>
           )}
-          <Button
+          {allowFullscreen && <Button
             size="small"
             variant="ghost"
             className="h-7 px-1.5 text-slate-600 hover:bg-slate-200"
             onClick={() => setIsFullscreen(!isFullscreen)}
             title={isFullscreen ? "Thu nhỏ lại" : "Phóng to toàn màn hình"}
+            aria-label={isFullscreen ? "Thu nhỏ lại" : "Phóng to toàn màn hình"}
           >
             {isFullscreen ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
-          </Button>
+          </Button>}
         </div>
       </div>
       <div className="flex-1 min-h-0 bg-slate-100">
