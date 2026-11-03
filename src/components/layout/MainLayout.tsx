@@ -23,6 +23,7 @@ import { UserDropdown } from '@/components/layout/UserDropdown';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useAuthStore } from '@/stores/authStore';
 import { getManagementHome } from '@/lib/authRedirect';
+import { AiChatWidget } from '@/components/ai/AiChatWidget';
 
 const navigation = [
   { href: '/', label: 'Trang chủ', icon: House },
@@ -159,6 +160,7 @@ export function MainLayout() {
       </header>
 
       <main id="main" tabIndex={-1}><Outlet /></main>
+      {['/', '/thu-tuc', '/thu-tuc-hanh-chinh', '/huong-dan', '/hoi-dap'].some(path => path === '/' ? location.pathname === '/' : location.pathname === path || location.pathname.startsWith(path + '/')) && <AiChatWidget />}
 
       {!hideFooter && (
         <footer className="bg-red-950 text-red-100">
