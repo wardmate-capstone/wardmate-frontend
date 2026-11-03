@@ -1043,7 +1043,7 @@ export function AdminRbacAuditView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-600">
             Theo dõi chi tiết các thao tác phân quyền, bổ nhiệm và quản lý tài
-            khoản trên hệ thống
+            khoản trên hệ thống. Bộ lọc chỉ áp dụng cho các bản ghi trên trang đang xem.
           </p>
           <Button
             size="small"
