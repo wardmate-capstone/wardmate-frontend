@@ -3,11 +3,7 @@ import {
   WarningCircle,
   CheckCircle,
   SealCheck,
-  // MagnifyingGlass,
-  // NotePencil,
-  // Folder,
   QrCode,
-  // CaretDown,
   ShieldCheck,
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
@@ -39,13 +35,6 @@ export function CitizenDashboardView({
     { label: 'Đã hoàn tất thủ tục', value: `${completedCount}`, icon: SealCheck, tone: 'success' },
   ];
 
-  // const quickShortcuts = [
-  //   { id: 'procedures' as CitizenSectionId, title: 'Tra cứu thủ tục', icon: MagnifyingGlass },
-  //   { id: 'dossiers_draft' as CitizenSectionId, title: 'Hồ sơ bản nháp', icon: NotePencil },
-  //   { id: 'dossiers_all' as CitizenSectionId, title: 'Hồ sơ của tôi', icon: Folder },
-  //   { id: 'qr_code' as CitizenSectionId, title: 'Mã QR nộp hồ sơ', icon: QrCode },
-  // ];
-
   return (
     <>
       {/* 4 Thẻ chỉ số */}
@@ -69,31 +58,6 @@ export function CitizenDashboardView({
           </article>
         ))}
       </section>
-
-      {/* Biểu đồ xu hướng */}
-      <CitizenUsageChart />
-
-      {/* Phím tắt thao tác nhanh */}
-      {/* <section className="admin-card admin-module-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Tiện ích nộp & Chuẩn bị hồ sơ</h2>
-          </div>
-        </div>
-        <div className="admin-module-grid">
-          {quickShortcuts.map(({ id, title, icon: Icon }) => (
-            <button key={id} type="button" onClick={() => onSelectSection(id)}>
-              <span>
-                <Icon size={22} weight="duotone" />
-              </span>
-              <div>
-                <strong>{title}</strong>
-              </div>
-              <CaretDown size={16} />
-            </button>
-          ))}
-        </div>
-      </section> */}
 
       {/* 2 Khối thông tin: Hồ sơ gần đây & Lưu ý hướng dẫn */}
       <section className="admin-insight-grid">
@@ -196,20 +160,5 @@ export function CitizenDashboardView({
         </article>
       </section>
     </>
-  );
-}
-
-function CitizenUsageChart() {
-  return (
-    <section className="admin-card admin-chart-card" aria-labelledby="citizen-chart-title">
-      <div className="admin-chart-heading">
-        <div>
-          <h2 id="citizen-chart-title">Nhật ký tra cứu &amp; Tiến độ chuẩn bị hồ sơ</h2>
-        </div>
-      </div>
-      <div className="flex items-center justify-center py-12 text-sm text-slate-400 italic">
-        ⚠️ API thống kê hoạt động công dân sẽ được tích hợp sau.
-      </div>
-    </section>
   );
 }
