@@ -3,7 +3,7 @@ import { authReply, mockWorkspaceAuth } from './fixtures/auth';
 import { mockDocumentWorkflow } from './fixtures/documentWorkflow';
 test.beforeEach(async ({ page }) => mockWorkspaceAuth(page, ['FRONT_DESK_OFFICER']));
 
-test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và không tràn ngang trên mobile', async ({ page }) => {
+test('Cổng cán bộ: Dashboard giữ luồng hồ sơ thực, bỏ khối chờ và không tràn ngang trên mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/officer');
 
@@ -11,17 +11,19 @@ test('Cổng cán bộ: Dashboard hiển thị hiệu suất ca trực và khôn
   await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), Cán bộ .+$/ })).toBeVisible();
 
   // Check dashboard content rather than labels in the closed mobile sidebar.
-  await expect(page.getByRole('region', { name: 'Tiến độ xử lý hồ sơ trong ca trực' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Tiến độ xử lý hồ sơ trong ca trực' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Hồ sơ ưu tiên xử lý ngay (0)' })).toBeVisible();
   await expect(page.getByRole('complementary')).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Chỉ số hiệu suất ca trực' })).toBeVisible();
-  await expect(page.getByText('API chỉ số hiệu suất cán bộ sẽ được tích hợp sau.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Chỉ số hiệu suất ca trực' })).toHaveCount(0);
+  await expect(page.getByText('Đang nhận tiếp dân', { exact: false })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Xem danh sách hồ sơ sẵn sàng' })).toBeVisible();
 
   // Check no QR Scan is present for officer
   await expect(page.getByText('Quét QR')).toHaveCount(0);
 
   // Check horizontal overflow on mobile
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/officer-dashboard-cleanup-mobile.png', fullPage: true });
 });
 
 test('Cổng cán bộ: Mở menu điều hướng mobile và chuyển sang Quản lý hồ sơ', async ({ page }) => {

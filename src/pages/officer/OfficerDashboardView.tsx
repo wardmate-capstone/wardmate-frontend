@@ -6,11 +6,7 @@ import { ListSkeleton } from '@/components/ui';
 import {
   ArrowRight,
   CaretRight,
-  TrendUp,
-  UserCircle,
-  ChartBar,
   Lightning,
-  Check,
   CheckCircle,
 } from '@phosphor-icons/react';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
@@ -53,34 +49,10 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
         </h1>
       </div>
 
-      {/* Main Grid: Biểu đồ luồng xử lý & Tổng quan chức năng chính */}
+      {/* Hàng đợi ưu tiên và hồ sơ sẵn sàng */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cột 1 & 2 (2/3 width): Biểu đồ xử lý hồ sơ & Hàng đợi ưu tiên */}
+        {/* Hàng đợi ưu tiên */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Card Biểu đồ — API sẽ được tích hợp sau */}
-          <section
-            aria-labelledby="chart-heading"
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="grid size-8 place-items-center rounded-lg bg-red-50 text-red-800">
-                  <ChartBar size={18} weight="bold" />
-                </span>
-                <div>
-                  <h2 id="chart-heading" className="text-base font-bold text-slate-900">
-                    Tiến độ xử lý hồ sơ trong ca trực
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            {/* API thống kê luồng xử lý hồ sơ theo khung giờ sẽ được tích hợp sau */}
-            <div className="flex items-center justify-center h-64 text-sm text-slate-400 italic">
-              Biểu đồ tiến độ xử lý hồ sơ đang được tổng hợp số liệu thực tế theo ca trực.
-            </div>
-          </section>
-
           {/* Hàng đợi ưu tiên xử lý ngay (Gọn gàng, chỉ hiển thị top hồ sơ cần duyệt lại gấp) */}
           <section
             aria-labelledby="priority-action-heading"
@@ -92,9 +64,9 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                   <Lightning size={18} weight="fill" />
                 </span>
                 <div>
-                  <h3 id="priority-action-heading" className="text-base font-bold text-slate-900">
+                  <h2 id="priority-action-heading" className="text-base font-bold text-slate-900">
                     Hồ sơ ưu tiên xử lý ngay ({resubmittedApps.length})
-                  </h3>
+                  </h2>
                 </div>
               </div>
               <button
@@ -127,7 +99,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                             {app.applicationNumber}
                           </strong>
                           <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-                            Công dân vừa bổ sung V2
+                            Công dân vừa bổ sung
                           </span>
                         </div>
                         <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
@@ -174,17 +146,14 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                 <span className="grid size-8 place-items-center rounded-lg bg-emerald-100 text-emerald-800">
                   <CheckCircle size={18} weight="bold" />
                 </span>
-                <h3 id="desk-action-heading" className="text-sm font-bold text-emerald-950">
+                <h2 id="desk-action-heading" className="text-sm font-bold text-emerald-950">
                   Giấy tờ sẵn sàng nộp UBND
-                </h3>
+                </h2>
               </div>
               <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
                 {isLoading ? '…' : documentsReadyApps.length} hồ sơ giấy tờ sẵn sàng
               </span>
             </div>
-            <p className="text-xs text-slate-600">
-              Hồ sơ đã hoàn thành tiền kiểm. Công dân đã nhận mã QR và bản PDF tờ khai để mang đến nộp tại bộ phận Một cửa.
-            </p>
             <button
               type="button"
               onClick={() => onSelectSection('apps-approved')}
@@ -195,56 +164,6 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             </button>
           </section>
 
-          {/* Card Hiệu suất ca làm việc — API sẽ được tích hợp sau */}
-          <section
-            aria-labelledby="performance-heading"
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <TrendUp size={20} className="text-emerald-700" weight="bold" />
-                <h3 id="performance-heading" className="text-sm font-bold text-slate-900">
-                  Chỉ số hiệu suất ca trực
-                </h3>
-              </div>
-            </div>
-            <div className="flex items-center justify-center py-6 text-sm text-slate-400 italic">
-              ⚠️ API chỉ số hiệu suất cán bộ sẽ được tích hợp sau.
-            </div>
-          </section>
-
-          {/* Card Thông tin ca trực & Phân công */}
-          <section
-            aria-labelledby="officer-duty-heading"
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3"
-          >
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <UserCircle size={20} className="text-slate-700" weight="bold" />
-              <h3 id="officer-duty-heading" className="text-sm font-bold text-slate-900">
-                Thông tin quầy làm việc
-              </h3>
-            </div>
-            <dl className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <dt className="text-slate-500">Cán bộ phụ trách:</dt>
-                <dd className="font-bold text-slate-900">{officerName}</dd>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <dt className="text-slate-500">Vị trí:</dt>
-                <dd className="font-semibold text-slate-700">Bộ phận Một cửa</dd>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <dt className="text-slate-500">Lĩnh vực:</dt>
-                <dd className="font-medium text-slate-700">Được phân công theo ca</dd>
-              </div>
-              <div className="flex justify-between py-1">
-                <dt className="text-slate-500">Trạng thái quầy:</dt>
-                <dd className="font-semibold text-emerald-700 inline-flex items-center gap-1">
-                  <Check size={12} weight="bold" /> Đang nhận tiếp dân
-                </dd>
-              </div>
-            </dl>
-          </section>
         </div>
       </div>
     </div>
