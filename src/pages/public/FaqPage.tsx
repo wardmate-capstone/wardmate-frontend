@@ -1,7 +1,6 @@
 import * as Accordion from '@radix-ui/react-accordion';
 import { ArrowRight, CaretDown, Question } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
-import { QuestionForm } from '@/components/faq/QuestionForm';
 
 const questions = [
   {
@@ -39,7 +38,7 @@ export function FaqPage() {
         </div>
       </section>
 
-      <section className="faq-main" aria-label="Hỏi đáp và gửi câu hỏi">
+      <section className="faq-main" aria-label="Giải đáp câu hỏi thường gặp">
         <div className="faq-list-column">
           <div className="faq-list-heading"><p>Giải đáp nhanh</p><h2>5 điều bạn cần biết</h2></div>
           <Accordion.Root type="single" collapsible className="faq-page-accordion">
@@ -57,8 +56,6 @@ export function FaqPage() {
             ))}
           </Accordion.Root>
         </div>
-
-        <aside className="faq-question-column" aria-label="Gửi câu hỏi mới"><QuestionForm /></aside>
       </section>
 
       <section className="faq-next-step">
