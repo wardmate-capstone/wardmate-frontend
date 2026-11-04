@@ -18,6 +18,7 @@ import {
   MagnifyingGlass,
   Plus,
   ClockCounterClockwise,
+  ShieldCheck,
   SidebarSimple,
   Stack,
   UserCircle,
@@ -28,6 +29,7 @@ import { Modal, Skeleton, TableSkeletonRows } from "@/components/ui";
 import {
   getAdminUsers,
   getAccount,
+  getAccounts,
   getAdminProfile,
   updateAccountStatus,
   getWards,
@@ -35,6 +37,8 @@ import {
   assignUserWard,
   saveAdminProfile,
   authErrorMessage,
+  type AccountItem,
+  type AccountPage,
   type ManagedUserDto,
   type ManagedUserPage,
   type WardDto,
@@ -63,6 +67,7 @@ type SectionId =
   | "overview"
   | "procedures"
   | "knowledge"
+  | "accounts"
   | "users"
   | "wards"
   | "roles"
@@ -98,9 +103,10 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
     title: "Tài khoản & truy cập",
     items: [
+      { id: "accounts", label: "Tài khoản đăng nhập", icon: Key, permissions: ['iam.accounts.'] },
       { id: "users", label: "Người dùng hệ thống", icon: Users, permissions: ['iam.accounts.'] },
       { id: "wards", label: "Đơn vị Phường / Xã", icon: Buildings, permissions: ['iam.wards.'] },
-      { id: "roles", label: "Vai trò & quyền hạn", icon: Key, permissions: ['iam.rbac.manage'] },
+      { id: "roles", label: "Vai trò & quyền hạn", icon: ShieldCheck, permissions: ['iam.rbac.manage'] },
     ],
   },
   {
@@ -130,6 +136,7 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
   knowledge: { title: "Dữ liệu kiến thức AI" },
+  accounts: { title: "Tài khoản đăng nhập" },
   users: { title: "Người dùng hệ thống" },
   wards: { title: "Quản lý đơn vị Phường / Xã" },
   roles: { title: "Vai trò & quyền hạn" },
@@ -246,12 +253,93 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
     if (activeSection === 'users' || activeSection === 'wards') void fetchWards();
   }, [activeSection, fetchWards]);
 
-  const currentUserId = useAuthStore((s) => s.user?.id);
+    const currentUserId = useAuthStore((s) => s.user?.id);
 
   const filteredUsers = useMemo(() => {
     if (!userData) return [];
-    return userData.items.filter((item) => item.id !== currentUserId);
+    return userData.items.filter((item) => {
+      // Ẩn tài khoản quản trị viên / IT_ADMIN khỏi danh sách người dùng thông thường
+      if (item.id === currentUserId) return false;
+      if (item.username.toLowerCase() === 'admin' || item.username.toLowerCase().startsWith('admin.')) return false;
+      if (item.roles?.some((r) => r.roleName === 'IT_ADMIN')) return false;
+      return true;
+    });
   }, [userData, currentUserId]);
+
+  // ACCOUNTS MANAGEMENT STATE (/api/v1/accounts)
+  const [accountsData, setAccountsData] = useState<AccountPage | null>(null);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
+  const [accountsPage, setAccountsPage] = useState(1);
+  const [accountToToggleDirect, setAccountToToggleDirect] = useState<AccountItem | null>(null);
+
+  const fetchAccounts = useCallback(async (page: number) => {
+    setAccountsLoading(true);
+    setAccountsError(null);
+    try {
+      const data = await getAccounts(page, 20);
+      setAccountsData(data);
+    } catch (err) {
+      setAccountsError(authErrorMessage(err));
+    } finally {
+      setAccountsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'accounts') {
+      void fetchAccounts(accountsPage);
+      void fetchWards();
+    }
+  }, [activeSection, accountsPage, fetchAccounts, fetchWards]);
+
+  const filteredAccounts = useMemo(() => {
+    if (!accountsData) return [];
+    return accountsData.items.filter((item) => {
+      // Ẩn tài khoản quản trị viên / IT_ADMIN khỏi danh sách tài khoản
+      if (item.id === currentUserId) return false;
+      if (item.username.toLowerCase() === 'admin' || item.username.toLowerCase().startsWith('admin.')) return false;
+      return true;
+    });
+  }, [accountsData, currentUserId]);
+
+  async function confirmToggleDirectAccountStatus() {
+    if (!accountToToggleDirect || togglingId) return;
+    const account = accountToToggleDirect;
+    setTogglingId(account.id);
+    const newStatus = !account.isActive;
+    try {
+      await updateAccountStatus(account.id, newStatus);
+      setAccountsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === account.id ? { ...item, isActive: newStatus } : item
+          ),
+        };
+      });
+      setUserData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === account.id ? { ...item, isActive: newStatus } : item
+          ),
+        };
+      });
+      toast.success(
+        newStatus
+          ? `Đã kích hoạt tài khoản ${account.username}.`
+          : `Đã tạm khóa tài khoản ${account.username}.`
+      );
+      setAccountToToggleDirect(null);
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   const [accountToToggle, setAccountToToggle] = useState<ManagedUserDto | null>(null);
 
@@ -433,6 +521,24 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <KnowledgeBaseView />
           )}
           {activeSection === "profile" && <UnifiedSelfProfileView />}
+          {activeSection === "accounts" && (
+            <AccountsView
+              query={query}
+              setQuery={setQuery}
+              accounts={filteredAccounts}
+              wards={wards}
+              total={accountsData?.total ?? 0}
+              page={accountsPage}
+              pageSize={20}
+              loading={accountsLoading}
+              error={accountsError}
+              togglingId={togglingId}
+              onPageChange={(p) => setAccountsPage(p)}
+              onRetry={() => void fetchAccounts(accountsPage)}
+              onToggleStatus={(acc) => setAccountToToggleDirect(acc)}
+              onCreateStaff={canCreateStaff ? () => setCreateStaffOpen(true) : undefined}
+            />
+          )}
           {activeSection === "users" && (
             selectedUser ? (
               detailLoading ? (
@@ -538,10 +644,58 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           open={createStaffOpen}
           wards={wards}
           onOpenChange={setCreateStaffOpen}
-          onCreated={() => void fetchUsers(userPage)}
+          onCreated={() => { void fetchUsers(userPage); void fetchAccounts(accountsPage); }}
         />
       )}
       <UserRolesModal user={roleUser} onClose={() => setRoleUser(undefined)} onChanged={() => void fetchUsers(userPage)} />
+
+      {/* Modal xác nhận Khóa / Mở khóa tài khoản trực tiếp */}
+      {accountToToggleDirect && (
+        <Modal
+          open={Boolean(accountToToggleDirect)}
+          onOpenChange={(open) => {
+            if (!open) setAccountToToggleDirect(null);
+          }}
+          title={accountToToggleDirect.isActive ? "Xác nhận tạm khóa tài khoản" : "Xác nhận kích hoạt tài khoản"}
+        >
+          <div className="space-y-4 py-2">
+            <p className="text-xs sm:text-sm text-slate-600">
+              {accountToToggleDirect.isActive ? (
+                <>
+                  Bạn có chắc chắn muốn <strong>tạm khóa</strong> tài khoản{" "}
+                  <strong className="text-slate-900">@{accountToToggleDirect.username}</strong>? Người dùng sẽ không thể đăng nhập vào hệ thống khi tài khoản bị khóa.
+                </>
+              ) : (
+                <>
+                  Bạn có chắc chắn muốn <strong>kích hoạt lại</strong> tài khoản{" "}
+                  <strong className="text-slate-900">@{accountToToggleDirect.username}</strong>?
+                </>
+              )}
+            </p>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAccountToToggleDirect(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(togglingId)}
+                onClick={() => void confirmToggleDirectAccountStatus()}
+                className={`px-4 py-2 text-xs font-bold rounded-lg text-white transition-colors disabled:opacity-50 ${
+                  accountToToggleDirect.isActive
+                    ? "bg-amber-700 hover:bg-amber-800"
+                    : "bg-emerald-700 hover:bg-emerald-800"
+                }`}
+              >
+                {togglingId ? "Đang xử lý..." : accountToToggleDirect.isActive ? "Tạm khóa tài khoản" : "Kích hoạt tài khoản"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal xác nhận Khóa / Mở khóa tài khoản người dùng */}
       {accountToToggle && (
@@ -800,6 +954,229 @@ function formatRoleLabel(roleName: string): string {
 function getRoleBadgeClass(roleName: string): string {
   const config = getRoleConfig(roleName);
   return config ? config.badgeClass : 'bg-slate-100 text-slate-700 border-slate-200';
+}
+
+
+function AccountsView({
+  query,
+  setQuery,
+  accounts,
+  wards,
+  total,
+  page,
+  pageSize,
+  loading,
+  error,
+  togglingId,
+  onPageChange,
+  onRetry,
+  onToggleStatus,
+  onCreateStaff,
+}: {
+  query: string;
+  setQuery: (value: string) => void;
+  accounts: AccountItem[];
+  wards: WardDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  error: string | null;
+  togglingId: string | null;
+  onPageChange: (page: number) => void;
+  onRetry: () => void;
+  onToggleStatus: (account: AccountItem) => void;
+  onCreateStaff?: () => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  const displayAccounts = useMemo(() => {
+    return accounts.filter((acc) => {
+      if (statusFilter === 'ACTIVE' && !acc.isActive) return false;
+      if (statusFilter === 'LOCKED' && acc.isActive) return false;
+      if (query.trim()) {
+        const q = query.toLowerCase().trim();
+        const matchUsername = acc.username.toLowerCase().includes(q);
+        const matchEmail = acc.email?.toLowerCase().includes(q);
+        return matchUsername || matchEmail;
+      }
+      return true;
+    });
+  }, [accounts, statusFilter, query]);
+
+  return (
+    <section className="admin-card admin-table-card admin-content-card">
+      <div className="admin-toolbar flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Tìm tên đăng nhập hoặc email..."
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
+            aria-label="Lọc theo trạng thái"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="LOCKED">Đang tạm khóa</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
+            aria-label="Tải lại danh sách"
+          >
+            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
+            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+          </button>
+
+          {onCreateStaff && (
+            <button
+              type="button"
+              onClick={onCreateStaff}
+              className="inline-flex items-center gap-1.5 h-10 px-4 text-xs font-bold rounded-lg bg-red-800 hover:bg-red-900 text-white shadow-xs transition-colors"
+            >
+              <Plus size={16} weight="bold" />
+              <span>Thêm cán bộ mới</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error ? (
+        <div className="p-8 text-center space-y-3">
+          <p className="text-sm text-rose-600 font-medium">{error}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <ArrowsClockwise size={14} />
+            <span>Thử lại</span>
+          </button>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="admin-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/75 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                <th className="px-4 py-3">Tên đăng nhập</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Đơn vị Phường / Xã</th>
+                <th className="px-4 py-3">Ngày tạo</th>
+                <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <TableSkeletonRows
+                  rows={5}
+                  columns={6}
+                  columnWidths={['w-36', 'w-48', 'w-36', 'w-28', 'w-24', 'w-20']}
+                  lastCellClassName="text-right"
+                />
+              ) : displayAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                    Không tìm thấy tài khoản đăng nhập phù hợp.
+                  </td>
+                </tr>
+              ) : (
+                displayAccounts.map((account) => {
+                  const ward = wards.find((w) => w.id === account.wardId);
+                  const isToggling = togglingId === account.id;
+
+                  return (
+                    <tr key={account.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3.5 font-bold text-slate-900 font-mono">
+                        @{account.username}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-700">{account.email}</td>
+                      <td className="px-4 py-3.5 text-slate-600">
+                        {ward ? (
+                          <span className="font-medium text-slate-800">{ward.name}</span>
+                        ) : (
+                          <span className="text-slate-400 italic">— Chưa gán —</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 font-mono text-[11px]">
+                        {new Date(account.createdAt).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {account.isActive ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            Hoạt động
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
+                            <span className="size-1.5 rounded-full bg-rose-500" />
+                            Tạm khóa
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <button
+                          type="button"
+                          disabled={isToggling}
+                          onClick={() => onToggleStatus(account)}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                            account.isActive
+                              ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                          }`}
+                        >
+                          {isToggling ? 'Đang lưu...' : account.isActive ? 'Khóa tài khoản' : 'Mở khóa'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination Footer */}
+      {!loading && !error && total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-slate-100 text-xs text-slate-500">
+          <span>
+            Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Tổng cộng <strong>{total}</strong> tài khoản)
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => onPageChange(page - 1)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Trước
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function UsersView({

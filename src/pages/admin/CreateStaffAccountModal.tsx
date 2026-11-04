@@ -8,10 +8,10 @@ import { toast } from '@/components/ui/Toast';
 import { PasswordStrength } from '@/components/auth/PasswordStrength';
 import { authErrorMessage, createStaffAccount, type StaffAccountRole, type WardDto } from '@/lib/api';
 
-const roleOptions: Array<{ value: StaffAccountRole; label: string; hint: string }> = [
-  { value: 'FRONT_DESK_OFFICER', label: 'Cán bộ Một cửa', hint: 'Tiếp nhận và tiền kiểm hồ sơ tại phường được chọn.' },
-  { value: 'MANAGER', label: 'Lãnh đạo UBND (Quản lý)', hint: 'Quản lý cán bộ, phân công và theo dõi hồ sơ của phường được chọn.' },
-  { value: 'PROCEDURE_MANAGER', label: 'Quản lý thủ tục', hint: 'Quản lý danh mục thủ tục và biểu mẫu; không bắt buộc gán phường.' },
+const roleOptions: Array<{ value: StaffAccountRole; label: string }> = [
+  { value: 'FRONT_DESK_OFFICER', label: 'Cán bộ Một cửa' },
+  { value: 'MANAGER', label: 'Lãnh đạo UBND (Quản lý)' },
+  { value: 'PROCEDURE_MANAGER', label: 'Quản lý thủ tục' },
 ];
 
 // Phường bắt buộc với vai trò làm việc theo phường; admin không có phường để BE tự suy ra.
@@ -107,11 +107,10 @@ export function CreateStaffAccountModal({ open, wards, onOpenChange, onCreated }
             {roleOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         ))}
-        {roleOption && <p className="-mt-2 text-[11px] text-slate-500">{roleOption.hint}</p>}
         {field('wardId', wardRequiredRoles.includes(role) ? 'Phường / Xã công tác *' : 'Phường / Xã công tác (không bắt buộc)', (
           <select {...register('wardId')} {...aria('wardId')} className={inputClass}>
             <option value="">{wards.length ? '— Chọn phường / xã —' : 'Chưa có phường / xã nào'}</option>
-            {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name} ({ward.code})</option>)}
+            {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}
           </select>
         ))}
         {field('fullName', 'Họ và tên *', <input {...register('fullName')} {...aria('fullName')} autoComplete="off" placeholder="Ví dụ: Trần Minh Hoàng" className={inputClass} />)}
@@ -121,9 +120,6 @@ export function CreateStaffAccountModal({ open, wards, onOpenChange, onCreated }
           <input {...register('password')} {...aria('password')} type="password" autoComplete="new-password" placeholder="••••••••" className={inputClass} />
         ))}
         <PasswordStrength value={password} strict />
-        <p className="text-[11px] text-slate-500 italic">
-          * Vai trò được gán tự động theo loại tài khoản. Hãy gửi mật khẩu khởi tạo cho cán bộ qua kênh an toàn và đề nghị đổi mật khẩu sau lần đăng nhập đầu tiên.
-        </p>
         <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
           <button type="button" onClick={() => onOpenChange(false)} className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50">
             Hủy bỏ

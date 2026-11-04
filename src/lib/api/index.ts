@@ -260,6 +260,22 @@ export interface AccountItem {
   email: string;
   isActive: boolean;
   createdAt: string;
+  wardId?: string | null;
+}
+
+export interface AccountPage {
+  items: AccountItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export async function getAccounts(page = 1, pageSize = 20): Promise<AccountPage> {
+  const response = await api.get<AccountPage>('/api/v1/accounts', {
+    ...cookieConfig,
+    params: { page, pageSize },
+  });
+  return response.data;
 }
 
 export async function getAccount(userId: string): Promise<AccountItem> {
