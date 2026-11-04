@@ -1,5 +1,30 @@
 # Tiến độ và bàn giao WardMate
 
+## Đồng bộ remote main, phân tách Accounts/Users và hoàn thiện Checklist — 04/11/2026
+
+- **Phạm vi & Nhiệm vụ:** Xử lý kéo code từ remote `origin/main` sau khi đồng nghiệp cập nhật các màn hình quản trị hệ thống và kiểm thử tìm kiếm/chat; đối chiếu, giải quyết xung đột, tích hợp giữ lại những phần tối ưu nhất và duy trì các mục chờ theo đúng yêu cầu của người dùng.
+- **Việc đã làm:**
+  - Fast-forward `main` đồng bộ với `origin/main` (`115ad30`).
+  - Khôi phục và cập nhật tài liệu bàn giao Backend `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md` và bảng theo dõi tiến độ `docs/PORTAL_REFINEMENT_TASKS_CHECKLIST.md`.
+  - **Mục 4 (`AiChatWidget.tsx`):** Thêm hiển thị mốc giờ gửi/nhận (`HH:mm`) bằng hàm `formatChatTime` cho cả bóng chat của người dùng và khung chân tin nhắn của trợ lý AI.
+  - **Mục 8 (`CreateStaffAccountModal.tsx`):** Loại bỏ mã phường `({ward.code})` trong ô chọn đơn vị; loại bỏ dòng text gợi ý vai trò thừa `{roleOption.hint}`; loại bỏ dòng lưu ý chân modal để form ngắn gọn, trang nhã.
+  - **Mục 9 (`AdminPage.tsx`, `src/lib/api/index.ts`):** Tách bạch nhóm "Tài khoản & truy cập" thành 2 màn hình riêng biệt:
+    1. **"Tài khoản đăng nhập" (`accounts`):** Tích hợp API `GET /api/v1/accounts`, bảng dữ liệu tài khoản (`@username`, email, phường, ngày tạo, trạng thái), tìm kiếm, bộ lọc trạng thái, thao tác Khóa/Mở khóa trực tiếp và phân trang.
+    2. **"Người dùng hệ thống" (`users`):** Giữ nguyên quản lý hồ sơ nhân thân chi tiết và phân quyền RBAC.
+    - **Nghiệp vụ bảo mật:** Ẩn toàn bộ tài khoản quản trị tối cao (`IT_ADMIN`, `admin`, tài khoản hiện tại) khỏi cả 2 danh sách tài khoản và người dùng thông thường theo đúng chỉ đạo của người dùng.
+  - **Mục 1, 3, 5, 6:** Duy trì giải pháp từ remote và local (điều hướng tìm kiếm `/thu-tuc?q=...`, thẻ văn bản hành chính gọn gàng + modal xem trước, logo `BrandMark` thống nhất, trợ lý AI hiển thị toàn hệ thống).
+  - **Mục 2, 7, 10:** Tiếp tục giữ nguyên trạng thái "Chờ xử lý" (Pending) theo đúng yêu cầu; các kiến nghị kỹ thuật Backend được lưu giữ đầy đủ trong `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md`.
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: Đạt 100% (exit 0).
+  - `npm run lint`: Đạt 100% (exit 0).
+  - Playwright Edge:
+    - `tests/public-search-chat.spec.ts`: 10/10 tests PASSED.
+    - `tests/admin-provisioning.spec.ts`: 5/5 tests PASSED.
+    - `tests/landing.spec.ts` & `tests/design-system.spec.ts`: 16/16 tests PASSED.
+    - `tests/admin-system-audit.spec.ts`: 12/12 tests PASSED.
+- **Trạng thái Git:** Cây thư mục sạch, stash đã được giải phóng, không còn xung đột.
+
+
 ## Chia 15 commit và đẩy main — 04/11/2026
 
 - **Phạm vi được yêu cầu:** toàn bộ 23 path chưa commit của hai task dọn UI và sửa tìm kiếm/lệ phí/PDF/chatbot. Đã fetch, main và origin/main đồng bộ tại 4658dbaf56a0a05ea59a9d3c5bf5bf9831c55093 trước khi đóng gói.
