@@ -10,7 +10,7 @@ import { systemError } from '@/lib/api/systemAdministration';
 import { AuditMetadata, AuditPagination, auditTime, SystemRequestStatus } from './SystemAuditShared';
 import { OperationBadge, OperationsFilter } from './SystemOperationsShared';
 
-const verifyNotice = 'Kiểm tra tệp phía máy chủ đang chờ hoàn thiện. Trạng thái “đã xác minh” chưa được nghiệm thu làm bằng chứng tệp toàn vẹn hoặc khôi phục được.';
+const verifyNotice = 'Xác minh kiểm tra kích thước, SHA-256 và khả năng đọc toàn bộ tệp sao lưu bằng pg_restore. Kết quả này không thay thế việc thử khôi phục database.';
 function fileSize(value: number | null) { return value === null ? 'Chưa có' : value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`; }
 function CreateBackupDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const userId = useAuthStore(state => state.user?.id);
@@ -36,6 +36,7 @@ function BackupDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const detail = useSystemAdministration('backup', id, signal => api.backup(id, signal));
   const [polls, setPolls] = useState(0);
   const [confirm, setConfirm] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
   const lock = useRef(false);
   const verify = useMutation({ mutationFn: async () => {
     const latest = await api.backup(id);
@@ -50,25 +51,32 @@ function BackupDetail({ id, onClose }: { id: string; onClose: () => void }) {
     return () => window.clearTimeout(timer);
   }, [active, detail.isFetching, detail.isError, detail.dataUpdatedAt, detail.refetch, polls]);
   async function verifyNow() {
-    if (lock.current) return;
+    if (lock.current || needsRefresh) return;
     lock.current = true;
     try {
       await verify.mutateAsync();
       if (useAuthStore.getState().user?.id !== userId) return;
-      toast.info('Máy chủ đã ghi nhận trạng thái xác minh. Vui lòng lưu ý giới hạn kiểm tra tệp.'); setConfirm(false);
-    } catch { /* Read back even when the server returned an error after saving errorCode. */ }
+      toast.success('Đã xác minh tính toàn vẹn tệp sao lưu.'); setConfirm(false);
+    } catch {
+      setNeedsRefresh(true); setConfirm(false);
+    }
     finally {
       if (useAuthStore.getState().user?.id === userId) await cache.invalidateQueries({ predicate: query => query.queryKey[0] === 'system-administration' && query.queryKey[1] === userId && String(query.queryKey[2]).startsWith('backup') });
       lock.current = false;
     }
   }
-  return <Modal open onOpenChange={open => { if (!open && !verify.isPending) onClose(); }} title="Chi tiết bản sao lưu" description="Trạng thái và các mốc xử lý do máy chủ cung cấp."><div className="space-y-4"><SystemRequestStatus pending={detail.isPending} error={detail.error} retry={() => void detail.refetch()} />
+  async function refreshDetail() {
+    const result = await detail.refetch();
+    if (!result.isError) { setNeedsRefresh(false); setConfirm(false); verify.reset(); }
+  }
+  return <Modal open onOpenChange={open => { if (!open && !verify.isPending) onClose(); }} title="Chi tiết bản sao lưu" description="Trạng thái và các mốc xử lý do máy chủ cung cấp."><div className="space-y-4"><SystemRequestStatus pending={detail.isPending} error={detail.error} retry={() => void refreshDetail()} />
     {row && <><AuditMetadata><div><dt>Mã bản sao lưu</dt><dd>{row.id}</dd></div><div><dt>Dịch vụ</dt><dd>{row.serviceName}</dd></div><div><dt>Trạng thái</dt><dd><OperationBadge status={row.status} backup /></dd></div><div><dt>Lý do</dt><dd>{row.reason}</dd></div><div><dt>Người yêu cầu</dt><dd>{row.requestedBy ?? 'Không có thông tin'}</dd></div><div><dt>Kích thước</dt><dd>{fileSize(row.sizeBytes)}</dd></div><div><dt>Mã SHA-256</dt><dd>{row.sha256 ?? 'Chưa có'}</dd></div><div><dt>Tạo lúc</dt><dd>{auditTime(row.createdAtUtc)}</dd></div><div><dt>Bắt đầu</dt><dd>{auditTime(row.startedAtUtc)}</dd></div><div><dt>Hoàn thành</dt><dd>{auditTime(row.completedAtUtc)}</dd></div><div><dt>Máy chủ xác minh lúc</dt><dd>{auditTime(row.verifiedAtUtc)}</dd></div><div><dt>Thử khôi phục lúc</dt><dd>{row.restoreTestedAtUtc ? auditTime(row.restoreTestedAtUtc) : 'Chưa có thông tin thử khôi phục'}</dd></div><div><dt>Mã lỗi</dt><dd>{row.errorCode ?? 'Không có'}</dd></div></AuditMetadata>
       {active && <p role="status" className="text-sm text-slate-600">Bản sao lưu đang được xử lý nền. {polls < 20 ? 'Đang theo dõi trạng thái tự động.' : 'Đã dừng theo dõi tự động; bạn có thể làm mới để kiểm tra tiếp.'}</p>}
-      <Button variant="outline" loading={detail.isFetching} disabled={verify.isPending} onClick={() => void detail.refetch()}>Làm mới chi tiết</Button>
-      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">{verifyNotice}</p>
-      {(row.status === 'Succeeded' || row.status === 'Verified') && !confirm && <Button variant="outline" onClick={() => { verify.reset(); setConfirm(true); }}>Yêu cầu xác minh</Button>}
-      {confirm && <div className="space-y-3 rounded-xl border border-slate-300 p-4"><h3 className="font-semibold">Xác nhận gửi yêu cầu kiểm tra tệp</h3><p className="text-sm text-slate-600">{verifyNotice} Thao tác này không khôi phục database.</p><div className="flex flex-wrap gap-3"><Button variant="outline" disabled={verify.isPending} onClick={() => setConfirm(false)}>Hủy xác minh</Button><Button loading={verify.isPending} onClick={() => void verifyNow()}>Xác nhận yêu cầu</Button></div></div>}
+      <Button variant="outline" loading={detail.isFetching} disabled={verify.isPending} onClick={() => void refreshDetail()}>Làm mới chi tiết</Button>
+      <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{verifyNotice}</p>
+      {(row.status === 'Succeeded' || row.status === 'Verified') && !confirm && <Button variant="outline" disabled={needsRefresh || detail.isFetching || verify.isPending} onClick={() => { verify.reset(); setConfirm(true); }}>Yêu cầu xác minh</Button>}
+      {confirm && <div className="space-y-3 rounded-xl border border-slate-300 p-4"><h3 className="font-semibold">Xác nhận gửi yêu cầu kiểm tra tệp</h3><p className="text-sm text-slate-600">Thao tác có thể mất vài phút tùy kích thước tệp. Hãy giữ cửa sổ này mở trong lúc kiểm tra.</p><div className="flex flex-wrap gap-3"><Button variant="outline" disabled={verify.isPending} onClick={() => setConfirm(false)}>Hủy xác minh</Button><Button loading={verify.isPending} onClick={() => void verifyNow()}>Xác nhận yêu cầu</Button></div></div>}
+      {verify.isPending && <p role="status" className="text-sm text-slate-600">Đang xác minh tệp sao lưu. Chưa có kết quả kiểm tra.</p>}
     </>}{verify.error && <p role="alert" className="text-sm text-red-800">{systemError(verify.error)} Không tự gửi lại yêu cầu; hãy đọc lại chi tiết trước khi thử tiếp.</p>}</div></Modal>;
 }
 
