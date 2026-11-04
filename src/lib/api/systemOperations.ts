@@ -7,7 +7,7 @@ const guid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 const timestamp = z.string().datetime({ offset: true });
 const safeCount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const serviceNameSchema = z.string().trim().min(1, 'Nhập mã dịch vụ.').max(64, 'Mã dịch vụ tối đa 64 ký tự.');
-export const backupStates = { Queued: 'Chờ xử lý', Running: 'Đang sao lưu', Succeeded: 'Đã sao lưu', Failed: 'Thất bại', Verified: 'Máy chủ ghi nhận đã xác minh' } as const;
+export const backupStates = { Queued: 'Chờ xử lý', Running: 'Đang sao lưu', Succeeded: 'Đã sao lưu', Failed: 'Thất bại', Verified: 'Đã xác minh tệp' } as const;
 export const healthStates = { Healthy: 'Hoạt động tốt', Degraded: 'Cần theo dõi', Unhealthy: 'Gặp sự cố', Unknown: 'Chưa xác định' } as const;
 export const operationsFilterSchema = z.object({
   service: z.string().trim().max(64, 'Mã dịch vụ tối đa 64 ký tự.'), from: dateInput, to: dateInput,
@@ -77,10 +77,14 @@ export const systemOperationsApi = {
   },
   verify: async (id: string) => {
     guid.parse(id);
-    const response = await api.post(path('backups/' + encodeURIComponent(id) + '/verify'));
+    // The server bounds download + archive verification at five minutes, plus error persistence.
+    const response = await api.post(path('backups/' + encodeURIComponent(id) + '/verify'), undefined, { timeout: 330_000 });
     if (response.status !== 200) throw new Error('Chưa xác nhận được kết quả kiểm tra. Vui lòng tải lại bản sao lưu.');
     const result = backupSchema.parse(response.data);
-    if (result.id !== id || result.status !== 'Verified' || !result.verifiedAtUtc) throw new Error('Kết quả xác minh không khớp yêu cầu. Vui lòng tải lại.');
+    if (result.id !== id || result.status !== 'Verified' || !result.verifiedAtUtc || result.verifiedAtUtc.startsWith('0001-')
+      || !result.sha256 || result.sizeBytes === null || result.sizeBytes === 0 || result.errorCode !== null) {
+      throw new Error('Kết quả xác minh thiếu thông tin hoặc không khớp yêu cầu. Vui lòng tải lại chi tiết trước khi thử tiếp.');
+    }
     return result;
   },
 };

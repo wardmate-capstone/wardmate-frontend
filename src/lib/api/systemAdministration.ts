@@ -124,6 +124,13 @@ export function systemError(error: unknown) {
     'system.backup_file_missing': 'Không tìm thấy tệp sao lưu trong kho lưu trữ.',
     'system.backup_checksum_mismatch': 'Mã kiểm tra của tệp không khớp. Cần bộ phận vận hành kiểm tra bản sao lưu.',
     'system.backup_invalid_archive': 'Tệp sao lưu không đúng định dạng được hỗ trợ.',
+    'system.backup_storage_unavailable': 'Kho lưu trữ sao lưu chưa sẵn sàng. Vui lòng liên hệ bộ phận vận hành.',
+    'system.backup_verification_busy': 'Máy chủ đang xác minh hoặc dọn bản sao lưu. Vui lòng thử lại sau.',
+    'system.backup_size_limit': 'Kích thước bản sao lưu vượt giới hạn xác minh hoặc thiếu thông tin kích thước.',
+    'system.backup_size_mismatch': 'Kích thước tệp không khớp thông tin bản sao lưu. Cần bộ phận vận hành kiểm tra.',
+    'system.backup_verifier_unavailable': 'Máy chủ chưa có công cụ pg_restore để kiểm tra tệp. Vui lòng liên hệ bộ phận vận hành.',
+    'system.backup_verification_timeout': 'Xác minh bị gián đoạn hoặc hết thời gian. Làm mới chi tiết trước khi thử tiếp.',
+    'system.backup_verification_unavailable': 'Máy chủ chưa thể đọc hoặc xác minh tệp sao lưu. Làm mới chi tiết trước khi thử tiếp.',
   };
   const code = systemErrorCode(error);
   if (code && messages[code]) return messages[code];
