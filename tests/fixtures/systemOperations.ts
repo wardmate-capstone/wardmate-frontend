@@ -20,8 +20,13 @@ export async function mockSystemOperations(page: Page) {
     if (path.endsWith('/health/services')) return authReply(route, { json: state.empty ? [] : [observation, { ...observation, id: '00000000-0000-0000-0000-000000000000', serviceName: 'new-service', status: 'Unknown', httpStatus: null, responseTimeMs: 0, errorCode: 'not_checked', checkedAtUtc: '0001-01-01T00:00:00Z' }, { ...observation, id: otherOperationId, serviceName: 'catalog', status: 'Unknown', errorCode: 'stale_observation' }] });
     if (path.includes('/health/services/')) return authReply(route, { json: { ...observation, serviceName: state.wrongService ? 'another' : path.split('/').at(-1) } });
     if (path.endsWith('/verify')) {
-      if (state.verifyError) { state.backup.errorCode = 'checksum_mismatch'; return authReply(route, { status: 400, json: { code: state.verifyError } }); }
-      state.backup = { ...state.backup, status: 'Verified', verifiedAtUtc: '2026-11-03T08:01:00Z' };
+      if (state.verifyError) {
+        if (state.verifyError.endsWith('_busy')) return authReply(route, { status: 409, json: { code: state.verifyError } });
+        state.backup = { ...state.backup, status: 'Succeeded', verifiedAtUtc: null, errorCode: state.verifyError };
+        const status = /unavailable|timeout/.test(state.verifyError) ? 503 : 400;
+        return authReply(route, { status, json: { code: state.verifyError } });
+      }
+      state.backup = { ...state.backup, status: 'Verified', verifiedAtUtc: '2026-11-03T08:01:00Z', errorCode: null };
       return authReply(route, { json: { ...state.backup, id: state.wrongId ? otherOperationId : operationId } });
     }
     if (path.endsWith('/backups') && method === 'POST') {

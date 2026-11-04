@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { mockSystemOperations, operationId } from './fixtures/systemOperations';
+import { mockSystemOperations, operationId, backup } from './fixtures/systemOperations';
+import { authReply } from './fixtures/auth';
 
 test('health renders configured services, unknown/stale states, detail and UTC history filters', async ({ page }) => {
   const state = await mockSystemOperations(page); await page.goto('/admin');
@@ -39,7 +40,7 @@ test('health rejects a wrong service response and non-202 queue result', async (
   expect(state.requests.filter(item => item.method === 'POST')).toHaveLength(1);
 });
 
-test('backup creates a queued request, follows status and verifies with explicit server limitation', async ({ page }) => {
+test('backup creates a queued request, follows status and verifies file integrity without claiming a restore test', async ({ page }) => {
   const state = await mockSystemOperations(page); state.autoProgress = true;
   await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
   await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
@@ -55,11 +56,12 @@ test('backup creates a queued request, follows status and verifies with explicit
   expect(state.requests.find(item => item.method === 'POST')?.body).toEqual({ serviceName: 'iam', reason: 'Sao lưu trước bảo trì' });
   await expect(dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true })).toBeVisible({ timeout: 15000 });
   await dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true }).click();
-  await expect(dialog.getByText(/chưa được nghiệm thu làm bằng chứng/).first()).toBeVisible();
+  await expect(dialog.getByText(/không thay thế việc thử khôi phục/).first()).toBeVisible();
   await dialog.getByRole('button', { name: 'Xác nhận yêu cầu', exact: true }).click();
-  await expect(dialog.getByText('Máy chủ ghi nhận đã xác minh', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Đã xác minh tệp', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Chưa có thông tin thử khôi phục', { exact: true })).toBeVisible();
   expect(state.requests.filter(item => item.path.endsWith('/verify'))).toHaveLength(1);
+
 });
 
 test('backup verify errors refresh server details and cannot turn into success', async ({ page }) => {
@@ -70,9 +72,17 @@ test('backup verify errors refresh server details and cannot turn into success',
   await dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true }).click();
   await dialog.getByRole('button', { name: 'Xác nhận yêu cầu', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Mã kiểm tra của tệp không khớp');
-  await expect(dialog.getByText('checksum_mismatch', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Máy chủ ghi nhận đã xác minh', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByText('system.backup_checksum_mismatch', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Đã xác minh tệp', { exact: true })).toHaveCount(0);
   expect(state.requests.filter(item => item.path.endsWith('/verify'))).toHaveLength(1);
+  await expect(dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true })).toBeDisabled();
+  state.verifyError = '';
+  await dialog.getByRole('button', { name: 'Làm mới chi tiết', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true })).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Xác nhận yêu cầu', exact: true }).click();
+  await expect(dialog.getByText('Đã xác minh tệp', { exact: true })).toBeVisible();
+  expect(state.requests.filter(item => item.path.endsWith('/verify'))).toHaveLength(2);
 });
 
 for (const code of ['system.backup_in_progress', 'system.backup_runner_unavailable']) {
@@ -130,4 +140,60 @@ test('operations schemas enforce boundaries and mobile detail stays inside viewp
   await expect(page.getByRole('dialog').getByText('Mã SHA-256', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/admin-backup-mobile.png' });
+});
+
+test('verify rejects contradictory metadata even when the server returns HTTP 200', async ({ page }) => {
+  await mockSystemOperations(page);
+  let patch: Record<string, unknown> = {};
+  await page.route('**/api/v1/system/backups/*/verify', route => authReply(route, { json: { ...backup, status: 'Verified', verifiedAtUtc: '2026-11-04T08:00:00Z', ...patch } }));
+  await page.goto('/admin');
+  for (const value of [{ sha256: null }, { sizeBytes: null }, { sizeBytes: 0 }, { errorCode: 'checksum_mismatch' }, { verifiedAtUtc: null }, { verifiedAtUtc: '0001-01-01T00:00:00Z' }]) {
+    patch = value;
+    const error = await page.evaluate(async id => {
+      const { systemOperationsApi } = await import('/src/lib/api/systemOperations.ts');
+      try { await systemOperationsApi.verify(id); return null; }
+      catch (error) { return error instanceof Error ? error.message : String(error); }
+    }, operationId);
+    expect(error).toContain('Kết quả xác minh thiếu thông tin');
+  }
+});
+
+test('verify reads current status before posting and blocks a backup that became Failed', async ({ page }) => {
+  const state = await mockSystemOperations(page);
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết bản sao lưu ' + operationId }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true }).click();
+  state.backup.status = 'Failed';
+  await dialog.getByRole('button', { name: 'Xác nhận yêu cầu', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('chưa ở trạng thái có thể xác minh');
+  expect(state.requests.filter(item => item.path.endsWith('/verify'))).toHaveLength(0);
+});
+
+test('failed re-verification clears the former verified state and renders the new backend errors', async ({ page }) => {
+  const state = await mockSystemOperations(page);
+  state.backup = { ...state.backup, status: 'Verified', verifiedAtUtc: '2026-11-03T08:01:00Z' };
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết bản sao lưu ' + operationId }).click();
+  const dialog = page.getByRole('dialog');
+  for (const [code, message] of [
+    ['system.backup_storage_unavailable', 'Kho lưu trữ sao lưu chưa sẵn sàng'],
+    ['system.backup_verification_busy', 'đang xác minh hoặc dọn bản sao lưu'],
+    ['system.backup_size_limit', 'vượt giới hạn xác minh'],
+    ['system.backup_size_mismatch', 'Kích thước tệp không khớp'],
+    ['system.backup_verifier_unavailable', 'chưa có công cụ pg_restore'],
+    ['system.backup_verification_timeout', 'bị gián đoạn hoặc hết thời gian'],
+    ['system.backup_verification_unavailable', 'chưa thể đọc hoặc xác minh tệp'],
+  ]) {
+    state.verifyError = code;
+    await dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Xác nhận yêu cầu', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText(message);
+    await expect(dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true })).toBeDisabled();
+    await expect(dialog.getByText('Đã xác minh tệp', { exact: true })).toHaveCount(0);
+    if (code !== 'system.backup_verification_busy') await expect(dialog.getByText(code, { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Làm mới chi tiết', exact: true }).click();
+    await expect(dialog.getByRole('button', { name: 'Yêu cầu xác minh', exact: true })).toBeEnabled();
+  }
+  expect(state.requests.filter(item => item.path.endsWith('/verify'))).toHaveLength(7);
 });
