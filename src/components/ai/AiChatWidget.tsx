@@ -46,6 +46,17 @@ const QUICK_SUGGESTIONS = [
   },
 ];
 
+function formatChatTime(date: Date | string | number | undefined | null): string {
+  if (!date) return '';
+  try {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
 function generateGuestAssistantAnswer(query: string, wardName?: string): string {
   const q = query.toLowerCase();
   const wardText = wardName ? ` tại ${wardName}` : '';
@@ -630,6 +641,11 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                       }`}
                     >
                       <p>{msg.text}</p>
+                      {msg.sender === 'user' && msg.timestamp && (
+                        <div className="mt-1 text-right text-[10px] text-red-200/90 font-medium select-none">
+                          {formatChatTime(msg.timestamp)}
+                        </div>
+                      )}
 
                       {/* Quick Suggestions */}
                       {msg.id === 'welcome' && !hasUserMessages && (
@@ -651,27 +667,30 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                         </div>
                       )}
 
-                      {/* Copy button */}
-                      {msg.sender === 'assistant' && msg.id !== 'welcome' && (
-                        <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-1 text-[10px] text-slate-400">
-                          <button
-                            type="button"
-                            onClick={() => void handleCopy(msg.id, msg.text)}
-                            className="inline-flex items-center gap-1 hover:text-slate-700 font-medium transition-colors"
-                            title="Sao chép câu trả lời"
-                          >
-                            {copiedId === msg.id ? (
-                              <>
-                                <Check size={12} className="text-emerald-600" />
-                                <span className="text-emerald-600 font-bold">Đã sao chép</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={12} />
-                                <span>Sao chép</span>
-                              </>
-                            )}
-                          </button>
+                      {/* Assistant message footer: timestamp & copy */}
+                      {msg.sender === 'assistant' && (
+                        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-1 text-[10px] text-slate-400">
+                          <span className="select-none">{formatChatTime(msg.timestamp)}</span>
+                          {msg.id !== 'welcome' ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleCopy(msg.id, msg.text)}
+                              className="inline-flex items-center gap-1 hover:text-slate-700 font-medium transition-colors"
+                              title="Sao chép câu trả lời"
+                            >
+                              {copiedId === msg.id ? (
+                                <>
+                                  <Check size={12} className="text-emerald-600" />
+                                  <span className="text-emerald-600 font-bold">Đã sao chép</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={12} />
+                                  <span>Sao chép</span>
+                                </>
+                              )}
+                            </button>
+                          ) : <span />}
                         </div>
                       )}
                     </div>
