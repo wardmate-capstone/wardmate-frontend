@@ -1,5 +1,31 @@
 # Tiến độ và bàn giao WardMate
 
+## Chia 5 commit và đẩy main — 04/11/2026
+
+- Người dùng yêu cầu chia các thay đổi FE còn lại thành **đúng 5 commit** rồi push main. Phạm vi 9 file: API/validation và lỗi Verify (2 file), giao diện sao lưu (1), test/fixture (2), tài liệu kỹ thuật (3) và PROGRESS (1). Bắt đầu tại f20d2b00f7aecf4f12727288e67de4f3851dc2dc, đã fetch và xác minh đồng bộ origin/main.
+- Nhóm commit: **2 fix, 1 test, 2 docs**. Đã tạo 4 commit đầu: 4db2c04 (API/timeout/lỗi), e709fdb (UI Verify/retry), 5a643bd (kiểm thử), 09e7e57 (tài liệu/đề nghị Gateway). Đã push 4 commit này và xác minh remote tại **09e7e579432c098cda12efb8400b3f32e24b3b53** bằng git ls-remote. Lần push đầu gặp lỗi máy chủ commit_refs, thử lại đã thành công, không force push.
+- Commit chứa mục này là commit thứ 5, dành cho bàn giao; bước tiếp theo là push và xác minh đúng 5 commit tính từ baseline, remote HEAD trùng local và working tree sạch. Kết quả cuối báo trong phản hồi hoàn tất; không ghi trước rằng commit chưa tạo đã push.
+- Đã đối chiếu đúng path, tổ chức lại index theo hạng mục và so SHA-256 xác nhận cả 9 file giữ nguyên nội dung sau khi chia 4 commit; chỉ PROGRESS được bổ sung mục bàn giao này. git diff --check và staged diff check đạt. Không commit env, dist, test artifacts hoặc thông tin xác thực. Sửa thẻ JSX chatbot trước đó đưa file về đúng HEAD nên không tạo commit rỗng cho file này.
+- Không chạy lại typecheck/lint/build/Playwright để tách commit. Kết quả thực chạy ở lượt sửa ngay trước: typecheck/lint/build đạt, **40/40 ca mock đạt trong một lượt**. Giới hạn còn nguyên: chưa nghiệm thu Azure/Blob/restore drill; BE/DevOps cần kiểm tra ActivityTimeout Gateway cho Verify dài. Không đổi BE, không coi Git push là bằng chứng deployment thành công.
+
+
+## Kiểm tra và sửa lỗi chặn FE — 04/11/2026
+
+- **Lỗi tìm được và đã sửa:** AiChatWidget.tsx dòng cuối cửa sổ chat mở section nhưng đóng fragment, gây TS1003 và lỗi parser Vite, toàn FE không tải được. Đổi đúng thẻ đóng thành /section, giữ nguyên nội dung/nhãn Hỏi Đáp AI, thời gian tin nhắn và logic chatbot. Đây là sửa thay đổi chưa commit bị sai cú pháp; sau sửa file khớp phiên bản HEAD nên không còn diff riêng của AiChatWidget.
+- **Kiểm tra thực chạy trên workspace hiện tại f20d2b0 + các thay đổi Verify:** npm run typecheck đạt, npm run lint đạt, npm run build đạt (8027 modules; còn cảnh báo annotation SignalR/Zod và chunk lớn hiện có). Playwright Edge: **40/40 ca đạt trong một lượt** với admin-system-operations, admin-system-audit, admin-system-settings và public-search-chat. Bao gồm Verify/lỗi/trạng thái thay đổi, RBAC/cache khi đổi danh tính, form cấu hình/xung đột, tìm kiếm, PDF/lệ phí mobile và chat khách 24h/chat xác thực. Lượt browser đầu được dừng sau khi phát hiện lỗi biên dịch, không tính đạt. git diff --check và git diff --cached --check đạt; không đổi index.
+- **Phát hiện cần BE/DevOps:** Gateway YARP 2.3.0 dùng LoadFromConfig; cluster analytics-system không đặt HttpRequest.ActivityTimeout trong appsettings.json/Production. Nếu không có override deployment, mặc định idle 100 giây có thể ngắt POST Verify đồng bộ trước giới hạn BE 5 phút dù FE đã chờ 330 giây. Đã đối chiếu tài liệu Microsoft và ghi đường cấu hình/đề nghị kiểm thử request dài tại BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md. Không khẳng định đã tái hiện production, không sửa BE theo phạm vi đã chốt.
+- Cập nhật BACKUP_VERIFY_COMPLETION_2026-11-04.md. Chưa chạy API/Blob thật hoặc restore drill. Không chạy lại toàn bộ suite ngoài các luồng nêu trên. Giữ các thay đổi staged của task Verify và tài liệu/phiên khác; không commit/push.
+
+
+## Đọc lại BE local sau khi người dùng tải bản mới — 04/11/2026
+
+- Đã đọc lại SystemBackups.Verify/Create, SystemBackupWorker, SystemBackupContracts và SystemBackupsController tại E:/wardmate-backend. Tính blob SHA từ nội dung chuẩn hóa LF bằng Node (không chạy Git trong repo BE): **4/4 khớp chính xác** các file bản GitHub đã dùng để triển khai FE. Không còn chờ bản sửa BE/source local.
+- Xác nhận logic: thiếu Blob/tệp thì lỗi; kiểm tra kích thước và SHA-256, pg_restore đọc archive; lỗi kiểm tra xóa mốc Verified và về Succeeded; lock chung với retention; worker bắt buộc pg_dump/Blob và upload thành công. DTO và endpoint không đổi, FE hiện có tương thích timeout/mã lỗi/trạng thái. Không phát hiện chênh lệch cần sửa thêm code trong lượt đọc lại.
+- Cập nhật trạng thái trong BACKUP_VERIFY_COMPLETION_2026-11-04.md, BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md và FRONTEND_SETUP.md. Giữ nguyên nội dung staged và thay đổi AiChatWidget của phiên khác; FE hiện ở f20d2b0 và đồng bộ origin/main khi bắt đầu đọc lại.
+- Kiểm tra lượt này: đối chiếu source/hash 4 file, rà hợp đồng FE và git diff --check; không chạy lại typecheck/lint/build/Playwright vì không đổi code. Kết quả lượt triển khai trước: 14/14 ca mock Verify/health/backups đạt, typecheck/lint/build đạt; không coi là vừa chạy lại trên workspace mới tích hợp.
+- Giới hạn: chưa chạy BE mới/Blob/pg_restore trên môi trường thật, chưa xác minh deployment/gateway timeout hay restore drill. Cần re-verify bản Verified từ implementation cũ. Không sửa BE, không commit/push.
+
+
 ## Đồng bộ remote main, phân tách Accounts/Users và hoàn thiện Checklist — 04/11/2026
 
 - **Phạm vi & Nhiệm vụ:** Xử lý kéo code từ remote `origin/main` sau khi đồng nghiệp cập nhật các màn hình quản trị hệ thống và kiểm thử tìm kiếm/chat; đối chiếu, giải quyết xung đột, tích hợp giữ lại những phần tối ưu nhất và duy trì các mục chờ theo đúng yêu cầu của người dùng.
