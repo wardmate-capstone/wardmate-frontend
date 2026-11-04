@@ -1,6 +1,20 @@
 # Gửi BE: điều kiện nghiệm thu sao lưu và Verify
 
+## Cập nhật 04/11/2026 — đã đối chiếu bản sửa GitHub
+
+Source local E:/wardmate-backend lúc kiểm tra đầu còn cũ; sau khi người dùng cập nhật, đã đọc lại và xác nhận bốn file Verify/worker/DTO/controller khớp các blob SHA của bản sửa GitHub. Đã đọc SystemBackups/worker/controller/DTO trực tiếp trên wardmate-capstone/wardmate-backend nhánh main bằng công cụ GitHub. Bản mới chặn thiếu kho lưu, kiểm tra size/SHA-256, giải mã toàn bộ archive bằng pg_restore; worker bỏ managed snapshot và bắt buộc upload thành công. Các lỗi source ở mục 1–2 dưới đây là ghi nhận lịch sử, đã được xử lý trong bản main vừa đọc. Chi tiết blob SHA, FE, kiểm thử và giới hạn: BACKUP_VERIFY_COMPLETION_2026-11-04.md.
+
+Không đồng nhất kiểm tra tệp với thử khôi phục. Chưa nghiệm thu Azure/Blob thật hoặc xác nhận deployment; cần re-verify các bản Verified từ implementation cũ. FE đã cập nhật thông báo, timeout, lỗi mới và kiểm tra response.
+
 Ngày 03/11/2026. Người dùng yêu cầu **chỉ làm FE**, ghi lại lỗi để BE sửa; phiên này không sửa hoặc build BE. Các phát hiện dưới đây từ source local tại `E:/wardmate-backend`, không khẳng định bản Azure đang có cùng implementation.
+
+## Bổ sung rà soát Gateway — 04/11/2026
+
+Đã đọc WardMate.YarpGateway (YARP 2.3.0): Program.cs dùng LoadFromConfig, cả appsettings.json và appsettings.Production.json đều không đặt HttpRequest.ActivityTimeout cho cluster analytics-system. Trong khi đó POST Verify chỉ trả response khi kiểm tra xong, BE cho phép tối đa 5 phút, FE chờ 330 giây.
+
+Theo [tài liệu Microsoft về YARP timeout](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/yarp/timeouts), ActivityTimeout mặc định là 100 giây khi không có hoạt động truyền nhận. Nếu môi trường triển khai không có override, Verify chờ xử lý lâu có thể bị Gateway ngắt trước khi BE hoàn tất. Đây là phát hiện về cấu hình source, chưa tái hiện timeout production và chưa đọc cấu hình bí mật môi trường.
+
+Đề nghị BE/DevOps đặt ReverseProxy:Clusters:analytics-system:HttpRequest:ActivityTimeout phù hợp ngân sách xử lý (ví dụ 00:05:30), kiểm tra cả cấu hình môi trường/ingress và thử request Verify >100 giây bằng dữ liệu thử nghiệm. Không chỉ tăng timeout Axios ở FE. Nếu hạ tầng không cho phép request dài, cần đổi Verify sang xử lý nền có endpoint theo dõi; không tự đặt hợp đồng mới ở FE. Phiên này giữ phạm vi chỉ sửa FE, không đổi cấu hình BE.
 
 ## 1. Verify có thể ghi nhận thành công khi chưa kiểm tra file
 
