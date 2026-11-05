@@ -1,5 +1,38 @@
 # Tiến độ và bàn giao WardMate
 
+## Chia 4 commit và đẩy main — 05/11/2026
+
+- Người dùng yêu cầu chia các thay đổi FE còn lại thành **đúng 4 commit** rồi đẩy lên main. Phạm vi 11 file:
+  1. Giao diện điều hành nhân sự (6 file): `src/components/staffing/staffing.css`, `shared.tsx`, `CalendarClosuresView.tsx`, `ConsultationsView.tsx`, `DispatchView.tsx`, `StaffingView.tsx`.
+  2. Kiểm thử tự động giao diện (1 file): `tests/staffing-ui.spec.ts`.
+  3. Kế hoạch nghiệp vụ & kỹ thuật lịch làm việc/đơn nghỉ Word (3 file): `docs/Work_Schedule_Management_Manager_Frontdesk.md`, `docs/WORK_SCHEDULE_ADAPTATION_PLAN_2026-11-05.md`, `docs/BE_WORK_SCHEDULE_IMPLEMENTATION_PLAN_2026-11-05.md`.
+  4. Nhật ký tiến độ và bàn giao (1 file): `docs/PROGRESS.md`.
+- Nhóm commit: **1 feat, 1 test, 2 docs**.
+- Kiểm tra trước khi chia commit: `npm run typecheck` đạt, `npm run lint` đạt, `npm run build` đạt (8028 modules transformed). Lượt Playwright mock trước đó đạt 12/12 ca.
+- Thực hiện commit từng nhóm theo đúng thứ tự và đẩy lên nhánh `main`.
+
+## Bàn giao kế hoạch Backend lịch/đơn nghỉ Word — 05/11/2026
+
+- Theo yêu cầu lập kế hoạch riêng cho BE, đã tạo `BE_WORK_SCHEDULE_IMPLEMENTATION_PLAN_2026-11-05.md` dựa trên kế hoạch thích ứng và source BE local StaffingService/Contracts/Domain/Security/DbContext. Không triển khai chức năng mới.
+- Tài liệu có backlog BE-WS-00–10 theo thứ tự đơn nghỉ Word → lịch tháng → xác nhận/thông báo → đổi ca; mô hình nháp riêng để giữ trạng thái/API nghỉ cũ, revision và snapshot bất biến, idempotency/transaction/khóa phường, phân quyền tệp, migration/rollout và bộ tiêu chí test. Các DTO/entity/năng lực mới chỉ là đề xuất; chưa tự đặt endpoint mới hoặc coi hợp đồng đã được BE chốt.
+- Xác nhận DbContext hiện có WorkflowOutbox/capture; còn phải đối chiếu và mở rộng event/worker cho staffing. Nhấn mạnh lịch nháp không tác động availability, duyệt nghỉ không tự bàn giao, API cũ không được bỏ qua Word khi đơn vị đã bật bắt buộc.
+- Còn cần mẫu DOCX, storage/retention, giờ đơn vị và hợp đồng API/event. Chỉ thêm tài liệu này và ghi chú; giữ nguyên thay đổi UI/tài liệu trước đó, không sửa BE, không commit/push. Kiểm tra nội dung/đường dẫn/diff; không chạy build/test ứng dụng, API thật hoặc migration cho task tài liệu.
+
+## Kế hoạch lịch làm việc và đơn nghỉ Word — 05/11/2026
+
+- Người dùng yêu cầu tổng hợp kế hoạch từ `Work_Schedule_Management_Manager_Frontdesk.md`, điều chỉnh theo Manager/Frontdesk hiện có; đã xác nhận **mở mẫu đơn Word, sửa trực tiếp rồi nộp Manager**. Chưa yêu cầu triển khai chức năng mới.
+- Đã đọc tài liệu nguồn, luồng FE staffing/Word và source BE local StaffingService/Contracts/Domain/Controller/Security. Có ca đơn lẻ, nghỉ bằng reason, quyết định/version/lịch sử/bàn giao; chưa có nháp/tệp đơn nghỉ, lịch tháng nháp/công bố, xác nhận lịch hoặc đổi ca. Editor DOCX có thể tái sử dụng; API bản khai công dân không phù hợp lưu đơn nhân sự.
+- Kế hoạch tại `WORK_SCHEDULE_ADAPTATION_PLAN_2026-11-05.md`: ưu tiên đơn nghỉ Word lưu nháp/nộp riêng, bản nộp bất biến và Manager chỉ đọc; sau đó lịch tháng trên nền ca hiện có, xác nhận/thông báo và đổi ca. Đây là đề xuất, chưa chốt hợp đồng API mới. Giữ lịch nháp ngoài tính khả dụng và không tự bàn giao hồ sơ khi duyệt nghỉ.
+- Còn cần mẫu DOCX, cấu hình lịch của đơn vị và hợp đồng BE/storage/version. Chỉ thêm tài liệu kế hoạch và ghi chú; giữ nguyên tài liệu người dùng và thay đổi UI chưa commit. Đã kiểm tra đường dẫn/nội dung/diff; không chạy test ứng dụng hoặc gọi API thật, không sửa BE, không commit/push.
+
+## Làm lại UI 5 mục điều hành — 05/11/2026
+
+- **Đã làm:** Điều phối hồ sơ, Lịch ca làm, Lịch ngày nghỉ, Duyệt nghỉ phép và Tham vấn chuyên môn tại `src/components/staffing/`. Đồng bộ tiêu đề/mô tả/thao tác, bộ lọc, thẻ và phân trang; ca làm/nghỉ phép có khung giờ bắt đầu/kết thúc riêng theo Việt Nam, ngày và badge trạng thái. Đưa nút xem tham vấn cùng hồ sơ vào thẻ tương ứng, phân biệt câu hỏi/ý kiến/lý do đóng. Bố cục một cột trên mobile, hai cột cho ca/nghỉ trên desktop rộng; tăng vùng bấm, xử lý tên/nội dung dài và trạng thái tải/rỗng/lỗi. Tái sử dụng Badge/Button/Modal và logic form/query hiện có; CSS riêng tại `staffing.css` có tham chiếu Tailwind.
+- **Phạm vi:** chỉ FE, giữ hợp đồng API, quyền, validation và điều kiện thao tác. Component dùng chung cũng cập nhật cách hiển thị lịch/nghỉ/tham vấn trong workspace cán bộ và lịch nghỉ Admin. Không sửa backend, không commit/push. Baseline `c9d6f8b`, working tree sạch trước task.
+- **Kiểm tra thực chạy:** `npm run typecheck`, `npm run lint`, `npm run build` đạt; build còn cảnh báo annotation dependency và chunk lớn hiện có. Playwright Edge `tests/staffing-ui.spec.ts` + `tests/manager.spec.ts`: **12/12 ca mock đạt trong lượt cuối**, gồm 5 màn ở 1440/768/390/360px, không tràn ngang, giờ Việt Nam, tên cán bộ, form tạo ca/validation, xem tham vấn cùng hồ sơ, trạng thái rỗng/lỗi/thử lại/khoảng ngày sai và hồi quy Manager. Đã xem ảnh ca làm desktop/mobile. `node tests/staffing-form-check.mjs`: **11/11 kiểm tra form độc lập đạt**, không gọi API. `git diff --check` đạt.
+- **Lưu ý kiểm tra:** lượt build đầu thiếu `@reference` cho CSS mới đã được sửa và build lại đạt. Lượt browser đầu chạy qua 5 ca nhưng dừng khi runner chờ dọn Vite; không dùng lượt đó làm kết quả cuối. Lượt 12 ca cuối kết thúc exit 0 sau khi dừng đúng tiến trình Vite do chính lượt test tạo, vì bước dọn server Windows chờ lâu; không đổi cấu hình Playwright.
+- **Giới hạn/bước tiếp:** chưa nghiệm thu API/deployment thật, chưa kiểm tra riêng workspace cán bộ/Admin bằng tài khoản thật hoặc zoom 200%. Người dùng có thể xem UI trong 5 mục Manager; các thao tác ghi vẫn cần xác minh trên môi trường tích hợp.
+
 ## Chia 5 commit và đẩy main — 04/11/2026
 
 - Người dùng yêu cầu chia các thay đổi FE còn lại thành **đúng 5 commit** rồi push main. Phạm vi 9 file: API/validation và lỗi Verify (2 file), giao diện sao lưu (1), test/fixture (2), tài liệu kỹ thuật (3) và PROGRESS (1). Bắt đầu tại f20d2b00f7aecf4f12727288e67de4f3851dc2dc, đã fetch và xác minh đồng bộ origin/main.
