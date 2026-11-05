@@ -1,0 +1,41 @@
+@reference "../../styles/globals.css";
+
+@layer components {
+  .staff-workspace { @apply min-w-0 space-y-5 text-slate-900; }
+  .staff-heading { @apply flex flex-wrap items-start justify-between gap-4; }
+  .staff-heading h2 { @apply text-lg font-bold; }
+  .staff-heading p { @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600; }
+  .staff-actions { @apply flex flex-wrap gap-2; }
+  .staff-filter { @apply rounded-xl border border-slate-200 bg-white p-4 sm:p-5; }
+  .staff-filter-fields { @apply flex flex-wrap items-end gap-4; }
+  .staff-filter-fields > label { @apply grid min-w-0 flex-1 gap-2 text-sm font-semibold sm:min-w-40 sm:flex-none; }
+  .staff-hint { @apply mt-4 border-t border-slate-100 pt-3 text-sm leading-6 text-slate-500; }
+  .staff-grid { @apply grid min-w-0 gap-4 xl:grid-cols-2; }
+  .staff-card { @apply min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 sm:p-5; }
+  .staff-card-heading { @apply flex flex-wrap items-start justify-between gap-3; }
+  .staff-card h3 { @apply mt-1 break-words text-base font-bold leading-6; overflow-wrap: anywhere; }
+  .staff-meta { @apply block text-sm font-medium text-slate-500; }
+  .staff-period { @apply my-4 grid grid-cols-2 gap-4 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:p-4; }
+  .staff-period > div + div { @apply border-l border-slate-200 pl-4; }
+  .staff-period time { @apply mt-2 block space-y-1; }
+  .staff-period time span { @apply flex items-center gap-2; }
+  .staff-period time span:first-child { @apply text-lg font-bold tabular-nums; }
+  .staff-period time span:last-child { @apply text-sm text-slate-600; }
+  .staff-note { @apply mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700; overflow-wrap: anywhere; }
+  .staff-note .staff-meta { @apply mb-1; }
+  .staff-consult-meta { @apply mt-4 grid gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-2; }
+  .staff-consult-meta dt { @apply mb-1 text-slate-500; }
+  .staff-consult-meta dd { @apply break-all text-slate-700; }
+  .staff-card-footer { @apply mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4; }
+  .staff-state { @apply flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-500; }
+  .staff-pager { @apply flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600; }
+  .staff-workspace button { @apply min-h-11; }
+  .staff-workspace details > summary { @apply min-h-11 content-center; }
+  @media (max-width: 639px) {
+    .staff-filter-fields { @apply grid grid-cols-1; }
+    .staff-filter-fields > label { @apply w-full; }
+    .staff-actions { @apply w-full; }
+    .staff-actions > button { @apply flex-1; }
+    .staff-workspace input, .staff-workspace select { @apply text-base; }
+  }
+}

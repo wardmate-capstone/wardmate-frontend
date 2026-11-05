@@ -3,16 +3,31 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
-import { Button, Modal, toast } from '@/components/ui';
+import { Badge, Button, Modal, toast } from '@/components/ui';
+import { CalendarBlank, Clock, Tray, ArrowsClockwise } from '@phosphor-icons/react';
+import './staffing.css';
 import { useAuthStore } from '@/stores/authStore';
 import { staffingError } from '@/lib/api/staffingError';
 import { getManagerOfficers } from '@/lib/api';
 import { staffingFormSchema } from '@/lib/staffingValidation';
 export { validatePeriod, vietnamIso } from '@/lib/staffingValidation';
 
-export const fieldClass = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white p-2.5 text-sm';
+export const fieldClass = 'w-full min-w-0 min-h-11 rounded-lg border border-slate-300 bg-white p-2.5 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700';
 export const dateText = (value: string) => new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 export const statusText = (value: string) => ({ PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy', OPEN: 'Chờ trả lời', ANSWERED: 'Đã trả lời', CLOSED: 'Đã đóng', SUBMITTED: 'Chờ tiền kiểm', UNDER_REVIEW: 'Đang kiểm tra', NEED_REVISION: 'Cần bổ sung', DOCUMENTS_READY: 'Giấy tờ sẵn sàng' }[value] || value);
+export function StaffStatus({ value, label }: { value: string; label?: string }) {
+  const variant = ['APPROVED', 'ANSWERED', 'ACTIVE'].includes(value) ? 'success' : ['PENDING', 'OPEN'].includes(value) ? 'warning' : value === 'REJECTED' ? 'danger' : 'neutral';
+  return <Badge variant={variant}>{label || statusText(value)}</Badge>;
+}
+export function StaffHeading({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
+  return <div className="staff-heading"><div><h2>{title}</h2><p>{description}</p></div>{children && <div className="staff-actions">{children}</div>}</div>;
+}
+export function StaffPeriod({ start, end }: { start: string; end: string }) {
+  const format = (value: string, time: boolean) => !Number.isFinite(Date.parse(value)) ? 'Không có thông tin' : new Intl.DateTimeFormat('vi-VN', time
+    ? { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' }
+    : { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
+  return <div className="staff-period">{[[start, 'Bắt đầu'], [end, 'Kết thúc']].map(([value, label]) => <div key={label}><span className="staff-meta">{label}</span><time dateTime={value}><span><Clock size={18} aria-hidden="true" />{format(value, true)}</span><span><CalendarBlank size={16} aria-hidden="true" />{format(value, false)}</span></time></div>)}</div>;
+}
 export function useStaffAccess() {
   const user = useAuthStore(s => s.user);
   const manager = user?.roles.includes('MANAGER') === true;
@@ -36,12 +51,12 @@ export function useStaffDirectory(enabled: boolean) {
   }, enabled);
 }
 export function QueryState({ query, empty }: { query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown }; empty?: boolean }) {
-  if (query.isPending) return <p role="status">Đang tải dữ liệu…</p>;
+  if (query.isPending) return <div role="status" className="staff-state"><ArrowsClockwise size={24} className="motion-safe:animate-spin" aria-hidden="true" /><p>Đang tải dữ liệu…</p></div>;
   if (query.isError) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800"><p>{staffingError(query.error)}</p><Button variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div>;
-  return empty ? <p className="py-6 text-sm text-slate-500">Chưa có dữ liệu trong phạm vi đang xem.</p> : null;
+  return empty ? <div className="staff-state"><Tray size={32} aria-hidden="true" /><p className="font-semibold text-slate-700">Chưa có dữ liệu trong phạm vi đang xem.</p><p className="text-sm">Bạn có thể đổi bộ lọc hoặc làm mới để kiểm tra lại.</p></div> : null;
 }
 export function Pager({ page, total, setPage }: { page: number; total: number; setPage: (page: number) => void }) {
-  return <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
+  return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
 }
 type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select'; options?: { value: string; label: string; disabled?: boolean }[]; max?: number };
 export function ActionForm({ title, description, fields, validate, submit, onClose, children }: {

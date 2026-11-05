@@ -4,7 +4,7 @@ import { Button, Modal } from '@/components/ui';
 import { staffingApi, type Consultation, type DispatchApplication } from '@/lib/api/staffing';
 import { documentFormApi } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
-import { ActionForm, dateText, Pager, QueryState, statusText, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
+import { ActionForm, StaffHeading, StaffStatus, dateText, Pager, QueryState, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
 
 function ConsultationDocuments({ applicationId }: { applicationId: string }) {
   const { user } = useStaffAccess();
@@ -28,11 +28,17 @@ export function ApplicationConsultations({ applicationId }: { applicationId: str
   if (!can('workflow.consultation.read')) return <p role="alert">Bạn không có quyền xem tham vấn.</p>;
   return <section className="space-y-3"><h3 className="font-bold">Tham vấn chuyên môn</h3><Button variant="outline" onClick={() => void query.refetch()}>Làm mới</Button><QueryState query={query} empty={!query.data?.length} />{!query.isError && <ConsultationCards items={query.data ?? []} />}</section>;
 }
-function ConsultationCards({ items }: { items: Consultation[] }) {
+function ConsultationCards({ items, onViewApplication }: { items: Consultation[]; onViewApplication?: (id: string) => void }) {
   const { user, manager, officer, can } = useStaffAccess();
   const [action, setAction] = useState<{ item: Consultation; close: boolean }>();
   const [documents, setDocuments] = useState<string>();
-  return <div className="space-y-3">{items.map(item => <article key={item.id} className="rounded-xl border bg-white p-4 text-sm space-y-2"><div className="flex flex-wrap justify-between gap-2"><strong>{statusText(item.status)}</strong><time>{dateText(item.createdAtUtc)}</time></div><p className="break-all text-slate-500">Hồ sơ: {item.applicationId}</p><p className="whitespace-pre-wrap break-words">Câu hỏi: {item.question}</p>{item.answer && <p className="whitespace-pre-wrap break-words">Ý kiến: {item.answer}</p>}{item.closeReason && <p className="whitespace-pre-wrap break-words">Lý do đóng: {item.closeReason}</p>}<p className="break-all text-slate-500">Người được hỏi: {item.specialistId}</p><div className="flex flex-wrap gap-2">
+  return <div className="grid min-w-0 gap-4">{items.map(item => <article key={item.id} className="staff-card"><div className="staff-card-heading"><StaffStatus value={item.status} /><time dateTime={item.createdAtUtc} className="text-sm text-slate-500">{dateText(item.createdAtUtc)}</time></div>
+    <div className="staff-note"><span className="staff-meta">Câu hỏi tham vấn</span><h3 className="!font-semibold">{item.question}</h3></div>
+    {item.answer && <div className="staff-note rounded-lg border border-emerald-100 bg-emerald-50 p-4"><span className="staff-meta">Ý kiến chuyên môn</span><p>{item.answer}</p></div>}
+    {item.closeReason && <div className="staff-note"><span className="staff-meta">Lý do đóng</span><p>{item.closeReason}</p></div>}
+    <dl className="staff-consult-meta"><div><dt>Hồ sơ (mã định danh)</dt><dd>{item.applicationId}</dd></div><div><dt>Người được hỏi (mã tài khoản)</dt><dd>{item.specialistId}</dd></div></dl>
+    <div className="staff-card-footer">
+    {onViewApplication && <Button variant="outline" onClick={() => onViewApplication(item.applicationId)}>Xem tham vấn cùng hồ sơ</Button>}
     {officer && item.specialistId === user?.id && item.status === 'OPEN' && can('workflow.consultation.respond') && <Button onClick={() => setAction({ item, close: false })}>Trả lời</Button>}
     {manager && item.status !== 'CLOSED' && can('workflow.dispatch.write') && <Button variant="outline" onClick={() => setAction({ item, close: true })}>Đóng tham vấn</Button>}
     {officer && item.specialistId === user?.id && item.status !== 'CLOSED' && can('workflow.consultation.respond') && <Button variant="outline" onClick={() => setDocuments(item.applicationId)}>Xem tài liệu</Button>}
@@ -62,7 +68,7 @@ export function ConsultationsView() {
   const [applicationId, setApplicationId] = useState<string>();
   const byApplication = useStaffQuery(['consultations', applicationId], signal => staffingApi.consultations(applicationId!, signal), Boolean(applicationId) && can('workflow.consultation.read'));
   if (!can('workflow.consultation.read')) return <p role="alert">Bạn không có quyền xem tham vấn.</p>;
-  return <section className="space-y-4"><h2 className="text-lg font-bold">Hộp thư tham vấn chuyên môn</h2><p className="text-sm text-slate-600">Lãnh đạo xem tham vấn trong phường; cán bộ xem tham vấn được gửi cho mình.</p><Button variant="outline" onClick={() => void query.refetch()}>Làm mới</Button><QueryState query={query} empty={!query.data?.items.length} />{!query.isError && <><ConsultationCards items={query.data?.items ?? []} />{query.data?.items.map(item => <Button key={item.id} variant="outline" onClick={() => setApplicationId(item.applicationId)}>Xem các tham vấn hồ sơ {item.applicationId}</Button>)}</>}<Pager page={page} total={query.data?.total ?? 0} setPage={setPage} />
+  return <section className="staff-workspace"><StaffHeading title="Hộp thư tham vấn chuyên môn" description="Lãnh đạo xem tham vấn trong phường; cán bộ xem tham vấn được gửi cho mình."><Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Làm mới</Button></StaffHeading><QueryState query={query} empty={!query.data?.items.length} />{!query.isError && !query.isPending && <ConsultationCards items={query.data?.items ?? []} onViewApplication={setApplicationId} />}<Pager page={page} total={query.data?.total ?? 0} setPage={setPage} />
     {applicationId && <Modal open onOpenChange={v => !v && setApplicationId(undefined)} title="Tham vấn theo hồ sơ"><QueryState query={byApplication} empty={!byApplication.data?.length} />{!byApplication.isError && <ConsultationCards items={byApplication.data ?? []} />}</Modal>}
   </section>;
 }

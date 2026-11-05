@@ -8,7 +8,7 @@ import { Badge, Button, Input, Modal, toast } from '@/components/ui';
 import { calendarClosuresApi, closureInputSchema, closureReasonSchema, type CalendarClosure } from '@/lib/api/calendarClosures';
 import { staffingError } from '@/lib/api/staffingError';
 import { addCalendarDays, calendarDateText, canCancelClosure, validClosureRange, vietnamToday } from '@/lib/calendarRules';
-import { dateText, fieldClass, QueryState, useStaffAccess } from './shared';
+import { StaffHeading, dateText, fieldClass, QueryState, useStaffAccess } from './shared';
 
 function useVietnamToday() {
   const [today, setToday] = useState(vietnamToday);
@@ -130,11 +130,11 @@ export function CalendarClosuresView() {
   const currentItem = action?.item && query.data?.find(item => item.id === action.item?.id);
   const rows = query.data?.filter(item => (scope === 'all' || (scope === 'national' ? item.wardCode === null : item.wardCode !== null)) &&
     (status === 'all' || (status === 'cancelled' ? item.cancelled : !item.cancelled))) ?? [];
-  return <section className="space-y-5" aria-label="Lịch ngày nghỉ">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{national ? 'Lịch ngày lễ toàn quốc' : 'Lịch đóng cửa phường và ngày lễ'}</h2><p className="mt-1 text-sm text-slate-600">{national ? 'Phạm vi toàn quốc theo quyền quản lý lịch của tài khoản.' : 'Lịch toàn quốc và phường bạn đang công tác.'} Ngày và giờ hiển thị theo Việt Nam (UTC+07).</p></div>
+  return <section className="staff-workspace" aria-label="Lịch ngày nghỉ">
+    <StaffHeading title={national ? 'Lịch ngày lễ toàn quốc' : 'Lịch đóng cửa phường và ngày lễ'} description={`${national ? 'Phạm vi toàn quốc theo quyền quản lý lịch của tài khoản.' : 'Lịch toàn quốc và phường bạn đang công tác.'} Ngày và giờ hiển thị theo Việt Nam (UTC+07).`}>
       {(national || manageWard) && <Button onClick={() => setAction({ context })}>{national ? 'Thêm ngày lễ toàn quốc' : 'Thêm ngày nghỉ phường'}</Button>}
-    </div>
-    <div className="admin-card flex flex-wrap items-end gap-3 p-4">
+    </StaffHeading>
+    <div className="staff-filter staff-filter-fields">
       <Input type="date" label="Từ ngày" value={from} onChange={e => setFrom(e.target.value)} containerClassName="min-w-0 flex-1 sm:flex-none" />
       <Input type="date" label="Đến ngày" value={to} onChange={e => setTo(e.target.value)} containerClassName="min-w-0 flex-1 sm:flex-none" />
       {!national && <label className="grid gap-2 text-sm font-semibold">Phạm vi<select className={fieldClass} value={scope} onChange={e => setScope(e.target.value)}><option value="all">Tất cả phạm vi</option><option value="ward">Phường của tôi</option><option value="national">Toàn quốc</option></select></label>}
@@ -144,7 +144,7 @@ export function CalendarClosuresView() {
     <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Lịch đóng cửa dùng điều chỉnh hạn tiền kiểm nội bộ. Ca làm và phân công cán bộ được quản lý riêng. Lịch trùng toàn quốc và phường không làm lùi hạn hai lần.</p>
     {!valid ? <p role="alert" className="text-red-800">Chọn khoảng ngày hợp lệ, tối đa 400 ngày gồm cả hai đầu.</p> : <>
       <QueryState query={query} empty={!rows.length} />
-      {!query.isError && !query.isPending && <div className="grid gap-3 lg:grid-cols-2">{rows.map(item => <article key={item.id} className="admin-card min-w-0 space-y-3 p-4">
+      {!query.isError && !query.isPending && <div className="staff-grid">{rows.map(item => <article key={item.id} className="staff-card space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold"><time dateTime={item.date}>{calendarDateText(item.date)}</time></h3><div className="flex flex-wrap gap-2"><Badge variant={item.wardCode === null ? 'info' : 'neutral'}>{item.wardCode === null ? 'Toàn quốc' : `Phường ${item.wardCode}`}</Badge><Badge variant={item.cancelled ? 'neutral' : 'warning'}>{item.cancelled ? 'Đã hủy' : item.date < today ? 'Đã qua' : item.date === today ? 'Hôm nay' : 'Sắp tới'}</Badge></div></div>
         <p className="whitespace-pre-wrap break-words text-sm">{item.reason}</p>
         <details className="text-sm text-slate-600"><summary className="cursor-pointer py-1 font-medium">Chi tiết khai báo{item.cancelled ? ' và hủy' : ''}</summary><dl className="mt-2 grid gap-2 break-words">

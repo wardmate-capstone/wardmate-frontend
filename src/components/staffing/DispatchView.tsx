@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button, Modal } from '@/components/ui';
 import { staffingApi, type DispatchApplication } from '@/lib/api/staffing';
 import { getManagerOfficers } from '@/lib/api';
-import { ActionForm, dateText, Pager, QueryState, statusText, useStaffAccess, useStaffQuery } from './shared';
+import { ActionForm, StaffHeading, dateText, Pager, QueryState, statusText, useStaffAccess, useStaffQuery } from './shared';
 import { ConsultationPanel } from './ConsultationsView';
 import {
   FileText,
@@ -102,38 +102,34 @@ export function DispatchView() {
   if (!manager || !can('workflow.dispatch.read')) return <p role="alert">Bạn không có quyền xem điều phối hồ sơ.</p>;
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
-        <div>
-          <h2 className="text-base font-bold text-slate-900">Danh sách hồ sơ điều phối</h2>
-          <p className="text-xs text-slate-500">Hồ sơ trong phường. Chỉ phân công khi cán bộ có ca làm và đủ điều kiện.</p>
-        </div>
+    <section className="staff-workspace">
+      <StaffHeading title="Danh sách hồ sơ điều phối" description="Hồ sơ trong phường. Chỉ phân công khi cán bộ có ca làm và đủ điều kiện.">
         <Button
           variant="outline"
-          size="small"
+          disabled={query.isFetching}
           onClick={() => void query.refetch()}
-          className="gap-1.5 text-xs font-semibold"
+          className="gap-2 font-semibold"
         >
-          <ArrowsClockwise size={14} className={query.isFetching ? 'animate-spin' : ''} />
+          <ArrowsClockwise size={18} aria-hidden="true" className={query.isFetching ? 'motion-safe:animate-spin' : ''} />
           <span>{query.isFetching ? 'Đang cập nhật...' : 'Làm mới'}</span>
         </Button>
-      </div>
+      </StaffHeading>
 
       <QueryState query={query} empty={!query.data?.items.length} />
 
-      {!query.isError && (
+      {!query.isError && !query.isPending && (
         <div className="grid gap-3">
           {query.data?.items.map(app => (
             <article
               key={app.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300 hover:shadow-sm space-y-4"
+              className="staff-card space-y-4"
             >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="space-y-1.5">
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-xs font-bold text-slate-800 border border-slate-200">
                       <FileText size={14} className="text-slate-500" />
-                      <span>{app.applicationCode || `HS-${app.id.slice(0, 8).toUpperCase()}`}</span>
+                      <span className="break-all">{app.applicationCode || `HS-${app.id.slice(0, 8).toUpperCase()}`}</span>
                     </span>
                     {renderStatusBadge(app.status)}
                   </div>
@@ -142,12 +138,12 @@ export function DispatchView() {
                   </h3>
                 </div>
 
-                <div className="flex items-center shrink-0">
-                  <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-1.5 text-xs">
+                <div className="flex min-w-0 max-w-full items-center sm:max-w-[45%]">
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200/80 px-3 py-2 text-sm">
                     <User size={15} className="text-slate-500" />
                     <span className="text-slate-500">Cán bộ phụ trách:</span>
                     {app.assignedOfficerId ? (
-                      <span className="font-semibold text-slate-900">{formatOfficer(app.assignedOfficerId)}</span>
+                      <span className="font-semibold text-slate-900 [overflow-wrap:anywhere]">{formatOfficer(app.assignedOfficerId)}</span>
                     ) : (
                       <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                         Chưa phân công
@@ -157,11 +153,7 @@ export function DispatchView() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                <span className="text-[11px] text-slate-400">
-                  Phiên bản phân công: v{app.assignmentVersion}
-                </span>
-
+              <div className="staff-card-footer">
                 <div className="flex flex-wrap items-center gap-2">
                   {can('workflow.dispatch.write') && ['SUBMITTED', 'UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'].includes(app.status) && (
                     <Button
