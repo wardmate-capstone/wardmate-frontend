@@ -125,6 +125,7 @@ export interface DocxOnlineEditorProps {
   errorMessage?: (error: unknown) => string;
   saveLabel?: string;
   savedLabel?: string;
+  saveAndCloseLabel?: string;
 }
 
 export default function DocxOnlineEditor({
@@ -140,6 +141,7 @@ export default function DocxOnlineEditor({
   errorMessage = documentFormError,
   saveLabel = 'Lưu vào hồ sơ',
   savedLabel = 'Đã lưu vào hồ sơ',
+  saveAndCloseLabel,
 }: DocxOnlineEditorProps) {
   const editorRef = useRef<DocxEditorRef>(null);
   const loader = useRef(load);
@@ -230,7 +232,7 @@ export default function DocxOnlineEditor({
     return file;
   }
 
-  async function save() {
+  async function save(closeAfterSave = false) {
     if (lock.current || readOnly || !onSave) return;
     lock.current = true;
     setBusy(true);
@@ -238,7 +240,10 @@ export default function DocxOnlineEditor({
     const savingRevision = revision.current;
     try {
       await onSave(await exportFile());
-      if (savingRevision === revision.current) setDirty(false);
+      if (savingRevision === revision.current) {
+        setDirty(false);
+        if (closeAfterSave) onClose();
+      }
       setSaved(true);
     } catch (err) {
       setError(errorMessage(err));
@@ -366,7 +371,20 @@ export default function DocxOnlineEditor({
           )}
 
           {/* Reference panel toggle */}
-          {referenceData && referenceData.length > 0 && (
+          {!readOnly && onSave && saveAndCloseLabel ? (
+            <Button
+              size="small"
+              variant="primary"
+              disabled={!editable}
+              loading={busy}
+              onClick={() => void save(true)}
+              className="gap-1.5 text-xs"
+              title="Lưu Word và thoát để nộp cho quản lý"
+            >
+              <CheckCircle size={16} weight="bold" />
+              <span>{saveAndCloseLabel}</span>
+            </Button>
+          ) : referenceData && referenceData.length > 0 && (
             <Button
               size="small"
               variant={showReferenceDrawer ? 'primary' : 'outline'}
