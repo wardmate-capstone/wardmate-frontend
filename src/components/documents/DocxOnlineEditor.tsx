@@ -385,19 +385,6 @@ export default function DocxOnlineEditor({
             <DownloadSimple size={16} />
             <span className="hidden sm:inline">Tải DOCX</span>
           </Button>
-
-          <div className="h-5 w-px bg-slate-200 hidden sm:block" aria-hidden="true" />
-
-          {/* Close X button */}
-          <button
-            type="button"
-            onClick={() => guard.requestClose(onClose)}
-            aria-label="Thoát không gian soạn thảo"
-            title="Đóng"
-            className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          >
-            <X size={18} weight="bold" />
-          </button>
         </div>
       </header>
 
