@@ -5,8 +5,8 @@ export function authReply(route: Route, options: Parameters<Route['fulfill']>[0]
     'access-control-expose-headers': 'Retry-After, retry-after',
     'access-control-allow-origin': route.request().headers().origin || 'http://localhost:4317',
     'access-control-allow-credentials': 'true',
-    'access-control-allow-headers': 'Content-Type, Authorization, X-CSRF-Protection',
-    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-allow-headers': 'Content-Type, Authorization, X-CSRF-Protection, Idempotency-Key',
+    'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     ...(options?.headers as Record<string, string> || {}),
   } });
 }
