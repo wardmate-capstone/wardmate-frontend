@@ -21,7 +21,12 @@ export function vietnamIso(value: string): string {
   if (!Number.isFinite(timestamp)) throw new Error('Ngày giờ không hợp lệ. Vui lòng chọn lại theo giờ Việt Nam.');
   return new Date(timestamp).toISOString();
 }
-
+export function vietnamLocal(value: string): string {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp + 7 * 3600000).toISOString().slice(0, 16) : '';
+}
+export const leaveMetadataSchema = z.object({ startsAt: z.string(), endsAt: z.string(), reason: z.string().trim().min(1, 'Vui lòng nhập lý do.').max(2000, 'Lý do tối đa 2.000 ký tự.') })
+  .superRefine((v, ctx) => { const issue = validatePeriod(v); if (issue) ctx.addIssue({ code: 'custom', path: ['endsAt'], message: issue }); });
 export function validStaffingRange(from: string, to: string): boolean {
   return validCalendarDate(from) && validCalendarDate(to) && to >= from &&
     Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`) <= 92 * 86400000;
