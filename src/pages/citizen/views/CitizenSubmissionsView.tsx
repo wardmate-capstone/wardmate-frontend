@@ -90,7 +90,7 @@ export function CitizenSubmissionsView({
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState('');
 
-  const query = useCitizenSubmissions(user?.id, true, { page, pageSize: 20, status });
+  const query = useCitizenSubmissions(user?.id, true, { page, pageSize: 10, status });
 
   // Lọc tìm kiếm theo tên tờ khai client-side
   const filteredItems = useMemo(() => {
