@@ -43,6 +43,7 @@ let activeConnection: HubConnection | null = null;
 let restartTimer: number | undefined;
 let isDisposed = false;
 let restartAttempt = 0;
+let bulkMarkingDepth = 0;
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   items: [],
@@ -141,6 +142,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     });
 
     connection.on('UpdateUnreadCount', (value: unknown) => {
+      // Đang đánh dấu tất cả: bỏ qua số đếm trung gian, sẽ đối chiếu một lần khi xong
+      if (bulkMarkingDepth > 0) return;
       if (typeof value === 'number') {
         set({ unreadCount: value });
       }
@@ -197,15 +200,34 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     const conn = activeConnection;
     if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối máy chủ thông báo.');
     const unread = get().items.filter((n) => !n.isRead).map((n) => n.id);
-    const results = await Promise.allSettled(unread.map((id) => conn.invoke('MarkRead', id)));
-    const done = new Set(unread.filter((_, i) => results[i].status === 'fulfilled'));
+    if (!unread.length) return;
+    const unreadSet = new Set(unread);
+    // BE chỉ có MarkRead từng thông báo và đẩy UpdateUnreadCount sau mỗi lần → chuông bị đếm lùi 40, 39, 38…
+    // Cập nhật lạc quan một lần, bỏ qua các sự kiện đếm trong lúc chạy, xong mới đối chiếu với server.
+    bulkMarkingDepth += 1;
     set((state) => ({
-      items: state.items.map((n) => (done.has(n.id) ? { ...n, isRead: true } : n)),
+      items: state.items.map((n) => (unreadSet.has(n.id) ? { ...n, isRead: true } : n)),
+      unreadCount: Math.max(0, state.unreadCount - unread.length),
     }));
+    let failed: string[] = [];
+    try {
+      const results = await Promise.allSettled(unread.map((id) => conn.invoke('MarkRead', id)));
+      failed = unread.filter((_, i) => results[i].status === 'rejected');
+      if (failed.length) {
+        // Hoàn lại trạng thái chưa đọc cho các thông báo đánh dấu thất bại
+        const failedSet = new Set(failed);
+        set((state) => ({
+          items: state.items.map((n) => (failedSet.has(n.id) ? { ...n, isRead: false } : n)),
+          unreadCount: state.unreadCount + failed.length,
+        }));
+      }
+    } finally {
+      bulkMarkingDepth -= 1;
+    }
     await conn.invoke<number>('GetUnreadCount').then((count) => {
       if (typeof count === 'number') set({ unreadCount: count });
     }).catch(() => undefined);
-    if (done.size < unread.length) {
+    if (failed.length) {
       throw new Error('Một số thông báo chưa đánh dấu được. Vui lòng thử lại.');
     }
   },
