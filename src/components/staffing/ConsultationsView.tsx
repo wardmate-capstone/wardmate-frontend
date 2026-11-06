@@ -43,8 +43,12 @@ function ConsultationCards({ items, onViewApplication }: { items: Consultation[]
     {manager && item.status !== 'CLOSED' && can('workflow.dispatch.write') && <Button variant="outline" onClick={() => setAction({ item, close: true })}>Đóng tham vấn</Button>}
     {officer && item.specialistId === user?.id && item.status !== 'CLOSED' && can('workflow.consultation.respond') && <Button variant="outline" onClick={() => setDocuments(item.applicationId)}>Xem tài liệu</Button>}
   </div></article>)}
-    {action && <ActionForm title={action.close ? 'Đóng tham vấn' : 'Trả lời tham vấn'} fields={[{ name: 'text', label: action.close ? 'Lý do đóng' : 'Ý kiến chuyên môn', type: 'textarea', max: 4000 }]} submit={v => action.close ? staffingApi.close(action.item, v.text) : staffingApi.answer(action.item, v.text)} onClose={() => setAction(undefined)} />}
-    {documents && <Modal open onOpenChange={open => !open && setDocuments(undefined)} title="Tài liệu tham vấn" className="sm:max-w-4xl"><ConsultationDocuments applicationId={documents} /></Modal>}
+    {action && (action.close ? manager && can('workflow.dispatch.write') : officer && can('workflow.consultation.respond') && action.item.specialistId === user?.id) && <ActionForm title={action.close ? 'Đóng tham vấn' : 'Trả lời tham vấn'} fields={[{ name: 'text', label: action.close ? 'Lý do đóng' : 'Ý kiến chuyên môn', type: 'textarea', max: 4000 }]} submit={async v => {
+      const latest = (await staffingApi.consultations(action.item.applicationId)).find(item => item.id === action.item.id);
+      if (!latest || latest.version !== action.item.version || latest.status !== action.item.status) throw new Error('Tham vấn đã thay đổi. Đóng biểu mẫu và tải lại trước khi gửi.');
+      return action.close ? staffingApi.close(latest, v.text) : staffingApi.answer(latest, v.text);
+    }} onClose={() => setAction(undefined)} />}
+    {documents && officer && can('workflow.consultation.respond') && <Modal open onOpenChange={open => !open && setDocuments(undefined)} title="Tài liệu tham vấn" className="sm:max-w-4xl"><ConsultationDocuments applicationId={documents} /></Modal>}
   </div>;
 }
 export function ConsultationPanel({ application }: { application: DispatchApplication }) {
