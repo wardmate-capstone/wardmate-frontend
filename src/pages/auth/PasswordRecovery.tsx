@@ -63,7 +63,6 @@ export function PasswordRecovery({ initialIdentity = '' }: { initialIdentity?: s
     setResending(true);
     try {
       await sendOtp(identity);
-      toast.success('Đã gửi lại yêu cầu mã xác thực.');
     } catch (error) {
       if (active.current) toast.error(authErrorMessage(error));
     } finally {
@@ -153,7 +152,7 @@ export function PasswordRecovery({ initialIdentity = '' }: { initialIdentity?: s
             <form className="auth-form-fields mt-4 grid gap-3.5" noValidate onSubmit={resetForm.handleSubmit(submitReset)}>
               <p role="status" className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs sm:text-sm leading-6 text-sky-950">
                 <EnvelopeSimple size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-                <span>{notice || 'Nhập mã xác thực đã được gửi tới email đăng ký của tài khoản.'}</span>
+                <span>{notice || 'Nếu tài khoản hợp lệ, mã xác thực đã được gửi tới email đăng ký.'}</span>
               </p>
               <div>
                 <label className="auth-label" htmlFor="recovery-otp">Mã xác thực (6 chữ số)</label>
@@ -171,6 +170,15 @@ export function PasswordRecovery({ initialIdentity = '' }: { initialIdentity?: s
                     required
                   />
                 </div>
+              </div>
+              <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 text-xs leading-relaxed text-slate-600">
+                <p className="font-semibold text-slate-700">Lưu ý khi nhận mã xác thực:</p>
+                <ul className="mt-1 list-disc pl-4 space-y-0.5 text-slate-600">
+                  <li>Vui lòng kiểm tra kỹ cả hộp thư Đến và thư mục Rác (Spam).</li>
+                  <li>Mã xác thực có hiệu lực trong vòng <strong>5 phút</strong>.</li>
+                  <li>Mỗi lần gửi mã cần chờ <strong>60 giây</strong> trước khi yêu cầu mã mới.</li>
+                  <li>Nếu nhập sai quá <strong>5 lần</strong>, bạn sẽ cần yêu cầu mã mới.</li>
+                </ul>
               </div>
               <PasswordField
                 field={resetForm.register('newPassword')}

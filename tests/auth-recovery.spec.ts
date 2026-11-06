@@ -171,3 +171,45 @@ test('đổi mật khẩu khi đăng nhập bằng OTP email gửi kèm Bearer v
     auth: 'Bearer ui-test-token',
   });
 });
+
+test('màn quên mật khẩu hiển thị thông báo trung tính 202, khối lưu ý 4 điểm và khóa nút gửi lại 60s (FE-04 / KB-02 #13)', async ({ page }) => {
+  let requestCount = 0;
+  await page.route('http://localhost:5000/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+    if (path.endsWith('/refresh-token')) return authReply(route, { status: 401, json: { code: 'iam.invalid_token' } });
+    if (path === '/api/v1/auth/password-otp/request') {
+      requestCount++;
+      return authReply(route, {
+        status: 202,
+        json: { message: 'Nếu tài khoản hợp lệ, mã xác thực đã được gửi tới email đăng ký.' },
+      });
+    }
+    return authReply(route, { status: 404 });
+  });
+
+  await page.goto('/quen-mat-khau');
+
+  // Nhập email bất kỳ (kể cả email không tồn tại trong hệ thống)
+  await page.getByLabel('Email hoặc tên đăng nhập').fill('nonexistent@example.com');
+  await page.getByRole('button', { name: 'Gửi mã xác thực' }).click();
+
+  // 1. Kiểm tra thông báo trung tính từ BE
+  await expect(page.getByRole('status')).toContainText('Nếu tài khoản hợp lệ, mã xác thực đã được gửi tới email đăng ký.');
+
+  // 2. Kiểm tra không có thông báo "Đã gửi mã thành công"
+  await expect(page.getByText('Đã gửi mã thành công')).toHaveCount(0);
+
+  // 3. Kiểm tra các dòng lưu ý thân thiện hiển thị đầy đủ
+  await expect(page.getByText('Vui lòng kiểm tra kỹ cả hộp thư Đến và thư mục Rác (Spam).')).toBeVisible();
+  await expect(page.getByText('Mã xác thực có hiệu lực trong vòng 5 phút.')).toBeVisible();
+  await expect(page.getByText('Mỗi lần gửi mã cần chờ 60 giây trước khi yêu cầu mã mới.')).toBeVisible();
+  await expect(page.getByText('Nếu nhập sai quá 5 lần, bạn sẽ cần yêu cầu mã mới.')).toBeVisible();
+
+  // 4. Kiểm tra nút "Gửi lại mã" bị khóa trong suốt 60 giây đếm ngược
+  const resendBtn = page.getByRole('button', { name: /Gửi lại mã sau \d+s/ });
+  await expect(resendBtn).toBeDisabled();
+
+  // 5. Kiểm tra request gửi đi đúng chuẩn
+  expect(requestCount).toBe(1);
+});
