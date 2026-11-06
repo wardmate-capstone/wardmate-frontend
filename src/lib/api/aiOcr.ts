@@ -287,6 +287,21 @@ export const KNOWLEDGE_PDF_MAX_BYTES = 10 * 1024 * 1024;
 const knowledgeBase = "/api/v1/ai/knowledge";
 const kb = (path: string) => aiPath(knowledgeBase + path);
 
+export class AiChatError extends Error {
+  code?: string;
+  status?: number;
+  retryAfter?: number | null;
+
+  constructor(message: string, code?: string, status?: number, retryAfter?: number | null) {
+    super(message);
+    this.name = 'AiChatError';
+    this.code = code;
+    this.status = status;
+    this.retryAfter = retryAfter;
+    Object.setPrototypeOf(this, AiChatError.prototype);
+  }
+}
+
 export const aiOcrApi = {
   extractCccd: async (
     frontImage: File,
@@ -365,11 +380,19 @@ export const aiOcrApi = {
           conversationId: input.conversationId || null,
           wardCode: input.wardCode || "WARD_001",
         },
-        { signal, suppressSessionExpiry: true, timeout: 35000 },
+        { signal, suppressSessionExpiry: true, timeout: 75000 },
       );
 
       return chatCompletionSchema.parse(response.data);
     } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        throw new AiChatError(
+          aiError(err),
+          aiErrorCode(err),
+          err.response?.status,
+          getAiRetryAfterSeconds(err),
+        );
+      }
       throw new Error(aiError(err));
     }
   },
@@ -680,9 +703,9 @@ const aiErrorMessages: Record<string, string> = {
   "chat.database_unavailable":
     "Trợ lý AI tạm thời không truy cập được cơ sở dữ liệu. Vui lòng thử lại sau.",
   "ai.guest_quota_exceeded":
-    "Bạn đã hết lượt hỏi hôm nay. Đăng nhập để hỏi tiếp.",
+    "Bạn đã hỏi 10 lượt hôm nay khi chưa đăng nhập. Vui lòng đăng nhập để hỏi tiếp hoặc thử lại vào ngày mai.",
   "ai.guest_limit_reached":
-    "Hệ thống đã hết lượt cho khách hôm nay. Đăng nhập hoặc thử lại ngày mai.",
+    "Lượt hỏi đáp cho khách hôm nay đã hết. Vui lòng đăng nhập để tiếp tục hoặc thử lại vào ngày mai.",
   "ai.quota_exceeded":
     "Bạn đã dùng hết 30 lượt hôm nay, thử lại ngày mai.",
   "ai.daily_limit_reached":
@@ -731,14 +754,25 @@ export function aiError(error: unknown): string {
     const traceId = data?.traceId;
     const traceSuffix = traceId ? ` (Mã tra cứu hỗ trợ: ${traceId})` : '';
 
-    if (code && aiErrorMessages[code]) return `${aiErrorMessages[code]}${traceSuffix}`;
+    if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+      return aiErrorMessages["ai.timeout"];
+    }
+
+    if (code && aiErrorMessages[code]) {
+      if (data?.title && (code === 'ai.guest_quota_exceeded' || code === 'ai.guest_limit_reached')) {
+        return `${data.title}${traceSuffix}`;
+      }
+      return `${aiErrorMessages[code]}${traceSuffix}`;
+    }
     const status = error.response?.status;
     if (status === 401)
       return "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.";
     if (status === 403) return `${aiErrorMessages["knowledge.forbidden"]}${traceSuffix}`;
     if (status === 409 && code === "chat.busy") return aiErrorMessages["chat.busy"];
-    if (status === 429)
+    if (status === 429) {
+      if (data?.title) return `${data.title}${traceSuffix}`;
       return "Vui lòng chờ một chút rồi gửi lại. Bạn đang thao tác quá nhanh.";
+    }
     if (!error.response)
       return "Không kết nối được dịch vụ hỗ trợ. Vui lòng kiểm tra mạng và thử lại.";
     const title = data?.title;

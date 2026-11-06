@@ -9,8 +9,9 @@ import {
   ClockCounterClockwise,
   Plus,
   CaretLeft,
+  SignIn,
 } from '@phosphor-icons/react';
-import { aiOcrApi, type ChatSession } from '@/lib/api/aiOcr';
+import { aiOcrApi, AiChatError, type ChatSession } from '@/lib/api/aiOcr';
 import { useQuery } from '@tanstack/react-query';
 import { authClient, getPublicWards } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -205,6 +206,16 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [quotaNotice, setQuotaNotice] = useState<{
+    type: 'guest_quota_exceeded' | 'guest_limit_reached' | 'user_quota_exceeded';
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (authenticated) {
+      setQuotaNotice(null);
+    }
+  }, [authenticated]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -307,16 +318,105 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
       const msg = err instanceof Error ? err.message : '';
-      if (
-        !authenticated ||
+      const code = err instanceof AiChatError ? err.code : undefined;
+      const status = err instanceof AiChatError ? err.status : undefined;
+
+      const isGuestQuotaExceeded =
+        code === 'ai.guest_quota_exceeded' ||
+        msg.includes('chưa đăng nhập') ||
+        (status === 429 && !authenticated && (msg.includes('lượt') || msg.includes('hôm nay')));
+
+      const isGuestLimitReached = code === 'ai.guest_limit_reached';
+
+      const isUserQuotaExceeded =
+        code === 'ai.quota_exceeded' ||
+        code === 'ai.daily_limit_reached' ||
+        (status === 429 && authenticated && (msg.includes('30 lượt') || msg.includes('hôm nay')));
+
+      const isTooManyRequests =
+        (status === 429 || code === 'ai.provider_busy') &&
+        !isGuestQuotaExceeded &&
+        !isGuestLimitReached &&
+        !isUserQuotaExceeded;
+
+      if (isGuestQuotaExceeded) {
+        const quotaText =
+          msg.includes('Bạn đã hỏi') || msg.includes('đăng nhập')
+            ? msg
+            : 'Bạn đã hỏi 10 lượt hôm nay khi chưa đăng nhập. Vui lòng đăng nhập để hỏi tiếp hoặc thử lại vào ngày mai.';
+        const assistantMessage: ChatMessage = {
+          id: String(Date.now() + 1),
+          sender: 'assistant',
+          text: `${quotaText}\n\n💡 Đăng nhập tài khoản công dân để tiếp tục trò chuyện không giới hạn, lưu lại lịch sử tư vấn và tiền kiểm hồ sơ AI tự động.`,
+          timestamp: new Date(),
+        };
+        const finalMessages = [...nextMessages, assistantMessage];
+        setMessages(finalMessages);
+        setQuotaNotice({
+          type: 'guest_quota_exceeded',
+          message: quotaText,
+        });
+        if (!authenticated) persistGuest(finalMessages, activeConversationId, targetWardCode);
+        return;
+      }
+
+      if (isGuestLimitReached) {
+        const limitText =
+          msg.includes('Lượt hỏi đáp cho khách') || msg.includes('hết')
+            ? msg
+            : 'Lượt hỏi đáp cho khách hôm nay đã hết. Vui lòng đăng nhập để tiếp tục hoặc thử lại vào ngày mai.';
+        const assistantMessage: ChatMessage = {
+          id: String(Date.now() + 1),
+          sender: 'assistant',
+          text: `${limitText}\n\n💡 Bạn có thể đăng nhập tài khoản công dân để tiếp tục gửi câu hỏi tới trợ lý AI.`,
+          timestamp: new Date(),
+        };
+        const finalMessages = [...nextMessages, assistantMessage];
+        setMessages(finalMessages);
+        setQuotaNotice({
+          type: 'guest_limit_reached',
+          message: limitText,
+        });
+        if (!authenticated) persistGuest(finalMessages, activeConversationId, targetWardCode);
+        return;
+      }
+
+      if (isUserQuotaExceeded) {
+        const userLimitText = msg.includes('30 lượt')
+          ? msg
+          : 'Bạn đã dùng hết 30 lượt AI hôm nay. Vui lòng thử lại vào ngày mai.';
+        const assistantMessage: ChatMessage = {
+          id: String(Date.now() + 1),
+          sender: 'assistant',
+          text: `${userLimitText}\n\nHạn mức hỏi đáp sẽ được làm mới tự động vào 00:00 ngày mai.`,
+          timestamp: new Date(),
+        };
+        const finalMessages = [...nextMessages, assistantMessage];
+        setMessages(finalMessages);
+        setQuotaNotice({
+          type: 'user_quota_exceeded',
+          message: userLimitText,
+        });
+        return;
+      }
+
+      if (isTooManyRequests) {
+        setMessages(prev => prev.filter(message => message.id !== userMessage.id));
+        setInputValue(text);
+        setError(msg || 'Hệ thống AI đang quá tải hoặc bạn đang gửi tin nhắn quá nhanh. Vui lòng chờ giây lát rồi gửi lại.');
+        return;
+      }
+
+      const isOfflineOrUnavailable =
         msg.includes('503') ||
         msg.includes('chat.database_unavailable') ||
         msg.includes('ai.provider_unavailable') ||
         msg.includes('Database chat') ||
         msg.includes('Failed to fetch') ||
         msg.includes('NetworkError') ||
-        msg.includes('Không kết nối')
-      ) {
+        msg.includes('Không kết nối');
+
+      if (!authenticated && isOfflineOrUnavailable) {
         const selectedWard = wards.data?.find(w => w.code === targetWardCode);
         const fallbackAnswer = generateGuestAssistantAnswer(text, selectedWard?.name);
         const assistantMessage: ChatMessage = {
@@ -347,6 +447,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
     setLoading(false);
     setConversationId(null);
     setError(null);
+    setQuotaNotice(null);
     setViewMode('chat');
     setMessages([WELCOME_MESSAGE]);
     if (!authenticated) { clearGuestChat(); setExpiresAt(null); }
@@ -724,56 +825,119 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                   </div>
                 )}
 
+                {quotaNotice && (
+                  <div role="status" className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 space-y-2.5 shadow-2xs">
+                    <div className="flex items-start gap-2.5">
+                      <div className="size-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <SignIn size={16} weight="bold" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-amber-950">
+                          {quotaNotice.type === 'guest_quota_exceeded'
+                            ? 'Đã đạt giới hạn 10 câu hỏi miễn phí cho khách'
+                            : quotaNotice.type === 'guest_limit_reached'
+                            ? 'Hệ thống đã đạt giới hạn lượt hỏi cho khách'
+                            : 'Đã dùng hết 30 lượt hỏi hôm nay'}
+                        </h4>
+                        <p className="mt-0.5 text-[11px] leading-relaxed text-amber-900/90">
+                          {quotaNotice.type === 'guest_quota_exceeded' || quotaNotice.type === 'guest_limit_reached'
+                            ? 'Đăng nhập tài khoản công dân để tiếp tục trò chuyện không giới hạn, lưu lại lịch sử tư vấn và tiền kiểm hồ sơ AI tự động.'
+                            : 'Hạn mức hỏi đáp sẽ được làm mới tự động vào ngày mai.'}
+                        </p>
+                      </div>
+                    </div>
+                    {(quotaNotice.type === 'guest_quota_exceeded' || quotaNotice.type === 'guest_limit_reached') && (
+                      <div className="pt-0.5 flex flex-wrap items-center gap-2">
+                        <Link
+                          to={'/dang-nhap?returnTo=' + encodeURIComponent(location.pathname + location.search + location.hash)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-800 text-white rounded-lg text-xs font-semibold hover:bg-red-900 transition-colors shadow-2xs"
+                        >
+                          <SignIn size={13} weight="bold" />
+                          <span>Đăng nhập ngay</span>
+                        </Link>
+                        <Link
+                          to="/dang-ky"
+                          className="text-xs text-red-800 font-semibold hover:underline px-2 py-1"
+                        >
+                          Tạo tài khoản mới
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Minimalist Input Box */}
-              <div className="border-t border-slate-200 bg-white p-2.5 space-y-1.5">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void handleSend();
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    aria-label="Câu hỏi cho trợ lý"
-                    maxLength={4000}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Nhập câu hỏi cần tư vấn..."
-                    disabled={loading}
-                    className="min-w-0 min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:bg-slate-100"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputValue.trim() || loading}
-                    className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-800 text-white disabled:opacity-40 hover:bg-red-900 transition-colors shadow-2xs"
-                    aria-label="Gửi tin nhắn"
-                  >
-                    <PaperPlaneTilt size={15} weight="fill" />
-                  </button>
-                </form>
-                {!authenticated ? (
-                  <p className="text-[10px] text-slate-500 text-center flex flex-wrap items-center justify-center gap-1">
-                    <span className="inline-block px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">Chế độ khách · Lưu trên trình duyệt trong 24 giờ</span>
-                    <span>·</span>
+              {quotaNotice && (quotaNotice.type === 'guest_quota_exceeded' || quotaNotice.type === 'guest_limit_reached') ? (
+                <div className="border-t border-amber-200 bg-amber-50/70 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-amber-950">Đã hết 10 câu hỏi miễn phí hôm nay</p>
+                      <p className="text-[11px] text-amber-900/90 leading-snug">Vui lòng đăng nhập để tiếp tục trò chuyện.</p>
+                    </div>
                     <Link
                       to={'/dang-nhap?returnTo=' + encodeURIComponent(location.pathname + location.search + location.hash)}
-                      className="text-red-700 font-semibold hover:underline"
+                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-800 text-white rounded-lg text-xs font-semibold hover:bg-red-900 transition-colors shadow-2xs"
                     >
-                      Đăng nhập
+                      <SignIn size={14} weight="bold" />
+                      <span>Đăng nhập</span>
                     </Link>
-                    <span>để lưu phiên và tiền kiểm hồ sơ AI</span>
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-slate-400 text-center">
-                    Thông tin tư vấn mang tính tham khảo hướng dẫn chuẩn bị hồ sơ.
-                  </p>
-                )}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-t border-slate-200 bg-white p-2.5 space-y-1.5">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void handleSend();
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      aria-label="Câu hỏi cho trợ lý"
+                      maxLength={4000}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder={loading ? 'Trợ lý đang suy nghĩ và trả lời...' : 'Nhập câu hỏi cần tư vấn...'}
+                      disabled={loading}
+                      className="min-w-0 min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() || loading}
+                      className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-800 text-white disabled:opacity-40 hover:bg-red-900 transition-colors shadow-2xs"
+                      aria-label="Gửi tin nhắn"
+                    >
+                      {loading ? (
+                        <ArrowsClockwise size={15} className="animate-spin" />
+                      ) : (
+                        <PaperPlaneTilt size={15} weight="fill" />
+                      )}
+                    </button>
+                  </form>
+                  {!authenticated ? (
+                    <p className="text-[10px] text-slate-500 text-center flex flex-wrap items-center justify-center gap-1">
+                      <span className="inline-block px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">Chế độ khách · Lưu trên trình duyệt trong 24 giờ</span>
+                      <span>·</span>
+                      <Link
+                        to={'/dang-nhap?returnTo=' + encodeURIComponent(location.pathname + location.search + location.hash)}
+                        className="text-red-700 font-semibold hover:underline"
+                      >
+                        Đăng nhập
+                      </Link>
+                      <span>để lưu phiên và tiền kiểm hồ sơ AI</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 text-center">
+                      Thông tin tư vấn mang tính tham khảo hướng dẫn chuẩn bị hồ sơ.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
         </section>
