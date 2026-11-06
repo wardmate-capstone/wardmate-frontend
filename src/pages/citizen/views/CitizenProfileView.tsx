@@ -4,17 +4,17 @@ import {
   ShieldCheck,
   IdentificationCard,
   PencilSimple,
-  Printer,
   Copy,
   MapPin,
   Lock,
   Scan,
+  Trash,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
-import { Input, Skeleton } from '@/components/ui';
+import { Button, Input, Modal, Skeleton } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
-import { updateMyProfile, authErrorMessage } from '@/lib/api';
+import { updateMyProfile, deleteMyProfile, authErrorMessage } from '@/lib/api';
 import type { UserProfileDto } from '@/types/profile';
 import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
@@ -74,7 +74,9 @@ export function CitizenProfileView({
   const [activeTab, setActiveTab] = useState<'personal' | 'security'>('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const saveLock = useRef(false);
 
   const isPristine =
@@ -196,6 +198,31 @@ export function CitizenProfileView({
     }
   }
 
+  async function handleDeleteProfile() {
+    setDeleting(true);
+    try {
+      await deleteMyProfile();
+      toast.success('Đã xóa thông tin cá nhân thành công.');
+      setIsDeleteModalOpen(false);
+      setFormData({
+        fullName: '',
+        identityNumber: '',
+        dateOfBirth: '',
+        gender: '',
+        phoneNumber: '',
+        permanentAddress: '',
+        temporaryAddress: '',
+      });
+      setErrors({});
+      setIsEditing(true);
+      onProfileUpdated?.();
+    } catch (error) {
+      toast.error(authErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const handleApplyExtractedCccd = (data: CccdExtractionDto) => {
     setIsEditing(true);
     setFormData((prev) => ({
@@ -219,7 +246,7 @@ export function CitizenProfileView({
   return (
     <div className="space-y-6">
       {/* Overview Banner kèm nút thao tác */}
-      <div className="admin-card p-6 border-l-4 border-l-red-800">
+      <div className="admin-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="size-16 rounded-2xl bg-red-900 text-white font-extrabold text-xl flex items-center justify-center shrink-0 shadow-md">
@@ -260,13 +287,6 @@ export function CitizenProfileView({
                 </button>
                 {!isEditing ? (
                   <>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                      onClick={() => window.print()}
-                    >
-                      <Printer size={16} /> In phiếu thông tin
-                    </button>
                     <button
                       type="button"
                       className="admin-primary-action text-xs"
@@ -348,7 +368,7 @@ export function CitizenProfileView({
                 </span>
               </h4>
               <p className="text-xs text-red-100/90 mt-0.5">
-                Cập nhật trực tiếp các trường bên dưới. Sau khi hoàn tất bấm nút <strong>Lưu thay đổi</strong> ở thẻ hồ sơ bên trên.
+                Chỉnh sửa các trường bên dưới và bấm <strong>Lưu thay đổi</strong> khi hoàn tất.
               </p>
             </div>
           </div>
@@ -380,7 +400,7 @@ export function CitizenProfileView({
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-red-700" weight="fill" />
-                Thông tin định danh do người dùng kê khai
+                Thông tin định danh CCCD
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
@@ -409,9 +429,6 @@ export function CitizenProfileView({
                   <div className="flex flex-col">
                     <span className="font-mono text-xl font-black text-red-950 tracking-wider">
                       {formatCCCD(formData.identityNumber)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      (Định danh: {formData.identityNumber})
                     </span>
                   </div>
                 ) : (
@@ -545,7 +562,7 @@ export function CitizenProfileView({
             <div>
               <label htmlFor="profile-account-email" className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Email đăng ký</label>
               <Input id="profile-account-email" type="email" value={accountEmail} readOnly aria-describedby="profile-email-help" placeholder="Tài khoản chưa có email" className="min-w-0 bg-slate-50 text-sm" />
-              <p id="profile-email-help" className="mt-2 text-xs leading-5 text-slate-500">Email nhận mã xác thực khi quên mật khẩu. Bạn có thể xem địa chỉ này; hiện chưa hỗ trợ đổi email tại đây.</p>
+              <p id="profile-email-help" className="mt-2 text-xs leading-5 text-slate-500">Dùng để nhận mã xác thực khi khôi phục tài khoản.</p>
             </div>
 
             <div>
@@ -670,6 +687,27 @@ export function CitizenProfileView({
           </div>
         </section>
 
+        {initialProfile && !isEditing && (
+          <div className="md:col-span-2 rounded-2xl border border-red-200/80 bg-red-50/40 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold text-red-950">Xóa dữ liệu thông tin cá nhân</h4>
+                <p className="mt-1 text-xs text-slate-600">
+                  Xóa các thông tin kê khai cá nhân khỏi tài khoản này.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-2 text-xs font-bold text-red-700 hover:bg-red-50 hover:border-red-400 transition-colors shadow-2xs"
+              >
+                <Trash size={16} />
+                <span>Xóa thông tin cá nhân</span>
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </>
   )}
@@ -684,6 +722,39 @@ export function CitizenProfileView({
         onOpenChange={setIsOcrModalOpen}
         onApplyExtractedData={handleApplyExtractedCccd}
       />
+
+      <Modal
+        open={isDeleteModalOpen}
+        onOpenChange={open => { if (!deleting) setIsDeleteModalOpen(open); }}
+        title="Xác nhận xóa thông tin cá nhân"
+        description="Hành động này sẽ xóa các thông tin cá nhân đã lưu trong tài khoản của bạn."
+      >
+        <div className="space-y-4 text-xs">
+          <p className="text-slate-600 leading-relaxed">
+            Bạn có chắc chắn muốn xóa toàn bộ thông tin cá nhân đã kê khai không?
+            Sau khi xóa, tài khoản sẽ trở về trạng thái chưa thiết lập hồ sơ và bạn có thể tạo lại bất cứ lúc nào.
+          </p>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              size="small"
+              disabled={deleting}
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="outline"
+              size="small"
+              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
+              loading={deleting}
+              onClick={() => void handleDeleteProfile()}
+            >
+              Xác nhận xóa
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

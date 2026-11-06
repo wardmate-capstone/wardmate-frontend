@@ -56,3 +56,32 @@ test('hồ sơ hiện email từ tài khoản, không gửi email vào API profi
   expect(saved.body).not.toHaveProperty('email');
   await expect(email).toHaveValue('demo@example.test');
 });
+
+test('xóa thông tin cá nhân mở modal xác nhận và gọi DELETE /api/v1/users/me/profile (FE-03)', async ({ page }) => {
+  const state = await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
+  await page.goto('/citizen?section=profile');
+
+  // Nút xóa hiển thị khi đang có profile
+  const deleteBtn = page.getByRole('button', { name: 'Xóa thông tin cá nhân' });
+  await expect(deleteBtn).toBeVisible();
+  await deleteBtn.click();
+
+  // Modal xác nhận mở lên
+  const modal = page.getByRole('dialog', { name: 'Xác nhận xóa thông tin cá nhân' });
+  await expect(modal).toBeVisible();
+
+  // Bấm Hủy -> đóng modal, không gọi API xóa
+  await modal.getByRole('button', { name: 'Hủy' }).click();
+  await expect(modal).toBeHidden();
+  expect(state.requests.filter(r => r.method === 'DELETE')).toHaveLength(0);
+
+  // Mở lại modal và bấm Xác nhận xóa
+  await deleteBtn.click();
+  await modal.getByRole('button', { name: 'Xác nhận xóa' }).click();
+
+  // Xác nhận gọi DELETE /api/v1/users/me/profile
+  await expect.poll(() => state.requests.filter(r => r.method === 'DELETE' && r.path === '/api/v1/users/me/profile').length).toBe(1);
+
+  // Xác nhận thông báo thành công hiển thị
+  await expect(page.getByText('Đã xóa thông tin cá nhân thành công.')).toBeVisible();
+});
