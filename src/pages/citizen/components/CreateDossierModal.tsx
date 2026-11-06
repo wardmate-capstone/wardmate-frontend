@@ -5,7 +5,11 @@ import { z } from 'zod';
 import { Button, Modal, Skeleton } from '@/components/ui';
 import { workflowError } from '@/lib/api/workflow';
 
-const schema = z.object({ procedureId: z.string().uuid('Chọn thủ tục hợp lệ.'), wardCode: z.string().trim().min(1, 'Chọn phường/xã tiếp nhận.').max(50), caseCode: z.string().max(100, 'Mã trường hợp tối đa 100 ký tự.') });
+const schema = z.object({
+  procedureId: z.string().trim().min(1, 'Chọn thủ tục hợp lệ.').regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Chọn thủ tục hợp lệ.'),
+  wardCode: z.string().trim().min(1, 'Phải chọn phường/xã tiếp nhận.').max(50),
+  caseCode: z.string().max(100, 'Mã trường hợp tối đa 100 ký tự.'),
+});
 export type CreateDossierValues = z.infer<typeof schema>;
 
 export function CreateDossierModal({ open, onClose, initial, procedures, wards, cases, loading, unavailable, onRetry, busy, onProcedureChange, onSubmit }: {

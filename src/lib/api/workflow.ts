@@ -527,6 +527,9 @@ export function workflowError(error: unknown): string {
       const traceId = (data as { traceId?: string; extensions?: { traceId?: string } }).traceId
         ?? (data as { extensions?: { traceId?: string } }).extensions?.traceId;
 
+      if (code === 'application.ward_required') {
+        return 'Hồ sơ cũ chưa có phường tiếp nhận; cần bổ sung trước khi nộp.';
+      }
       if (code === 'application.checklist_incomplete' && Array.isArray(missingItems) && missingItems.length > 0) {
         const itemNames = missingItems.map((m) => m.title || m.code).filter(Boolean).join(', ');
         return `Vui lòng hoàn tất các giấy tờ bắt buộc trước khi nộp: ${itemNames}`;
