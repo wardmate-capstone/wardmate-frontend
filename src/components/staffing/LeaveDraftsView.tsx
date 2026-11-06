@@ -6,6 +6,7 @@ import { Button, Modal, toast } from '@/components/ui';
 import { staffingApi } from '@/lib/api/staffing';
 import { workScheduleApi, type LeaveCapabilities, type LeaveDraft } from '@/lib/api/workSchedules';
 import { staffingError } from '@/lib/api/staffingError';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { leaveMetadataSchema, vietnamIso, vietnamLocal } from '@/lib/staffingValidation';
 import { ActionForm, OperationError, Pager, QueryState, StaffPeriod, dateText, fieldClass, useStaffAccess, useStaffOperation, useStaffQuery, validatePeriod } from './shared';
 
@@ -54,46 +55,66 @@ function DraftWorkspace({ id, capabilities, onClose, onSubmitted }: { id: string
   const client = useQueryClient();
   const query = useStaffQuery(['leave-draft', id], signal => workScheduleApi.draft(id, signal));
   const [editor, setEditor] = useState(false);
-  const [edit, setEdit] = useState(false);
-  const [confirm, setConfirm] = useState<'submit' | 'delete'>();
+  const [metadataDirty, setMetadataDirty] = useState(false);
+  const [metadataReset, setMetadataReset] = useState(0);
+  const [confirm, setConfirm] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [savedRevision, setSavedRevision] = useState<string>();
   const [savedMetadataVersion, setSavedMetadataVersion] = useState<number>();
   const [editorDraft, setEditorDraft] = useState<LeaveDraft>();
   const operation = useStaffOperation();
+  const guard = useUnsavedChanges(metadataDirty, operation.busy || editor);
   const submitRequest = useRef<{ draft: LeaveDraft; key: string } | null>(null);
   const item = query.data;
   const update = (draft: LeaveDraft) => { client.setQueriesData({ queryKey: ['staffing', user?.id], predicate: q => q.queryKey.includes('leave-draft') && q.queryKey.includes(id) }, draft); };
   const replay = Boolean(submitRequest.current && operation.review);
+  const submit = () => {
+    if (!item) return;
+    submitRequest.current ??= { draft: item, key: crypto.randomUUID() };
+    const sent = submitRequest.current;
+    void operation.run(() => workScheduleApi.submit(sent.draft, sent.key), receipt => onSubmitted(receipt.leaveId), true);
+  };
   const reopen = async () => {
     const latest = await query.refetch();
-    if (latest.data && !latest.isError) { operation.reset(); submitRequest.current = null; setSavedRevision(undefined); }
+    if (latest.data && !latest.isError) { operation.reset(); submitRequest.current = null; setSavedRevision(undefined); setMetadataReset(value => value + 1); }
   };
-  return <Modal open title="Nháp đơn xin nghỉ" description="Lưu Word chỉ cập nhật nháp. Đơn chỉ được chuyển đến quản lý khi bạn bấm Nộp cho quản lý." className={editor ? wordDialogClass : 'sm:max-w-3xl'} onOpenChange={v => !v && !operation.busy && !editor && onClose()}>
+  const wordReady = Boolean(item && savedRevision && savedRevision === item.documentRevisionId && savedMetadataVersion === item.metadataVersion);
+  return <Modal open title="Nháp đơn xin nghỉ" description="1. Thông tin nghỉ → 2. Soạn Word → 3. Nộp cho quản lý" className={editor ? wordDialogClass : 'sm:max-w-3xl'} onOpenChange={v => !v && guard.requestClose(onClose)}>
     <QueryState query={query} />
-    {!query.isError && item && <div className="space-y-4"><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><p className="text-sm text-slate-500">Lưu lần cuối: {dateText(item.updatedAtUtc)}</p>
-      {item.submittedLeaveId ? <><p role="status">Nháp đã được nộp.</p><Button onClick={() => onSubmitted(item.submittedLeaveId!)}>Xem đơn đã nộp</Button></> : <>
-        <div className="staff-actions"><Button disabled={operation.busy || operation.review || query.isFetching} onClick={() => { setEditorDraft(item); setSaveError(''); setEditor(true); }}>Soạn / mở lại Word</Button>
-          <Button variant="outline" disabled={operation.busy || operation.review || query.isFetching} onClick={() => setEdit(true)}>Sửa thông tin nghỉ</Button>
-          <Button variant="outline" disabled={operation.busy || operation.review || query.isFetching} onClick={() => setConfirm('delete')}>Xóa nháp</Button></div>
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">Trước khi nộp, hãy mở và lưu Word theo thông tin nghỉ hiện tại. Thời gian trong thông tin nghỉ được dùng để tính lịch; bạn cần đối chiếu với nội dung Word.</p>
-        <Button disabled={operation.busy || query.isFetching || (operation.review && !replay) || (!replay && (!savedRevision || savedRevision !== item.documentRevisionId || savedMetadataVersion !== item.metadataVersion))} onClick={() => setConfirm('submit')}>{replay ? 'Kiểm tra / gửi lại lần nộp trước' : 'Nộp cho quản lý'}</Button>
-        <Button variant="outline" disabled={operation.busy || query.isFetching} onClick={() => void reopen()}>Đọc lại trạng thái</Button>
+    {!query.isError && item && <div className="space-y-4">
+      {item.submittedLeaveId ? <><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p>{item.reason}</p><p role="status">Nháp đã được nộp.</p><Button onClick={() => onSubmitted(item.submittedLeaveId!)}>Xem đơn đã nộp</Button></> : <>
+        <section aria-label="Bước 1: Thông tin nghỉ" className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <h3 className="font-bold text-slate-900">1. Thông tin nghỉ</h3>
+          <p className="text-sm text-slate-600">Bạn có thể sửa ngày giờ và lý do ngay bên dưới khi đơn chưa nộp. Thời gian này được dùng để tính lịch nghỉ.</p>
+          <fieldset disabled={operation.busy || operation.review || query.isFetching}>
+            <ActionForm inline key={`${item.metadataVersion}-${metadataReset}`} title="Thông tin nghỉ" onDirtyChange={setMetadataDirty} fields={[{ name: 'startsAt', label: 'Bắt đầu nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'endsAt', label: 'Kết thúc nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'reason', label: 'Lý do ngắn', type: 'textarea' }]} defaultValues={{ startsAt: vietnamLocal(item.startsAtUtc), endsAt: vietnamLocal(item.endsAtUtc), reason: item.reason }} validate={v => validatePeriod(v)} submit={async v => { const latest = await workScheduleApi.draft(id); if (latest.version !== item.version) throw new Error('Nháp đã thay đổi. Đọc lại trạng thái trước khi sửa.'); update(await workScheduleApi.editDraft(id, { startsAt: vietnamIso(v.startsAt), endsAt: vietnamIso(v.endsAt), reason: v.reason, expectedVersion: item.version })); setSavedRevision(undefined); }} onClose={() => {}} />
+          </fieldset>
+        </section>
+        <section aria-label="Bước 2: Soạn Word" className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <h3 className="font-bold text-slate-900">2. Soạn Word</h3>
+          <p className="text-sm text-slate-600">Kiểm tra nội dung Word khớp với ngày giờ ở bước 1, rồi bấm <strong>Xuất bản</strong> để lưu và thoát. Đơn chưa được gửi ở bước này.</p>
+          <Button disabled={metadataDirty || operation.busy || operation.review || query.isFetching} onClick={() => { setEditorDraft(item); setSaveError(''); setEditor(true); }}>Soạn / mở lại Word</Button>
+          {wordReady && !metadataDirty && <p role="status" className="text-sm font-medium text-emerald-800">Word đã lưu. Bạn có thể nộp đơn ở bước 3.</p>}
+        </section>
+        <section aria-label="Bước 3: Nộp đơn" className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <h3 className="font-bold text-slate-900">3. Nộp đơn</h3>
+          <p className="text-sm text-slate-600">Bấm một lần để gửi bản Word đã lưu cho quản lý. Sau khi nộp, bạn không thể sửa đơn.</p>
+          {!wordReady && <p className="text-sm text-amber-900">Hoàn tất và lưu Word ở bước 2 để mở nút nộp.</p>}
+          <Button disabled={metadataDirty || operation.busy || query.isFetching || (operation.review && !replay) || (!replay && !wordReady)} onClick={submit}>{operation.busy ? 'Đang nộp…' : replay ? 'Kiểm tra / gửi lại lần nộp trước' : 'Nộp cho quản lý'}</Button>
+        </section>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><p className="text-xs text-slate-500">Lưu lần cuối: {dateText(item.updatedAtUtc)}</p><div className="flex gap-2"><Button size="small" variant="ghost" disabled={operation.busy || query.isFetching} onClick={() => guard.requestClose(() => void reopen())}>Đọc lại trạng thái</Button><Button size="small" variant="ghost" disabled={operation.busy || operation.review || query.isFetching || metadataDirty} onClick={() => setConfirm(true)}>Xóa nháp</Button></div></div>
       </>}
       <OperationError operation={operation} />{saveError && <p role="alert" className="text-sm text-red-800">{saveError}</p>}
     </div>}
-    {editor && editorDraft && <Suspense fallback={<p role="status">Đang mở trình soạn Word…</p>}><DocxEditor sourceKey={`leave-${id}`} title="Đơn xin nghỉ" author={user?.username || 'Cán bộ'} subtitle="Lưu nháp Word, sau đó quay lại để nộp cho quản lý" saveLabel="Lưu nháp Word" savedLabel="Đã lưu nháp, chưa nộp" errorMessage={staffingError}
+    {editor && editorDraft && <Suspense fallback={<p role="status">Đang mở trình soạn Word…</p>}><DocxEditor sourceKey={`leave-${id}`} title="Đơn xin nghỉ" author={user?.username || 'Cán bộ'} subtitle="Bấm Xuất bản để lưu Word và thoát, sau đó nộp cho quản lý" saveLabel="Lưu nháp Word" savedLabel="Đã lưu nháp, chưa nộp" saveAndCloseLabel="Xuất bản" errorMessage={staffingError}
       referenceData={[{ label: 'Bắt đầu nghỉ', value: dateText(editorDraft.startsAtUtc) }, { label: 'Kết thúc nghỉ', value: dateText(editorDraft.endsAtUtc) }, { label: 'Lý do ngắn', value: editorDraft.reason }]}
       load={async signal => { const latest = await workScheduleApi.draft(id, signal); if (latest.version !== editorDraft.version || latest.submittedLeaveId) throw new Error('Nháp đã thay đổi. Quay lại và đọc lại trạng thái trước khi soạn.'); return workScheduleApi.draftDocx(id, signal); }}
       onSave={async file => {
         try { const result = await workScheduleApi.saveDocx(editorDraft, file, capabilities.maxDocxBytes); update(result); setEditorDraft(result); setSavedRevision(result.documentRevisionId ?? undefined); setSavedMetadataVersion(result.metadataVersion); setSaveError(''); toast.success('Đã lưu nháp Word. Bạn chưa nộp đơn.'); }
         catch (error) { setSavedRevision(undefined); setSaveError(staffingError(error)); throw error; }
       }} onClose={() => { setEditor(false); void query.refetch(); }} /></Suspense>}
-    {edit && item && <ActionForm title="Sửa thông tin nghỉ" fields={[{ name: 'startsAt', label: 'Bắt đầu nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'endsAt', label: 'Kết thúc nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'reason', label: 'Lý do ngắn', type: 'textarea' }]} defaultValues={{ startsAt: vietnamLocal(item.startsAtUtc), endsAt: vietnamLocal(item.endsAtUtc), reason: item.reason }} validate={v => validatePeriod(v)} submit={async v => { const latest = await workScheduleApi.draft(id); if (latest.version !== item.version) throw new Error('Nháp đã thay đổi. Đóng biểu mẫu và đọc lại trạng thái.'); update(await workScheduleApi.editDraft(id, { startsAt: vietnamIso(v.startsAt), endsAt: vietnamIso(v.endsAt), reason: v.reason, expectedVersion: item.version })); setSavedRevision(undefined); }} onClose={() => setEdit(false)}><p className="mb-4 text-sm text-amber-900">Sau khi sửa, cần mở và lưu lại Word trước khi nộp.</p></ActionForm>}
-    {confirm && item && <Modal open title={confirm === 'delete' ? 'Xóa nháp đơn nghỉ?' : 'Nộp đơn cho quản lý?'} onOpenChange={v => !v && !operation.busy && setConfirm(undefined)} footer={<><Button variant="outline" disabled={operation.busy} onClick={() => setConfirm(undefined)}>Quay lại</Button><Button disabled={operation.busy} onClick={() => {
-      if (confirm === 'delete') void operation.run(() => workScheduleApi.deleteDraft(id, item.version), onClose);
-      else { submitRequest.current ??= { draft: item, key: crypto.randomUUID() }; const sent = submitRequest.current; void operation.run(() => workScheduleApi.submit(sent.draft, sent.key), receipt => onSubmitted(receipt.leaveId), true).finally(() => setConfirm(undefined)); }
-    }}>{operation.busy ? 'Đang xử lý…' : confirm === 'delete' ? 'Xóa nháp' : 'Xác nhận nộp'}</Button></>}><p>{confirm === 'delete' ? 'Nháp chưa nộp và nội dung Word riêng sẽ không còn trong danh sách.' : 'Bản Word đã lưu sẽ được gửi cho quản lý. Sau nộp bạn không thể sửa bản này.'}</p><OperationError operation={operation} /></Modal>}
+    {guard.confirmation}
+    {confirm && item && <Modal open title="Xóa nháp đơn nghỉ?" onOpenChange={v => !v && !operation.busy && setConfirm(false)} footer={<><Button variant="outline" disabled={operation.busy} onClick={() => setConfirm(false)}>Quay lại</Button><Button disabled={operation.busy} onClick={() => void operation.run(() => workScheduleApi.deleteDraft(id, item.version), onClose)}>{operation.busy ? 'Đang xử lý…' : 'Xóa nháp'}</Button></>}><p>Nháp chưa nộp và nội dung Word riêng sẽ không còn trong danh sách.</p><OperationError operation={operation} /></Modal>}
   </Modal>;
 }
 

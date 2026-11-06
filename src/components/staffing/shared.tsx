@@ -86,9 +86,10 @@ export function Pager({ page, total, setPage }: { page: number; total: number; s
   return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
 }
 type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select'; options?: { value: string; label: string; disabled?: boolean }[]; max?: number };
-export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues }: {
+export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues, inline = false, onDirtyChange }: {
   title: string; description?: string; fields: Field[]; validate?: (values: Record<string, string>) => string | undefined;
   submit: (values: Record<string, string>) => Promise<unknown>; onClose: () => void; children?: ReactNode; defaultValues?: Record<string, string>;
+  inline?: boolean; onDirtyChange?: (dirty: boolean) => void;
 }) {
   const formId = useId();
   const client = useQueryClient();
@@ -98,6 +99,8 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
   const pendingFocus = useRef<string | null>(null);
   const form = useForm<Record<string, string>>({ resolver: zodResolver(staffingFormSchema(fields)), defaultValues: defaultValues ?? Object.fromEntries(fields.map(f => [f.name, ''])) });
   const busy = form.formState.isSubmitting;
+  const dirty = form.formState.isDirty;
+  useEffect(() => { onDirtyChange?.(dirty || busy); }, [dirty, busy, onDirtyChange]);
   useEffect(() => {
     if (!busy && pendingFocus.current) { form.setFocus(pendingFocus.current); pendingFocus.current = null; }
   }, [busy, form]);
@@ -111,6 +114,7 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
       await submit(values);
       await Promise.all(['staffing', 'workflow', 'document-form'].map(key => client.invalidateQueries({ queryKey: [key] })));
       toast.success('Đã lưu thay đổi.');
+      if (inline) form.reset(values);
       onClose();
     } catch (e) {
       const status = axios.isAxiosError(e) ? e.response?.status : undefined;
@@ -135,9 +139,11 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
       setError(`${staffingError(e)}${review ? ' Đóng hộp thoại và kiểm tra dữ liệu mới nhất trước khi thao tác lại.' : ''}`);
     } finally { lock.current = false; }
   });
-  return <Modal open onOpenChange={open => !open && !busy && onClose()} title={title} description={description} footer={<><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" form={formId} disabled={busy || conflict}>{busy ? 'Đang lưu…' : 'Xác nhận'}</Button></>}>
-    {children}<form id={formId} onSubmit={e => void handle(e)} noValidate className="grid gap-4">{fields.map(f => <label key={f.name} className="grid gap-1 text-sm font-medium">{f.label}<span className="sr-only"> (bắt buộc)</span>
+  const content = <>{children}<form id={formId} onSubmit={e => void handle(e)} noValidate className={`grid gap-4 ${inline ? 'sm:grid-cols-2' : ''}`}>{fields.map(f => <label key={f.name} className={`grid gap-1 text-sm font-medium ${inline && f.type === 'textarea' ? 'sm:col-span-2' : ''}`}>{f.label}<span className="sr-only"> (bắt buộc)</span>
       {f.type === 'textarea' ? <textarea rows={4} maxLength={f.max ?? 2000} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} /> : f.type === 'select' ? <select className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined}><option value="">Chọn…</option>{f.options?.map(o => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select> : <input type={f.type ?? 'text'} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} />}
-      {form.formState.errors[f.name] && <span id={`${formId}-${f.name}-error`} role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}</label>)}{error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}</form>
+      {form.formState.errors[f.name] && <span id={`${formId}-${f.name}-error`} role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}</label>)}{error && <p role="alert" className={`rounded-lg bg-red-50 p-3 text-red-800 ${inline ? 'sm:col-span-2' : ''}`}>{error}</p>}</form></>;
+  if (inline) return <div className="space-y-3">{content}<div className="flex flex-wrap items-center gap-3"><Button type="submit" form={formId} disabled={busy || conflict || !dirty}>{busy ? 'Đang lưu…' : 'Lưu thông tin nghỉ'}</Button><p className="text-sm text-slate-600" role="status">{dirty ? 'Có thay đổi chưa lưu. Lưu trước khi soạn Word.' : 'Thông tin đã lưu. Bạn có thể tiếp tục soạn Word.'}</p></div></div>;
+  return <Modal open onOpenChange={open => !open && !busy && onClose()} title={title} description={description} footer={<><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" form={formId} disabled={busy || conflict}>{busy ? 'Đang lưu…' : 'Xác nhận'}</Button></>}>
+    {content}
   </Modal>;
 }
