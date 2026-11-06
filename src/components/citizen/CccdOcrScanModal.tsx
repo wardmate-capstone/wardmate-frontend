@@ -249,7 +249,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
         open={open}
         onOpenChange={handleClose}
         title="Quét thông tin Căn cước công dân (AI OCR)"
-        description="Tự động bóc tách thông tin từ ảnh chụp thẻ CCCD để điền nhanh hồ sơ và thông tin cá nhân."
+        description="Bóc tách thông tin từ ảnh chụp CCCD để tự động điền hồ sơ."
         className="sm:max-w-2xl"
       >
         <div className="space-y-4 text-xs">
@@ -257,7 +257,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
           <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-amber-900">
             <ShieldCheck size={20} className="shrink-0 text-amber-700 mt-0.5" weight="duotone" />
             <div className="leading-relaxed">
-              <strong>Bảo vệ dữ liệu cá nhân:</strong> Ảnh CCCD chỉ được xử lý tạm thời để trích xuất văn bản và <strong>không lưu trữ vào hệ thống cơ sở dữ liệu</strong>. Vui lòng đối chiếu lại thông tin trước khi nộp hồ sơ.
+              <strong>Bảo vệ dữ liệu:</strong> Ảnh CCCD chỉ dùng để trích xuất thông tin tạm thời và <strong>không lưu trữ trên hệ thống</strong>.
             </div>
           </div>
 
@@ -748,7 +748,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                     )}
                   </div>
                   <span className="text-[10px] text-slate-500 ml-auto italic hidden sm:inline">
-                    Nhấp vào ảnh để mở to đối chiếu với thông tin
+                    Nhấp ảnh để phóng to đối chiếu
                   </span>
                 </div>
               )}
