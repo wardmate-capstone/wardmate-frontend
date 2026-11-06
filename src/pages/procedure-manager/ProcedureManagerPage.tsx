@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { UnifiedProcedureSidebar as ProcedureManagerSidebar, type ProcedureNavSection } from "@/components/layout/RoleWorkspaceSidebars";
 import {
@@ -36,7 +36,16 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 export function ProcedureManagerPage({ embedded = false, readOnly = false, initialSection = "dashboard" }: { embedded?: boolean; readOnly?: boolean; initialSection?: ProcedureNavSection } = {}) {
   const [params, setParams] = useSearchParams();
-  const [section, setSection] = useState<ProcedureNavSection>(readOnly ? 'procedures' : initialSection);
+  const rawParamSection = params.get("section") as ProcedureNavSection | null;
+  const validSection = (rawParamSection && ['dashboard', 'procedures', 'drafts', 'categories', 'forms', 'ai-knowledge', 'profile'].includes(rawParamSection)) ? rawParamSection : null;
+  const [section, setSection] = useState<ProcedureNavSection>(readOnly ? 'procedures' : (validSection ?? initialSection));
+
+  useEffect(() => {
+    const s = params.get("section") as ProcedureNavSection | null;
+    if (s && ['dashboard', 'procedures', 'drafts', 'categories', 'forms', 'ai-knowledge', 'profile'].includes(s)) {
+      setSection(s);
+    }
+  }, [params]);
   const [mobile, setMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<ProcedureSummary>();
@@ -152,7 +161,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                   </p>
                 )}
               </div>
-              {["dashboard", "procedures"].includes(section) && can("procedure.create") && <div className="flex flex-wrap gap-3">
+              {section === "procedures" && can("procedure.create") && <div className="flex flex-wrap gap-3">
                 <Button onClick={openCreate}>Thêm thủ tục</Button>
               </div>}
             </div>
@@ -206,6 +215,9 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                 key={revision}
                 stats={stats.data}
                 statsLoading={stats.loading}
+                categoriesCount={categories.data?.length}
+                canCreate={can('procedure.create')}
+                onCreateProcedure={openCreate}
                 onNavigateSection={navigate}
                 onSelectProcedure={setSelected}
               />
@@ -271,8 +283,12 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                     setSelected(created);
                     toast.success("Đã tạo thủ tục.");
                   } catch (e) {
-                    if (e instanceof ProcedureValidationError) setValidationError(e);
-                    setError(procedureError(e));
+                    if (e instanceof ProcedureValidationError) {
+                      setValidationError(e);
+                      setError("");
+                    } else {
+                      setError(procedureError(e));
+                    }
                   } finally {
                     setBusy(false);
                     lock.current = false;

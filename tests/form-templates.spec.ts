@@ -37,7 +37,7 @@ async function openWarehouse(page: Page, permissions?: string[]) {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER'], permissions);
   await mockCatalog(page);
   const state = await mockForms(page);
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Kho biểu mẫu Word' })).toBeVisible();
   await expect(page.getByText('Tờ khai kiểm thử', { exact: true })).toBeVisible();
@@ -178,7 +178,7 @@ test('procedure editor previews a real linked template and saves the selected ID
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   const catalog = await mockCatalog(page);
   await mockForms(page);
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
   await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
@@ -226,7 +226,7 @@ test('dual-role user uploads an empty template in procedure-manager workspace', 
   await mockCatalog(page);
   const state = await mockForms(page);
   state.item.fileDocxUrl = null;
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'Tờ khai kiểm thử' });
   await expect(row.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true })).toBeDisabled();
@@ -250,7 +250,7 @@ test('dual-role user preserves forbidden reason in procedure-manager workspace',
     expect(route.request().headers().authorization).toBe('Bearer ui-test-token');
     return authReply(route, { status: 403, json: { code: 'auth.forbidden', title: 'Bạn không có quyền thực hiện thao tác này.', traceId: 'mock-trace' } });
   });
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   await page.getByRole('button', { name: 'Thêm đơn', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -266,7 +266,7 @@ test('IT_ADMIN without PROCEDURE_MANAGER reads templates without write controls'
   await mockWorkspaceAuth(page, ['IT_ADMIN']);
   await mockCatalog(page);
   const state = await mockForms(page);
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   await expect(page.getByText('Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
@@ -287,7 +287,7 @@ test('empty procedure opens the form picker directly and persists multiple forms
       { ...original, id: secondId, code: 'BM-02', title: 'Mẫu thứ hai' },
     ], page: 1, pageSize: 10, totalCount: 2, totalPages: 1 } });
   });
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
   await page.getByRole('button', { name: /5 Biểu mẫu/ }).click();
@@ -324,7 +324,7 @@ test('picker uses the warehouse despite catalog bridge failure, keeps selections
     const missing = { ...original, id: '07000000-0000-0000-0000-000000000007', code: 'CHUA-TEP', title: 'Mẫu chưa có tệp', fileDocxUrl: null };
     return catalogReply(route, { json: { items: params.get('searchCode') ? [second] : params.get('page') === '2' ? [second] : [original, missing], page: Number(params.get('page')), pageSize: 10, totalCount: params.get('searchCode') ? 1 : 11, totalPages: params.get('searchCode') ? 1 : 2 } });
   });
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   const editor = page.getByRole('dialog');
   await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
@@ -425,7 +425,7 @@ async function openLinkedEditor(page: Page) {
   const catalog = await mockCatalog(page);
   catalog.detail.formDefinitions = [{ formTemplateId, formCode: 'BM-01', formName: original.title, formType: 'DOCX_TEMPLATE', quantity: 2, caseCode: 'A', isMandatory: false }];
   await mockForms(page);
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
   await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
@@ -550,7 +550,7 @@ test('saving locks the procedure inputs and prevents closing or duplicate writes
 test('new procedure shows Vietnamese field errors and asks before discarding entered data', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   const catalog = await mockCatalog(page);
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Thêm thủ tục', exact: true });
   await editor.getByRole('checkbox').check();
