@@ -1,5 +1,46 @@
 # Tiến độ và bàn giao WardMate
 
+## Khôi phục hợp đồng chuẩn BE và hiển thị lịch tháng thành công — 06/11/2026
+
+- **Trạng thái thực tế:** Màn hình **Lịch ca làm** và **Danh sách ca** tại `http://localhost:5173/manager` đã hiển thị lịch làm việc thành công, không còn lỗi chặn validation Zod.
+- **Nguyên nhân và khắc phục:**
+  - Trước đó FE tự thêm các trường `daysOff`, `isPublished`, `canEdit`, `editDeadlineUtc` vào schema Zod và logic xử lý lịch, trong khi hợp đồng BE chính thức (`MonthlyView`, `ScheduleDraftInput`, `MonthlyRevisionView`) và tài liệu bàn giao `Lịch làm việc Front Desk và đơn nghỉ Word` chỉ gồm: `month, slots, baseFingerprint, draft, leaves, closures, confirmations`.
+  - Đã loại bỏ các trường thừa khỏi `src/lib/api/workSchedules.ts`, `MonthlyScheduleView.tsx`, `ScheduleListView.tsx`, `scheduleCalendar.ts` và các fixture test.
+  - Ngày có ca hiển thị màu xanh nhạt; ngày nghỉ/lễ chung hoặc nghỉ phép cả ngày hiển thị màu đỏ nhạt; ngày chưa có ca hiển thị "Chưa có ca" (không tự quy kết thành ngày nghỉ cá nhân do BE không lưu riêng entity này).
+- **Rà soát toàn bộ 47 API bàn giao (22 cũ + 25 mới):**
+  - **Luồng A (5 API):** Capabilities, ngày đóng cửa phường và toàn quốc, hủy ngày đóng cửa.
+  - **Luồng B (11 API):** Tra cứu ca, thêm/hủy ca lẻ, lịch tháng, cấu hình mẫu tuần, xem trước preview kèm sao chép theo ngày, lưu nháp draft, công bố publish kèm xác nhận ngoại lệ ngày đóng cửa, lịch sử BASELINE/PUBLISHED, xác nhận lịch bằng baseFingerprint cá nhân.
+  - **Luồng C (11 API):** Mẫu đơn Word chung, tải DOCX mẫu, tạo nháp Word với Idempotency-Key, danh sách nháp, mở lại nháp, tải/lưu Word riêng với multipart/hash, xóa nháp, nộp cho quản lý; fallback API nộp trực tiếp cũ khi chính sách chưa bắt buộc Word.
+  - **Luồng D (11 API):** Danh sách đơn nghỉ, chi tiết kèm cờ hasSubmittedDocx và hash, tải Word đã nộp, ca bị ảnh hưởng (shift-impact), hồ sơ cần bàn giao (impact/applications), quyết định duyệt/từ chối/hủy, lịch sử chuyển trạng thái, điều phối hồ sơ.
+  - **Luồng E (3 API):** Danh sách đề nghị đổi giờ ca, cán bộ gửi đề nghị PENDING theo shiftVersion ca gốc, Manager duyệt/từ chối theo ID yêu cầu đổi ca.
+  - **Luồng F (6 API):** Mời tham vấn hồ sơ UNDER_REVIEW, hộp thư tham vấn, tab tham vấn chi tiết, kiểm tra quyền đọc tài liệu, chuyên viên trả lời, Manager đóng tham vấn.
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 lỗi).
+  - `npm run lint`: đạt (0 lỗi).
+  - `npm run build`: đạt (8036 modules transformed, dist hoàn chỉnh trong 27s).
+  - `node tests/staffing-validation-check.mjs`: 56/56 checks đạt.
+  - Xác nhận trực quan qua ảnh giao diện local 5173: lịch tháng 12/2026 hiển thị đúng 4 tuần ca làm (thứ Hai: 08:00–11:00, 13:00–16:00, 2 ca), các ngày khác "Chưa có ca".
+- **Bước tiếp theo:** Người dùng tiếp tục thao tác thử nghiệm các luồng (tạo ca, lưu nháp, công bố lịch, xin nghỉ Word, đổi ca) trên môi trường local/Azure; báo lại nếu có bất kỳ phản hồi hoặc yêu cầu tinh chỉnh UI nào.
+
+## Đối chiếu lịch tháng với backend bên cạnh — 06/11/2026
+
+- Đã đọc mô tả/ràng buộc, DTO và service tại `D:/term 9/wardmate-backend`, không chạy Git hoặc sửa BE. Checkout này chưa có daysOff/isPublished/canEdit/editDeadlineUtc hay migration PersistScheduleDaysOff; không đồng nhất với checkout `E:/wardmate-backend` trong lịch sử.
+- Swagger Workflow Azure trực tiếp hiện có 7 trường MonthlyView cũ, draft có 4 trường cũ. Gateway `/swagger/v1/swagger.json` trả 404 trong lượt này. Chưa kiểm tra response lịch bằng phiên thật; không sử dụng token trong ảnh.
+- FE yêu cầu contract mới; ảnh chọn shifts 200 không phải bằng chứng cho schedules/{month}. Đã cập nhật phần đối chiếu mới ở đầu `docs/SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`, đề xuất tương thích chỉ đọc trước và chốt nghiệp vụ trước thay đổi ghi. Chưa sửa logic, migrate/deploy hoặc chạy test; chỉ kiểm tra source/tài liệu/API schema công khai và diff.
+
+## Khắc phục thiếu cấu hình Azure khi clone FE — 06/11/2026
+
+- Xác minh checkout chỉ có `.env.example`, không có env được Vite nạp. POST local `/api/v1/auth/login` với `{}` trả 404 trước sửa; trang chủ 200 ở lượt trước không chứng minh API đã nối.
+- Đã tạo `.env.development.local` từ mẫu Azure hiện có, giữ proxy bật; file được Git ignore, không chứa tài khoản/token. Vite tự restart sau khi tạo file. Thêm `README.md` hướng dẫn clone/cài/env/chạy và phân biệt lỗi login, `/me`, refresh.
+- Kiểm tra thật qua proxy localhost sau sửa: login `{}` trả 400 validation; GET wards 200; GET users/me không Bearer trả 401; POST refresh-token không body/cookie (đúng cách FE gửi) trả 401 `iam.invalid_token`. Thử refresh với `{}` trả 400 do validation body nên không dùng thử nghiệm đó để kết luận contract cookie hỏng. Swagger IAM công khai có LoginCommand, BrowserAuthResponse và header CSRF.
+- `npm run typecheck` đạt. Chưa đăng nhập bằng tài khoản thật, chưa xác minh cookie/F5 hay tất cả API Azure; không chạy lint/build/E2E trong lượt này, không commit/push. Người dùng tải lại localhost:5173 và thử tài khoản đúng môi trường; nếu còn lỗi cần HTTP status/mã lỗi của login và users/me, không cần mật khẩu/token.
+
+## Chạy frontend local — 06/11/2026
+
+- Đã cài 399 packages bằng `npm install --no-audit --no-fund`; `npm ci` ban đầu thất bại do lockfile thiếu `@emnapi/core` và `@emnapi/runtime` 1.11.3. `package-lock.json` đã được npm bổ sung dependency và chuẩn hóa metadata peer; không đổi `package.json`.
+- Đã chạy `npm run dev` ngoài sandbox tại `http://localhost:5173/`, kiểm tra HTTP trả 200. Server chỉ tồn tại trong phiên chạy; lần sau có thể cần khởi động lại.
+- Chưa chạy typecheck/lint/build hoặc kiểm thử nghiệp vụ/API thật trong lượt khởi động này. Không commit/push.
+
 ## RCA lỗi HTTP 200 nhưng hai màn lịch không hiển thị — 06/11/2026
 
 - Theo yêu cầu người dùng, đã lập `docs/SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`: nguyên nhân, bằng chứng, trách nhiệm, phương án khôi phục chỉ đọc và triển khai đồng bộ. Lượt này chỉ điều tra/tài liệu, không sửa tiếp logic FE/BE hoặc deploy.

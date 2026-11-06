@@ -1,5 +1,12 @@
 # Báo cáo nguyên nhân lỗi lịch làm việc và phương án khắc phục
 
+## Đối chiếu lại checkout trên máy backend — 06/11/2026
+
+- Backend thực tế bên cạnh FE là `D:/term 9/wardmate-backend`. `MonthlyScheduleContracts.cs` và `docs/api-guide.md` tại checkout này chỉ có MonthlyView với month/slots/baseFingerprint/draft/leaves/closures/confirmations; draft chỉ nhận expectedVersion/baseFingerprint/slots/reason. Không tìm thấy migration PersistScheduleDaysOff trong cây service Workflow này. Tham chiếu `E:/wardmate-backend` phía dưới là bằng chứng lịch sử ở checkout khác, không chứng minh máy hiện tại đã có source mới.
+- Đã đọc lại Swagger Workflow Azure trực tiếp: MonthlyView và ScheduleDraftInput cũng có các trường cũ như trên. Lượt này URL Gateway `/swagger/v1/swagger.json` trả 404, không dùng làm bằng chứng schema Gateway hiện tại. Chưa đọc body lịch bằng phiên người dùng.
+- Ảnh chọn request `/staffing/shifts` HTTP 200; `MonthlyScheduleView.tsx` gọi song song shifts (ca qua đêm từ tháng trước) và `/staffing/schedules/{month}`. `workSchedules.ts` bắt buộc daysOff/isPublished/canEdit/editDeadlineUtc và đổi mọi ZodError của lịch tháng thành thông báo yêu cầu cập nhật BE. Vì vậy mã 200 của shifts không xác nhận response lịch tháng hợp lệ.
+- Ràng buộc WF-WS-03 tại backend hiện tại cho công bố ca tương lai hoặc giữ nguyên ca đã bắt đầu; chưa phải quy tắc khóa sửa trước tháng 24 giờ của FE mới. Không tự áp đặt quy tắc mới chỉ bằng sửa DTO.
+- Hướng đề xuất: khôi phục hiển thị chỉ đọc cho hợp đồng cũ hợp lệ và báo lỗi schema chính xác; sau đó chốt giữ nghiệp vụ BE hiện tại hay nâng cấp đồng bộ ngày nghỉ/khóa lịch. Nếu giữ BE hiện tại, FE cần trở về đầy đủ semantics cũ cho luồng ghi. Nếu nâng cấp, cần bổ sung/tìm đúng source BE, lưu DB + migration, enforcement và outbox rồi deploy/nghiệm thu; deploy lại nguyên checkout hiện tại không bổ sung tính năng còn thiếu. Chưa sửa logic hoặc deploy trong lượt phân tích này.
 Ngày lập: **06/11/2026, UTC+7**. Phạm vi: hai màn **Sắp xếp lịch tháng** và **Danh sách ca** trong ảnh người dùng gửi.
 
 ## 1. Kết luận
