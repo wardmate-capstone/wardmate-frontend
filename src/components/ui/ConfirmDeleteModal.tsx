@@ -11,8 +11,10 @@ export interface ConfirmDeleteModalProps {
   description?: string;
   warningNote?: string;
   loading?: boolean;
+  confirmDisabled?: boolean;
   onConfirm: () => void | Promise<void>;
   confirmLabel?: string;
+  footer?: ReactNode;
   children?: ReactNode;
 }
 
@@ -24,8 +26,10 @@ export function ConfirmDeleteModal({
   description,
   warningNote,
   loading = false,
+  confirmDisabled = false,
   onConfirm,
   confirmLabel = 'Xác nhận xóa',
+  footer,
   children,
 }: ConfirmDeleteModalProps) {
   return (
@@ -36,26 +40,28 @@ export function ConfirmDeleteModal({
       }}
       title={title}
       footer={
-        <>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={() => onOpenChange(false)}
-          >
-            Hủy bỏ
-          </Button>
-          <Button
-            type="button"
-            loading={loading}
-            disabled={loading}
-            className="bg-red-700 text-white hover:bg-red-800"
-            onClick={onConfirm}
-          >
-            <Trash size={18} weight="bold" />
-            {confirmLabel}
-          </Button>
-        </>
+        footer ?? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={() => onOpenChange(false)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              type="button"
+              loading={loading}
+              disabled={loading || confirmDisabled}
+              className="bg-red-700 text-white hover:bg-red-800"
+              onClick={onConfirm}
+            >
+              <Trash size={18} weight="bold" />
+              {confirmLabel}
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-3">

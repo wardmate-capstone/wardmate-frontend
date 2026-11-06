@@ -71,7 +71,7 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
     } catch (e) {
       const msg = procedureError(e);
       setDeleteError(msg);
-      toast.error(msg);
+      // Không bắn toast khi modal vẫn mở để tránh thông báo trùng lặp kép
     } finally {
       setDeleteBusy(false);
     }
@@ -233,15 +233,39 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
       <ConfirmDeleteModal
         open={!!deleting}
         onOpenChange={(value) => {
-          if (!value && !deleteBusy) setDeleting(undefined);
+          if (!value && !deleteBusy) {
+            setDeleting(undefined);
+            setDeleteError('');
+          }
         }}
         title="Xóa danh mục"
         itemName={deleting?.categoryName}
-        description="Thao tác này sẽ xóa danh mục nếu không còn thủ tục nào liên kết."
+        description={deleteError ? undefined : "Thao tác này sẽ xóa danh mục nếu không còn thủ tục nào liên kết."}
         loading={deleteBusy}
+        confirmDisabled={Boolean(deleteError)}
+        footer={
+          deleteError ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setDeleting(undefined);
+                setDeleteError('');
+              }}
+            >
+              Đã hiểu
+            </Button>
+          ) : undefined
+        }
         onConfirm={() => void handleDelete()}
       >
-        <ProcedureFeedback error={deleteError} />
+        {deleteError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-900 space-y-1.5">
+            <p className="font-semibold text-red-800">{deleteError}</p>
+            <p className="text-xs text-red-700 leading-relaxed">
+              Danh mục này hiện đang được liên kết với các thủ tục hành chính. Vui lòng chuyển các thủ tục sang danh mục khác hoặc xóa các thủ tục đó trước khi xóa danh mục này.
+            </p>
+          </div>
+        ) : null}
       </ConfirmDeleteModal>
     </div>
   );
