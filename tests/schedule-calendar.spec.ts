@@ -276,3 +276,47 @@ test('Danh sách ca chọn cán bộ và tháng, không có lối tắt sửa/h�
   expect(state.requests.some(r => r.path.endsWith('/schedules/2026-12-01'))).toBe(true);
 });
 
+for (const stage of ['draft', 'publish']) test(`Sửa và gửi lại được sau lỗi validation 400 ở bước ${stage}`, async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  let rejected = false;
+  await page.route(`**/api/v1/staffing/schedules/2026-11-01/${stage}`, async route => {
+    if (!rejected) {
+      rejected = true;
+      return authReply(route, { status: 400, json: { code: 'schedule.invalid_input', title: 'Kiểm tra ghi chú công bố.' } });
+    }
+    await route.fallback();
+  });
+  await openCalendar(page);
+  await setHours(page, '07/11/2026', '09:00', '12:00');
+  const dialog = await publishCalendar(page);
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await dialog.getByLabel('Ghi chú công bố').fill('Điều chỉnh ghi chú sau khi kiểm tra');
+  await dialog.getByRole('button', { name: 'Công bố lịch', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(state.requests.findLast(r => r.path.endsWith('/publish'))?.body).toMatchObject({ reason: 'Điều chỉnh ghi chú sau khi kiểm tra' });
+});
+
+test('Ca đầu tháng sau chặn ca qua đêm cuối tháng trước', async ({ page }) => {
+  await mockWorkSchedules(page, true);
+  await page.route('**/api/v1/staffing/shifts?*', route => authReply(route, { json: [{ id: ids.shift, officerId: ids.officer, wardCode: 'P01', startsAtUtc: '2026-12-01T01:00:00Z', endsAtUtc: '2026-12-01T05:00:00Z', version: 1 }] }));
+  await openCalendar(page);
+  await page.getByRole('button', { name: /^Ngày 30\/11\/2026/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Giờ làm ngày 30/11/2026', exact: true });
+  await dialog.getByLabel('Từ giờ', { exact: true }).fill('22:00');
+  await dialog.getByLabel('Đến giờ', { exact: true }).fill('09:00');
+  await dialog.getByLabel('Kết thúc ngày hôm sau', { exact: true }).check();
+  await dialog.getByRole('button', { name: 'Áp dụng vào lịch', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('trùng giờ');
+});
+
+test('Danh sách hiển thị ca qua đêm vào ngày hôm sau và ca từ tháng trước', async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  state.slots[0].startsAt = '2026-11-07T15:00:00Z';
+  state.slots[0].endsAt = '2026-11-08T02:00:00Z';
+  await page.route('**/api/v1/staffing/shifts?*', route => authReply(route, { json: [{ id: ids.monthly, officerId: ids.officer, wardCode: 'P01', startsAtUtc: '2026-10-31T15:00:00Z', endsAtUtc: '2026-11-01T02:00:00Z', version: 1 }] }));
+  await page.goto('/manager?section=shifts&view=list');
+  await page.getByRole('combobox', { name: 'Cán bộ xem lịch', exact: true }).selectOption(ids.officer);
+  await expect(page.getByRole('row').filter({ has: page.getByRole('cell', { name: '01/11/2026', exact: true }) })).toContainText('22:00–09:00 (từ 31/10/2026)');
+  await expect(page.getByRole('row').filter({ has: page.getByRole('cell', { name: '08/11/2026', exact: true }) })).toContainText('22:00–09:00 (từ 07/11/2026)');
+});
+

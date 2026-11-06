@@ -1,5 +1,12 @@
 # Báo cáo nguyên nhân lỗi lịch làm việc và phương án khắc phục
 
+## Trạng thái sau rà soát và sửa FE — 06/11/2026 (Asia/Saigon)
+
+- Checkout đang kiểm tra là `E:/wardmate-backend`. Đã đọc lại contracts/controller/service và ràng buộc WF-WS-03: MonthlyView có 7 trường và draft chỉ nhận expectedVersion/baseFingerprint/slots/reason. Chưa có lưu ngày nghỉ cá nhân hoặc enforcement khóa lịch 24 giờ trước đầu tháng trong source này.
+- FE hiện đã khôi phục dùng đúng hợp đồng đó trong commit `f175f8f`; phần mô tả FE bắt buộc bốn trường mới ở các mục bên dưới là bằng chứng lịch sử, không còn mô tả code hiện tại. Không cần bổ sung trường giả để vượt Zod.
+- Rà soát tiếp đã sửa lỗi giữ trạng thái cũ sau HTTP 400 khi lưu/công bố, bổ sung kiểm tra ca qua đêm tại ranh giới tháng và hiển thị ca kéo dài sang ngày hôm sau trong danh sách. Kết quả kiểm tra mới và phạm vi chưa nghiệm thu thật nằm ở đầu `PROGRESS.md`.
+- Ngày nghỉ bằng checkbox và hạn sửa lịch 24 giờ vẫn cần BE hỗ trợ và phát hành đồng bộ; không thể coi là hoàn tất chỉ từ FE. Publish hiện có outbox thông báo cho cán bộ có ca thay đổi, nhưng chưa kiểm chứng phát thông báo thật trên Azure trong lượt này.
+
 ## Đối chiếu lại checkout trên máy backend — 06/11/2026
 
 - Backend thực tế bên cạnh FE là `D:/term 9/wardmate-backend`. `MonthlyScheduleContracts.cs` và `docs/api-guide.md` tại checkout này chỉ có MonthlyView với month/slots/baseFingerprint/draft/leaves/closures/confirmations; draft chỉ nhận expectedVersion/baseFingerprint/slots/reason. Không tìm thấy migration PersistScheduleDaysOff trong cây service Workflow này. Tham chiếu `E:/wardmate-backend` phía dưới là bằng chứng lịch sử ở checkout khác, không chứng minh máy hiện tại đã có source mới.

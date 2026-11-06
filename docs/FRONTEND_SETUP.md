@@ -1,17 +1,18 @@
 # Nền tảng FE Web
 
-## Ngày nghỉ lưu API và khóa lịch đã công bố — 06/11/2026
+## Lịch tháng: hợp đồng đang dùng — 06/11/2026
 
-- Hợp đồng mới cần Workflow BE + migration 20261106061808_PersistScheduleDaysOff. GET schedules/{month} phải có daysOff, isPublished, canEdit, editDeadlineUtc; FE báo cần cập nhật BE nếu thiếu, không giả dữ liệu lưu bằng localStorage.
-- Tick/bỏ tick Nghỉ gọi PUT draft ngay với toàn bộ slots + daysOff cả phường, expectedVersion/baseFingerprint; giữ lịch người khác. Giờ áp dụng từ form vẫn cần công bố (hoặc được lưu cùng thao tác tick tiếp theo). Cán bộ chỉ thấy ngày nghỉ chính thức sau publish. Tải lại đọc từ serverdraft hoặc lịch chính thức; đã bỏ cách chỉ giữ dấu nghỉ ở state FE.
-- Lịch PUBLISHED/BASELINE mở chỉ xem. Manager có quyền manage bấm Sửa lịch nếu canEdit và còn hạn: đủ 24 giờ trước ngày 1 theo Việt Nam (tháng 12/2026: chậm nhất 30/11 00:00). BE chặn cả draft/publish sau hạn, FE không vượt quyền bằng đồng hồ máy. Công bố lại ghi outbox SCHEDULE_PUBLISHED cho từng cán bộ thay giờ/ngày nghỉ; không gửi khi chỉ lưu draft.
-- Danh sách ca: chọn cán bộ rồi tháng/năm, bảng toàn tháng đọc ca/ngày nghỉ chính thức; không có nút tạo/hủy ca trực tiếp. Hai client createShift/cancelShift giữ cho tương thích API cũ nhưng không còn UI gọi; API cũ cũng chặn tháng đã công bố. Sửa dùng lịch tháng. Bảng coverage hiện 45 nhánh UI + 2 endpoint cũ chỉ còn client, vẫn tổng 47 route hợp đồng.
-- Schema history chấp nhận BASELINE có baseFingerprint rỗng như migration thật; DRAFT/PUBLISHED vẫn cần hash 64 ký tự. Chi tiết kiểm tra/giới hạn ở PROGRESS.md.
+- Đối chiếu source hiện tại tại `E:/wardmate-backend`: MonthlyView gồm `month, slots, baseFingerprint, draft, leaves, closures, confirmations`; ScheduleDraftInput nhận `expectedVersion, baseFingerprint, slots, reason`. FE dùng đúng các trường này. Không yêu cầu hoặc tự tạo `daysOff/isPublished/canEdit/editDeadlineUtc`.
+- Chọn cán bộ rồi tháng; bấm ngày để đặt hoặc bỏ ca, lưu nháp và xác nhận công bố riêng. Mỗi lần lưu gửi toàn bộ ca của phường, giữ ca và bản nháp của cán bộ khác. HTTP 400 cho sửa và gửi lại; lỗi mạng/409/5xx giữ nội dung và yêu cầu kiểm tra trạng thái, không tự gửi lại mutation.
+- Lịch tháng đọc ca qua đêm tại hai ranh giới tháng để chặn giờ trùng, không đưa ca ngoài tháng vào payload. Danh sách hiển thị cả ca kéo dài sang hôm sau và ca từ cuối tháng trước.
+- Ngày có ca màu xanh nhạt; ngày lễ/nghỉ chung hoặc nghỉ phép cả ngày màu đỏ nhạt. Ngày trống là chưa có ca. BE hiện chưa lưu ngày nghỉ cá nhân bằng checkbox và chưa áp hạn khóa sửa 24 giờ trước đầu tháng; không coi hai yêu cầu đó đã triển khai. Muốn hỗ trợ cần thay đổi hợp đồng, lưu trữ và enforcement BE đồng bộ.
+- BE hiện cho sửa ca tương lai và giữ nguyên ca đã bắt đầu. Publish ghi outbox `SCHEDULE_PUBLISHED` cho cán bộ có ca thay đổi; lưu nháp chưa thông báo. Chưa nghiệm thu thông báo trên Azure bằng phiên thật trong lượt này.
+- Danh sách ca chỉ xem theo cán bộ/tháng; chỉnh tại Sắp xếp lịch tháng. Schema history cho phép BASELINE có baseFingerprint rỗng theo migration; DRAFT/PUBLISHED yêu cầu hash 64 ký tự.
 
 ## Lịch làm việc, đơn nghỉ Word và đổi ca — 06/11/2026
 
 - Đã nối 25 thao tác Workflow mới với UI Manager/Frontdesk, giữ 22 thao tác cũ; bảng 47 method/path → client/UI tại `FE_STAFFING_API_COVERAGE_2026-11-06.md`. Client mới: `src/lib/api/workSchedules.ts`, UI tại `src/components/staffing/`.
-- Lịch mở mặc định ở bảng tháng 7 cột; hành vi lưu ngày nghỉ/khóa/công bố theo mục cập nhật phía trên. GET shifts ngày đầu tháng bổ sung ca qua đêm từ tháng trước để xem/chặn trùng, không đưa các ca ngoài tháng vào payload lưu. Tiện ích giờ tuần/sao chép/lịch sử thu gọn riêng; chỉ điền ngày trống chưa chỉnh, không điền ngày nghỉ đã đánh dấu. Frontdesk xác nhận fingerprint gồm ca/nghỉ cá nhân và đề nghị đổi giờ theo hạn BE.
+- Lịch mở mặc định ở bảng tháng 7 cột; hành vi lưu ngày nghỉ/khóa/công bố theo mục cập nhật phía trên. GET shifts bổ sung ca qua đêm ở ranh giới tháng để xem/chặn trùng, không đưa các ca ngoài tháng vào payload lưu. Tiện ích giờ tuần/sao chép/lịch sử thu gọn riêng; chỉ điền ngày trống chưa chỉnh, không điền ngày nghỉ/lễ chung hoặc nghỉ phép cả ngày. Frontdesk xác nhận fingerprint ca cá nhân và đề nghị đổi giờ theo điều kiện BE.
 - Nghỉ cá nhân có Nháp của tôi/Đơn đã nộp. Mẫu chung đọc theo capability; Word mở bản riêng của draft. Lưu multipart, metadataVersion/revision/version đồng bộ; tạo và nộp có key UUID riêng, giữ key/body khi gửi lại. Khi Word bắt buộc không fallback `POST /leaves`. Đơn cũ không Word vẫn đọc theo hợp đồng.
 - Manager đọc detail/version mới trước quyết định, xem Word đã nộp chỉ đọc và hash, tách ca ảnh hưởng khỏi hồ sơ đang giữ để bàn giao. Lỗi quyền/detail không mở các thao tác phụ. Duyệt nghỉ không tự chuyển hồ sơ.
 - Query staffing tách theo user/phường/role/permission, luôn đọc lại khi mount; mutation không tự retry, 409 giữ nội dung và yêu cầu xem lại. Editor tái sử dụng lazy load, có nhãn/lỗi theo ngữ cảnh; modal Word dùng toàn viewport để tránh thanh công cụ bị che.

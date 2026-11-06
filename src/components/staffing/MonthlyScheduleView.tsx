@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import axios from 'axios';
 import { Button, Modal } from '@/components/ui';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { workScheduleApi, type ScheduleRevision, type ScheduleSlot } from '@/lib/api/workSchedules';
@@ -46,10 +47,12 @@ export function MonthlyScheduleView({ onRequestChange }: { onRequestChange: (slo
 function CalendarLoader(props: BoardProps & { month: string }) {
   const query = useStaffQuery(['month', props.month], async signal => {
     const start = vietnamIso(props.month + 'T00:00');
-    const [data, shifts] = await Promise.all([workScheduleApi.month(props.month, signal), staffingApi.shifts(start, vietnamIso(nextDate(props.month) + 'T00:00'), signal)]);
-    // Previous-month overnight shifts are context only; never include them in this month's save payload.
-    const carry = shifts.filter(s => !s.cancelledAtUtc && Date.parse(s.startsAtUtc) < Date.parse(start) && Date.parse(s.endsAtUtc) > Date.parse(start)).map(s => {
-      if (s.version === undefined) throw new Error('Ca từ tháng trước thiếu phiên bản. Vui lòng lấy lịch mới.');
+    const nextMonth = nextDate(calendarDays(props.month).at(-1)!);
+    const end = vietnamIso(nextMonth + 'T00:00');
+    const [data, shifts] = await Promise.all([workScheduleApi.month(props.month, signal), staffingApi.shifts(start, vietnamIso(nextDate(nextMonth) + 'T00:00'), signal)]);
+    // Boundary shifts are context only, including next month's shifts that may overlap an overnight edit.
+    const carry = shifts.filter(s => !s.cancelledAtUtc && (Date.parse(s.startsAtUtc) < Date.parse(start) || Date.parse(s.startsAtUtc) >= Date.parse(end))).map(s => {
+      if (s.version === undefined) throw new Error('Ca ở tháng liền kề thiếu phiên bản. Vui lòng lấy lịch mới.');
       return { shiftId: s.id, officerId: s.officerId, startsAt: s.startsAtUtc, endsAt: s.endsAtUtc, shiftVersion: s.version };
     });
     return { ...data, carry };
@@ -105,7 +108,14 @@ function CalendarBoard({ initial, officerId, month, name, onDirty, onBusy, onPub
     if (draftRef.current && !useOfficial && sameSchedule(draftRef.current.slots, nextSlots) && draftRef.current.reason === reason.trim()) return draftRef.current;
     if (attempted.current) throw new Error('Chưa xác định lần lưu trước. Lấy lịch mới để kiểm tra bản đã lưu trên hệ thống.');
     attempted.current = true;
-    const revision = await workScheduleApi.saveMonth(month, { expectedVersion: draftRef.current?.version ?? 0, baseFingerprint: base.baseFingerprint, slots: nextSlots, reason });
+    let revision: ScheduleRevision;
+    try {
+      revision = await workScheduleApi.saveMonth(month, { expectedVersion: draftRef.current?.version ?? 0, baseFingerprint: base.baseFingerprint, slots: nextSlots, reason });
+    } catch (error) {
+      // A validation rejection did not save anything. Let the manager correct and submit again.
+      if (axios.isAxiosError(error) && error.response?.status === 400) attempted.current = false;
+      throw error;
+    }
     draftRef.current = revision; attempted.current = false;
     setPersisted(nextSlots);
     return revision;
@@ -120,7 +130,13 @@ function CalendarBoard({ initial, officerId, month, name, onDirty, onBusy, onPub
       const revision = await persistDraft(slots);
       saved.current = { revisionId: revision.id, expectedVersion: revision.version, allowClosure, reason };
     }
-    await workScheduleApi.publish(month, saved.current!);
+    try {
+      await workScheduleApi.publish(month, saved.current!);
+    } catch (error) {
+      // Keep the fixed payload only when the result is uncertain; a 400 permits corrections.
+      if (axios.isAxiosError(error) && error.response?.status === 400) saved.current = null;
+      throw error;
+    }
   }, onPublished, true);
   const fill = (from?: string) => operation.run(async () => {
     const preview = await workScheduleApi.preview(month, from);

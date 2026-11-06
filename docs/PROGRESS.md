@@ -1,5 +1,15 @@
 # Tiến độ và bàn giao WardMate
 
+## Rà soát BE và sửa luồng lịch Manager — 06/11/2026 (Asia/Saigon)
+
+- Đọc lại `E:/wardmate-backend/AGENTS.md`, `PROGRESS.md`, MonthlyScheduleContracts/MonthlySchedulesController/MonthlyScheduleService, StaffingService và WF-WS-03. Không sửa hoặc chạy Git BE. Source hiện tại dùng MonthlyView 7 trường; chưa có ngày nghỉ cá nhân, isPublished/canEdit/editDeadlineUtc hoặc enforcement hạn sửa 24 giờ trước đầu tháng. FE đang khớp hợp đồng sau commit `f175f8f`; không khôi phục các trường giả hoặc checkbox chưa có lưu trữ.
+- `MonthlyScheduleView.tsx`: HTTP 400 ở PUT draft cho phép sửa rồi gửi lại; HTTP 400 ở POST publish bỏ payload công bố cũ để gửi ghi chú/revision đã sửa. Lỗi mạng/409/5xx hoặc response không xác định vẫn giữ nội dung và cơ chế yêu cầu đối chiếu, không tự retry mutation. Đọc shifts đến hết ngày đầu tháng sau để chặn ca qua đêm cuối tháng trùng ca đầu tháng sau; ca ngoài tháng chỉ làm ngữ cảnh, không vào payload lưu.
+- `ScheduleListView.tsx`: bổ sung ca kéo dài từ cuối tháng trước, liệt kê ca theo thời gian giao với từng ngày và ghi rõ ngày bắt đầu/kết thúc của ca qua đêm. Giữ bộ lọc cán bộ/tháng và chế độ chỉ xem.
+- Thêm 4 ca hồi quy trong `tests/schedule-calendar.spec.ts`: lỗi 400 draft, lỗi 400 publish dùng ghi chú mới, trùng ca đầu tháng sau, danh sách ca qua đêm trong/giữa hai tháng. Cập nhật trạng thái hiện tại tại `FRONTEND_SETUP.md` và đầu `SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`; các mục RCA phía sau giữ làm lịch sử.
+- Kiểm tra lượt này: typecheck đạt; lint đạt; build đạt (8036 modules, còn cảnh báo annotation SignalR/Zod và chunk lớn). Playwright Edge `schedule-calendar + work-schedules + staffing-ui`: **38/38 đạt**. Sau tinh chỉnh điều kiện lỗi và cách tính ranh giới tháng, chạy lại 4 ca mới **4/4 đạt**, lint/build cuối đạt; 4 ca này nằm trong 38, không cộng thành 42 ca khác nhau. Đã xem ảnh lịch mobile 390px; kiểm thử có desktop/mobile và tăng cỡ chữ. Runner Windows chờ dọn server sau khi workers kết thúc; dừng đúng Vite PID do từng lượt test tạo để lấy summary/exit 0.
+- Giới hạn: đây là kiểm thử mock theo source BE, chưa nghiệm thu đăng nhập/lưu/công bố/outbox/SignalR trên Azure bằng phiên thật. BE publish có tạo outbox cho cán bộ có ca thay đổi; chưa chứng minh thông báo đã được phát thật. Checkbox ngày nghỉ và khóa sửa trước tháng 24 giờ vẫn cần BE hỗ trợ đồng bộ, chưa hoàn tất hai yêu cầu đó.
+- Git đầu lượt: main tại `8ef7883`, đã đồng bộ origin/main, các commit từ lượt trước đã có trên remote. Bản sửa này được chuẩn bị thành commit bổ sung, giữ lịch sử đã phát hành. Tại thời điểm ghi bàn giao chưa push bản sửa mới; kết quả push được kiểm tra riêng sau commit, không đồng nhất Git push với deploy.
+
 ## Khôi phục hợp đồng chuẩn BE và hiển thị lịch tháng thành công — 06/11/2026
 
 - **Trạng thái thực tế:** Màn hình **Lịch ca làm** và **Danh sách ca** tại `http://localhost:5173/manager` đã hiển thị lịch làm việc thành công, không còn lỗi chặn validation Zod.
