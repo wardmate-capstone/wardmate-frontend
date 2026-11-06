@@ -1,5 +1,122 @@
 # Tiến độ và bàn giao WardMate
 
+## Đơn nghỉ: sửa ngày trực tiếp, Xuất bản Word và nộp một lần — 06/11/2026
+
+- Theo xác nhận người dùng, nút Đối chiếu thông tin trong trình soạn đơn nghỉ đổi thành **Xuất bản**: xuất DOCX và lưu qua API hiện có, chỉ đóng editor sau khi lưu thành công đúng nội dung hiện tại. Lỗi giữ editor/nội dung để sửa hoặc thử lại. Lưu nháp Word/Ctrl+S vẫn lưu mà không thoát. Xuất bản chưa gửi đơn cho quản lý; người dùng bấm **Nộp cho quản lý** một lần để gửi, bỏ modal xác nhận nộp trung gian. Giữ kiểm tra revision/metadataVersion và key chống nộp trùng. Editor ở các workspace khác giữ hành vi cũ.
+- Người dùng đã xác nhận nút sửa hoạt động nhưng giao diện khó hiểu. `LeaveDraftsView.tsx` chia bản nháp theo ba bước **Thông tin nghỉ → Soạn Word → Nộp đơn**. Ngày giờ/lý do sửa trực tiếp trong bước 1, lưu bằng **Lưu thông tin nghỉ**, không phải mở modal sửa riêng. `shared.tsx` bổ sung chế độ inline cho ActionForm, tái sử dụng RHF/Zod, validation, xử lý lỗi/xung đột có sẵn. Khi có thông tin chưa lưu, chặn soạn Word/nộp và cảnh báo khi đóng hoặc đọc lại trạng thái. Sửa metadata đã lưu yêu cầu lưu lại Word trước khi nộp. Xóa nháp vẫn có xác nhận.
+- Kiểm tra: typecheck, lint và build đạt; build còn cảnh báo annotation SignalR/Zod và chunk lớn. Playwright Edge mock lượt cuối `work-schedules.spec.ts + docx-online.spec.ts --workers=2 --timeout=90000`: **16/16 đạt**, gồm đổi ngày giờ đúng UTC, giữ nội dung khi upload lỗi, Xuất bản lưu bản cuối/tự thoát, nộp một lần, cảnh báo mất thay đổi và mobile 390px. Đã xem ảnh desktop/mobile, không tràn ngang. Các lượt đầu có timeout và assertion test dùng sai định dạng UTC (đã sửa kỳ vọng); không coi các lượt đó là đạt. Runner chờ dọn Vite sau workers; dừng đúng PID server 4317 của lượt test để lấy summary.
+- Giới hạn: kiểm thử bằng API mock và DOCX thật, chưa xác minh lưu/nộp trên Azure bằng phiên thật. Không đổi hợp đồng API hoặc backend. Người dùng tải lại giao diện và thử luồng sửa thông tin → lưu → Word/Xuất bản → nộp trên môi trường đang dùng.
+- Git theo yêu cầu người dùng: chia 3 commit gồm editor lưu/thoát, UI đơn nghỉ ba bước, kiểm thử/bàn giao; đẩy lên `origin/main`. Đã fetch và xác minh main đồng bộ tại `294c1a5` trước khi chia commit. Tại thời điểm ghi tài liệu, đang chuẩn bị commit/push; kết quả push và SHA được xác minh riêng sau khi hoàn tất. Lượt Git chỉ kiểm tra diff/nội dung, dùng kết quả validation của lượt triển khai ngay trước đó, không chạy lại test.
+
+## Rà soát BE và sửa luồng lịch Manager — 06/11/2026 (Asia/Saigon)
+
+- Đọc lại `E:/wardmate-backend/AGENTS.md`, `PROGRESS.md`, MonthlyScheduleContracts/MonthlySchedulesController/MonthlyScheduleService, StaffingService và WF-WS-03. Không sửa hoặc chạy Git BE. Source hiện tại dùng MonthlyView 7 trường; chưa có ngày nghỉ cá nhân, isPublished/canEdit/editDeadlineUtc hoặc enforcement hạn sửa 24 giờ trước đầu tháng. FE đang khớp hợp đồng sau commit `f175f8f`; không khôi phục các trường giả hoặc checkbox chưa có lưu trữ.
+- `MonthlyScheduleView.tsx`: HTTP 400 ở PUT draft cho phép sửa rồi gửi lại; HTTP 400 ở POST publish bỏ payload công bố cũ để gửi ghi chú/revision đã sửa. Lỗi mạng/409/5xx hoặc response không xác định vẫn giữ nội dung và cơ chế yêu cầu đối chiếu, không tự retry mutation. Đọc shifts đến hết ngày đầu tháng sau để chặn ca qua đêm cuối tháng trùng ca đầu tháng sau; ca ngoài tháng chỉ làm ngữ cảnh, không vào payload lưu.
+- `ScheduleListView.tsx`: bổ sung ca kéo dài từ cuối tháng trước, liệt kê ca theo thời gian giao với từng ngày và ghi rõ ngày bắt đầu/kết thúc của ca qua đêm. Giữ bộ lọc cán bộ/tháng và chế độ chỉ xem.
+- Thêm 4 ca hồi quy trong `tests/schedule-calendar.spec.ts`: lỗi 400 draft, lỗi 400 publish dùng ghi chú mới, trùng ca đầu tháng sau, danh sách ca qua đêm trong/giữa hai tháng. Cập nhật trạng thái hiện tại tại `FRONTEND_SETUP.md` và đầu `SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`; các mục RCA phía sau giữ làm lịch sử.
+- Kiểm tra lượt này: typecheck đạt; lint đạt; build đạt (8036 modules, còn cảnh báo annotation SignalR/Zod và chunk lớn). Playwright Edge `schedule-calendar + work-schedules + staffing-ui`: **38/38 đạt**. Sau tinh chỉnh điều kiện lỗi và cách tính ranh giới tháng, chạy lại 4 ca mới **4/4 đạt**, lint/build cuối đạt; 4 ca này nằm trong 38, không cộng thành 42 ca khác nhau. Đã xem ảnh lịch mobile 390px; kiểm thử có desktop/mobile và tăng cỡ chữ. Runner Windows chờ dọn server sau khi workers kết thúc; dừng đúng Vite PID do từng lượt test tạo để lấy summary/exit 0.
+- Giới hạn: đây là kiểm thử mock theo source BE, chưa nghiệm thu đăng nhập/lưu/công bố/outbox/SignalR trên Azure bằng phiên thật. BE publish có tạo outbox cho cán bộ có ca thay đổi; chưa chứng minh thông báo đã được phát thật. Checkbox ngày nghỉ và khóa sửa trước tháng 24 giờ vẫn cần BE hỗ trợ đồng bộ, chưa hoàn tất hai yêu cầu đó.
+- Git đầu lượt: main tại `8ef7883`, đã đồng bộ origin/main, các commit từ lượt trước đã có trên remote. Bản sửa này được chuẩn bị thành commit bổ sung, giữ lịch sử đã phát hành. Tại thời điểm ghi bàn giao chưa push bản sửa mới; kết quả push được kiểm tra riêng sau commit, không đồng nhất Git push với deploy.
+
+## Khôi phục hợp đồng chuẩn BE và hiển thị lịch tháng thành công — 06/11/2026
+
+- **Trạng thái thực tế:** Màn hình **Lịch ca làm** và **Danh sách ca** tại `http://localhost:5173/manager` đã hiển thị lịch làm việc thành công, không còn lỗi chặn validation Zod.
+- **Nguyên nhân và khắc phục:**
+  - Trước đó FE tự thêm các trường `daysOff`, `isPublished`, `canEdit`, `editDeadlineUtc` vào schema Zod và logic xử lý lịch, trong khi hợp đồng BE chính thức (`MonthlyView`, `ScheduleDraftInput`, `MonthlyRevisionView`) và tài liệu bàn giao `Lịch làm việc Front Desk và đơn nghỉ Word` chỉ gồm: `month, slots, baseFingerprint, draft, leaves, closures, confirmations`.
+  - Đã loại bỏ các trường thừa khỏi `src/lib/api/workSchedules.ts`, `MonthlyScheduleView.tsx`, `ScheduleListView.tsx`, `scheduleCalendar.ts` và các fixture test.
+  - Ngày có ca hiển thị màu xanh nhạt; ngày nghỉ/lễ chung hoặc nghỉ phép cả ngày hiển thị màu đỏ nhạt; ngày chưa có ca hiển thị "Chưa có ca" (không tự quy kết thành ngày nghỉ cá nhân do BE không lưu riêng entity này).
+- **Rà soát toàn bộ 47 API bàn giao (22 cũ + 25 mới):**
+  - **Luồng A (5 API):** Capabilities, ngày đóng cửa phường và toàn quốc, hủy ngày đóng cửa.
+  - **Luồng B (11 API):** Tra cứu ca, thêm/hủy ca lẻ, lịch tháng, cấu hình mẫu tuần, xem trước preview kèm sao chép theo ngày, lưu nháp draft, công bố publish kèm xác nhận ngoại lệ ngày đóng cửa, lịch sử BASELINE/PUBLISHED, xác nhận lịch bằng baseFingerprint cá nhân.
+  - **Luồng C (11 API):** Mẫu đơn Word chung, tải DOCX mẫu, tạo nháp Word với Idempotency-Key, danh sách nháp, mở lại nháp, tải/lưu Word riêng với multipart/hash, xóa nháp, nộp cho quản lý; fallback API nộp trực tiếp cũ khi chính sách chưa bắt buộc Word.
+  - **Luồng D (11 API):** Danh sách đơn nghỉ, chi tiết kèm cờ hasSubmittedDocx và hash, tải Word đã nộp, ca bị ảnh hưởng (shift-impact), hồ sơ cần bàn giao (impact/applications), quyết định duyệt/từ chối/hủy, lịch sử chuyển trạng thái, điều phối hồ sơ.
+  - **Luồng E (3 API):** Danh sách đề nghị đổi giờ ca, cán bộ gửi đề nghị PENDING theo shiftVersion ca gốc, Manager duyệt/từ chối theo ID yêu cầu đổi ca.
+  - **Luồng F (6 API):** Mời tham vấn hồ sơ UNDER_REVIEW, hộp thư tham vấn, tab tham vấn chi tiết, kiểm tra quyền đọc tài liệu, chuyên viên trả lời, Manager đóng tham vấn.
+- **Kiểm tra đã chạy:**
+  - `npm run typecheck`: đạt (0 lỗi).
+  - `npm run lint`: đạt (0 lỗi).
+  - `npm run build`: đạt (8036 modules transformed, dist hoàn chỉnh trong 27s).
+  - `node tests/staffing-validation-check.mjs`: 56/56 checks đạt.
+  - Xác nhận trực quan qua ảnh giao diện local 5173: lịch tháng 12/2026 hiển thị đúng 4 tuần ca làm (thứ Hai: 08:00–11:00, 13:00–16:00, 2 ca), các ngày khác "Chưa có ca".
+- **Bước tiếp theo:** Người dùng tiếp tục thao tác thử nghiệm các luồng (tạo ca, lưu nháp, công bố lịch, xin nghỉ Word, đổi ca) trên môi trường local/Azure; báo lại nếu có bất kỳ phản hồi hoặc yêu cầu tinh chỉnh UI nào.
+
+## Đối chiếu lịch tháng với backend bên cạnh — 06/11/2026
+
+- Đã đọc mô tả/ràng buộc, DTO và service tại `D:/term 9/wardmate-backend`, không chạy Git hoặc sửa BE. Checkout này chưa có daysOff/isPublished/canEdit/editDeadlineUtc hay migration PersistScheduleDaysOff; không đồng nhất với checkout `E:/wardmate-backend` trong lịch sử.
+- Swagger Workflow Azure trực tiếp hiện có 7 trường MonthlyView cũ, draft có 4 trường cũ. Gateway `/swagger/v1/swagger.json` trả 404 trong lượt này. Chưa kiểm tra response lịch bằng phiên thật; không sử dụng token trong ảnh.
+- FE yêu cầu contract mới; ảnh chọn shifts 200 không phải bằng chứng cho schedules/{month}. Đã cập nhật phần đối chiếu mới ở đầu `docs/SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`, đề xuất tương thích chỉ đọc trước và chốt nghiệp vụ trước thay đổi ghi. Chưa sửa logic, migrate/deploy hoặc chạy test; chỉ kiểm tra source/tài liệu/API schema công khai và diff.
+
+## Khắc phục thiếu cấu hình Azure khi clone FE — 06/11/2026
+
+- Xác minh checkout chỉ có `.env.example`, không có env được Vite nạp. POST local `/api/v1/auth/login` với `{}` trả 404 trước sửa; trang chủ 200 ở lượt trước không chứng minh API đã nối.
+- Đã tạo `.env.development.local` từ mẫu Azure hiện có, giữ proxy bật; file được Git ignore, không chứa tài khoản/token. Vite tự restart sau khi tạo file. Thêm `README.md` hướng dẫn clone/cài/env/chạy và phân biệt lỗi login, `/me`, refresh.
+- Kiểm tra thật qua proxy localhost sau sửa: login `{}` trả 400 validation; GET wards 200; GET users/me không Bearer trả 401; POST refresh-token không body/cookie (đúng cách FE gửi) trả 401 `iam.invalid_token`. Thử refresh với `{}` trả 400 do validation body nên không dùng thử nghiệm đó để kết luận contract cookie hỏng. Swagger IAM công khai có LoginCommand, BrowserAuthResponse và header CSRF.
+- `npm run typecheck` đạt. Chưa đăng nhập bằng tài khoản thật, chưa xác minh cookie/F5 hay tất cả API Azure; không chạy lint/build/E2E trong lượt này, không commit/push. Người dùng tải lại localhost:5173 và thử tài khoản đúng môi trường; nếu còn lỗi cần HTTP status/mã lỗi của login và users/me, không cần mật khẩu/token.
+
+## Chạy frontend local — 06/11/2026
+
+- Đã cài 399 packages bằng `npm install --no-audit --no-fund`; `npm ci` ban đầu thất bại do lockfile thiếu `@emnapi/core` và `@emnapi/runtime` 1.11.3. `package-lock.json` đã được npm bổ sung dependency và chuẩn hóa metadata peer; không đổi `package.json`.
+- Đã chạy `npm run dev` ngoài sandbox tại `http://localhost:5173/`, kiểm tra HTTP trả 200. Server chỉ tồn tại trong phiên chạy; lần sau có thể cần khởi động lại.
+- Chưa chạy typecheck/lint/build hoặc kiểm thử nghiệp vụ/API thật trong lượt khởi động này. Không commit/push.
+
+## RCA lỗi HTTP 200 nhưng hai màn lịch không hiển thị — 06/11/2026
+
+- Theo yêu cầu người dùng, đã lập `docs/SCHEDULE_API_CONTRACT_RCA_AND_FIX_2026-11-06.md`: nguyên nhân, bằng chứng, trách nhiệm, phương án khôi phục chỉ đọc và triển khai đồng bộ. Lượt này chỉ điều tra/tài liệu, không sửa tiếp logic FE/BE hoặc deploy.
+- Đã đọc Swagger công khai Gateway lúc 13:41:45 UTC+7 và Workflow trực tiếp lúc 13:43:35: cả hai HTTP 200 nhưng MonthlyView chỉ có 7 trường cũ, thiếu daysOff/isPublished/canEdit/editDeadlineUtc; ScheduleDraftInput chưa có daysOff. FE mới bắt buộc các trường này. Config development Vite proxy staffing về Workflow Azure trực tiếp, không phải BE local. Chưa đọc response nghiệp vụ bằng phiên thật hoặc DB/revision Azure; báo cáo phân biệt schema công khai với body thực tế.
+- Xác định trách nhiệm chính ở tích hợp/rollout do agent thực hiện: FE yêu cầu contract mới trước khi nghiệm thu BE đích, chưa có tương thích chỉ đọc; không quy lỗi người dùng hoặc cá nhân BE/DevOps khi thiếu log triển khai. Thông báo hiện gom mọi ZodError thành yêu cầu cập nhật BE nên cũng cần sửa độ chính xác.
+- Đề xuất, chưa triển khai: legacy response hợp lệ vẫn hiển thị chỉ đọc, không giả canEdit/daysOff hoặc bỏ validation; migration + BE đúng môi trường rồi nghiệm thu response/lưu/nghiệp vụ/thông báo thật trước bật ghi FE. Kiểm tra tài liệu/đường dẫn và diff; không chạy lại build/test cho thay đổi tài liệu, không dùng số kiểm thử cũ làm kết quả mới.
+
+## Lưu ngày nghỉ qua API, khóa lịch đã công bố và danh sách theo cán bộ/tháng — 06/11/2026
+
+- **Đã sửa source FE và BE theo yêu cầu mới.** Ghi chú “dấu nghỉ chỉ giữ trong phiên” ở các mục lịch sử phía dưới đã được thay thế bằng hợp đồng có lưu DB. Chưa deploy Azure hoặc áp dụng migration lên DB thật.
+- **Danh sách ca:** thêm `src/components/staffing/ScheduleListView.tsx`; chọn cán bộ rồi tháng/năm, bảng ngày/loại ngày/giờ làm, chỉ đọc ca/ngày nghỉ chính thức trong tháng. Người ngừng hoạt động vẫn tra cứu được ở danh sách. Bỏ nút tạo/hủy ca trực tiếp khỏi danh sách; sửa qua Sắp xếp lịch tháng. Giữ tên tab người dùng đã đổi.
+- **API/checkbox:** `workSchedules.ts` có `daysOff:[{officerId,date}]` trong input draft và response revision/tháng; tháng có thêm `isPublished,canEdit,editDeadlineUtc`. Tick/bỏ tick gọi GET đối chiếu rồi PUT draft ngay với toàn bộ slots+daysOff cả phường; dùng revision/version mới cho thao tác tiếp theo, không mất ngày nghỉ người khác. Mở lại lấy nháp đã lưu, sau công bố lấy ngày nghỉ chính thức. Giờ sửa bằng form được lưu khi công bố hoặc cùng lần tick tiếp theo. Lỗi/mất phản hồi giữ nội dung, chặn ghi đè; kiểm tra response có đúng ngày nghỉ trước báo thành công. BE cũ thiếu metadata thì báo cần cập nhật, không giả lưu bằng localStorage.
+- **Khóa/sửa:** tháng đã PUBLISHED/BASELINE mặc định chỉ xem lịch chính thức, không lấy nháp chưa công bố để giả lịch đã công bố. Có nút Sửa lịch cho Manager có quyền manage khi còn hạn; bấm sửa mới mở bản đang soạn. Hạn là đủ 24 giờ trước 00:00 ngày 1 theo Việt Nam: tháng 12/2026 sửa chậm nhất **30/11/2026 00:00** (29/11 17:00 UTC), đúng mốc vẫn được. BE kiểm tra lại dưới khóa phường ở draft/publish và luồng đổi ca; API tạo/hủy ca cũ không sửa tháng đã công bố. Công bố lại xong về chỉ xem.
+- **Thông báo:** BE công bố lưu event STAFFING/SCHEDULE_PUBLISHED vào outbox cùng transaction cho từng cán bộ có giờ hoặc ngày nghỉ thay đổi, kể cả chỉ đổi ngày nghỉ. Consumer hiện có nhận loại event này và tạo IN_APP; không phát event khi chỉ lưu nháp, không phát trùng khi replay publish đã thành công. Hộp xác nhận liệt kê giờ cũ/mới, ngày nghỉ thêm/bỏ, cán bộ bị ảnh hưởng và nhắc sẽ thông báo. Chưa nghiệm thu giao nhận RabbitMQ/Analytics/SignalR thật.
+- **BE cùng workspace:** cập nhật MonthlyScheduleContracts/MonthlyScheduleService, StaffingService, WardSchedule/WorkflowDbContext; thêm SchedulePolicy, migration `20261106061808_PersistScheduleDaysOff` (JSONB `days_off_json`) cùng designer/snapshot. Hướng dẫn và toàn bộ đường dẫn ở `E:/wardmate-backend/PROGRESS.md`, `docs/api-guide.md`, `docs/system-constraints.md`. Không chạy Git trong BE theo AGENTS, không commit/push repo nào.
+- **Kiểm tra thực chạy:** hồi quy `schedule-calendar + work-schedules + staffing-ui` **39/39 đạt**; sau tinh chỉnh quyền/schema/lỗi, nhóm trọng tâm **7/7 đạt**, gồm 2 ca mới sát hạn và response không xác nhận ngày nghỉ: **41 ca khác nhau** qua hai lượt. Tất cả nghiệp vụ/danh tính dùng mock; fixture Word là DOCX ZIP/XML thực. Cập nhật test bảng danh sách theo UI mới, kiểm tra tự lưu/mở lại/công bố/khóa, giữ nghỉ người khác, cutoff, năm nhuận, qua đêm, cache/lỗi mạng và responsive 1440/768/390/360 + font CSS 200%. Sửa schema lịch sử BASELINE để nhận fingerprint rỗng đúng migration BE thật, không nới DRAFT/PUBLISHED.
+- Typecheck, lint, FE build cuối đạt (còn cảnh báo annotation/chunk lớn cũ). BE build Release toàn solution sau migration **0 errors / 0 warnings**; EF `has-pending-model-changes` đạt, đã tạo/đọc SQL migration offline. Không tạo lại test project BE; chưa chạy kiểm thử DB/race/outbox thật. SDK .NET 8.0.427 cài trong thư mục tạm sau kiểm SHA-512 do máy ban đầu chỉ có runtime; không đổi SDK hệ thống. Các Vite PID do test tạo đã được dừng để kết thúc teardown Windows, exit 0.
+- **Bước triển khai còn lại:** áp dụng migration và deploy Workflow mới trước FE mới; kiểm tra hai Manager cạnh tranh version, hai phường, hạn sửa theo giờ server và thông báo IN_APP thực với tài khoản kiểm thử. Không coi các lượt mock/build là xác minh đã lưu/gửi thông báo trên Azure. Bảng coverage cập nhật: 45 nhánh UI hiện hành + 2 endpoint create/cancel cũ chỉ còn client tương thích; tổng route vẫn 47.
+
+## Đổi mặc định và màu ngày làm/ngày nghỉ — 06/11/2026
+
+- Đã sửa `MonthlyScheduleView.tsx` và `staffing.css`: mặc định **không tick = ngày làm, xanh nhạt** kể cả chưa có giờ; **tick = nghỉ, đỏ nhạt**. Ngày lễ/nghỉ chung và nghỉ phép phủ cả ngày từ BE được tick/đỏ; phép một phần ngày không biến cả ngày thành nghỉ. Màu chọn ngày và trạng thái đã qua không ghi đè màu làm/nghỉ. Thay “Không có ca” trên ô ngày làm trống bằng “Chưa đặt giờ”.
+- Tách dấu nghỉ khỏi việc thiếu slots. Tick nghỉ bỏ ca ngày đó trong bản đang soạn, bỏ tick khôi phục giờ đã nhập, không tự mở form; áp dụng giờ mới chuyển về ngày làm. Tiện ích điền ngày trống bỏ qua ngày được tick nghỉ; cảnh báo mất thay đổi bao gồm dấu nghỉ. Không sửa API/BE, không tự tạo ca mặc định hoặc dùng closure chung để lưu nghỉ cá nhân.
+- **Giới hạn xác minh từ hợp đồng BE hiện tại:** `ScheduleDraftInput`/`MonthlyRevisionView` chỉ có slots, không có ngày nghỉ cá nhân. Vì vậy dấu tick cá nhân chỉ giữ trong phiên xếp lịch, mất khi tải lại/công bố; UI giải thích rõ. Phần bỏ ca tương lai vẫn lưu qua API khi công bố. Muốn giữ nguyên dấu tick khi mở lại cần BE bổ sung dữ liệu ngày làm/nghỉ theo cán bộ/tháng; chưa tự đặt hợp đồng mới hay dùng localStorage thay dữ liệu BE. Ghi chú này thay thế quy ước cũ “không có ca là nghỉ” trong mục phía dưới.
+- Kiểm tra thực chạy: `npm run typecheck`, `npm run lint`, `npm run build` đạt (8035 modules, còn cảnh báo annotation/chunk lớn cũ); **19/19 Playwright lịch dùng mock đạt**, gồm kiểm tra màu CSS thực, ngày trống mặc định không tick, tick/bỏ tick khôi phục giờ, ngày lễ đỏ, công bố, cache/lỗi mạng, qua đêm và responsive 1440/390/360 + font CSS 200%. Đã xem ảnh mobile 390. Dừng đúng Vite PID của lượt test để kết thúc teardown Windows, exit 0. Chưa nghiệm thu Azure bằng phiên thật. Cập nhật `FRONTEND_SETUP.md`; giữ thay đổi trước đó, không commit/push.
+
+## Xây lại bảng lịch tháng theo cán bộ — 06/11/2026
+
+- **Đã triển khai theo yêu cầu mới nhất:** Manager mở Lịch ca làm mặc định ở Lịch tháng → chọn cán bộ trước → chọn tháng/năm bằng bộ chọn tiếng Việt → bảng đủ ngày, 7 cột Thứ Hai–Chủ nhật → bấm ngày đặt giờ 24 giờ, nhiều ca/qua đêm hoặc tick Nghỉ → xác nhận công bố bên dưới bảng. Giữ các tab danh sách và đổi ca; giờ tuần/sao chép/lịch sử nằm trong Tiện ích xếp lịch. Frontdesk bấm ngày xem chi tiết, xác nhận đã xem hoặc đề nghị đổi giờ; tháng rỗng không cho xác nhận.
+- **File chính:** viết lại `src/components/staffing/MonthlyScheduleView.tsx`, thêm `ScheduleWeekPattern.tsx`, `src/lib/scheduleCalendar.ts`; cập nhật `StaffingView.tsx`, `staffing.css`, fixture/tests lịch. Giữ thay đổi đang có của phiên trước; không commit/push, không sửa BE.
+- **API/nghiệp vụ:** đối chiếu lại `MonthlyScheduleService.cs` và `StaffingService.cs` local. Tick Nghỉ là không có ca cá nhân trong ngày, không gọi API tạo ngày nghỉ chung. Ngày lễ/nghỉ phép hiển thị từ BE; chặn giờ trùng/nghỉ phép được duyệt và yêu cầu xác nhận ca thay đổi trong ngày lễ. GET shifts ngày đầu tháng bổ sung ca qua đêm từ tháng trước để xem/chặn trùng; không đưa các ca ngoài tháng vào payload lưu. Không dựng phiên bản giả nếu ca thiếu version.
+- **Công bố:** một thao tác UI thực hiện lưu draft đầy đủ ca cả phường rồi publish theo hợp đồng có sẵn; hai call này không phải một transaction FE. Giữ lịch người khác và bản soạn hợp lệ trên server, liệt kê cán bộ/giờ cũ/giờ mới trong xác nhận. Kiểm tra fingerprint/version trước PUT; bản soạn lỗi thời phải xác nhận bỏ trước khi lập lại từ lịch chính thức. Nếu đã lưu nhưng publish lỗi, giữ revision/body để kiểm tra và thử công bố lại; không báo thành công sớm hay tự retry. Nếu mất phản hồi lưu, yêu cầu lấy lịch mới để đối chiếu.
+- **Sửa lỗi khi kiểm tra:** không cố định lại editor từ cache cũ khi bấm Lấy lịch mới; lỗi đọc nền không unmount/mất giờ đang chỉnh; sau công bố vẫn mở khóa bộ chọn/tải lại dù lần đọc tiếp thất bại. Hiển thị ca qua đêm vào ngày sau và khóa tick nghỉ nhầm. Chọn ngày đã qua mở chi tiết chỉ xem thay vì form giờ bị khóa. Giữ thay đổi khi chuyển tab; đổi cán bộ/tháng/tải lại có cảnh báo bỏ thay đổi và có beforeunload. Hook hiện tại chưa chặn mọi điều hướng router ra workspace.
+- **Kiểm tra thực chạy:** lượt hồi quy cuối `schedule-calendar + work-schedules + staffing-ui` **33/33 đạt** (API/danh tính mock, có DOCX ZIP/XML thực từ fixture). Sau chỉnh trạng thái mở khóa và tra tên, chạy thêm hai ca công bố thường/công bố xong đọc lỗi **2/2 đạt**, trong đó một ca mới: **34 ca khác nhau** qua hai lượt. Bao gồm xung đột, giữ lịch người khác, ngày lễ/nghỉ phép, ca qua đêm/cận tháng, cache/lỗi mạng, năm nhuận, desktop 1440 và mobile 390/360, font CSS 200%, Word/nghỉ/đổi ca và năm màn điều hành. Đã xem ảnh desktop/mobile; không coi tăng font CSS là zoom trình duyệt thật. Lượt đầu sửa assertion chọn ca theo ID thay vì thứ tự; các lượt có reload khi đang thay source/build không tính đạt, đã chạy lại ổn định.
+- `npm run typecheck`, `npm run lint`, build cuối **8035 modules** đạt; lint lại các file UI/test lịch sau bổ sung đạt. Build còn cảnh báo annotation SignalR/Zod và chunk lớn hiện có. Windows runner chờ dọn Vite sau các ca; đã dừng đúng PID Vite do từng lượt test tạo để nhận summary/exit 0, không dừng dịch vụ khác. Cập nhật `FRONTEND_SETUP.md` và bảng coverage theo tên thao tác mới.
+- **Giới hạn/bước tiếp:** chưa nghiệm thu Azure bằng phiên thật/hai phường; không dùng mock làm bằng chứng dữ liệu thật đã lưu. BE hiện không có API xóa vĩnh viễn lịch tháng/ca đã kết thúc; bảng tháng giữ ca đã bắt đầu chỉ xem, danh sách vẫn hỗ trợ hủy ca còn hiệu lực theo API. Không có loại nghỉ/lễ cá nhân được lưu riêng ngoài trạng thái không có ca. Kiểm tra thật tiếp theo: hai cán bộ trong cùng phường, giữ lịch người khác khi công bố, ngày lễ/nghỉ phép và lỗi/xung đột đồng thời với BE deploy.
+
+## Triển khai FE lịch tháng, nghỉ Word và đổi ca — 06/11/2026
+
+- **Đã triển khai FE theo kế hoạch được người dùng duyệt.** Bổ sung 25 thao tác mới, giữ 22 thao tác cũ; bảng **47 API → client/UI** tại `FE_STAFFING_API_COVERAGE_2026-11-06.md`. Đây là bao phủ call site/nhánh UI, không phải 47 thao tác đã nghiệm thu Azure có xác thực. Baseline FE `46bb7c0`; giữ tài liệu bàn giao và kế hoạch chưa tracked có sẵn, không commit/push.
+- **API/cache:** thêm `src/lib/api/workSchedules.ts`, cập nhật staffing/validation/error. Có Zod, đối chiếu ID/phiên bản cần thiết, binary DOCX/hash/multipart, key/body cố định cho tạo/nộp khi gửi lại, không tự retry mutation. Query staffing tách user/phường/role/quyền; luôn đọc lại khi mount, giữ nội dung và khóa ghi sau xung đột.
+- **UI mới:** `LeaveDraftsView.tsx`, `LeaveRequestsView.tsx`, `MonthlyScheduleView.tsx`, `ShiftChangesView.tsx`; `StaffingView` nối hai workspace. Frontdesk có nháp/đơn đã nộp, editor Word lưu/mở lại, sửa metadata/xóa/nộp và xem Word đã nộp chỉ đọc; đọc capability để không bỏ qua Word bắt buộc. Manager có detail/version mới, ca bị ảnh hưởng, hồ sơ bàn giao, quyết định/lịch sử; không tự chuyển hồ sơ khi duyệt nghỉ.
+- **Lịch:** danh sách ca, tháng theo ngày/cán bộ, mẫu tuần, preview/sao chép theo ngày trong tháng, chỉnh toàn bộ slots, lưu nháp/công bố/lịch sử BASELINE, phục hồi nháp lỗi thời có xác nhận; giữ ca đã bắt đầu. Frontdesk xác nhận fingerprint cá nhân, gửi đổi giờ với version ca thật; Manager duyệt/từ chối theo ID yêu cầu. Bộ lọc hiển thị không làm thiếu ca khi lưu; công bố có xác nhận riêng ngoại lệ ngày đóng cửa và ca bị hủy.
+- **Dùng chung:** editor DOCX lazy load có nhãn/lỗi theo ngữ cảnh; khung Word toàn viewport. Sửa guard thay đổi chưa lưu hiển thị trên editor. Tham vấn đọc lại trước trả lời/đóng và kiểm tra quyền khi mở tài liệu. Toast/bell staffing về đúng nhóm danh sách, invalidation staffing/workflow; Manager/Officer hiểu query section/view tương ứng. Không giả resourceId/actionUrl mà BE chưa gửi. Cập nhật `FRONTEND_SETUP.md`.
+- **Lỗi phát hiện và đã sửa:** thanh công cụ Word che nút lưu khi nằm trong modal hẹp; modal đọc Word trùng tên accessible; label select trong test cần đối chiếu đúng accessible name; khung giờ 2 cột bị cắt chữ khi phóng chữ 200% (đổi flex wrap, thêm kiểm tra overflow bên trong). Test mobile cold-start từng vượt chờ 5 giây, đã chờ tối đa 15 giây cho dữ liệu lịch sẵn sàng và chạy lại đạt. Script form từng timeout lúc tối ưu dependency/chạy song song build, chạy riêng lại đạt; không tính các lượt lỗi là đạt.
+- **Kiểm tra thực chạy:** typecheck đạt (chạy riêng và trong build), lint đạt, build cuối đạt **8033 modules**; còn cảnh báo annotation SignalR/Zod và chunk lớn hiện có. Playwright Edge có **36 ca khác nhau đạt qua các lượt**: lượt hồi quy chung `work-schedules + staffing-ui + manager + docx-online` **30/30**; lượt bổ sung notification/stale/copy/403/detail **6/6** (trùng 1 ca detail với lượt chính); lượt responsive/phóng chữ cuối **4/4** (trùng 3 ca responsive, thêm 1 ca phóng chữ). Đã xem ảnh desktop/mobile và chữ 200%; đây là tăng font CSS, chưa xác minh zoom trình duyệt thực. Script validation **56/56**; form độc lập **11/11**, không gọi API; proxy **50 tuyến + 3 ca giữ header/body** gồm Idempotency-Key/PATCH/multipart. `git diff --check` đạt; bảng coverage kiểm đếm 47 dòng.
+- **Môi trường kiểm tra:** Word dùng DOCX ZIP/XML thực do fixture tạo, nghiệp vụ/API và danh tính được mock. Runner Windows chờ dọn Vite sau khi báo từng ca; đã dừng đúng các tiến trình Vite do lượt test tạo để nhận summary/exit 0. Không thay cấu hình Playwright, không dừng dịch vụ của người dùng. Test artifacts ở test-results, không đưa vào source.
+- **Giới hạn còn lại:** chưa có nghiệm thu nghiệp vụ Azure bằng phiên thật: mẫu chung/Blob, hai phường, quyền tải tệp thực, dữ liệu lưu qua restart, outbox/SignalR liên dịch vụ và deployment. Bước tiếp là chạy kịch bản hai phường trong bàn giao với tài khoản kiểm thử hợp lệ, ghi riêng kết quả thật; không dùng mock hay Swagger làm bằng chứng các phần này đã đạt. Không sửa BE, migration, secrets hoặc cấu hình template/storage.
+
+## Khảo sát BE mới và kế hoạch tích hợp đầy đủ FE — 06/11/2026
+
+- Người dùng yêu cầu gắn toàn bộ API trong bàn giao `Lịch làm việc Front Desk và đơn nghỉ Word.md`, hoàn thiện UI/UX và kiểm tra bug/validation, **trước hết lập kế hoạch để xem**. Lượt này chỉ khảo sát/lập kế hoạch, chưa triển khai chức năng.
+- Đã đọc source BE local mới LeaveDraft/MonthlySchedule contracts/controller/service, hướng dẫn API và WF-WS; đã đọc Swagger UI/index.js/OpenAPI JSON đang deploy qua Gateway (HTTP 200). Đủ 47 thao tác trong bàn giao: 22 cũ + 25 mới. Bộ lọc rộng có 49 vì thêm assignment-summary và PUT assignee đã được FE dùng ở Giám sát hồ sơ, đưa vào hồi quy. Thông tin cũ “BE chưa có nháp/lịch tháng/đổi ca” bên dưới là lịch sử, không còn là trạng thái source hiện tại.
+- FE hiện có 22 client/luồng cũ; chưa có 25 API mới và UI Word/lịch tháng/đổi ca tương ứng. Kế hoạch chi tiết tại `FE_STAFFING_FULL_INTEGRATION_PLAN_2026-11-06.md`: 8 bước từ coverage/client/schema → Word → duyệt nghỉ → lịch tháng → xác nhận/đổi ca → hồi quy/thông báo → test và nghiệm thu thật.
+- Điểm hợp đồng cần giữ: mẫu Word chung, capability không chứng minh tải được file; nháp/tệp riêng, lưu/nộp tách biệt; idempotency key/body giữ nguyên khi retry; metadataVersion/revision; lịch nháp gửi toàn bộ slots, sao chép theo ngày trong tháng như BE hiện tại, fingerprint lịch cá nhân, quyết định đổi ca không có expectedVersion; BASELINE có actor UUID toàn 0.
+- Git FE đầu lượt: main tại `46bb7c0`, chỉ tài liệu bàn giao tiếng Việt của người dùng chưa tracked. Không chạy Git BE theo AGENTS backend, không sửa BE hoặc cấu hình mẫu/storage. Không gọi nghiệp vụ có xác thực, không tạo dữ liệu thật; chưa chạy build/test trong lượt kế hoạch. Chỉ thêm kế hoạch và ghi chú, kiểm tra nội dung/đường dẫn/diff; không commit/push.
+- Bước tiếp: người dùng xem kế hoạch; sau đó triển khai FE theo hợp đồng thật. Nghiệm thu hai phường cần phiên kiểm thử hợp lệ và mẫu/storage đã cấu hình; có route trong Swagger không chứng minh luồng Word/quyền/thông báo thật đã đạt.
+
 ## Nâng cấp UI/UX Dashboard Quản lý Thủ tục (`ProcedureDashboardView`) — 06/11/2026
 
 - **Mục tiêu & Bối cảnh:**
@@ -23,7 +140,6 @@
 - **Kiểm tra chất lượng:**
   - `npm run typecheck`: **0 lỗi** (đạt 100%). Người dùng yêu cầu không cần chạy test.
 
-
 ## Hoàn thành Mục 16 (FE-09): Tạo phôi & Tải DOCX trực tiếp trên màn bản nháp AI — 06/11/2026
 
 - **Mục tiêu & Nghiệp vụ (FE-09 / KB-04):**
@@ -36,8 +152,8 @@
      - Quy trình chuẩn Backend: Gọi `POST /api/v1/form-templates` (tạo metadata) $\rightarrow$ Gọi `POST /api/v1/form-templates/{id}/upload-docx` (tải file lên kho).
      - Bắt và hiển thị lỗi thân thiện thông qua `formTemplateErrorMessage`.
   2. **Tích hợp nút hành động trong `ProcedureFormPicker.tsx`:**
-     - Với mỗi biểu mẫu AI bóc tách chưa có `formTemplateId`: Bổ sung nút *"Tạo phôi & tải DOCX"* (màu hổ phách) bên cạnh badge *"Chưa gắn phôi Word"*.
-     - Tại vùng kho biểu mẫu: Bổ sung nút *"Tạo phôi mới"* để thêm nhanh biểu mẫu mới kèm file Word trực tiếp.
+     - Với mỗi biểu mẫu AI bóc tách chưa có `formTemplateId`: Bổ sung nút _"Tạo phôi & tải DOCX"_ (màu hổ phách) bên cạnh badge _"Chưa gắn phôi Word"_.
+     - Tại vùng kho biểu mẫu: Bổ sung nút _"Tạo phôi mới"_ để thêm nhanh biểu mẫu mới kèm file Word trực tiếp.
   3. **Tự động lưu bản nháp (`ProcedureDraftWorkspace.tsx`):**
      - Khi tạo phôi thành công: Tự động gán `formTemplateId` mới tạo vào `formDefinitions` của bản nháp và gọi `procedureApi.saveDraft(draft.id, draft.revision, updatedPayload)` để lưu ngay vào bản nháp, tránh thất lạc dữ liệu.
   4. **Hiển thị cảnh báo AIOCR (`ProcedureFormPicker.tsx`, `ProcedureApiEditor.tsx`):**
@@ -45,8 +161,8 @@
      - Lọc các cảnh báo liên quan đến `formDefinitions` hoặc tệp mẫu $\rightarrow$ Hiển thị khối Alert màu hổ phách nổi bật ở đầu danh sách biểu mẫu và chấm cam trên Tab Bar.
 - **Kiểm thử tự động & Xác minh chất lượng:**
   - Viết mới bộ test E2E tại `tests/procedure-draft-direct-docx.spec.ts`:
-    + Test 1: Tạo phôi và tải DOCX trực tiếp cho biểu mẫu chưa liên kết trong bản nháp AI, tự động lưu bản nháp: **PASSED (17.9s)**.
-    + Test 2: Hiển thị khối cảnh báo hổ phách khi AI phát hiện chênh lệch số lượng biểu mẫu: **PASSED (9.6s)**.
+    - Test 1: Tạo phôi và tải DOCX trực tiếp cho biểu mẫu chưa liên kết trong bản nháp AI, tự động lưu bản nháp: **PASSED (17.9s)**.
+    - Test 2: Hiển thị khối cảnh báo hổ phách khi AI phát hiện chênh lệch số lượng biểu mẫu: **PASSED (9.6s)**.
   - `npm run typecheck`: **0 lỗi**.
   - `npm run lint`: **0 lỗi**.
 - **Trạng thái:** ✅ Đã hoàn thành Mục 16 (FE-09) và cập nhật tài liệu `PORTAL_REFINEMENT_TASKS_CHECKLIST.md`.
@@ -111,17 +227,17 @@
      - Cập nhật hàm `toggle`: Map dữ liệu từ `DocumentFormOption` sang `Row` với đầy đủ các thuộc tính chuẩn của Backend (`formTemplateId: form.id`, `formCode: form.formCode`, `formName: form.formName`, `formType: form.formType || 'DOCX_TEMPLATE'`, `quantity: 1`, `isMandatory: true`, `caseCode: null`).
      - Render thẻ biểu mẫu lấy trực tiếp từ `query.data` (mảng `DocumentFormOption[]`), hiển thị mã biểu mẫu dạng badge font-mono, tên biểu mẫu, loại phôi DOCX và nút chọn mẫu (`aria-label="${form.formCode} · ${form.formName}"`).
   3. **Thêm Banner phân biệt trong `ProcedureChecklistModal.tsx`:**
-     - Bổ sung khối Alert màu xanh da trời phía trên bảng danh mục giấy tờ: *"Lưu ý phân biệt: Mục này dùng để khai báo danh mục giấy tờ đính kèm (CMND, Giấy khai sinh, v.v.). Mẫu đơn, tờ khai điện tử (DOCX) được cấu hình tại mục 'Biểu mẫu' trong màn Chỉnh sửa thủ tục."*.
+     - Bổ sung khối Alert màu xanh da trời phía trên bảng danh mục giấy tờ: _"Lưu ý phân biệt: Mục này dùng để khai báo danh mục giấy tờ đính kèm (CMND, Giấy khai sinh, v.v.). Mẫu đơn, tờ khai điện tử (DOCX) được cấu hình tại mục 'Biểu mẫu' trong màn Chỉnh sửa thủ tục."_.
   4. **Bảo toàn dữ liệu trong `ProcedureApiEditor.tsx`:**
      - Xác nhận luồng submit `PUT /api/v1/procedure-manager/procedures/{id}` gửi toàn bộ payload bao gồm `checklistSchema` và `formDefinitions` hiện tại, kèm `decisionNumber` và `effectiveDate`.
 - **Kiểm thử tự động & Xác minh chất lượng:**
   - Viết mới bộ test E2E chuyên biệt tại `tests/procedure-form-linking.spec.ts`:
-    + Test 1: Sửa thủ tục nhập tay $\rightarrow$ vào Tab Biểu mẫu $\rightarrow$ tải mẫu từ `GET /api/v1/procedure-manager/document-forms` $\rightarrow$ chọn mẫu `KB04 Tờ khai` $\rightarrow$ điền ngày hiệu lực $\rightarrow$ bấm Lưu thay đổi $\rightarrow$ kiểm tra request PUT gửi lên backend chứa đúng 2 mục `checklistSchema` ban đầu và mảng `formDefinitions` có mẫu vừa chọn với đầy đủ thuộc tính chuẩn.
-    + Test 2: Mở `ProcedureChecklistModal` $\rightarrow$ xác nhận hiển thị thông báo hướng dẫn phân biệt giấy tờ và biểu mẫu DOCX.
+    - Test 1: Sửa thủ tục nhập tay $\rightarrow$ vào Tab Biểu mẫu $\rightarrow$ tải mẫu từ `GET /api/v1/procedure-manager/document-forms` $\rightarrow$ chọn mẫu `KB04 Tờ khai` $\rightarrow$ điền ngày hiệu lực $\rightarrow$ bấm Lưu thay đổi $\rightarrow$ kiểm tra request PUT gửi lên backend chứa đúng 2 mục `checklistSchema` ban đầu và mảng `formDefinitions` có mẫu vừa chọn với đầy đủ thuộc tính chuẩn.
+    - Test 2: Mở `ProcedureChecklistModal` $\rightarrow$ xác nhận hiển thị thông báo hướng dẫn phân biệt giấy tờ và biểu mẫu DOCX.
   - Cập nhật test 12 trong `tests/procedure-manager.spec.ts` khớp với API mới `**/api/v1/procedure-manager/document-forms*`.
   - Kết quả kiểm thử:
-    + `tests/procedure-form-linking.spec.ts`: **2/2 tests PASSED 100%**.
-    + `tests/procedure-manager.spec.ts` (test 12): **PASSED 100%**.
+    - `tests/procedure-form-linking.spec.ts`: **2/2 tests PASSED 100%**.
+    - `tests/procedure-manager.spec.ts` (test 12): **PASSED 100%**.
   - `npm run typecheck`: **0 lỗi**.
   - `npm run lint`: **0 lỗi**.
 - **Trạng thái:** ✅ Đã hoàn thành Mục 12 (FE-07) và cập nhật tài liệu `PORTAL_REFINEMENT_TASKS_CHECKLIST.md`.
@@ -132,33 +248,33 @@
   - Xử lý triệt để hiện tượng câu hỏi chatbot bị trình duyệt hủy kết nối `(canceled)` khi hỏi liên tiếp hoặc khi Gemini xử lý lâu.
   - Khóa ô nhập liệu trong suốt thời gian chờ trợ lý AI suy nghĩ và phản hồi.
   - Xử lý mã lỗi 429 từ Backend AIOCR:
-    + `ai.guest_quota_exceeded`: Khách vãng lai hỏi tới câu thứ 11 (hết 10 câu/ngày/IP). Hiển thị lời mời đăng nhập trang nhã, không hiện lỗi kỹ thuật.
-    + `ai.guest_limit_reached`: Toàn hệ thống đã hết lượt hỏi cho khách hôm nay. Hiển thị thông báo hẹn thử lại ngày mai hoặc đăng nhập.
-    + `ai.quota_exceeded` / `ai.daily_limit_reached`: Hết hạn mức 30 câu/ngày của công dân đăng nhập.
-    + `ai.provider_busy`: Gemini bận hoặc quá tải tạm thời.
+    - `ai.guest_quota_exceeded`: Khách vãng lai hỏi tới câu thứ 11 (hết 10 câu/ngày/IP). Hiển thị lời mời đăng nhập trang nhã, không hiện lỗi kỹ thuật.
+    - `ai.guest_limit_reached`: Toàn hệ thống đã hết lượt hỏi cho khách hôm nay. Hiển thị thông báo hẹn thử lại ngày mai hoặc đăng nhập.
+    - `ai.quota_exceeded` / `ai.daily_limit_reached`: Hết hạn mức 30 câu/ngày của công dân đăng nhập.
+    - `ai.provider_busy`: Gemini bận hoặc quá tải tạm thời.
 - **Những việc đã thực hiện:**
   1. **Nâng timeout Chatbot lên 75 giây (`src/lib/api/aiOcr.ts`):**
      - Đổi `timeout: 35000` thành `timeout: 75000` (75 giây) trong `aiOcrApi.chat`. Tránh việc axios tự động hủy kết nối khi mô hình ngôn ngữ lớn (Gemini) khởi động lạnh hoặc phân tích câu hỏi pháp lý phức tạp mất 40–50 giây.
-     - Bắt mã lỗi `ECONNABORTED` / timeout để trả về thông điệp thân thiện: *"Trợ lý phản hồi quá lâu. Vui lòng thử lại."*.
+     - Bắt mã lỗi `ECONNABORTED` / timeout để trả về thông điệp thân thiện: _"Trợ lý phản hồi quá lâu. Vui lòng thử lại."_.
   2. **Định nghĩa lớp lỗi chuyên biệt `AiChatError` (`src/lib/api/aiOcr.ts`):**
      - Kế thừa `Error`, lưu giữ đầy đủ `code`, `status` (429, 503, 409...) và `retryAfter` từ ProblemDetails backend để component UI bắt và phân loại chính xác.
   3. **Khóa chặt ô nhập và nút gửi (`src/components/ai/AiChatWidget.tsx`):**
-     - Trong suốt thời gian `loading = true`: Ô nhập liệu bị vô hiệu hóa (`disabled={loading}`), đổi placeholder thành *"Trợ lý đang suy nghĩ và trả lời..."*. Nút gửi hiển thị icon xoay loading và bị khóa, ngăn chặn người dùng bấm gửi liên tiếp.
+     - Trong suốt thời gian `loading = true`: Ô nhập liệu bị vô hiệu hóa (`disabled={loading}`), đổi placeholder thành _"Trợ lý đang suy nghĩ và trả lời..."_. Nút gửi hiển thị icon xoay loading và bị khóa, ngăn chặn người dùng bấm gửi liên tiếp.
   4. **Hiển thị Khung thông báo trang nhã mời đăng nhập khi gặp 429 (`AiChatWidget.tsx`):**
      - Khi khách vãng lai gặp lỗi `ai.guest_quota_exceeded` (câu hỏi thứ 11):
-       + Giữ nguyên tin nhắn câu hỏi của khách trong lịch sử chat.
-       + Trợ lý trả lời lịch sự giải thích về hạn mức 10 câu/ngày.
-       + Xuất hiện **Khung thông báo trang nhã mời đăng nhập** (màu hổ phách nhẹ) với nút *"Đăng nhập ngay"* (chuyển hướng kèm `returnTo`) và link *"Tạo tài khoản mới"*.
-       + Thanh nhập liệu dưới cùng tự động chuyển sang chế độ thông báo hết lượt kèm nút Đăng nhập.
+       - Giữ nguyên tin nhắn câu hỏi của khách trong lịch sử chat.
+       - Trợ lý trả lời lịch sự giải thích về hạn mức 10 câu/ngày.
+       - Xuất hiện **Khung thông báo trang nhã mời đăng nhập** (màu hổ phách nhẹ) với nút _"Đăng nhập ngay"_ (chuyển hướng kèm `returnTo`) và link _"Tạo tài khoản mới"_.
+       - Thanh nhập liệu dưới cùng tự động chuyển sang chế độ thông báo hết lượt kèm nút Đăng nhập.
      - Khi gặp `ai.guest_limit_reached`: Hiển thị thông báo toàn hệ thống đã đạt giới hạn lượt khách và mời đăng nhập tài khoản công dân.
      - Tách biệt rạch ròi cơ chế Fallback Offline: Chỉ kích hoạt câu trả lời cẩm nang tĩnh khi mất mạng thật sự hoặc 503; không nuốt lỗi 429 của khách.
 - **Kiểm thử tự động & Xác minh chất lượng:**
   - Viết mới 2 kịch bản E2E trong `tests/guest-chat-and-ai-fallback.spec.ts`:
-    + Mock 429 `ai.guest_quota_exceeded` ở câu hỏi thứ 11 $\rightarrow$ xác nhận hiển thị câu trả lời lịch sự, nút "Đăng nhập ngay", khung thông báo hết lượt 10 câu $\rightarrow$ không hiện lỗi đỏ kỹ thuật.
-    + Mock API có độ trễ 800ms $\rightarrow$ xác nhận ô input bị `disabled`, placeholder đổi thành *"Trợ lý đang suy nghĩ và trả lời..."*, nút gửi bị `disabled`.
+    - Mock 429 `ai.guest_quota_exceeded` ở câu hỏi thứ 11 $\rightarrow$ xác nhận hiển thị câu trả lời lịch sự, nút "Đăng nhập ngay", khung thông báo hết lượt 10 câu $\rightarrow$ không hiện lỗi đỏ kỹ thuật.
+    - Mock API có độ trễ 800ms $\rightarrow$ xác nhận ô input bị `disabled`, placeholder đổi thành _"Trợ lý đang suy nghĩ và trả lời..."_, nút gửi bị `disabled`.
   - Kết quả kiểm thử:
-    + `tests/guest-chat-and-ai-fallback.spec.ts`: **4/4 tests PASSED 100%**.
-    + `tests/public-search-chat.spec.ts`: **10/10 tests PASSED 100%**.
+    - `tests/guest-chat-and-ai-fallback.spec.ts`: **4/4 tests PASSED 100%**.
+    - `tests/public-search-chat.spec.ts`: **10/10 tests PASSED 100%**.
   - `npm run typecheck`: **0 lỗi**.
   - `npm run lint`: **0 lỗi**.
 - **Trạng thái:** ✅ Đã hoàn thành Mục 14 (FE-02) và cập nhật tài liệu `PORTAL_REFINEMENT_TASKS_CHECKLIST.md`.
@@ -166,21 +282,21 @@
 ## Nâng cấp thông báo xuất bản chi tiết & Tinh chỉnh toàn diện UI "Thiết lập sử dụng mẫu" (FE-08) — 05/11/2026
 
 - **Yêu cầu người dùng:**
-  1. *"cái thông báo này có thể chỉ rõ hơn đc ko"*: Thông báo toast cảnh báo xuất bản cần nêu rõ tên cụ thể của biểu mẫu chưa gắn phôi Word và hướng dẫn nơi bổ sung.
-  2. *"và lỗi UI đang còn hơi nhiều ở khúc này mở 'Thiết lập sử dụng mẫu'"*: Tinh chỉnh lại toàn bộ UI của khối mở rộng "Thiết lập sử dụng mẫu" trong danh sách biểu mẫu, loại bỏ tình trạng lệch kích thước ô, thô kệch.
+  1. _"cái thông báo này có thể chỉ rõ hơn đc ko"_: Thông báo toast cảnh báo xuất bản cần nêu rõ tên cụ thể của biểu mẫu chưa gắn phôi Word và hướng dẫn nơi bổ sung.
+  2. _"và lỗi UI đang còn hơi nhiều ở khúc này mở 'Thiết lập sử dụng mẫu'"_: Tinh chỉnh lại toàn bộ UI của khối mở rộng "Thiết lập sử dụng mẫu" trong danh sách biểu mẫu, loại bỏ tình trạng lệch kích thước ô, thô kệch.
 - **Giải pháp & Kết quả triển khai:**
   1. **Nâng cấp thông báo Toast xuất bản (`ProcedureDraftWorkspace.tsx`):**
      - Tại cả 2 điểm xuất bản (từ bản nháp chi tiết và từ modal xem trước): Thay vì chỉ báo chung chung `Có N biểu mẫu chưa gắn tệp phôi DOCX`, hệ thống tự động trích xuất tên cụ thể của biểu mẫu bị thiếu:
-       *Ví dụ:* `"Đã xuất bản thủ tục thành công. Lưu ý: Có 1 biểu mẫu chưa gắn tệp phôi DOCX: "Don Khai Sinh". Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu"."`
+       _Ví dụ:_ `"Đã xuất bản thủ tục thành công. Lưu ý: Có 1 biểu mẫu chưa gắn tệp phôi DOCX: "Don Khai Sinh". Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu"."`
      - Tăng thời gian hiển thị lên `duration: 8000` (8 giây) để cán bộ đọc kịp hướng dẫn.
   2. **Đại tu toàn diện UI thẻ biểu mẫu & khối "Thiết lập sử dụng mẫu" (`ProcedureFormPicker.tsx`):**
-     - *Badge trạng thái trực quan:* Thêm nhãn màu hổ phách `Chưa gắn phôi Word` ngay cạnh mã biểu mẫu nếu mẫu chưa có `formTemplateId`.
-     - *Thanh tóm tắt thông tin nhanh:* Bổ sung thanh tóm tắt xám nhạt tinh tế hiển thị: `Số lượng: 1 bản • Loại: Mẫu Word (DOCX) • Áp dụng: Mọi trường hợp`.
-     - *Chuẩn hóa form nhập "Thiết lập sử dụng mẫu":*
-       + Phần `summary` chuyển sang thiết kế hiện đại với icon `Sliders` đỏ thương hiệu và icon `CaretDown` xoay 180° mượt mà khi mở rộng.
-       + Khung nền bo góc `rounded-xl`, viền nhạt `border-slate-200/80`, nền `bg-slate-50/60`.
-       + Toàn bộ 4 ô nhập/chọn (Số lượng bản nộp, Quy định nộp, Loại biểu mẫu, Trường hợp áp dụng) được đồng bộ tuyệt đối về chiều cao chuẩn `h-9` (36px), phông chữ `text-xs`, nhãn `text-xs font-semibold text-slate-700`.
-       + Ô Loại biểu mẫu cung cấp dropdown 2 tùy chọn rõ ràng: *Mẫu Word (phôi DOCX)* (`DOCX_TEMPLATE`) và *Mẫu điện tử tương tác* (`ONLINE_INTERACTIVE`).
+     - _Badge trạng thái trực quan:_ Thêm nhãn màu hổ phách `Chưa gắn phôi Word` ngay cạnh mã biểu mẫu nếu mẫu chưa có `formTemplateId`.
+     - _Thanh tóm tắt thông tin nhanh:_ Bổ sung thanh tóm tắt xám nhạt tinh tế hiển thị: `Số lượng: 1 bản • Loại: Mẫu Word (DOCX) • Áp dụng: Mọi trường hợp`.
+     - _Chuẩn hóa form nhập "Thiết lập sử dụng mẫu":_
+       - Phần `summary` chuyển sang thiết kế hiện đại với icon `Sliders` đỏ thương hiệu và icon `CaretDown` xoay 180° mượt mà khi mở rộng.
+       - Khung nền bo góc `rounded-xl`, viền nhạt `border-slate-200/80`, nền `bg-slate-50/60`.
+       - Toàn bộ 4 ô nhập/chọn (Số lượng bản nộp, Quy định nộp, Loại biểu mẫu, Trường hợp áp dụng) được đồng bộ tuyệt đối về chiều cao chuẩn `h-9` (36px), phông chữ `text-xs`, nhãn `text-xs font-semibold text-slate-700`.
+       - Ô Loại biểu mẫu cung cấp dropdown 2 tùy chọn rõ ràng: _Mẫu Word (phôi DOCX)_ (`DOCX_TEMPLATE`) và _Mẫu điện tử tương tác_ (`ONLINE_INTERACTIVE`).
 - **Kiểm tra chất lượng:**
   - `npm run typecheck`: 0 lỗi.
   - `npm run lint`: 0 lỗi.
@@ -189,16 +305,16 @@
 ## Khắc phục lỗi xác thực formType biểu mẫu khi xuất bản bản nháp thủ tục (FE-08) — 05/11/2026
 
 - **Nguyên nhân lỗi:**
-  - Trong ảnh phản hồi của người dùng khi bấm "Xác nhận xuất bản": Hệ thống báo lỗi *"Loại biểu mẫu (dòng 1): Vui lòng nhập loại biểu mẫu hợp lệ"* và đánh dấu tab *5 Biểu mẫu* bị lỗi.
+  - Trong ảnh phản hồi của người dùng khi bấm "Xác nhận xuất bản": Hệ thống báo lỗi _"Loại biểu mẫu (dòng 1): Vui lòng nhập loại biểu mẫu hợp lệ"_ và đánh dấu tab _5 Biểu mẫu_ bị lỗi.
   - Đối chiếu source backend AIOCR (`AzureProcedureDocumentExtractor.cs:156`): Khi tệp PDF không đủ bằng chứng rõ ràng về định dạng tệp, AI trích xuất sẽ để `formType: null`.
   - Trong khi đó, ở frontend:
-    + Schema validation (`formsSchema` trong `src/lib/api/procedures.ts`) bắt buộc `formType` phải là `'DOCX_TEMPLATE'` hoặc `'ONLINE_INTERACTIVE'`.
-    + Giao diện `ProcedureFormPicker.tsx` trước đó chỉ hiển thị dòng text thuần túy: *"Loại biểu mẫu: Cần kiểm tra loại biểu mẫu"* mà **không có ô dropdown nào để người dùng chọn hoặc sửa**.
-    + Dẫn tới người dùng bị chặn xuất bản bởi một lỗi không thể tự sửa trên giao diện!
+    - Schema validation (`formsSchema` trong `src/lib/api/procedures.ts`) bắt buộc `formType` phải là `'DOCX_TEMPLATE'` hoặc `'ONLINE_INTERACTIVE'`.
+    - Giao diện `ProcedureFormPicker.tsx` trước đó chỉ hiển thị dòng text thuần túy: _"Loại biểu mẫu: Cần kiểm tra loại biểu mẫu"_ mà **không có ô dropdown nào để người dùng chọn hoặc sửa**.
+    - Dẫn tới người dùng bị chặn xuất bản bởi một lỗi không thể tự sửa trên giao diện!
 - **Giải pháp xử lý:**
   1. **Tự động chuẩn hóa (`normalizeDraftPayload`):** Khi AI bóc tách trả về `formType` bị `null`, `undefined` hoặc chuỗi rỗng, hệ thống tự động chuẩn hóa fallback về `'DOCX_TEMPLATE'` (Mẫu Word - định dạng chuẩn của toàn bộ phôi đơn hành chính Việt Nam).
   2. **Thêm điều khiển chọn loại biểu mẫu trên UI (`ProcedureFormPicker.tsx`):**
-     - Tại mục *"Thiết lập sử dụng mẫu"*, chuyển dòng text tĩnh thành ô dropdown chọn **Loại biểu mẫu** với 2 tùy chọn: *Mẫu Word (DOCX)* (`DOCX_TEMPLATE`) và *Mẫu điện tử tương tác* (`ONLINE_INTERACTIVE`).
+     - Tại mục _"Thiết lập sử dụng mẫu"_, chuyển dòng text tĩnh thành ô dropdown chọn **Loại biểu mẫu** với 2 tùy chọn: _Mẫu Word (DOCX)_ (`DOCX_TEMPLATE`) và _Mẫu điện tử tương tác_ (`ONLINE_INTERACTIVE`).
      - Cán bộ có thể chủ động xem và thay đổi loại biểu mẫu cho từng mẫu đơn ngay trên giao diện.
   3. **Chuẩn hóa dữ liệu trước khi validate:** Tại cả 2 điểm xuất bản (từ không gian bản nháp và từ modal xem trước), payload luôn được chuẩn hóa `formType` hợp lệ và `formTemplateId || null` trước khi gọi `validateProcedure`.
 - **Kiểm tra chất lượng:**
@@ -210,16 +326,16 @@
 
 - **Nội dung xử lý theo phản hồi trực tiếp từ giao diện:**
   1. **Sửa lỗi layout khối xóa thông tin cá nhân (`CitizenProfileView.tsx`):**
-     - Khối *"Xóa dữ liệu thông tin cá nhân"* nằm trong grid 2 cột (`md:grid-cols-2`) nhưng thiếu `md:col-span-2`, dẫn tới bị ép co cụm vào cột 1 bên trái và để trống hoác cột 2 bên phải (như trong ảnh phản hồi). Đã thêm `md:col-span-2` giúp thẻ trải đều, cân đối toàn màn hình.
+     - Khối _"Xóa dữ liệu thông tin cá nhân"_ nằm trong grid 2 cột (`md:grid-cols-2`) nhưng thiếu `md:col-span-2`, dẫn tới bị ép co cụm vào cột 1 bên trái và để trống hoác cột 2 bên phải (như trong ảnh phản hồi). Đã thêm `md:col-span-2` giúp thẻ trải đều, cân đối toàn màn hình.
      - Xóa bỏ `border-l-4 border-l-red-800` ở thẻ Banner trên cùng, loại bỏ vệt đỏ nhô lệch ở góc bo tròn trên bên trái (Ảnh 3).
   2. **Gỡ bỏ nút "In phiếu thông tin" (`CitizenProfileView.tsx`):**
-     - Đã loại bỏ hoàn toàn nút *"In phiếu thông tin"* ở phần nút hành động hồ sơ cá nhân theo đúng yêu cầu người dùng; dọn dẹp import icon `Printer`.
+     - Đã loại bỏ hoàn toàn nút _"In phiếu thông tin"_ ở phần nút hành động hồ sơ cá nhân theo đúng yêu cầu người dùng; dọn dẹp import icon `Printer`.
   3. **Tinh gọn toàn diện các đoạn Subtext rườm rà, thừa chữ:**
-     - *Thẻ CCCD:* Xóa dòng text trùng lặp không cần thiết `(Định danh: ...)`; rút gọn tiêu đề badge từ *"THÔNG TIN ĐỊNH DANH DO NGƯỜI DÙNG KÊ KHAI"* $\rightarrow$ *"Thông tin định danh CCCD"*.
-     - *Ô Email đăng ký:* Rút gọn subtext dài giải thích kỹ thuật thành *"Dùng để nhận mã xác thực khi khôi phục tài khoản."*.
-     - *Khối xóa dữ liệu:* Tinh gọn mô tả thành *"Xóa các thông tin kê khai cá nhân khỏi tài khoản này."*.
-     - *Banner chế độ chỉnh sửa:* Tinh gọn thành *"Chỉnh sửa các trường bên dưới và bấm Lưu thay đổi khi hoàn tất."*.
-     - *Modal Quét CCCD AI OCR (`CccdOcrScanModal.tsx`):* Rút gọn tiêu đề mô tả và banner bảo vệ dữ liệu thành câu ngắn gọn, súc tích, dễ đọc.
+     - _Thẻ CCCD:_ Xóa dòng text trùng lặp không cần thiết `(Định danh: ...)`; rút gọn tiêu đề badge từ _"THÔNG TIN ĐỊNH DANH DO NGƯỜI DÙNG KÊ KHAI"_ $\rightarrow$ _"Thông tin định danh CCCD"_.
+     - _Ô Email đăng ký:_ Rút gọn subtext dài giải thích kỹ thuật thành _"Dùng để nhận mã xác thực khi khôi phục tài khoản."_.
+     - _Khối xóa dữ liệu:_ Tinh gọn mô tả thành _"Xóa các thông tin kê khai cá nhân khỏi tài khoản này."_.
+     - _Banner chế độ chỉnh sửa:_ Tinh gọn thành _"Chỉnh sửa các trường bên dưới và bấm Lưu thay đổi khi hoàn tất."_.
+     - _Modal Quét CCCD AI OCR (`CccdOcrScanModal.tsx`):_ Rút gọn tiêu đề mô tả và banner bảo vệ dữ liệu thành câu ngắn gọn, súc tích, dễ đọc.
 - **Kiểm tra chất lượng:**
   - `npm run typecheck` đạt 0 lỗi.
   - `npm run lint` đạt 0 lỗi.
@@ -231,15 +347,15 @@
   1. **Giải đáp nghiệp vụ hiển thị hồ sơ tại Cán bộ Một cửa (Frontdesk / Officer):**
      - Làm rõ tại sao khi công dân tạo hồ sơ xong nhưng tài khoản Cán bộ Một cửa ở phường đó chưa thấy: Trong ảnh người dùng cung cấp (`media_1793884717332_0a8dcb97.jpg`), hồ sơ mới tạo có trạng thái **`Bản nháp` (DRAFT)**.
      - Theo kịch bản nghiệp vụ KB-06 và kiến trúc Workflow Backend: API Cán bộ Một cửa (`GET /api/v1/officer/applications`) chỉ lấy các hồ sơ đã chính thức nộp sang trạng thái **`SUBMITTED` (Chờ tiền kiểm)**; hệ thống tự động lọc bỏ hồ sơ nháp để bảo vệ dữ liệu riêng tư của công dân khi đang chuẩn bị tài liệu.
-     - Sau khi công dân hoàn tất hồ sơ và bấm *"Nộp hồ sơ tiền kiểm"* $\rightarrow$ hồ sơ chuyển sang `SUBMITTED`, tài khoản Cán bộ Một cửa đúng phường đó sẽ thấy ngay lập tức trong hàng đợi.
+     - Sau khi công dân hoàn tất hồ sơ và bấm _"Nộp hồ sơ tiền kiểm"_ $\rightarrow$ hồ sơ chuyển sang `SUBMITTED`, tài khoản Cán bộ Một cửa đúng phường đó sẽ thấy ngay lập tức trong hàng đợi.
   2. **Gỡ bỏ nút "Chuẩn bị hồ sơ mới" tại trang Tổng quan công dân (`CitizenPage.tsx`):**
      - Đã xóa nút `+ Chuẩn bị hồ sơ mới` ở phần tiêu đề trang khi `activeSection === 'dashboard'` theo đúng yêu cầu người dùng; giữ lại nút nộp hồ sơ ở các phân hệ hồ sơ chuyên biệt.
   3. **Khôi phục toàn diện Dashboard Tổng quan Quản trị hệ thống (`AdminPage.tsx`):**
      - Lần theo lịch sử commit (`ab6b4cd`), phát hiện commit trước đó đã xóa nhầm các thẻ KPI, danh mục phân hệ và bảng tình trạng dịch vụ, dẫn tới màn hình Admin Dashboard chỉ còn duy nhất 1 thẻ tài khoản trơ trọi như trong ảnh người dùng (`media_1793884775190_51ed22d5.png`).
      - Khôi phục cấu trúc chuẩn mực với dữ liệu thật:
-       + **4 Thẻ chỉ số tổng quan (`admin-stat-grid`):** "Thủ tục đang áp dụng" (lấy tổng số thực tế qua `usePublicProcedureList`), "Tài khoản nội bộ" (lấy qua `getAdminUsers`), "Đơn vị Phường / Xã" (lấy qua `wards`), "Hệ thống vận hành" (Ổn định).
-       + **Lối tắt phân hệ quản trị (`admin-module-card` / `admin-module-grid`):** 6 phân hệ nòng cốt (Thủ tục, Tri thức AI, Tài khoản, Người dùng, Phường/Xã, Phân quyền).
-       + **Bố cục 2 cột chuyên nghiệp (`admin-insight-grid`):** Cột trái là "Phân quyền gần đây" (Nhật ký RBAC audit), Cột phải là "Tình trạng dịch vụ" (Giám sát 5 service lõi: AI RAG, OCR CCCD, IAM, Workflow Một cửa, PDF/QR) với trạng thái xanh trực quan.
+       - **4 Thẻ chỉ số tổng quan (`admin-stat-grid`):** "Thủ tục đang áp dụng" (lấy tổng số thực tế qua `usePublicProcedureList`), "Tài khoản nội bộ" (lấy qua `getAdminUsers`), "Đơn vị Phường / Xã" (lấy qua `wards`), "Hệ thống vận hành" (Ổn định).
+       - **Lối tắt phân hệ quản trị (`admin-module-card` / `admin-module-grid`):** 6 phân hệ nòng cốt (Thủ tục, Tri thức AI, Tài khoản, Người dùng, Phường/Xã, Phân quyền).
+       - **Bố cục 2 cột chuyên nghiệp (`admin-insight-grid`):** Cột trái là "Phân quyền gần đây" (Nhật ký RBAC audit), Cột phải là "Tình trạng dịch vụ" (Giám sát 5 service lõi: AI RAG, OCR CCCD, IAM, Workflow Một cửa, PDF/QR) với trạng thái xanh trực quan.
 - **Kiểm tra chất lượng:**
   - `npm run typecheck` đạt 0 lỗi.
   - `npm run lint` đạt 0 lỗi.
@@ -249,13 +365,13 @@
 
 - **Phạm vi & Nhiệm vụ (Mục 17):**
   - **FE-03: Nút Xóa thông tin cá nhân & Modal xác nhận (`CitizenProfileView.tsx`):**
-    - Bổ sung nút *"Xóa thông tin cá nhân"* ở cuối phân hệ xem thông tin cá nhân của công dân khi profile đã tồn tại.
+    - Bổ sung nút _"Xóa thông tin cá nhân"_ ở cuối phân hệ xem thông tin cá nhân của công dân khi profile đã tồn tại.
     - Tích hợp Modal Radix UI theo Design System xác nhận hành động nguy hiểm: cảnh báo thông tin sẽ bị xóa hoàn toàn khỏi hệ thống, hỗ trợ nút Hủy và nút Xác nhận xóa.
     - Gọi API `DELETE /api/v1/users/me/profile` qua hàm `deleteMyProfile()`.
     - Sau khi xóa thành công: reset toàn bộ form về giá trị rỗng, tự động mở form nhập liệu (`isEditing = true`) để công dân có thể tạo hồ sơ thông tin mới (`POST /api/v1/users/me/profile` qua cơ chế tự động fallback của `updateMyProfile`), đồng thời thông báo Toast thành công.
   - **FE-08: Xuất bản bản nháp thủ tục khi chưa liên kết phôi DOCX (`ProcedureDraftWorkspace.tsx`):**
     - Cho phép công chức xuất bản bản nháp thủ tục mà không bắt buộc tất cả biểu mẫu phải có `formTemplateId`.
-    - Tại cả 2 điểm xuất bản (Xuất bản từ chi tiết bản nháp và Xuất bản từ modal xem trước): Nếu có biểu mẫu chưa liên kết phôi DOCX (`!f.formTemplateId`), hệ thống xuất bản thành công nhưng gửi cảnh báo màu hổ phách (`toast.warning`) nhắc nhở rõ ràng: *"Đã xuất bản thủ tục. Lưu ý: Có {N} biểu mẫu chưa gắn tệp phôi DOCX (có thể bổ sung sau)."*
+    - Tại cả 2 điểm xuất bản (Xuất bản từ chi tiết bản nháp và Xuất bản từ modal xem trước): Nếu có biểu mẫu chưa liên kết phôi DOCX (`!f.formTemplateId`), hệ thống xuất bản thành công nhưng gửi cảnh báo màu hổ phách (`toast.warning`) nhắc nhở rõ ràng: _"Đã xuất bản thủ tục. Lưu ý: Có {N} biểu mẫu chưa gắn tệp phôi DOCX (có thể bổ sung sau)."_
     - Vẫn duy trì nghiêm ngặt điều kiện nghiệp vụ: Bước đối soát PDF gốc (`confirmed: true`) là bắt buộc trước khi xuất bản.
   - **FE-06: Bổ sung API quản trị trong `src/lib/api/index.ts`:**
     - Hoàn thiện và xuất đầy đủ các hàm API theo chuẩn Backend: `getUsers(filter)`, `getAccount()`, `getAdminProfile()`, `createAdminProfile()`, `updateAdminProfile()`, `saveAdminProfile()`, `deleteAdminProfile()`.
@@ -275,10 +391,10 @@
     - Duy trì thông điệp trung tính từ Backend (`"Nếu tài khoản hợp lệ, mã xác thực đã được gửi tới email đăng ký."`) hiển thị trên banner `role="status"`, không tiết lộ tài khoản có tồn tại trong hệ thống hay không để chống dò quét tài khoản.
   - **Hướng dẫn thân thiện cho người dùng:**
     - Bổ sung khối lưu ý trang nhã ngay dưới ô nhập mã xác thực OTP với 4 điểm hướng dẫn chi tiết:
-      + Kiểm tra kỹ cả hộp thư Đến và thư mục Rác (Spam).
-      + Mã xác thực có hiệu lực trong vòng **5 phút**.
-      + Mỗi lần gửi mã cần chờ **60 giây** trước khi yêu cầu mã mới.
-      + Nếu nhập sai quá **5 lần**, bạn sẽ cần yêu cầu mã mới.
+      - Kiểm tra kỹ cả hộp thư Đến và thư mục Rác (Spam).
+      - Mã xác thực có hiệu lực trong vòng **5 phút**.
+      - Mỗi lần gửi mã cần chờ **60 giây** trước khi yêu cầu mã mới.
+      - Nếu nhập sai quá **5 lần**, bạn sẽ cần yêu cầu mã mới.
   - **Khóa nút gửi lại mã:** Nút "Gửi lại mã" bị vô hiệu hóa (`disabled`) trong suốt 60 giây đếm ngược, hiển thị rõ thời gian còn lại `Gửi lại mã sau {cooldown}s`.
 - **Kiểm thử tự động:**
   - Viết mới test E2E tại `tests/auth-recovery.spec.ts` kiểm tra kịch bản nhập email bất kỳ $\rightarrow$ nhận thông báo trung tính 202 $\rightarrow$ không hiện toast khẳng định $\rightarrow$ hiển thị đầy đủ 4 điểm lưu ý $\rightarrow$ nút gửi lại bị khóa 60s.
@@ -345,7 +461,6 @@
   - `npm run build`: Đạt 100% (exit 0, 8.027 modules transformed).
   - Playwright: `tests/procedure-manager.spec.ts` 24/24 tests PASSED 100%.
 
-
 ## Chia 5 commit và đẩy main — 04/11/2026
 
 - Người dùng yêu cầu chia các thay đổi FE còn lại thành **đúng 5 commit** rồi push main. Phạm vi 9 file: API/validation và lỗi Verify (2 file), giao diện sao lưu (1), test/fixture (2), tài liệu kỹ thuật (3) và PROGRESS (1). Bắt đầu tại f20d2b00f7aecf4f12727288e67de4f3851dc2dc, đã fetch và xác minh đồng bộ origin/main.
@@ -354,14 +469,12 @@
 - Đã đối chiếu đúng path, tổ chức lại index theo hạng mục và so SHA-256 xác nhận cả 9 file giữ nguyên nội dung sau khi chia 4 commit; chỉ PROGRESS được bổ sung mục bàn giao này. git diff --check và staged diff check đạt. Không commit env, dist, test artifacts hoặc thông tin xác thực. Sửa thẻ JSX chatbot trước đó đưa file về đúng HEAD nên không tạo commit rỗng cho file này.
 - Không chạy lại typecheck/lint/build/Playwright để tách commit. Kết quả thực chạy ở lượt sửa ngay trước: typecheck/lint/build đạt, **40/40 ca mock đạt trong một lượt**. Giới hạn còn nguyên: chưa nghiệm thu Azure/Blob/restore drill; BE/DevOps cần kiểm tra ActivityTimeout Gateway cho Verify dài. Không đổi BE, không coi Git push là bằng chứng deployment thành công.
 
-
 ## Kiểm tra và sửa lỗi chặn FE — 04/11/2026
 
 - **Lỗi tìm được và đã sửa:** AiChatWidget.tsx dòng cuối cửa sổ chat mở section nhưng đóng fragment, gây TS1003 và lỗi parser Vite, toàn FE không tải được. Đổi đúng thẻ đóng thành /section, giữ nguyên nội dung/nhãn Hỏi Đáp AI, thời gian tin nhắn và logic chatbot. Đây là sửa thay đổi chưa commit bị sai cú pháp; sau sửa file khớp phiên bản HEAD nên không còn diff riêng của AiChatWidget.
 - **Kiểm tra thực chạy trên workspace hiện tại f20d2b0 + các thay đổi Verify:** npm run typecheck đạt, npm run lint đạt, npm run build đạt (8027 modules; còn cảnh báo annotation SignalR/Zod và chunk lớn hiện có). Playwright Edge: **40/40 ca đạt trong một lượt** với admin-system-operations, admin-system-audit, admin-system-settings và public-search-chat. Bao gồm Verify/lỗi/trạng thái thay đổi, RBAC/cache khi đổi danh tính, form cấu hình/xung đột, tìm kiếm, PDF/lệ phí mobile và chat khách 24h/chat xác thực. Lượt browser đầu được dừng sau khi phát hiện lỗi biên dịch, không tính đạt. git diff --check và git diff --cached --check đạt; không đổi index.
 - **Phát hiện cần BE/DevOps:** Gateway YARP 2.3.0 dùng LoadFromConfig; cluster analytics-system không đặt HttpRequest.ActivityTimeout trong appsettings.json/Production. Nếu không có override deployment, mặc định idle 100 giây có thể ngắt POST Verify đồng bộ trước giới hạn BE 5 phút dù FE đã chờ 330 giây. Đã đối chiếu tài liệu Microsoft và ghi đường cấu hình/đề nghị kiểm thử request dài tại BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md. Không khẳng định đã tái hiện production, không sửa BE theo phạm vi đã chốt.
 - Cập nhật BACKUP_VERIFY_COMPLETION_2026-11-04.md. Chưa chạy API/Blob thật hoặc restore drill. Không chạy lại toàn bộ suite ngoài các luồng nêu trên. Giữ các thay đổi staged của task Verify và tài liệu/phiên khác; không commit/push.
-
 
 ## Đọc lại BE local sau khi người dùng tải bản mới — 04/11/2026
 
@@ -370,7 +483,6 @@
 - Cập nhật trạng thái trong BACKUP_VERIFY_COMPLETION_2026-11-04.md, BE_REQUEST_BACKUP_VERIFICATION_2026-11-03.md và FRONTEND_SETUP.md. Giữ nguyên nội dung staged và thay đổi AiChatWidget của phiên khác; FE hiện ở f20d2b0 và đồng bộ origin/main khi bắt đầu đọc lại.
 - Kiểm tra lượt này: đối chiếu source/hash 4 file, rà hợp đồng FE và git diff --check; không chạy lại typecheck/lint/build/Playwright vì không đổi code. Kết quả lượt triển khai trước: 14/14 ca mock Verify/health/backups đạt, typecheck/lint/build đạt; không coi là vừa chạy lại trên workspace mới tích hợp.
 - Giới hạn: chưa chạy BE mới/Blob/pg_restore trên môi trường thật, chưa xác minh deployment/gateway timeout hay restore drill. Cần re-verify bản Verified từ implementation cũ. Không sửa BE, không commit/push.
-
 
 ## Đồng bộ remote main, phân tách Accounts/Users và hoàn thiện Checklist — 04/11/2026
 
@@ -396,7 +508,6 @@
     - `tests/admin-system-audit.spec.ts`: 12/12 tests PASSED.
 - **Trạng thái Git:** Cây thư mục sạch, stash đã được giải phóng, không còn xung đột.
 
-
 ## Chia 15 commit và đẩy main — 04/11/2026
 
 - **Phạm vi được yêu cầu:** toàn bộ 23 path chưa commit của hai task dọn UI và sửa tìm kiếm/lệ phí/PDF/chatbot. Đã fetch, main và origin/main đồng bộ tại 4658dbaf56a0a05ea59a9d3c5bf5bf9831c55093 trước khi đóng gói.
@@ -405,7 +516,6 @@
 - Đã đối chiếu đúng 23 path và SHA-256 trước/sau khi chia 14 commit; nội dung triển khai/tài liệu giữ nguyên, riêng PROGRESS được bổ sung bàn giao. git diff --check đạt; không đưa env, token, dist, ảnh chụp hoặc dữ liệu thật vào commit.
 - Không chạy lại typecheck/lint/build/Playwright chỉ để chia commit. Kết quả ở bước triển khai: typecheck/lint/build đạt; dọn UI có 60 ca mock khác nhau đạt qua các lượt, phần công khai/chat có 49 ca khác nhau đạt qua các lượt. Hai tập có ca trùng, không cộng thành tổng 109. Chi tiết bên dưới và trong hai tài liệu task.
 - **Giới hạn còn lại:** full-audit cũ lỗi import chatInputSchema, chưa nghiệm thu API Azure hay PDF thật; push Git không chứng minh CI/CD/deployment thành công. Không thay BE.
-
 
 ## Tìm kiếm công khai, lệ phí, PDF nguồn và chatbot 24 giờ — hoàn tất 04/11/2026
 
@@ -505,24 +615,24 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Phân bổ độ rộng tự nhiên, đan xen khi không chỉ định cấu hình riêng thay vì vệt w-24 cụt lủn hàng loạt.
   3. **Rà soát & tối ưu toàn bộ các role:**
      - **Role Frontdesk (Cán bộ một cửa):**
-       + `OfficerAuditLogView.tsx`: Cấu hình 6 cột skeleton chuẩn, căn phải cột cán bộ.
-       + `OfficerApplicationListView.tsx`: Cấu hình 7 cột skeleton, cột thao tác có `sticky right-0 bg-white text-right shadow-...` khớp chuẩn với header sticky.
+       - `OfficerAuditLogView.tsx`: Cấu hình 6 cột skeleton chuẩn, căn phải cột cán bộ.
+       - `OfficerApplicationListView.tsx`: Cấu hình 7 cột skeleton, cột thao tác có `sticky right-0 bg-white text-right shadow-...` khớp chuẩn với header sticky.
      - **Role Citizen (Công dân):**
-       + `CitizenDossiersView.tsx`: Cấu hình 6 cột skeleton chuẩn, cột thủ tục w-56, ghi chú w-48, thao tác căn phải.
-       + `CitizenFeedbackView.tsx`: Thay thông báo text tải bằng `ListSkeleton rows={3}` mượt mà.
+       - `CitizenDossiersView.tsx`: Cấu hình 6 cột skeleton chuẩn, cột thủ tục w-56, ghi chú w-48, thao tác căn phải.
+       - `CitizenFeedbackView.tsx`: Thay thông báo text tải bằng `ListSkeleton rows={3}` mượt mà.
      - **Role Manager (Lãnh đạo phường):**
-       + `ManagerApplicationsView.tsx`: Cấu hình 6 cột skeleton, cột thao tác sticky right căn phải.
-       + `ManagerProfilesView.tsx`: Cấu hình 4 cột skeleton, cột cán bộ w-44, lĩnh vực w-48, thao tác căn phải.
+       - `ManagerApplicationsView.tsx`: Cấu hình 6 cột skeleton, cột thao tác sticky right căn phải.
+       - `ManagerProfilesView.tsx`: Cấu hình 4 cột skeleton, cột cán bộ w-44, lĩnh vực w-48, thao tác căn phải.
      - **Role Procedure Manager (Quản lý thủ tục):**
-       + `ProcedureApiList.tsx`: Triệt tiêu lỗi giấu card và thead khi tải (Zero Layout Shift). Header 5/6 cột luôn hiển thị cố định, skeleton mượt mà trong tbody.
-       + `ProcedureDraftWorkspace.tsx`: Giữ nguyên card và thead bản nháp gần đây, skeleton 3 cột chuẩn.
+       - `ProcedureApiList.tsx`: Triệt tiêu lỗi giấu card và thead khi tải (Zero Layout Shift). Header 5/6 cột luôn hiển thị cố định, skeleton mượt mà trong tbody.
+       - `ProcedureDraftWorkspace.tsx`: Giữ nguyên card và thead bản nháp gần đây, skeleton 3 cột chuẩn.
      - **Role Admin (Quản trị hệ thống):**
-       + `AdminPage.tsx`: Gộp 2 bảng Users trùng lặp thành 1 bảng chuẩn duy nhất với thead cố định, skeleton 4 cột; tối ưu bảng Wards 4 cột.
-       + `AdminRbacViews.tsx`: Giữ nguyên toolbar tìm kiếm và thead Roles, thead Audit Logs cố định không bị giấu khi tải.
-       + `FormsView.tsx`: Giữ nguyên thead biểu mẫu Word, bỏ lồng `.admin-card`, skeleton 4 cột chuẩn.
-       + `NotificationDeliveriesView.tsx`: Tối ưu độ rộng skeleton 7 cột nhật ký gửi thông báo.
+       - `AdminPage.tsx`: Gộp 2 bảng Users trùng lặp thành 1 bảng chuẩn duy nhất với thead cố định, skeleton 4 cột; tối ưu bảng Wards 4 cột.
+       - `AdminRbacViews.tsx`: Giữ nguyên toolbar tìm kiếm và thead Roles, thead Audit Logs cố định không bị giấu khi tải.
+       - `FormsView.tsx`: Giữ nguyên thead biểu mẫu Word, bỏ lồng `.admin-card`, skeleton 4 cột chuẩn.
+       - `NotificationDeliveriesView.tsx`: Tối ưu độ rộng skeleton 7 cột nhật ký gửi thông báo.
      - **Component AI:**
-       + `KnowledgeBaseView.tsx`: Tối ưu độ rộng skeleton 7 cột kho kiến thức.
+       - `KnowledgeBaseView.tsx`: Tối ưu độ rộng skeleton 7 cột kho kiến thức.
 - **Trạng thái Git:** Đã commit và push thành công lên `origin/main` (`142a6fd..6c628e8`).
 - **Commits:**
   1. `f84e572` fix(ui): standardize table list skeletons and eliminate layout shift across all roles
@@ -583,13 +693,13 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Loại bỏ badge UUID `74b0ee66...` trong dropdown chuông thông báo; tự động trích xuất mã hồ sơ thân thiện `HS-2026...` từ nội dung.
   4. **Rà soát và chuyển hóa toàn bộ thuật ngữ kỹ thuật (Tech-speak) sang ngôn ngữ hành chính công:**
      - Loại bỏ các từ "BE", "API", "HTTP 401/429/415", "Mã kiểm vết", "payload JSON":
-       + `ConsultationsView.tsx`: "BE kiểm tra..." -> "Hồ sơ ở chế độ tham khảo chuyên môn...", "Hệ thống sẽ chuyển yêu cầu đến chuyên viên cùng lĩnh vực đang trong ca trực để hỗ trợ giải đáp."
-       + `DispatchView.tsx`: "BE xác minh lại điều kiện..." -> "Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu."
-       + `CitizenFeedbackView.tsx`: "chưa có API lịch sử toàn bộ đánh giá..." -> "Hiển thị danh sách đánh giá theo các hồ sơ bạn đã hoàn tất tiền kiểm."
-       + `OfficerDashboardView.tsx`: "⚠️ API sẽ tích hợp sau" -> "Bộ phận Một cửa" / "Được phân công theo ca" / "Biểu đồ tiến độ xử lý hồ sơ đang được tổng hợp số liệu thực tế theo ca trực."
-       + `PermissionFeatures.tsx`: "kết nối API DocumentForm" -> "Chức năng quản lý kho biểu mẫu điện tử đang được hoàn thiện."
-       + `AdminRbacViews.tsx`: "Xem payload JSON gốc" -> "Xem dữ liệu kiểm toán gốc".
-       + `aiOcr.ts`: Bỏ các mã lỗi kỹ thuật "HTTP 401", "HTTP 429", "HTTP 415", chuyển "Mã kiểm vết" -> "Mã tra cứu hỗ trợ".
+       - `ConsultationsView.tsx`: "BE kiểm tra..." -> "Hồ sơ ở chế độ tham khảo chuyên môn...", "Hệ thống sẽ chuyển yêu cầu đến chuyên viên cùng lĩnh vực đang trong ca trực để hỗ trợ giải đáp."
+       - `DispatchView.tsx`: "BE xác minh lại điều kiện..." -> "Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu."
+       - `CitizenFeedbackView.tsx`: "chưa có API lịch sử toàn bộ đánh giá..." -> "Hiển thị danh sách đánh giá theo các hồ sơ bạn đã hoàn tất tiền kiểm."
+       - `OfficerDashboardView.tsx`: "⚠️ API sẽ tích hợp sau" -> "Bộ phận Một cửa" / "Được phân công theo ca" / "Biểu đồ tiến độ xử lý hồ sơ đang được tổng hợp số liệu thực tế theo ca trực."
+       - `PermissionFeatures.tsx`: "kết nối API DocumentForm" -> "Chức năng quản lý kho biểu mẫu điện tử đang được hoàn thiện."
+       - `AdminRbacViews.tsx`: "Xem payload JSON gốc" -> "Xem dữ liệu kiểm toán gốc".
+       - `aiOcr.ts`: Bỏ các mã lỗi kỹ thuật "HTTP 401", "HTTP 429", "HTTP 415", chuyển "Mã kiểm vết" -> "Mã tra cứu hỗ trợ".
 - **Kiểm tra đã chạy:**
   - `npm run typecheck`: **0 errors**.
   - `npm run lint`: **0 errors, 0 warnings**.
@@ -635,8 +745,8 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Bổ sung 2 trạng thái giao thông báo mới từ Analytics Backend: `Dispatching` (Đang điều phối gửi) và `Unknown` (Không xác định) vào danh sách bộ lọc và badge hiển thị.
   5. **Kiểm thử tự động Playwright E2E:**
      - Tạo mới `tests/officer-dossier-assist.spec.ts` kiểm thử toàn diện 2 kịch bản:
-       + Ca 1: Chạy trợ lý AI, đối soát chéo CCCD với bản khai DOCX, hiển thị danh sách giấy tờ thiếu và chèn nhận xét gợi ý vào form.
-       + Ca 2: Xử lý lỗi 429 `ai.provider_busy`, đọc header `Retry-After` và hiển thị đồng hồ đếm ngược.
+       - Ca 1: Chạy trợ lý AI, đối soát chéo CCCD với bản khai DOCX, hiển thị danh sách giấy tờ thiếu và chèn nhận xét gợi ý vào form.
+       - Ca 2: Xử lý lỗi 429 `ai.provider_busy`, đọc header `Retry-After` và hiển thị đồng hồ đếm ngược.
      - Cập nhật fixture `tests/fixtures/auth.ts` hỗ trợ expose header `Retry-After` trong CORS reply.
 - **Kiểm tra đã chạy:**
   - `npm run typecheck`: **0 errors**.
@@ -653,7 +763,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - `docs/PROGRESS.md`
 - **Bước tiếp theo:**
   - Chờ DevOps/Backend deploy bản build backend AIOCR mới lên môi trường Azure để xác minh thực tế.
-
 
 ## Triển khai Hệ thống Thông báo Thời gian thực (Real-time In-App Toast & Hub Sync) — 31/10/2026
 
@@ -770,17 +879,17 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Phân tích mã nguồn backend `AuthorizedDocumentSource.cs` (dòng 16-20) cho thấy `Download` gọi sang DocumentForm service với URL nội bộ và chỉ đọc supporting-documents (chưa hỗ trợ submissions).
      - Đã tạo tệp báo cáo kỹ thuật chi tiết: `docs/BE_HANDOVER_ISSUES_2026-10-30.md` để gửi trực tiếp cho đội ngũ Backend & DevOps cấu hình PostgreSQL, RabbitMQ và liên kết nội bộ giữa các microservices trên Azure.
      - Cập nhật `AiChatWidget.tsx`: khi người dùng đã đăng nhập gặp lỗi 503 từ BE, hệ thống tự động kích hoạt fallback tư vấn nghiệp vụ công chuẩn mực kèm thông báo bảo trì, không làm gián đoạn trải nghiệm người dùng.
-  1. **Xử lý lỗi 503 `chat.database_unavailable` ở nút Tiền kiểm AI:**
+  3. **Xử lý lỗi 503 `chat.database_unavailable` ở nút Tiền kiểm AI:**
      - Backend AIOCR phụ thuộc PostgreSQL AI chưa chạy migration/kết nối DB trên Azure. Phía FE: `src/lib/api/aiOcr.ts` bắt mã lỗi `chat.database_unavailable` và HTTP 503.
      - `DocumentAiVerificationCard.tsx` hiển thị banner cảnh báo amber thân thiện, nêu rõ máy chủ AI đang bảo trì hoặc chưa sẵn sàng DB, đồng thời hướng dẫn cán bộ/công dân đối soát giấy tờ thủ công để không làm tắc nghẽn quy trình nộp hay duyệt hồ sơ.
-  2. **Hiển thị đầy đủ nút Tiền kiểm AI cho Officer:**
+  4. **Hiển thị đầy đủ nút Tiền kiểm AI cho Officer:**
      - Trong `OfficerDocumentsPanel.tsx`: loại bỏ ràng buộc `item.fileExists &&`, chỉ cần `Boolean(item.id)` là hiển thị nút `✨ Tiền kiểm AI` cho toàn bộ tài liệu đính kèm.
      - Bổ sung nút `✨ Tiền kiểm AI` cho cả phần bản khai đã nộp (`submissions`) của cán bộ Một cửa và công dân.
      - Trong `OfficerReviewWorkspaceView.tsx`: thêm nút tắt `✨ Tài liệu & AI` tại tab Tổng quan (`overview`) dưới mỗi mục giấy tờ đã chuẩn bị, giúp cán bộ mở nhanh tab tài liệu để đối soát AI.
-  3. **Mở khóa Chatbot AI cho Khách vãng lai (không cần đăng nhập):**
+  5. **Mở khóa Chatbot AI cho Khách vãng lai (không cần đăng nhập):**
      - Trong `AiChatWidget.tsx`: bỏ chặn `if (!authenticated)`, mở khóa form nhập câu hỏi, nút gửi, bộ chọn phường/xã và gợi ý câu hỏi phổ biến (`QUICK_SUGGESTIONS`) cho mọi người dùng.
      - Xây dựng cơ chế tư vấn tự động nghiệp vụ thủ tục hành chính công một cửa (CCCD, Đăng ký kết hôn, Khai sinh, Chứng thực bản sao, Đăng ký cư trú) cho khách, kèm lời nhắc đăng nhập nếu muốn lưu phiên và dùng tiền kiểm AI trực tuyến.
-  4. **Cải thiện màn hình Admin "Quản trị phát thông báo":**
+  6. **Cải thiện màn hình Admin "Quản trị phát thông báo":**
      - Thiết kế lại Empty State giàu thông tin khi bảng rỗng: biểu tượng phát thanh, giải thích rõ cơ chế phát sinh bản ghi delivery qua sự kiện và broker RabbitMQ, hiển thị badge xác nhận kết nối máy chủ HTTP 200 OK và nút làm mới dữ liệu.
      - Phân tích nguyên nhân tab Network của người dùng bị trống do filter DevTools `cookie-domain:cms...` vô tình ẩn requests.
 - **Tệp liên quan:**
@@ -871,7 +980,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - Fetch lại trước push: remote chưa có commit mới ngoài gốc `1635a0e`. Không thay đổi cấu hình môi trường hoặc publish thêm. Kết quả push và HEAD cuối phải xác minh bằng `git ls-remote origin refs/heads/main`; không xem việc tạo commit là bằng chứng đã push.
 - Thời điểm kiểm tra/chốt: 2026-10-30T11:36:26+07:00. Giới hạn DOCX tham vấn và lịch sử lý do BE ở báo cáo tích hợp vẫn còn.
 - 19 commit trước commit bàn giao này:
-
   - `d048e12a11` — feat(api): add validated dispatch and assignment services
   - `d47a706781` — feat(api): add shift leave and handover services
   - `2c510ef141` — feat(api): add versioned consultation services
@@ -1260,14 +1368,13 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - `npx playwright test tests/manager.spec.ts tests/analytics.spec.ts`: **17/17 tests PASS (100%)**.
   - `npm run build`: **Build production thành công**.
 
-
 ## Nâng cấp Giao diện Bộ lọc Thống kê Quản lý (AnalyticsFilters UI) — 23/10/2026
 
 - **Yêu cầu người dùng:** Xây dựng lại khu vực bộ lọc của giao diện Manager (và các nơi tương tự) chuyên nghiệp, đẹp và hiện đại hơn.
 - **Các cải tiến đã triển khai tại `src/components/analytics/AnalyticsFilters.tsx`:**
   1. **Thiết kế phân tầng hiện đại (Card Header & Body):**
-     - Bổ sung thanh tiêu đề phụ với icon `FunnelSimple`, nhãn *"Bộ lọc & Phạm vi thời gian"* và mô tả trực quan.
-     - Cụm nút bấm chọn nhanh thời gian (*Tháng này, Quý này, Năm nay*) được đưa vào cụm segment control viền mềm với hiệu ứng active nổi bật, đổi màu đỏ thương hiệu và bóng đổ tinh tế khi được chọn.
+     - Bổ sung thanh tiêu đề phụ với icon `FunnelSimple`, nhãn _"Bộ lọc & Phạm vi thời gian"_ và mô tả trực quan.
+     - Cụm nút bấm chọn nhanh thời gian (_Tháng này, Quý này, Năm nay_) được đưa vào cụm segment control viền mềm với hiệu ứng active nổi bật, đổi màu đỏ thương hiệu và bóng đổ tinh tế khi được chọn.
   2. **Tối ưu hóa các trường nhập liệu ngày & thủ tục:**
      - Các ô nhập ngày `Từ ngày` và `Đến ngày` bổ sung nhãn kèm icon `CalendarBlank`, styling viền bo góc tròn `rounded-xl`, màu nền xám nhẹ `bg-slate-50/40`, focus ring đỏ nhạt cao cấp `focus:ring-red-100`.
      - Cụm "Thủ tục áp dụng": Gộp ô tìm kiếm nhanh (icon `MagnifyingGlass`) và dropdown chọn thủ tục liền kề cân đối, có badge xanh `Đã lọc thủ tục` khi đang chọn thủ tục cụ thể.
@@ -1279,14 +1386,13 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Kiểm tra kỹ thuật:**
   - `npm run typecheck`: **0 lỗi (exit code 0)**.
 
-
 ## Cải tổ UI/UX "Tờ khai của tôi": Chống Trùng lặp Tiêu đề, Làm Sạch Tên File & Toolbar Chuẩn — 23/10/2026
 
 - **Yêu cầu người dùng:** Đặt lại tựa đề chuẩn cho chức năng, loại bỏ trùng lặp 3 tầng tiêu đề (Breadcrumb, H1, H2 trong card) và cải tổ toàn diện UI/UX của danh mục bản khai.
 - **Các cải tiến đã triển khai:**
   1. **Chuẩn hóa Tựa đề & Phân cấp Tiêu đề (`CitizenPage.tsx`):**
      - Đổi tên gọi từ `Bản khai của tôi` ➔ **`Tờ khai của tôi`** chuẩn hành chính một cửa, đồng bộ giữa Breadcrumb, Sidebar và H1 trang.
-     - Bổ sung subtitle giải thích rõ ràng: *"Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ."* hiển thị dưới H1 trang.
+     - Bổ sung subtitle giải thích rõ ràng: _"Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ."_ hiển thị dưới H1 trang.
      - Xóa bỏ thẻ H2 trùng lặp bên trong Card (`CitizenSubmissionsView.tsx`), thay bằng `<h2 className="sr-only">Danh sách tờ khai</h2>` chuẩn trợ năng WCAG.
   2. **Bộ lọc làm sạch tên file thông minh (`cleanSubmissionFileName`):**
      - Tự động cắt bỏ tiền tố mã băm GUID 32 ký tự hex (ví dụ: `dccb6f4a..._don-nhap.docx` ➔ `don-nhap.docx`).
@@ -1298,7 +1404,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Badge đếm số lượng tờ khai (`4 tờ khai`) và nút Làm mới kèm icon xoay đồng bộ.
   4. **Nâng cấp thẻ hiển thị tờ khai (Document Cards):**
      - Thêm icon nhận diện file Word màu xanh (`FileDoc` trong khung xanh nhạt bo góc).
-     - Badge trạng thái trực quan với màu sắc & chấm trạng thái rõ ràng (*Nháp đã lưu*, *Đã chốt*, *Cần chỉnh sửa*, *Giấy tờ sẵn sàng*, *Đã duyệt*).
+     - Badge trạng thái trực quan với màu sắc & chấm trạng thái rõ ràng (_Nháp đã lưu_, _Đã chốt_, _Cần chỉnh sửa_, _Giấy tờ sẵn sàng_, _Đã duyệt_).
      - Hiển thị ngày giờ cập nhật có icon `Clock` và dung lượng file KB.
      - Khối thông báo ghi chú của cán bộ trong hộp cảnh báo vàng viền mềm.
      - Phân cấp nút bấm rõ ràng: Nút chính `"Xem bản khai"` (đỏ thương hiệu) và Nút phụ `"Mở hồ sơ liên quan"` (outline nhã nhặn).
@@ -1359,7 +1465,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 - **Hạng mục hoàn thành:**
   - Bổ sung định danh mục `dossiers_cancelled` vào kiểu dữ liệu `CitizenSectionId` (`src/pages/citizen/types.ts`).
-  - Thêm tab con **"Đã hủy"** (`XCircle` icon) dưới nhóm điều hướng *"Hồ sơ của tôi"* ở Sidebar (`src/pages/citizen/CitizenPage.tsx`).
+  - Thêm tab con **"Đã hủy"** (`XCircle` icon) dưới nhóm điều hướng _"Hồ sơ của tôi"_ ở Sidebar (`src/pages/citizen/CitizenPage.tsx`).
   - Cập nhật tiêu đề trang `sectionTitles.dossiers_cancelled: { title: 'Hồ sơ đã hủy' }`.
   - Ánh xạ bộ lọc trạng thái `dossiers_cancelled` => `'Đã hủy'` trong `CitizenDossiersView.tsx`.
   - Cập nhật nút quay lại từ chi tiết hồ sơ: nếu hồ sơ có trạng thái `'Đã hủy'`, hệ thống tự động quay lại đúng tab `dossiers_cancelled`.
@@ -1404,8 +1510,8 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Với các hồ sơ trên bảng chưa có thông tin công dân từ summary, hệ thống tự động gọi ngầm `workflowApi.getOfficerApplication(id)` để trích xuất ngay họ tên thật và số CCCD/SĐT, sau đó cập nhật trực tiếp lên bảng mà không cần người dùng thao tác.
      - Khi cán bộ chuyển trang/lọc hoặc nạp lại, thông tin đã cache hiển thị ngay tức thì, không gây giật lag hay phụ thuộc vào việc deploy backend mới.
   4. **Tối ưu UI danh sách hồ sơ (`OfficerApplicationListView.tsx`):**
-     - Loại bỏ thanh tiêu đề phụ dư thừa *"Hàng đợi hồ sơ tiếp nhận / X hồ sơ"* phía trên bảng.
-     - Chuyển nút *"Làm mới"* lên thẳng thanh công cụ bộ lọc (cùng hàng với kết quả tìm kiếm), giúp bảng hồ sơ gọn gàng, thoáng đãng và hiển thị trực tiếp hàng tiêu đề cột.
+     - Loại bỏ thanh tiêu đề phụ dư thừa _"Hàng đợi hồ sơ tiếp nhận / X hồ sơ"_ phía trên bảng.
+     - Chuyển nút _"Làm mới"_ lên thẳng thanh công cụ bộ lọc (cùng hàng với kết quả tìm kiếm), giúp bảng hồ sơ gọn gàng, thoáng đãng và hiển thị trực tiếp hàng tiêu đề cột.
 - **Kiểm tra kỹ thuật:**
   - `npm run typecheck`: **0 lỗi (exit code 0)**.
   - `npm run lint`: **0 lỗi (exit code 0)**.
@@ -1416,12 +1522,12 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   1. Trả thanh Tab điều hướng về kiểu thanh gạch chân (Underline Tabs) tinh tế, chuẩn mực, không dùng hiệu ứng gradient hay badge nổi trội chói mắt.
   2. Gỡ bỏ hoàn toàn khối card "Mật khẩu tài khoản" dư thừa ở chân trang tab Thông tin cá nhân.
   3. **Tối ưu heading và nội dung đổi mật khẩu (`AccountSecuritySection.tsx`):**
-     - Đơn giản hóa phần Heading: Bỏ gradient nền rườm rà, dùng layout ngang gọn gàng, tiêu đề súc tích *"Đổi mật khẩu"* và phụ đề ngắn gọn, ý nghĩa: *"Bảo vệ an toàn cho tài khoản của bạn"*.
+     - Đơn giản hóa phần Heading: Bỏ gradient nền rườm rà, dùng layout ngang gọn gàng, tiêu đề súc tích _"Đổi mật khẩu"_ và phụ đề ngắn gọn, ý nghĩa: _"Bảo vệ an toàn cho tài khoản của bạn"_.
      - Rút gọn toàn bộ các placeholder ô nhập ("Nhập mật khẩu hiện tại", "Nhập mật khẩu mới", "Nhập lại mật khẩu mới") giảm tải chữ, tạo cảm giác thoáng đãng và dễ thao tác.
      - **Thanh đo độ mạnh 4 nấc real-time (Strength Meter):** Phản hồi màu sắc sinh động (Yếu, Trung bình, Khá tốt, Rất mạnh).
      - **Checklist 4 tiêu chí dạng thẻ pill tương tác:** Tự động chuyển từ xám sang nền xanh `emerald-50` kèm dấu tick `Check` khi đạt tiêu chí.
      - **Chỉ báo khớp mật khẩu xác nhận real-time:** Báo tick xanh khi trùng khớp, báo cảnh báo đỏ khi chưa khớp trước khi bấm gửi.
-     - Footer thanh lịch với ghi chú bảo mật và nút *"Lưu mật khẩu mới"* chuẩn phong cách WardMate.
+     - Footer thanh lịch với ghi chú bảo mật và nút _"Lưu mật khẩu mới"_ chuẩn phong cách WardMate.
 - **Kiểm tra kỹ thuật:**
   - `npm run typecheck`: **0 lỗi (exit code 0)**.
   - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
@@ -1481,44 +1587,43 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Thêm mutation `useCancelApplicationMutation` trong `src/hooks/useWorkflow.ts`.
      - Bổ sung nút "Hủy hồ sơ" kèm modal cảnh báo xác nhận trong `CitizenDossierDetailView.tsx` khi hồ sơ ở trạng thái `Bản nháp` hoặc `Cần chỉnh sửa`.
      - Adapter cập nhật trạng thái `'Đã hủy'` (`CANCELLED`).
-  3. **Đổi mật khẩu tài khoản (`POST /api/v1/users/me/change-password`):**
+  2. **Đổi mật khẩu tài khoản (`POST /api/v1/users/me/change-password`):**
      - Bổ sung API `changePassword` trong `src/lib/api/index.ts`.
      - Xây dựng component `ChangePasswordModal.tsx` với checklist độ mạnh mật khẩu (>=8 ký tự, hoa, thường, số, ký tự đặc biệt), ẩn/hiện mật khẩu, kiểm tra trùng khớp.
      - Tự động thu hồi phiên đăng nhập và điều hướng an toàn về `/dang-nhap` khi đổi mật khẩu thành công (do backend thu hồi toàn bộ refresh token).
      - Tích hợp nút mở đổi mật khẩu tại:
-       + Menu tài khoản `UserDropdown.tsx` (cả giao diện desktop và mobile drawer).
-       + Trang hồ sơ cá nhân cán bộ/quản lý `UnifiedSelfProfileView.tsx`.
-       + Trang hồ sơ công dân `CitizenProfileView.tsx`.
-  4. **Xem trước trực tiếp tài liệu đính kèm (`GET /api/v1/supporting-documents/{documentId}/preview`):**
+       - Menu tài khoản `UserDropdown.tsx` (cả giao diện desktop và mobile drawer).
+       - Trang hồ sơ cá nhân cán bộ/quản lý `UnifiedSelfProfileView.tsx`.
+       - Trang hồ sơ công dân `CitizenProfileView.tsx`.
+  3. **Xem trước trực tiếp tài liệu đính kèm (`GET /api/v1/supporting-documents/{documentId}/preview`):**
      - Bổ sung `previewSupportingDocument` trong `src/lib/api/documentForms.ts`.
      - Cập nhật `OfficerDocumentsPanel.tsx` và `DossierChecklistView.tsx` để xem trước trực tiếp (inline stream) đối với định dạng PDF, PNG, JPG/JPEG kèm cơ chế tự động fallback về download nếu là Word hoặc định dạng không hỗ trợ.
-  5. **Thủ tục hành chính nổi bật (`GET /api/v1/procedures/featured`):**
+  4. **Thủ tục hành chính nổi bật (`GET /api/v1/procedures/featured`):**
      - Bổ sung `procedureApi.featured` và hook `useFeaturedProcedures()`.
      - Hiển thị danh sách thủ tục nổi bật có gắn huy hiệu "Nổi bật" tại trang chủ `HomePage.tsx` khi chưa nhập từ khóa tìm kiếm.
-  6. **Nộp bản Word đã điền offline (`POST /api/v1/citizen/submissions/upload-filled-docx`):**
+  5. **Nộp bản Word đã điền offline (`POST /api/v1/citizen/submissions/upload-filled-docx`):**
      - Bổ sung `uploadFilledDocx` trong `documentFormApi` và `useDocumentMutations`.
      - Kết nối luồng upload bản Word tải về từ biểu mẫu trong `DossierChecklistView.tsx`.
-  7. **Bóc tách thông tin thẻ CCCD bằng AI OCR (`POST /api/v1/ai-ocr/cccd/extract`):**
+  6. **Bóc tách thông tin thẻ CCCD bằng AI OCR (`POST /api/v1/ai-ocr/cccd/extract`):**
      - Tạo client `src/lib/api/aiOcr.ts` với Zod schema xác thực dữ liệu trích xuất.
      - Xây dựng component `CccdOcrScanModal.tsx` cho phép tải ảnh mặt trước (bắt buộc) và mặt sau (tùy chọn) thẻ CCCD, kiểm tra dung lượng (tối đa 8MB/ảnh).
      - Hiển thị kết quả bóc tách (Số CCCD, Họ tên, Ngày sinh, Giới tính, Quê quán, Thường trú) cùng độ tin cậy AI, hỗ trợ người dùng áp dụng trực tiếp vào biểu mẫu hồ sơ công dân (`CitizenProfileView.tsx`).
      - Bổ sung cảnh báo an toàn bảo mật dữ liệu công dân (không lưu trữ ảnh vào cơ sở dữ liệu).
-  8. **Trợ lý ảo AI hỏi đáp quy trình thủ tục (`POST /api/v1/ai/chat/completions`):**
+  7. **Trợ lý ảo AI hỏi đáp quy trình thủ tục (`POST /api/v1/ai/chat/completions`):**
      - Xây dựng component `AiChatWidget.tsx` dạng cửa sổ nổi tương tác trực quan (Floating Widget) góc dưới bên phải màn hình tại `CitizenPage.tsx` và `HomePage.tsx`.
      - Hỗ trợ câu hỏi nhanh gợi ý, duy trì mã phiên hội thoại `conversationId`, hiển thị câu trả lời dạng văn bản an toàn kèm lưu ý pháp lý.
-  9. **Cấu hình Gateway / Proxy (`vite.config.ts` & `serviceUrls.ts`):**
+  8. **Cấu hình Gateway / Proxy (`vite.config.ts` & `serviceUrls.ts`):**
      - Bổ sung định tuyến proxy cho `/api/v1/ai-ocr` và `/api/v1/ai/chat`.
-  10. **Theo dõi Hạn xử lý tiền kiểm (Review Deadline - SLA 45 giờ làm việc):**
-      - Bổ sung trường `dueAtUtc` và `deadlineStatus` trong `OfficerApplication` và `CitizenDossier`.
-      - Cập nhật adapter `workflowAdapters.ts` tự động tính toán trạng thái quá hạn (`urgency: 'overdue'`).
-      - Hiển thị nhãn hạn xử lý và cảnh báo quá hạn trong danh sách hồ sơ cán bộ Một cửa (`OfficerApplicationListView.tsx`).
-      - Hiển thị thông tin hạn tiền kiểm (45 giờ làm việc của UBND) tại khối trạng thái chi tiết hồ sơ công dân (`CitizenDossierDetailView.tsx`).
+  9. **Theo dõi Hạn xử lý tiền kiểm (Review Deadline - SLA 45 giờ làm việc):**
+     - Bổ sung trường `dueAtUtc` và `deadlineStatus` trong `OfficerApplication` và `CitizenDossier`.
+     - Cập nhật adapter `workflowAdapters.ts` tự động tính toán trạng thái quá hạn (`urgency: 'overdue'`).
+     - Hiển thị nhãn hạn xử lý và cảnh báo quá hạn trong danh sách hồ sơ cán bộ Một cửa (`OfficerApplicationListView.tsx`).
+     - Hiển thị thông tin hạn tiền kiểm (45 giờ làm việc của UBND) tại khối trạng thái chi tiết hồ sơ công dân (`CitizenDossierDetailView.tsx`).
 - **Kiểm tra kỹ thuật:**
   - `npm run typecheck`: **0 lỗi (exit code 0)**.
   - `npm run lint`: **0 lỗi, 0 cảnh báo (exit code 0)**.
   - `npm run build`: **Build production thành công 100% trong 51.67s**.
 - **Bước tiếp theo:** Người dùng kiểm tra trải nghiệm các tính năng mới trên môi trường dev/staging.
-
 
 ## Thiết kế lại UI/UX tra cứu thủ tục — 21/10/2026
 
@@ -2037,7 +2142,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
       - `submissionMethods`: tự động gán `estimatedDays: 0`, `feeAmount: 0`, `feeUnit: "VNĐ"`.
       - `checklistSchema`: tự động gán `quantity: 1`, `isMandatory: true`, `submissionType: "NOP"`, `documentCopyType: "ORIGINAL"`.
     - Cập nhật `ProcedureDraftWorkspace.tsx`: lưu payload đã qua chuẩn hóa (`validated`) lên backend thay vì payload thô trước khi gọi `publishDraft`.
-    - Thêm ô chọn `Loại biểu mẫu` (`formType`) vào `FormDefinitionsEditor` (cho phép chọn giữa *Mẫu điện tử tương tác* và *Mẫu Word DOCX*).
+    - Thêm ô chọn `Loại biểu mẫu` (`formType`) vào `FormDefinitionsEditor` (cho phép chọn giữa _Mẫu điện tử tương tác_ và _Mẫu Word DOCX_).
     - Thêm hàm `humanizeFieldPath` ánh xạ các JSON path kỹ thuật (`contentPayload.submissionMethods.0.estimatedDays`) thành nhãn tiếng Việt dễ hiểu và chỉ rõ vị trí (Ví dụ: `Phần 4 [Phương thức nộp] - dòng 1: Thời hạn (ngày)`).
     - Bỏ trạng thái `disabled={!confirmed}` của nút Xác nhận xuất bản: hiển thị `toast.warning(...)` hướng dẫn cán bộ tích chọn đối soát thay vì vô hiệu hóa câm lặng.
     - Mở rộng quyền điều kiện xuất bản `(can("procedure.drafts.publish") || can("procedure.publish"))`.
@@ -2067,7 +2172,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Kiểm tra**:
   - `npm run typecheck`: PASS (0 lỗi).
   - `npm run lint`: PASS (0 lỗi).
-
 
 ## Nâng cấp trải nghiệm UI/UX phân hệ IAM, bộ lọc trạng thái và chuẩn hóa quản lý hồ sơ — 11/10/2026
 
@@ -2211,7 +2315,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - Bỏ phần render mục `Chức năng được cấp` khỏi sidebar. Giữ nguyên toàn bộ code và các file liên quan (`PermissionFeatures.tsx`, handler tính năng) đúng theo yêu cầu "không cần xóa hết mấy cái liên quan".
     - Xóa khối thẻ tài khoản ở đáy sidebar (`.admin-sidebar-user` chứa avatar, tên tài khoản và vai trò) theo yêu cầu người dùng, giúp sidebar gọn gàng và đồng bộ với UserDropdown ở topbar.
 - **Sửa lỗi crash `CitizenQrCodeView` khi chưa có hồ sơ (`Cannot read properties of undefined`)**:
-  - Tại `src/pages/citizen/views/CitizenQrCodeView.tsx`: Thêm điều kiện xử lý an toàn khi danh sách hồ sơ `dossiers` rỗng hoặc chưa chọn hồ sơ (`!activeDossier`); hiển thị giao diện placeholder thông báo *"Chưa có mã QR hồ sơ - API mã QR hồ sơ điện tử sẽ được tích hợp sau"* thay vì cố đọc `activeDossier.procedureName`.
+  - Tại `src/pages/citizen/views/CitizenQrCodeView.tsx`: Thêm điều kiện xử lý an toàn khi danh sách hồ sơ `dossiers` rỗng hoặc chưa chọn hồ sơ (`!activeDossier`); hiển thị giao diện placeholder thông báo _"Chưa có mã QR hồ sơ - API mã QR hồ sơ điện tử sẽ được tích hợp sau"_ thay vì cố đọc `activeDossier.procedureName`.
 - **Xóa toàn bộ subtext (phụ đề dưới tiêu đề/thẻ) trên Phân hệ Cán bộ Một cửa (Officer)**:
   - Tại `src/pages/officer/OfficerHeader.tsx`: Bỏ toàn bộ phụ đề `subtitle` trong cấu hình `SECTION_TITLES` của tất cả các section.
   - Tại `src/pages/officer/OfficerDashboardView.tsx`: Xóa các dòng subtext phụ đề mô tả bên dưới tiêu đề biểu đồ ca trực, hàng đợi ưu tiên xử lý ngay và thẻ tiếp nhận tại quầy.
@@ -2347,7 +2451,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - `npm run typecheck`: Đạt 0 lỗi.
   - `npm run lint`: Đạt 0 lỗi.
 
-
 ## Đồng nhất Icon Hệ thống trên Toàn bộ Sidebar (Chuẩn `@phosphor-icons/react`) — 07/10/2026
 
 - **1. Thống nhất Icon đại diện cho các mục cùng chức năng**:
@@ -2402,7 +2505,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - `src/types/procedureManager.ts` (Type mock cũ của Procedure Manager, đã được thay thế hoàn toàn bởi `src/lib/api/procedures.ts`).
 - **2. Cập nhật Fixture & Test Playwright**:
   - `tests/fixtures/auth.ts`: Bổ sung mock cho endpoint `/api/v1/users/profiles` (API 60) đảm bảo test môi trường giả lập cán bộ chạy chuẩn xác.
-  - `tests/manager.spec.ts`: Cập nhật nhãn tìm kiếm nút Sidebar và Header từ context cũ sang context mới *"Cán bộ Một cửa"*.
+  - `tests/manager.spec.ts`: Cập nhật nhãn tìm kiếm nút Sidebar và Header từ context cũ sang context mới _"Cán bộ Một cửa"_.
 - **3. Kiểm tra chất lượng sau dọn dẹp**:
   - `npm run typecheck`: Đạt 0 lỗi (Exit code 0).
   - `npm run lint`: Đạt 0 lỗi (Exit code 0).
@@ -2426,12 +2529,12 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - Tạo component dùng chung [`UnifiedSelfProfileView.tsx`](file:///d:/frontend/src/components/profile/UnifiedSelfProfileView.tsx).
     - **Hero Banner nhận diện cán bộ**: Ảnh bìa cờ hoa trang trọng, avatar ký tự tên viết tắt, nhãn vai trò và đơn vị hành chính.
     - **Thẻ CCCD gắn chip chuẩn Quốc gia**: Thiết kế mô phỏng thẻ Căn cước công dân gắn chip với dải gradient đỏ - vàng ánh kim, chip bảo mật vàng, quốc hiệu, mã QR tra cứu và nút sao chép số CCCD 1 chạm có thông báo Toast.
-    - **Khối Thông tin Định danh & Nhân thân (API 06/07)**: Họ tên, Ngày tháng năm sinh, Giới tính, Số điện thoại liên hệ (chuẩn hóa nhãn *"Chưa được cập nhật"* khi trống).
+    - **Khối Thông tin Định danh & Nhân thân (API 06/07)**: Họ tên, Ngày tháng năm sinh, Giới tính, Số điện thoại liên hệ (chuẩn hóa nhãn _"Chưa được cập nhật"_ khi trống).
     - **Khối Nơi cư trú**: Địa chỉ thường trú và Địa chỉ tạm trú (kèm thẻ chip Đơn vị công tác nếu có).
     - **Khối Tài khoản & Quyền hạn công vụ (API 05)**: Tên đăng nhập, Email liên kết, Vai trò hệ thống, và Đơn vị Phường/Xã công tác đối chiếu từ danh mục API `getWards()`.
     - **Thao tác hành động**: Nút "Chỉnh sửa hồ sơ" mở Modal cập nhật thông tin gọi API `PUT /api/v1/users/me/profile` (tự động cập nhật store và làm mới giao diện) + Nút "In phiếu thông tin" (`window.print()`).
   - **Tích hợp đồng bộ vào cả 4 vai trò**:
-    - **Admin (`AdminPage.tsx`)**: Bổ sung mục "Hồ sơ cá nhân" (icon `UserCircle`, tab `profile`) trong nhóm *Tài khoản & truy cập* tại Sidebar, kết nối trực tiếp với `UnifiedSelfProfileView`.
+    - **Admin (`AdminPage.tsx`)**: Bổ sung mục "Hồ sơ cá nhân" (icon `UserCircle`, tab `profile`) trong nhóm _Tài khoản & truy cập_ tại Sidebar, kết nối trực tiếp với `UnifiedSelfProfileView`.
     - **Lãnh đạo UBND (`ManagerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, đồng thời ẩn heading phụ tránh đúp tiêu đề.
     - **Cán bộ Một cửa (`OfficerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, gỡ bỏ hoàn toàn view cũ giả lập ca trực hardcode.
     - **Quản lý Thủ tục (`ProcedureManagerPage.tsx`)**: Chuyển đổi tab `profile` sang `UnifiedSelfProfileView`, đồng nhất 100% trải nghiệm người dùng.
@@ -2448,7 +2551,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - **API 16 (`PUT /api/v1/accounts/{id}/status`)**: Xác nhận người dùng nhận định **chính xác 100%**. Trước đó Manager chỉ có thao tác Xem/Sửa/Xóa hồ sơ, chưa có nút Khóa/Mở khóa tài khoản cho cán bộ cấp dưới. Nay đã bổ sung cột Trạng thái và nút "Tạm khóa / Kích hoạt" trong `ManagerProfilesView.tsx`.
 - **2. Thực hiện Mục 3: Chuẩn hóa UX Frontend "hết kì" và mượt mà 100%**:
   - **Đổi ngữ cảnh Manager (`/quan-ly`)**: Cập nhật nhãn Sidebar và Header từ "Hồ sơ công dân" thành "Nhân sự Một cửa / Cán bộ Một cửa", tiêu đề "Quản lý Cán bộ Một cửa", phản ánh đúng bản chất cán bộ cấp dưới trong phường quản lý.
-  - **Xử lý thân thiện khi Manager gặp lỗi 403 (chưa có Phường)**: Thay vì báo lỗi chung chung, hiển thị Alert hướng dẫn rõ ràng: *"Tài khoản Lãnh đạo của bạn chưa được phân bổ Phường công tác trong hệ thống. Vui lòng liên hệ Quản trị viên hệ thống (Admin) để gán Phường trước khi quản lý cán bộ Một cửa."*
+  - **Xử lý thân thiện khi Manager gặp lỗi 403 (chưa có Phường)**: Thay vì báo lỗi chung chung, hiển thị Alert hướng dẫn rõ ràng: _"Tài khoản Lãnh đạo của bạn chưa được phân bổ Phường công tác trong hệ thống. Vui lòng liên hệ Quản trị viên hệ thống (Admin) để gán Phường trước khi quản lý cán bộ Một cửa."_
   - **Admin Xem chi tiết (API 15 & API 60)**: Bổ sung nút "Xem chi tiết" và Modal hiển thị toàn diện thông tin tài khoản (username, email, ward, roles, trạng thái) và hồ sơ định danh (CCCD, họ tên, ngày sinh, giới tính, thường trú, tạm trú).
   - **Manager Khóa/Mở tài khoản (API 16)**: Bổ sung cột Trạng thái và nút "Khóa / Kích hoạt" trực tiếp cho từng cán bộ Một cửa trong bảng `ManagerProfilesView.tsx`.
 - **3. Tinh chỉnh UI theo yêu cầu người dùng**:
@@ -2459,14 +2562,14 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - **Tách riêng trang Quản lý đơn vị Phường / Xã (`WardsView`)**: Thêm mục menu "Đơn vị Phường / Xã" trong nhóm Tài khoản & truy cập; chuyển toàn bộ nút "Thêm phường" và bảng danh sách phường sang view riêng này.
   - **Tối ưu phân cấp quản trị cán bộ Một cửa & Tinh gọn dropdown Phường**:
     - Gỡ bỏ hoàn toàn nút "Thêm Cán bộ Một cửa" khỏi trang Admin; chức năng này giao riêng cho Lãnh đạo cấp phường (`Manager`) tại `/quan-ly`.
-    - Dropdown chọn phường công tác trong bảng Người dùng chỉ hiển thị tên phường thuần túy (`w.name`, ví dụ: *Phường Bình Hòa*), bỏ mã code kỹ thuật trong ngoặc đơn (`(PHUONG_BINH_HOA)`) giúp giao diện gọn gàng, tự nhiên.
+    - Dropdown chọn phường công tác trong bảng Người dùng chỉ hiển thị tên phường thuần túy (`w.name`, ví dụ: _Phường Bình Hòa_), bỏ mã code kỹ thuật trong ngoặc đơn (`(PHUONG_BINH_HOA)`) giúp giao diện gọn gàng, tự nhiên.
   - **Bổ sung & Chuẩn hóa bộ lọc Vai trò (Role Filter) tinh gọn cho Admin**:
     - Chuẩn hóa chỉ giữ đúng các vai trò đối tượng mà Admin cần quản trị: `Tất cả vai trò`, `Lãnh đạo UBND`, `Cán bộ Một cửa`, `Quản lý thủ tục`, `Công dân`.
     - Loại bỏ tùy chọn `Quản trị viên` khỏi dropdown bộ lọc (`ROLE_FILTER_OPTIONS`), do Admin không cần tự lọc chính mình trên danh sách quản trị người dùng.
     - Loại bỏ triệt để các mã kỹ thuật tiếng Anh thô (`REGISTERED_CITIZEN`, `FRONT_DESK_OFFICER`,...), loại bỏ các hậu tố ngoặc đơn dài dòng (`(Admin)`, `(Manager)`), gom các biến thể dữ liệu trùng lặp về cùng một vai trò chuẩn.
   - **Chuẩn hóa & Phân tách rõ Phường công tác theo Vai trò (Cán bộ vs Công dân/Admin)**:
     - **Bảng Người dùng Admin (`AdminPage.tsx`)**: Chỉ hiển thị dropdown chọn Phường công tác đối với các tài khoản Cán bộ địa phương (`MANAGER`, `FRONT_DESK_OFFICER`). Đối với tài khoản Công dân (`REGISTERED_CITIZEN`) và Quản trị viên/khác, hiển thị nhãn nhẹ nhàng `Không áp dụng` thay vì dropdown và chữ `(Chưa gán phường)`.
-    - **Trang Xem chi tiết (`ManagerProfileDetailView.tsx`)**: 
+    - **Trang Xem chi tiết (`ManagerProfileDetailView.tsx`)**:
       - Tự động ẩn huy hiệu `Đơn vị: ...` ở Banner nếu tài khoản không phải Cán bộ địa phương.
       - Tại khối Thông tin Tài khoản: Nếu là Công dân/Admin, hiển thị `Phạm vi quản trị: Toàn hệ thống (Không áp dụng)`. Nơi ở của công dân được thể hiện chuẩn mực qua 2 trường cư trú độc lập: `Địa chỉ thường trú` và `Địa chỉ tạm trú`.
   - **Cơ chế Điều hướng Thông minh giữ Cán bộ / Quản lý trong Dashboard nghiệp vụ**:
@@ -2483,7 +2586,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
       - **Tối ưu hiển thị**: Tự động ẩn tiêu đề `<h1>Người dùng hệ thống</h1>` khi Admin đang xem chi tiết, tránh tình trạng bị dính chữ phía trên thanh điều hướng `← Quay lại danh sách người dùng` (đồng bộ với cơ chế của Manager).
     - **Quản lý Cán bộ Một cửa (Manager - `/quan-ly`)**: Đặt cờ `isFrontDesk={true}`, **ẩn hoàn toàn Mục 2 (Lịch sử hồ sơ) và Mục 3 (Giấy tờ điện tử)**; chỉ giữ lại Mục 1 phục vụ quản lý nhân sự nội bộ.
   - **Chuẩn hóa Hồ sơ cá nhân Cán bộ Một cửa (`OfficerProfileView.tsx`) dùng 100% dữ liệu API thật**:
-    - Loại bỏ hoàn toàn khối giả lập hardcode *"Phân công quầy tiếp nhận"* (cơ quan giả UBND Phường An Khánh, vị trí trực giả, lĩnh vực phụ trách giả, lịch trực tuần giả, badge giả "Đang trong ca trực").
+    - Loại bỏ hoàn toàn khối giả lập hardcode _"Phân công quầy tiếp nhận"_ (cơ quan giả UBND Phường An Khánh, vị trí trực giả, lĩnh vực phụ trách giả, lịch trực tuần giả, badge giả "Đang trong ca trực").
     - Chuyển sang hiển thị 100% dữ liệu thực từ backend IAM:
       - **Thông tin Định danh & Nhân thân (API 06/07)**: Thẻ CCCD gắn chip (kèm nút sao chép), Họ tên, Ngày tháng năm sinh, Giới tính, Số điện thoại liên hệ, Địa chỉ thường trú và Tạm trú.
       - **Thông tin Tài khoản & Quyền hạn công vụ (API 05)**: Tên đăng nhập, Email, Đơn vị Phường công tác thực tế (đối chiếu `wardId` qua API `getWards()`), Vai trò Việt hóa chuẩn (`Cán bộ Một cửa`), và số lượng quyền nghiệp vụ IAM.
@@ -2492,7 +2595,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - **Manager Quản lý Cán bộ Một cửa (`ManagerProfilesView.tsx`)**: Bỏ cột "Số điện thoại" trong bảng danh sách giúp bảng thông thoáng; chuyển thông tin số điện thoại vào trong màn hình Xem chi tiết.
     - **Làm rõ UI Đơn vị Phường trong Xem chi tiết (`ManagerProfileDetailView.tsx`)**:
       - Bổ sung icon `Buildings` kèm nhãn rõ ràng `Đơn vị: {wardName}` dạng thẻ badge trang nhã ở Header Banner thay vì thẻ xám không rõ ý nghĩa.
-      - Xóa bỏ hoàn toàn dòng text phụ dính nhau `@username · email` ở Banner; gom toàn bộ dữ liệu tài khoản và quyền truy cập về **1 chỗ duy nhất** ở khối *"Thông tin Tài khoản & Quyền truy cập"* ở cuối trang với nhãn đầy đủ cho từng trường dữ liệu.
+      - Xóa bỏ hoàn toàn dòng text phụ dính nhau `@username · email` ở Banner; gom toàn bộ dữ liệu tài khoản và quyền truy cập về **1 chỗ duy nhất** ở khối _"Thông tin Tài khoản & Quyền truy cập"_ ở cuối trang với nhãn đầy đủ cho từng trường dữ liệu.
     - **Chuẩn hóa thông báo trường dữ liệu trống**: Thay thế toàn bộ dấu gạch thô `'—'` hoặc chữ `'Chưa cập nhật'` thành dòng chữ chuẩn **`"Chưa được cập nhật"`** (dạng chữ nghiêng màu xám thanh lịch) cho toàn bộ các trường dữ liệu chưa có (Số CCCD, Họ tên, Ngày sinh, Giới tính, Số điện thoại, Địa chỉ thường trú, Tạm trú, Email, Đơn vị Phường, Vai trò).
 - **4. Kiểm tra chất lượng & Commit phân tách**:
   - `npm run typecheck`: Đạt 0 lỗi.
@@ -2727,7 +2830,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
     - **Hoàn toàn không có checkbox**, giữ trải nghiệm đọc và tra cứu công khai trong sáng, không gây nhầm lẫn với trạng thái chuẩn bị hồ sơ cá nhân.
   - [`src/pages/public/ProcedureDetailPage.tsx`](file:///d:/frontend/src/pages/public/ProcedureDetailPage.tsx):
     - Truyền `content.checklist` vào `ProcedureCasesView`.
-    - Cập nhật nhãn mục lục thành *"Thành phần hồ sơ & Quy trình"*.
+    - Cập nhật nhãn mục lục thành _"Thành phần hồ sơ & Quy trình"_.
   - [`tests/landing.spec.ts`](file:///d:/frontend/tests/landing.spec.ts):
     - Cập nhật test 16 xác minh danh mục giấy tờ xuất hiện, có nút Tải mẫu và khẳng định 0 checkbox (`toHaveCount(0)`).
 - **Kiểm tra**:
@@ -2815,7 +2918,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 ## Tích hợp API Quản lý Hồ sơ Công dân cho Quản lý (Manager) — 02/10/2026
 
-
 - **Yêu cầu**: Tích hợp nhóm API AdminProfiles (`/api/v1/users/{userId}/profile`) và Accounts (`/api/v1/accounts`) vào phân hệ Quản lý Điều hành (`ManagerPage` → `ManagerProfilesView`), xóa bỏ dữ liệu mock, tải và thao tác trực tiếp với dữ liệu thật từ máy chủ. Giữ nguyên tối đa cấu trúc UI hiện tại.
 - **Hiện trạng & Giải pháp API**:
   - Backend IAM phân tách: `GET /api/v1/accounts` trả về danh sách tài khoản phân trang, và nhóm `GET / POST / PUT / DELETE /api/v1/users/{userId}/profile` quản lý hồ sơ theo từng `userId` (yêu cầu quyền `iam.manage`).
@@ -2841,7 +2943,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - `npx playwright test tests/manager.spec.ts`: Đạt 4/4 tests (100%).
 
 ## Tích hợp API Accounts vào trang Admin — Người dùng hệ thống — 02/10/2026
-
 
 - **Yêu cầu**: Trang Admin → mục "Người dùng hệ thống" đang dùng dữ liệu hardcoded (mock). Yêu cầu xoá mock và call API thật.
 - **API backend** (`/api/v1/accounts`):
@@ -2896,7 +2997,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Yêu cầu & Triển khai**:
   - Tinh chỉnh giao diện hiển thị các tình huống/trường hợp (`Cases`) và danh mục giấy tờ yêu cầu (`Checklist`) chuẩn hóa hoàn toàn theo cấu trúc bảng biểu chính thức của Cổng Dịch vụ công Quốc gia ([dichvucong.gov.vn](https://dichvucong.gov.vn/)), đồng thời lược bỏ khối sơ đồ quy trình 3 bước lặp lại để giao diện cực kỳ trực quan, tập trung và dễ sử dụng nhất cho người dân.
   - Component [src/pages/public/components/ProcedureCasesAndChecklist.tsx](file:///d:/frontend/src/pages/public/components/ProcedureCasesAndChecklist.tsx):
-    - **Thanh Tabs Trường hợp áp dụng (Cases)**: Tab bar tinh tế cho phép chuyển đổi tức thì giữa các trường hợp (ví dụ: *Đúng hạn*, *Quá hạn*, *Chưa kết hôn*...), kèm thẻ ghi chú điều kiện áp dụng ngay bên dưới.
+    - **Thanh Tabs Trường hợp áp dụng (Cases)**: Tab bar tinh tế cho phép chuyển đổi tức thì giữa các trường hợp (ví dụ: _Đúng hạn_, _Quá hạn_, _Chưa kết hôn_...), kèm thẻ ghi chú điều kiện áp dụng ngay bên dưới.
     - **Cấu trúc 2 Bảng biểu chuẩn Cổng DVC**:
       1. **Bảng 1: Giấy tờ, tài liệu phải nộp** (Cơ quan lưu giữ vào hồ sơ).
       2. **Bảng 2: Giấy tờ phải xuất trình** (Đối chiếu xong trả lại người nộp).
@@ -2915,9 +3016,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   - `npm run build`: Đạt 100% (Vite production bundle thành công).
   - Playwright test: Kiểm tra tab chuyển trường hợp, hiển thị 2 bảng nộp/xuất trình, tương tác checkbox và responsive không tràn ngang (390px, 768px, 1440px): Đạt 100%.
 
-
 ## Commit và push điều hướng/tài khoản — 02/10/2026
-
 
 - Đã commit và push lên `origin/main`: `5b49dfe` (điều hướng theo role IAM) và `20173b8` (dropdown theo trang, logout chung, bỏ sidebar trùng và test). Đã xác minh remote main bằng `git ls-remote` trùng HEAD `20173b8` sau push.
 - Tài liệu bàn giao và hợp đồng auth được gom vào commit tài liệu tiếp theo. Phiên commit/push không chạy lại test; kết quả kiểm tra trước commit được ghi ở các mục bên dưới. Không sửa BE, không force push.
@@ -2974,7 +3073,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 - **Yêu cầu & Triển khai**:
   1. **Đồng nhất thông báo Toast**:
-     - Thay đổi thông báo khi đăng xuất từ *"Đã đăng xuất an toàn."* thành **"Đã đăng xuất."** ngắn gọn, chuẩn xác.
+     - Thay đổi thông báo khi đăng xuất từ _"Đã đăng xuất an toàn."_ thành **"Đã đăng xuất."** ngắn gọn, chuẩn xác.
   2. **Đồng nhất luồng Đăng xuất trên toàn ứng dụng**:
      - Ở Landing Page và Topbar Cổng công dân (`/citizen`), khi người dùng bấm **"Đăng xuất"**, hệ thống sẽ thực hiện đăng xuất ngay tức thì và hiển thị toast **"Đã đăng xuất."**.
      - Đã loại bỏ hoàn toàn popup xác nhận thừa rườm rà ở trang `/citizen`, đảm bảo trải nghiệm người dùng (UX) đồng nhất 100% giữa các trang.
@@ -3038,7 +3137,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
      - Tạo `UserProfileProvider` ([src/hooks/useUserProfile.tsx](file:///d:/frontend/src/hooks/useUserProfile.tsx)) bọc tại gốc `App.tsx`.
      - Toàn bộ ứng dụng (`UserDropdown`, Topbar, Citizen sidebar, `CitizenProfileView`) hiện tại dùng chung 1 nguồn dữ liệu duy nhất, chỉ gọi 1 request API khi người dùng đăng nhập.
   2. Khắc phục trải nghiệm popup đăng xuất ở trang Cổng dịch vụ công dân (`/citizen`):
-     - Rút gọn tiêu đề và nội dung modal: *"Bạn có chắc chắn muốn đăng xuất tài khoản? Phiên làm việc hiện tại sẽ kết thúc an toàn."*
+     - Rút gọn tiêu đề và nội dung modal: _"Bạn có chắc chắn muốn đăng xuất tài khoản? Phiên làm việc hiện tại sẽ kết thúc an toàn."_
      - Hai nút bấm trực quan: **"Ở lại"** và **"Đăng xuất"**.
      - Cải tiến `useLogout(redirectTo)`: Khi đăng xuất, xóa phiên và điều hướng an toàn về trang chủ (`/`), hiển thị thông báo toast chuẩn mực.
 - **Kiểm tra**:
@@ -3093,7 +3192,6 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - **Kiểm tra**:
   - `npm run typecheck`: Đạt 100% (0 lỗi).
   - `npm run lint`: Đạt 100% (0 lỗi/cảnh báo).
-
 
 ## Sửa cấu hình BE Azure và origin FE — 01/10/2026
 
@@ -3260,6 +3358,7 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 - Đưa thao tác tải biểu mẫu lên cạnh nút thêm thủ tục; bỏ nút thêm trùng ở banner. Rút gọn tiêu đề AI và placeholder tìm kiếm, giữ đầy đủ chức năng.
 - Kiểm tra lượt rút gọn: lint và build (gồm TypeScript) đạt, cảnh báo bundle lớn còn tồn tại; 6/6 test procedure-manager đạt với nhãn mới. Đã xem ảnh desktop; kiểm tra desktop/mobile 1440/390px không tràn ngang.
 - Vẫn là frontend/mock; không sửa các giới hạn dữ liệu và xử lý nghiệp vụ vốn có. Người dùng yêu cầu chia thành 2 commit và push: khung dashboard; nội dung màn hình và rút gọn text. Đối chiếu Git và origin/main để xác định trạng thái đồng bộ hiện tại.
+
 ## FE-TASK-33 — Phân hệ Quản lý Hồ sơ Công dân trên Admin (Admin Profiles)
 
 - Người dùng yêu cầu: Thêm trang giao diện AdminProfiles tại `src/pages/admin/AdminPage.tsx` quản lý 7 thuộc tính định danh cá nhân:
@@ -3271,10 +3370,10 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
   6. `permanentAddress`: Nơi thường trú
   7. `temporaryAddress`: Nơi tạm trú / Nơi ở hiện tại
 - Triển khai trong `src/pages/admin/AdminPage.tsx`:
-  - Bổ sung `SectionId` `'profiles'` và mục **"Hồ sơ công dân"** vào menu điều hướng nhóm *Tài khoản & truy cập* (icon `IdentificationCard`, badge đếm số lượng).
+  - Bổ sung `SectionId` `'profiles'` và mục **"Hồ sơ công dân"** vào menu điều hướng nhóm _Tài khoản & truy cập_ (icon `IdentificationCard`, badge đếm số lượng).
   - Giao diện bảng dữ liệu `AdminProfilesView`:
     - Thanh công cụ (`admin-toolbar`): Ô tìm kiếm từ khóa đa trường (`SearchBar`), dropdown lọc theo giới tính và nút `+ Thêm hồ sơ`.
-    - Bảng hiển thị: 7 cột thuộc tính định danh kèm mã mono nổi bật cho CCCD, badge giới tính và nút thao tác *Chỉnh sửa*.
+    - Bảng hiển thị: 7 cột thuộc tính định danh kèm mã mono nổi bật cho CCCD, badge giới tính và nút thao tác _Chỉnh sửa_.
   - Modal tạo mới / Chỉnh sửa hồ sơ `AdminProfileModal`:
     - Dựa trên Radix Modal chuẩn của hệ thống, form nhập liệu đầy đủ cả 7 trường thông tin, kiểm tra tính hợp lệ cơ bản và cập nhật trực tiếp vào state danh sách kèm thông báo Sonner Toast.
 - Cập nhật theo yêu cầu ngày 30/09:
@@ -3392,20 +3491,20 @@ Mục đích: giúp phiên Codex mới tiếp tục đúng công việc và quy�
 
 ## Đã hoàn thành
 
-| Hạng mục | Kết quả / vị trí |
-| --- | --- |
-| UI core | `src/components/ui/`: Button, Input, Modal, Badge, Toast và export chung |
-| Button | Thêm loading, disabled khi loading và aria-busy; giữ variant/size hiện có |
-| Input | Label, hint, error, aria-describedby/aria-invalid; áp dụng vào đăng nhập/đăng ký |
-| Modal | Radix, focus trap, Escape, trả focus cả khi mở bằng code, bố cục mobile |
-| Toast | Module dùng chung; chuyển Toaster và thông báo các trang sang module này |
-| JWT client | `src/lib/api/createJwtClient.ts`: gắn Bearer, gom refresh đồng thời, retry tối đa một lần, xử lý 401 đến trễ |
-| Quản lý phiên | Chặn kết quả refresh của phiên cũ sau logout/đổi phiên; request hủy không gửi lại |
-| Lỗi refresh | 401/403 từ refresh hoặc retry vẫn 401 thì hết phiên; lỗi mạng/server giữ phiên để thử lại |
-| Điều hướng | `src/lib/authRedirect.ts`: returnTo an toàn; AuthPage hiện lý do hết phiên |
-| Cấu hình | `.env.example` để trống VITE_API_BASE_URL; không gọi endpoint giả |
-| Tài liệu | `design-system-and-auth.md`: cách dùng core và nối backend |
-| Ví dụ UI | `tests/fixtures/ui.html`, `tests/fixtures/ui.tsx`: dùng khi chạy Vite dev |
+| Hạng mục      | Kết quả / vị trí                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| UI core       | `src/components/ui/`: Button, Input, Modal, Badge, Toast và export chung                                     |
+| Button        | Thêm loading, disabled khi loading và aria-busy; giữ variant/size hiện có                                    |
+| Input         | Label, hint, error, aria-describedby/aria-invalid; áp dụng vào đăng nhập/đăng ký                             |
+| Modal         | Radix, focus trap, Escape, trả focus cả khi mở bằng code, bố cục mobile                                      |
+| Toast         | Module dùng chung; chuyển Toaster và thông báo các trang sang module này                                     |
+| JWT client    | `src/lib/api/createJwtClient.ts`: gắn Bearer, gom refresh đồng thời, retry tối đa một lần, xử lý 401 đến trễ |
+| Quản lý phiên | Chặn kết quả refresh của phiên cũ sau logout/đổi phiên; request hủy không gửi lại                            |
+| Lỗi refresh   | 401/403 từ refresh hoặc retry vẫn 401 thì hết phiên; lỗi mạng/server giữ phiên để thử lại                    |
+| Điều hướng    | `src/lib/authRedirect.ts`: returnTo an toàn; AuthPage hiện lý do hết phiên                                   |
+| Cấu hình      | `.env.example` để trống VITE_API_BASE_URL; không gọi endpoint giả                                            |
+| Tài liệu      | `design-system-and-auth.md`: cách dùng core và nối backend                                                   |
+| Ví dụ UI      | `tests/fixtures/ui.html`, `tests/fixtures/ui.tsx`: dùng khi chạy Vite dev                                    |
 
 Các modal/badge nghiệp vụ cũ chưa được chuyển đồng loạt sang core. Không tự mở rộng phạm vi refactor.
 

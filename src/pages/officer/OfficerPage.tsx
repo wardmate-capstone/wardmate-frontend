@@ -2,7 +2,7 @@ import { StaffingView } from '@/components/staffing/StaffingView';
 import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from '@/components/ui/Toast';
 // INITIAL_OFFICER_APPLICATIONS, INITIAL_OFFICER_AUDIT_LOGS, INITIAL_OFFICER_NOTIFICATIONS đã được xóa — dữ liệu hồ sơ, audit, thông báo sẽ lấy từ API sau.
 import type {
@@ -68,6 +68,13 @@ export const OfficerPage: React.FC = () => {
   const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
   const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section && ['shifts', 'closures', 'leaves', 'consultations'].includes(section)) {
+      setActiveSection(section as OfficerSection); setReviewingApp(null);
+    }
+  }, [location.key, searchParams]);
   const urlApplicationId = searchParams.get('applicationId');
   const openedUrlAppRef = useRef<string | null>(null);
 

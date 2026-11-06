@@ -3,6 +3,7 @@ import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import { DispatchView } from '@/components/staffing/DispatchView';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { UnifiedManagerSidebar as ManagerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
 import { ManagerHeader, managerSectionTitles } from './ManagerHeader';
 import { ManagerProfilesView } from './views/ManagerProfilesView';
@@ -33,7 +34,13 @@ import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
 
 export const ManagerPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [currentSection, setCurrentSection] = useState<ManagerSectionId>('overview');
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section && ['dispatch', 'shifts', 'closures', 'leaves', 'consultations', 'applications'].includes(section)) setCurrentSection(section as ManagerSectionId);
+  }, [location.key, searchParams]);
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
   const { profile } = useUserProfile();

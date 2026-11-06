@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -8,6 +9,7 @@ import { Bell, ArrowRight, X } from '@phosphor-icons/react';
 
 export const NotificationToastSubscriber: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const authStatus = useAuthStore((state) => state.status);
   const { connect, disconnect, setOnNotificationReceived, markRead } = useNotificationStore();
@@ -26,6 +28,11 @@ export const NotificationToastSubscriber: React.FC = () => {
 
   useEffect(() => {
     setOnNotificationReceived((notification: NotificationDto) => {
+      const staffing = notification.type === 'SYSTEM_ALERT' && notification.title === 'Cập nhật lịch và nghỉ phép';
+      if (staffing) {
+        void queryClient.invalidateQueries({ queryKey: ['staffing'] });
+        void queryClient.invalidateQueries({ queryKey: ['workflow'] });
+      }
       // Hiển thị Toast nổi ở góc trên bên phải
       toast.custom(
         (t) => (
@@ -69,7 +76,7 @@ export const NotificationToastSubscriber: React.FC = () => {
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-red-800 px-3 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-red-900 active:scale-95 transition"
               >
-                <span>Xem hồ sơ</span>
+                <span>{staffing ? 'Xem chi tiết' : 'Xem hồ sơ'}</span>
                 <ArrowRight size={13} weight="bold" />
               </button>
             </div>
@@ -85,7 +92,7 @@ export const NotificationToastSubscriber: React.FC = () => {
     return () => {
       setOnNotificationReceived(undefined);
     };
-  }, [setOnNotificationReceived, markRead, navigate, user?.roles]);
+  }, [setOnNotificationReceived, markRead, navigate, user?.roles, queryClient]);
 
   return null;
 };

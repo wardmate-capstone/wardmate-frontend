@@ -7,9 +7,10 @@ const targets = [];
 let vite;
 try {
   for (const name of ['iam', 'catalog', 'workflow', 'document', 'analytics']) {
-    const server = createHttpServer((request, response) => {
+    const server = createHttpServer(async (request, response) => {
+      const chunks = []; for await (const chunk of request) chunks.push(chunk);
       response.setHeader('Content-Type', 'application/json');
-      response.end(JSON.stringify({ service: name, path: request.url, method: request.method }));
+      response.end(JSON.stringify({ service: name, path: request.url, method: request.method, key: request.headers['idempotency-key'], contentType: request.headers['content-type'], body: Buffer.concat(chunks).toString('utf8') }));
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     targets.push({ server, name, url: `http://127.0.0.1:${server.address().port}` });
@@ -68,6 +69,11 @@ try {
     ['/api/v1/officer/applications/app/release', 'workflow'],
     ['/api/v1/manager/applications/app/assignee', 'workflow'],
     ['/api/v1/manager/applications/assignment-summary', 'workflow'],
+    ['/api/v1/staffing/capabilities', 'workflow'],
+    ['/api/v1/staffing/leave-drafts?page=1&pageSize=20', 'workflow'],
+    ['/api/v1/staffing/leave-templates/current', 'workflow'],
+    ['/api/v1/staffing/schedules/2026-11-01/preview?copyFrom=2026-10-01', 'workflow'],
+    ['/api/v1/staffing/shift-change-requests?page=1&pageSize=20', 'workflow'],
     ['/api/v1/officer/activity?page=1&pageSize=20', 'workflow'],
     ['/api/v1/manager/officers?assignedCategory=1', 'iam'],
     ['/api/v1/procedures?pageNumber=1', 'catalog'],
@@ -84,7 +90,15 @@ try {
     assert.equal(result.path, path, 'Proxy must preserve request path and query');
     assert.equal(result.method, method, 'Proxy must preserve HTTP method');
   }
-  console.log(`PASS: ${cases.length} real Vite proxy routes`);
+  const key = '11111111-1111-4111-8111-111111111111';
+  const create = await (await fetch(base + '/api/v1/staffing/leave-drafts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: '{"reason":"proxy-check"}' })).json();
+  assert.equal(create.service, 'workflow'); assert.equal(create.key, key); assert.equal(create.body, '{"reason":"proxy-check"}');
+  const patch = await (await fetch(base + '/api/v1/staffing/leave-drafts/draft', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"expectedVersion":2}' })).json();
+  assert.equal(patch.service, 'workflow'); assert.equal(patch.method, 'PATCH'); assert.equal(patch.body, '{"expectedVersion":2}');
+  const file = new FormData(); file.append('file', new Blob(['PK-proxy-fixture']), 'don-nghi.docx'); file.append('expectedVersion', '2'); file.append('metadataVersion', '1');
+  const upload = await (await fetch(base + '/api/v1/staffing/leave-drafts/draft/docx', { method: 'PUT', body: file })).json();
+  assert.equal(upload.service, 'workflow'); assert.match(upload.contentType, /^multipart\/form-data; boundary=/); assert.match(upload.body, /name="file"/); assert.match(upload.body, /PK-proxy-fixture/); assert.match(upload.body, /name="metadataVersion"/);
+  console.log(`PASS: ${cases.length} real Vite proxy routes + 3 request/header/body preservation checks`);
 } finally {
   await vite?.close();
   await Promise.all(targets.map(({ server }) => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); })));

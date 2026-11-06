@@ -20,6 +20,7 @@ async function setup(page: Page) {
   await page.route('**/api/v1/staffing/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
+    if (/\/schedules\/\d{4}-\d{2}-01$/.test(path)) return authReply(route, { json: { month: path.split('/').at(-1), slots: [{ shiftId: itemId, officerId, startsAt: period.startsAtUtc, endsAt: period.endsAtUtc, shiftVersion: 1 }], baseFingerprint: 'A'.repeat(64), draft: null, leaves: [], closures: [], confirmations: [] } });
     if (path.endsWith('/shifts')) return authReply(route, { json: [{ id: itemId, officerId, wardCode: 'WARD_A', ...period }] });
     if (path.endsWith('/leaves')) return authReply(route, { json: [{ id: itemId, officerId, wardCode: 'WARD_A', ...period, reason: 'Nghỉ giải quyết việc gia đình.', status: 'PENDING', version: 1 }] });
     if (path.endsWith('/closures')) return authReply(route, { json: [{ id: itemId, wardCode: 'WARD_A', date: '2026-11-07', effectiveFromUtc: period.startsAtUtc, reason: 'Bảo trì trụ sở làm việc.', createdBy: officerId, createdAtUtc: '2026-11-05T01:00:00Z', cancelled: false, cancelledBy: null, cancelledAtUtc: null, cancellationReason: null }] });
@@ -35,6 +36,7 @@ async function navigate(page: Page, name: string) {
   if ((page.viewportSize()?.width ?? 1440) < 1024) await page.getByRole('button', { name: 'Mở menu điều hướng', exact: true }).click();
   await page.locator('aside').getByRole('button', { name, exact: true }).click();
   await expect(page.locator('.staff-workspace')).toBeVisible();
+  if (name === 'Lịch ca làm') { await page.getByRole('button', { name: 'Danh sách ca', exact: true }).click(); await page.getByRole('combobox', { name: 'Cán bộ xem lịch', exact: true }).selectOption(officerId); }
 }
 
 for (const width of [1440, 768, 390, 360]) {
@@ -43,7 +45,7 @@ for (const width of [1440, 768, 390, 360]) {
     await setup(page);
     for (const [name, content] of [
       ['Điều phối hồ sơ', 'HS-2026-001'],
-      ['Lịch ca làm', 'Ca làm hoạt động'],
+      ['Lịch ca làm', '07:00–17:00'],
       ['Lịch ngày nghỉ', 'Bảo trì trụ sở làm việc.'],
       ['Duyệt nghỉ phép', 'Nghỉ giải quyết việc gia đình.'],
       ['Tham vấn chuyên môn', consultation.question],
@@ -52,15 +54,10 @@ for (const width of [1440, 768, 390, 360]) {
       await expect(page.locator('.staff-workspace').getByText(content, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (name === 'Lịch ca làm') {
-        await expect(page.locator('.staff-card').getByRole('heading', { name: 'Cán bộ kiểm thử' })).toBeVisible();
-        await expect(page.locator('.staff-period')).toContainText('07:00');
-        await expect(page.locator('.staff-period')).toContainText('17:00');
-        await page.screenshot({ path: testInfo.outputPath(`shifts-${width}.png`), fullPage: true });
-        await page.getByRole('button', { name: 'Tạo ca làm', exact: true }).click();
-        await expect(page.getByRole('dialog')).toBeVisible();
-        await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
-        await expect(page.getByRole('dialog').getByRole('alert').first()).toBeVisible();
-        await page.getByRole('dialog').getByRole('button', { name: 'Đóng', exact: true }).click();
+        await expect(page.getByRole('table')).toContainText('07:00–17:00');
+        await expect(page.getByRole('button', { name: 'Tạo ca làm', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Hủy ca', exact: true })).toHaveCount(0);
+        await page.screenshot({ path: testInfo.outputPath('shift-list.png'), fullPage: true });
       }
       if (name === 'Tham vấn chuyên môn') {
         await page.getByRole('button', { name: 'Xem tham vấn cùng hồ sơ' }).click();
@@ -70,20 +67,18 @@ for (const width of [1440, 768, 390, 360]) {
   });
 }
 
-test('Ca làm: trạng thái rỗng, lỗi, thử lại và khoảng ngày không hợp lệ', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+test('Danh sách tháng: lỗi đọc, thử lại và chọn năm/tháng', async ({ page }) => {
   await setup(page);
-  let error = false;
-  await page.route('**/api/v1/staffing/shifts?*', route => authReply(route, error ? { status: 503, json: { message: 'Tạm thời không khả dụng' } } : { json: [] }));
+  let fail = true;
+  await page.route('**/api/v1/staffing/schedules/*', async route => {
+    if (fail) return authReply(route, { status: 503, json: { code: 'schedule.unavailable' } });
+    return route.fallback();
+  });
   await navigate(page, 'Lịch ca làm');
-  await expect(page.getByText('Chưa có dữ liệu trong phạm vi đang xem.')).toBeVisible();
-  error = true;
-  await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
   await expect(page.locator('.staff-workspace').getByRole('alert')).toBeVisible();
-  error = false;
+  fail = false;
   await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
-  await expect(page.getByText('Chưa có dữ liệu trong phạm vi đang xem.')).toBeVisible();
-  await page.getByLabel('Đến ngày', { exact: true }).fill('2026-10-01');
-  await expect(page.getByText('Chọn khoảng ngày tăng dần, tối đa 93 ngày.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Làm mới', exact: true })).toBeDisabled();
+  await expect(page.getByRole('table')).toContainText('07:00–17:00');
+  await page.getByRole('combobox', { name: 'Tháng xem lịch', exact: true }).selectOption('12');
+  await expect(page.getByRole('table')).toContainText('31/12/2026');
 });

@@ -122,6 +122,10 @@ export interface DocxOnlineEditorProps {
   readOnly?: boolean;
   author: string;
   referenceData?: { label: string; value: string }[];
+  errorMessage?: (error: unknown) => string;
+  saveLabel?: string;
+  savedLabel?: string;
+  saveAndCloseLabel?: string;
 }
 
 export default function DocxOnlineEditor({
@@ -134,6 +138,10 @@ export default function DocxOnlineEditor({
   readOnly = false,
   author,
   referenceData,
+  errorMessage = documentFormError,
+  saveLabel = 'Lưu vào hồ sơ',
+  savedLabel = 'Đã lưu vào hồ sơ',
+  saveAndCloseLabel,
 }: DocxOnlineEditorProps) {
   const editorRef = useRef<DocxEditorRef>(null);
   const loader = useRef(load);
@@ -183,7 +191,7 @@ export default function DocxOnlineEditor({
         }
       })
       .catch((err) => {
-        if (!controller.signal.aborted) setError(documentFormError(err));
+        if (!controller.signal.aborted) setError(errorMessage(err));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -194,7 +202,7 @@ export default function DocxOnlineEditor({
       unsubscribe.current.forEach((dispose) => dispose());
       unsubscribe.current = [];
     };
-  }, [sourceKey, retry]);
+  }, [sourceKey, retry, errorMessage]);
 
   function ready(editor: Editor) {
     unsubscribe.current.forEach((dispose) => dispose());
@@ -224,7 +232,7 @@ export default function DocxOnlineEditor({
     return file;
   }
 
-  async function save() {
+  async function save(closeAfterSave = false) {
     if (lock.current || readOnly || !onSave) return;
     lock.current = true;
     setBusy(true);
@@ -232,10 +240,13 @@ export default function DocxOnlineEditor({
     const savingRevision = revision.current;
     try {
       await onSave(await exportFile());
-      if (savingRevision === revision.current) setDirty(false);
+      if (savingRevision === revision.current) {
+        setDirty(false);
+        if (closeAfterSave) onClose();
+      }
       setSaved(true);
     } catch (err) {
-      setError(documentFormError(err));
+      setError(errorMessage(err));
     } finally {
       lock.current = false;
       setBusy(false);
@@ -251,7 +262,7 @@ export default function DocxOnlineEditor({
       const file = await exportFile();
       downloadBlob(file, file.name);
     } catch (err) {
-      setError(documentFormError(err));
+      setError(errorMessage(err));
     } finally {
       lock.current = false;
       setBusy(false);
@@ -285,7 +296,7 @@ export default function DocxOnlineEditor({
             onClick={() => guard.requestClose(onClose)}
             aria-label="Đóng hộp thoại"
             className="gap-1 px-2 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            title="Quay lại hồ sơ"
+            title="Quay lại"
           >
             <ArrowLeft size={18} weight="bold" />
             <span className="hidden sm:inline font-semibold">Quay lại</span>
@@ -323,7 +334,7 @@ export default function DocxOnlineEditor({
             {!busy && !dirty && saved && (
               <span role="status" className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                 <CheckCircle size={14} weight="bold" />
-                <span>Đã lưu vào hồ sơ</span>
+                <span>{savedLabel}</span>
               </span>
             )}
             {!busy && !dirty && !saved && readOnly && (
@@ -342,10 +353,10 @@ export default function DocxOnlineEditor({
               loading={busy}
               onClick={() => void save()}
               className="gap-1.5 text-xs font-bold shadow-xs bg-red-800 hover:bg-red-900 ml-1"
-              title="Lưu tệp vào hồ sơ (Ctrl + S)"
+              title={`${saveLabel} (Ctrl + S)`}
             >
               <FloppyDisk size={16} weight="bold" />
-              <span>Lưu vào hồ sơ</span>
+              <span>{saveLabel}</span>
             </Button>
           )}
         </div>
@@ -360,7 +371,20 @@ export default function DocxOnlineEditor({
           )}
 
           {/* Reference panel toggle */}
-          {referenceData && referenceData.length > 0 && (
+          {!readOnly && onSave && saveAndCloseLabel ? (
+            <Button
+              size="small"
+              variant="primary"
+              disabled={!editable}
+              loading={busy}
+              onClick={() => void save(true)}
+              className="gap-1.5 text-xs"
+              title="Lưu Word và thoát để nộp cho quản lý"
+            >
+              <CheckCircle size={16} weight="bold" />
+              <span>{saveAndCloseLabel}</span>
+            </Button>
+          ) : referenceData && referenceData.length > 0 && (
             <Button
               size="small"
               variant={showReferenceDrawer ? 'primary' : 'outline'}
