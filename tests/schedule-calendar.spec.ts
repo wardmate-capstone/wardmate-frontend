@@ -40,45 +40,6 @@ test('Chọn cán bộ trước tháng; sửa giờ và công bố giữ đủ l
   expect((save.body as { slots: unknown[] }).slots).toContainEqual(other);
   expect(state.slots.find(s => s.officerId === ids.officer)?.startsAt).toBe('2026-11-07T02:00:00.000Z');
   expect(state.requests.find(r => r.path.endsWith('/publish'))?.body).toMatchObject({ allowClosure: false, revisionId: ids.monthly, expectedVersion: 1 });
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 07/11/2026', exact: true })).not.toBeChecked();
-});
-
-test('Tick nghỉ bỏ ca tương lai của đúng người, giữ ca đã qua và ca người khác', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true);
-  const past = { ...state.slots[0], shiftId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', startsAt: '2026-11-02T01:00:00Z', endsAt: '2026-11-02T05:00:00Z' };
-  const other = { ...state.slots[0], officerId: ids.officer2, shiftId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' };
-  state.slots.push(past, other);
-  await openCalendar(page);
-  await page.getByRole('button', { name: /^Ngày 02\/11\/2026/ }).click();
-  const detail = page.getByRole('dialog', { name: 'Lịch ngày 02/11/2026', exact: true });
-  await expect(detail).toContainText('Chỉ xem');
-  await expect(detail.getByRole('button', { name: 'Áp dụng vào lịch', exact: true })).toHaveCount(0);
-  await detail.getByRole('button', { name: 'Đóng hộp thoại', exact: true }).click();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 02/11/2026', exact: true })).toBeDisabled();
-  await page.getByRole('checkbox', { name: 'Nghỉ ngày 07/11/2026', exact: true }).check();
-  await expect(await publishCalendar(page)).not.toBeVisible();
-  expect(state.slots).toEqual([past, other]);
-  expect(state.requests.some(r => r.method === 'DELETE' || r.path.endsWith('/closures'))).toBe(false);
-});
-
-test('Mặc định ngày làm không tick, nền xanh; tick nghỉ nền đỏ, bỏ tick không mở form giờ', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true); await openCalendar(page);
-  const checkbox = page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true });
-  const cell = page.locator('.schedule-cell').filter({ has: checkbox });
-  await expect(checkbox).not.toBeChecked();
-  await expect(cell).toContainText('Chưa đặt giờ');
-  await expect(cell).toHaveCSS('background-color', 'rgb(236, 253, 245)');
-  await checkbox.check();
-  await expect(cell).toHaveCSS('background-color', 'rgb(255, 241, 242)');
-  await expect(cell).toContainText('Ngày nghỉ');
-  await checkbox.uncheck();
-  await expect(cell).toHaveCSS('background-color', 'rgb(236, 253, 245)');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await setHours(page, '07/11/2026', '09:00', '12:00');
-  const work = page.getByRole('checkbox', { name: 'Nghỉ ngày 07/11/2026', exact: true });
-  await work.check(); await work.uncheck();
-  await expect(page.getByRole('button', { name: /^Ngày 07\/11\/2026/ })).toContainText('09:00');
-  expect(state.requests.filter(r => r.method === 'PUT' && r.path.endsWith('/draft')).length).toBeGreaterThanOrEqual(2);
 });
 
 test('Giờ sai, ca chồng nhau bị chặn; đổi cán bộ cảnh báo bỏ thay đổi', async ({ page }) => {
@@ -164,11 +125,8 @@ test('Tiện ích giờ tuần, sao chép và lịch sử vẫn dùng API, chưa
 
 test('Ngày lễ yêu cầu xác nhận ngoại lệ; nghỉ phép được duyệt chặn giờ trùng', async ({ page }) => {
   const state = await mockWorkSchedules(page, true);
-  await page.route('**/api/v1/staffing/schedules/2026-11-01', route => authReply(route, { json: { month: '2026-11-01', daysOff: state.daysOff, isPublished: state.isPublished, canEdit: state.canEdit, editDeadlineUtc: state.editDeadlineUtc, slots: state.slots, baseFingerprint: state.fingerprint, draft: state.draft, leaves: [{ id: ids.leave, officerId: ids.officer, startsAtUtc: '2026-11-08T01:00:00Z', endsAtUtc: '2026-11-08T05:00:00Z' }], closures: [{ id: ids.leave, closureDate: '2026-11-07', wardCode: 'P01' }], confirmations: [] } }));
+  await page.route('**/api/v1/staffing/schedules/2026-11-01', route => authReply(route, { json: { month: '2026-11-01', slots: state.slots, baseFingerprint: state.fingerprint, draft: state.draft, leaves: [{ id: ids.leave, officerId: ids.officer, startsAtUtc: '2026-11-08T01:00:00Z', endsAtUtc: '2026-11-08T05:00:00Z' }], closures: [{ id: ids.leave, closureDate: '2026-11-07', wardCode: 'P01' }], confirmations: [] } }));
   await openCalendar(page);
-  const holiday = page.getByRole('checkbox', { name: 'Nghỉ ngày 07/11/2026', exact: true });
-  await expect(holiday).toBeChecked();
-  await expect(page.locator('.schedule-cell').filter({ has: holiday })).toHaveCSS('background-color', 'rgb(255, 241, 242)');
   await page.getByRole('button', { name: /^Ngày 08\/11\/2026/ }).click();
   const hours = page.getByRole('dialog', { name: 'Giờ làm ngày 08/11/2026', exact: true });
   await hours.getByRole('button', { name: 'Áp dụng vào lịch', exact: true }).click();
@@ -193,8 +151,6 @@ test('Ca qua đêm hiển thị ngày sau và không tick nghỉ nhầm', async 
   await dialog.getByLabel('Đến giờ', { exact: true }).fill('06:00');
   await dialog.getByLabel('Kết thúc ngày hôm sau', { exact: true }).check();
   await dialog.getByRole('button', { name: 'Áp dụng vào lịch', exact: true }).click();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).not.toBeChecked();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: /^Ngày 08\/11\/2026/ }).click();
   const next = page.getByRole('dialog', { name: 'Giờ làm ngày 08/11/2026', exact: true });
   await next.getByLabel('Từ giờ', { exact: true }).fill('05:00');
@@ -261,11 +217,9 @@ test('Ca từ tháng trước hiển thị và chặn trùng, không bị đưa 
   const state = await mockWorkSchedules(page, true);
   const prior = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', officerId: ids.officer, wardCode: 'P01', startsAtUtc: '2026-11-30T15:00:00Z', endsAtUtc: '2026-12-01T02:00:00Z', version: 2 };
   await page.route('**/api/v1/staffing/shifts?*', route => authReply(route, { json: [prior] }));
-  await page.route('**/api/v1/staffing/schedules/2026-12-01', route => authReply(route, { json: { month: '2026-12-01', daysOff: [], isPublished: false, canEdit: true, editDeadlineUtc: '2026-11-29T17:00:00Z', slots: [], baseFingerprint: state.fingerprint, draft: null, leaves: [], closures: [], confirmations: [] } }));
+  await page.route('**/api/v1/staffing/schedules/2026-12-01', route => authReply(route, { json: { month: '2026-12-01', slots: [], baseFingerprint: state.fingerprint, draft: null, leaves: [], closures: [], confirmations: [] } }));
   await openCalendar(page);
   await page.getByRole('combobox', { name: 'Tháng làm việc', exact: true }).selectOption('12');
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 01/12/2026', exact: true })).not.toBeChecked();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 01/12/2026', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: /^Ngày 01\/12\/2026/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Giờ làm ngày 01/12/2026', exact: true });
   await dialog.getByLabel('Từ giờ', { exact: true }).fill('08:00');
@@ -304,56 +258,6 @@ test('Công bố thành công nhưng tải lại lỗi vẫn cho phép lấy l�
   await expect(page.getByRole('button', { name: /^Ngày 07\/11\/2026/ })).toContainText('09:00');
 });
 
-test('Tick nghỉ gọi API ngay, mở lại nháp/công bố/tải lại vẫn giữ ngày nghỉ và lịch người khác', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true);
-  state.draft = { id: ids.monthly, month: '2026-11-01', status: 'DRAFT', version: 2, baseFingerprint: state.fingerprint, actorId: ids.manager, reason: 'Lịch đang soạn', publishedAtUtc: null, slots: state.slots, daysOff: [{ officerId: ids.officer2, date: '2026-11-09' }] };
-  await openCalendar(page);
-  await page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true }).check();
-  await expect.poll(() => (state.draft?.daysOff as unknown[])?.length).toBe(2);
-  const input = state.requests.find(r => r.method === 'PUT' && r.path.endsWith('/draft'))?.body;
-  expect(input).toMatchObject({ expectedVersion: 2, daysOff: expect.arrayContaining([{ officerId: ids.officer, date: '2026-11-08' }, { officerId: ids.officer2, date: '2026-11-09' }]) });
-  expect(state.requests.some(r => r.path.endsWith('/publish'))).toBe(false);
-  await openCalendar(page);
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeChecked();
-  const publish = await publishCalendar(page);
-  await expect(publish).not.toBeVisible();
-  await openCalendar(page);
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeChecked();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeDisabled();
-  expect(state.daysOff).toContainEqual({ officerId: ids.officer2, date: '2026-11-09' });
-});
-
-test('Lịch đã công bố hết hạn: chỉ xem, không có nút sửa, không có API ghi', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true); state.isPublished = true; state.canEdit = false;
-  await openCalendar(page);
-  await expect(page.getByRole('region', { name: 'Trạng thái lịch', exact: true })).toContainText('Đã hết hạn sửa');
-  await expect(page.getByRole('button', { name: 'Sửa lịch', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: /^Ngày 07\/11\/2026/ }).click();
-  await expect(page.getByRole('dialog', { name: 'Lịch ngày 07/11/2026', exact: true })).toBeVisible();
-  expect(state.requests.some(r => r.method === 'PUT' || r.method === 'POST')).toBe(false);
-});
-
-test('Lịch công bố còn hạn chỉ mở sửa qua nút Sửa lịch, công bố lại có xác nhận thông báo', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true); state.isPublished = true; state.canEdit = true;
-  await page.clock.setFixedTime(new Date('2026-10-30T16:00:00Z'));
-  await page.goto('/manager?section=shifts');
-  await page.getByRole('combobox', { name: '1. Chọn cán bộ', exact: true }).selectOption(ids.officer);
-  await page.getByRole('combobox', { name: 'Tháng làm việc', exact: true }).selectOption('11');
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Sửa lịch', exact: true }).click();
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeEnabled();
-  await setHours(page, '07/11/2026', '09:00', '12:00');
-  await page.getByRole('button', { name: 'Xác nhận công bố lịch', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Công bố lịch tháng?', exact: true });
-  await expect(dialog).toContainText('thông báo lịch mới cho từng cán bộ');
-  await dialog.getByRole('checkbox', { name: 'Tôi đã kiểm tra giờ làm và các cán bộ có lịch thay đổi.' }).check();
-  await dialog.getByRole('button', { name: 'Công bố lịch', exact: true }).click();
-  await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('region', { name: 'Trạng thái lịch', exact: true })).toContainText('Chỉ xem');
-  expect(state.requests.filter(r => r.path.endsWith('/publish'))).toHaveLength(1);
-});
-
 test('Danh sách ca chọn cán bộ và tháng, không có lối tắt sửa/hủy ca chính thức', async ({ page }) => {
   const state = await mockWorkSchedules(page, true);
   state.slots.push({ ...state.slots[0], officerId: ids.officer2, shiftId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', startsAt: '2026-11-07T06:00:00Z', endsAt: '2026-11-07T09:00:00Z' });
@@ -372,27 +276,3 @@ test('Danh sách ca chọn cán bộ và tháng, không có lối tắt sửa/h�
   expect(state.requests.some(r => r.path.endsWith('/schedules/2026-12-01'))).toBe(true);
 });
 
-test('Đúng mốc 24 giờ vẫn mở sửa; server báo hết hạn trước ghi thì giữ giờ và không gửi PUT', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true); state.isPublished = true; state.canEdit = true;
-  await page.clock.setFixedTime(new Date(state.editDeadlineUtc));
-  await page.goto('/manager?section=shifts');
-  await page.getByRole('combobox', { name: '1. Chọn cán bộ', exact: true }).selectOption(ids.officer);
-  await page.getByRole('combobox', { name: 'Tháng làm việc', exact: true }).selectOption('11');
-  await page.getByRole('button', { name: 'Sửa lịch', exact: true }).click();
-  await setHours(page, '07/11/2026', '09:00', '12:00');
-  state.canEdit = false;
-  const dialog = await publishCalendar(page);
-  await expect(dialog.getByRole('alert')).toContainText('hết hạn sửa');
-  expect(state.requests.some(r => r.method === 'PUT' || r.path.endsWith('/publish'))).toBe(false);
-});
-
-test('Máy chủ không xác nhận ngày nghỉ thì giữ đánh dấu, báo lỗi và không công bố', async ({ page }) => {
-  const state = await mockWorkSchedules(page, true);
-  await page.route('**/api/v1/staffing/schedules/2026-11-01/draft', route => authReply(route, { json: { id: ids.monthly, month: '2026-11-01', status: 'DRAFT', version: 1, baseFingerprint: state.fingerprint, actorId: ids.manager, reason: 'Lịch đang soạn', publishedAtUtc: null, slots: state.slots } }));
-  await openCalendar(page);
-  await page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true }).check();
-  await expect(page.getByRole('alert')).toContainText('Máy chủ chưa xác nhận đúng bản nháp');
-  await expect(page.getByRole('checkbox', { name: 'Nghỉ ngày 08/11/2026', exact: true })).toBeChecked();
-  await expect(page.getByRole('button', { name: 'Xác nhận công bố lịch', exact: true })).toBeDisabled();
-  expect(state.requests.some(r => r.path.endsWith('/publish'))).toBe(false);
-});

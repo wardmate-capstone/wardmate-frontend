@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { api } from './index';
 import { leaveSchema } from './staffing';
 import { servicePath, serviceUrls } from './serviceUrls';
-import { sameDaysOff } from '../scheduleCalendar';
 
 const guid = z.guid();
 const natural = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -32,14 +31,11 @@ export const draftSchema = z.object({
 export type LeaveDraft = z.infer<typeof draftSchema>;
 export const slotSchema = z.object({ shiftId: guid, officerId: guid, startsAt: time, endsAt: time, shiftVersion: natural });
 export type ScheduleSlot = z.infer<typeof slotSchema>;
-const dayOffSchema = z.object({ officerId: guid, date });
-export type ScheduleDayOff = z.infer<typeof dayOffSchema>;
 const revisionSchema = z.object({ id: guid, month: date, status: z.enum(['DRAFT', 'PUBLISHED', 'BASELINE']), version: natural, baseFingerprint: hash.or(z.literal('')),
-  actorId: guid, reason: z.string(), publishedAtUtc: time.nullable(), slots: z.array(slotSchema), daysOff: z.array(dayOffSchema).default([]) })
+  actorId: guid, reason: z.string(), publishedAtUtc: time.nullable(), slots: z.array(slotSchema) })
   .refine(r => r.status === 'BASELINE' || r.baseFingerprint.length === 64, 'Phiên bản lịch thiếu dấu xác minh.');
 export type ScheduleRevision = z.infer<typeof revisionSchema>;
 const monthlySchema = z.object({ month: date, slots: z.array(slotSchema), baseFingerprint: hash, draft: revisionSchema.nullable(),
-  daysOff: z.array(dayOffSchema), isPublished: z.boolean(), canEdit: z.boolean(), editDeadlineUtc: time,
   leaves: z.array(z.object({ id: guid, officerId: guid, startsAtUtc: time, endsAtUtc: time })),
   closures: z.array(z.object({ id: guid, closureDate: date, wardCode: z.string().nullable() })),
   confirmations: z.array(z.object({ officerId: guid, confirmedAtUtc: time.nullable() })),
@@ -102,7 +98,7 @@ export const workScheduleApi = {
   shiftImpact: (id: string, signal?: AbortSignal) => read(`/leaves/${guid.parse(id)}/shift-impact`, z.array(z.object({ shiftId: guid, shiftStartsAtUtc: time, shiftEndsAtUtc: time, overlapStartsAtUtc: time, overlapEndsAtUtc: time })), signal),
   month: async (month: string, signal?: AbortSignal) => {
     const result = await read(`/schedules/${monthSchema.parse(month)}`, monthlySchema, signal).catch(error => {
-      if (error instanceof z.ZodError) throw new Error('API lịch chưa trả đủ dữ liệu ngày nghỉ và quyền sửa lịch. Cần cập nhật BE trước khi sử dụng.');
+      if (error instanceof z.ZodError) throw new Error('Dữ liệu lịch từ máy chủ không đúng định dạng. Vui lòng lấy lịch mới hoặc liên hệ hỗ trợ.');
       throw error;
     });
     if (result.month !== month) throw new Error('Lịch máy chủ trả về không đúng tháng đang xem.'); return result;
@@ -113,9 +109,9 @@ export const workScheduleApi = {
     const result = await read(`/schedules/${monthSchema.parse(month)}/preview`, z.object({ month: date, slots: z.array(slotSchema), closures: z.array(date), conflicts: z.array(z.string()), baseFingerprint: hash }), signal, copyFrom ? { copyFrom: monthSchema.parse(copyFrom) } : undefined);
     if (result.month !== month) throw new Error('Bản xem trước không khớp tháng đã chọn.'); return result;
   },
-  saveMonth: async (month: string, input: { expectedVersion: number; baseFingerprint: string; slots: ScheduleSlot[]; reason: string; daysOff: ScheduleDayOff[] }) => {
-    const result = await write('put', `/schedules/${monthSchema.parse(month)}/draft`, z.object({ expectedVersion: natural, baseFingerprint: hash, slots: z.array(slotSchema).max(500), reason, daysOff: z.array(dayOffSchema).max(3100) }).parse(input), revisionSchema);
-    if (result.month !== month || result.status !== 'DRAFT' || result.version !== input.expectedVersion + 1 || result.baseFingerprint !== input.baseFingerprint || !sameDaysOff(result.daysOff, input.daysOff)) throw new Error('Máy chủ chưa xác nhận đúng bản nháp tháng. Vui lòng đọc lại lịch.'); return result;
+  saveMonth: async (month: string, input: { expectedVersion: number; baseFingerprint: string; slots: ScheduleSlot[]; reason: string }) => {
+    const result = await write('put', `/schedules/${monthSchema.parse(month)}/draft`, z.object({ expectedVersion: natural, baseFingerprint: hash, slots: z.array(slotSchema).max(500), reason }).parse(input), revisionSchema);
+    if (result.month !== month || result.status !== 'DRAFT' || result.version !== input.expectedVersion + 1 || result.baseFingerprint !== input.baseFingerprint) throw new Error('Máy chủ chưa xác nhận đúng bản nháp tháng. Vui lòng đọc lại lịch.'); return result;
   },
   publish: async (month: string, input: { revisionId: string; expectedVersion: number; allowClosure: boolean; reason: string }) => {
     const result = sameId(await write('post', `/schedules/${monthSchema.parse(month)}/publish`, z.object({ revisionId: guid, expectedVersion: natural, allowClosure: z.boolean(), reason }).parse(input), revisionSchema), input.revisionId);

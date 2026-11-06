@@ -20,7 +20,7 @@ async function setup(page: Page) {
   await page.route('**/api/v1/staffing/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
-    if (/\/schedules\/\d{4}-\d{2}-01$/.test(path)) return authReply(route, { json: { month: path.split('/').at(-1), slots: [{ shiftId: itemId, officerId, startsAt: period.startsAtUtc, endsAt: period.endsAtUtc, shiftVersion: 1 }], daysOff: [], baseFingerprint: 'A'.repeat(64), draft: null, leaves: [], closures: [], confirmations: [], isPublished: true, canEdit: false, editDeadlineUtc: '2026-10-30T17:00:00Z' } });
+    if (/\/schedules\/\d{4}-\d{2}-01$/.test(path)) return authReply(route, { json: { month: path.split('/').at(-1), slots: [{ shiftId: itemId, officerId, startsAt: period.startsAtUtc, endsAt: period.endsAtUtc, shiftVersion: 1 }], baseFingerprint: 'A'.repeat(64), draft: null, leaves: [], closures: [], confirmations: [] } });
     if (path.endsWith('/shifts')) return authReply(route, { json: [{ id: itemId, officerId, wardCode: 'WARD_A', ...period }] });
     if (path.endsWith('/leaves')) return authReply(route, { json: [{ id: itemId, officerId, wardCode: 'WARD_A', ...period, reason: 'Nghỉ giải quyết việc gia đình.', status: 'PENDING', version: 1 }] });
     if (path.endsWith('/closures')) return authReply(route, { json: [{ id: itemId, wardCode: 'WARD_A', date: '2026-11-07', effectiveFromUtc: period.startsAtUtc, reason: 'Bảo trì trụ sở làm việc.', createdBy: officerId, createdAtUtc: '2026-11-05T01:00:00Z', cancelled: false, cancelledBy: null, cancelledAtUtc: null, cancellationReason: null }] });
