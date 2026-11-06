@@ -1,0 +1,113 @@
+import { lazy, Suspense, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button, Modal, toast } from '@/components/ui';
+import { staffingApi } from '@/lib/api/staffing';
+import { workScheduleApi, type LeaveCapabilities, type LeaveDraft } from '@/lib/api/workSchedules';
+import { staffingError } from '@/lib/api/staffingError';
+import { leaveMetadataSchema, vietnamIso, vietnamLocal } from '@/lib/staffingValidation';
+import { ActionForm, OperationError, Pager, QueryState, StaffPeriod, dateText, fieldClass, useStaffAccess, useStaffOperation, useStaffQuery, validatePeriod } from './shared';
+
+const DocxEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
+const wordDialogClass = 'sm:inset-0 sm:left-0 sm:top-0 sm:max-w-none sm:w-full sm:max-h-dvh sm:translate-x-0 sm:translate-y-0';
+export function WordViewer({ title, load, onClose }: { title: string; load: (signal: AbortSignal) => Promise<{ blob: Blob; fileName: string }>; onClose: () => void }) {
+  const { user } = useStaffAccess();
+  return <Modal open onOpenChange={v => !v && onClose()} title="Trình đọc Word" className={wordDialogClass}><Suspense fallback={<p role="status">Đang mở trình đọc Word…</p>}><DocxEditor sourceKey={title} title={title} readOnly author={user?.username || 'Cán bộ'} load={load} onClose={onClose} errorMessage={staffingError} /></Suspense></Modal>;
+}
+type Metadata = { startsAt: string; endsAt: string; reason: string };
+function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabilities: LeaveCapabilities; onClose: () => void; onCreated: (id: string) => void; onSubmitted: (id: string) => void }) {
+  const [word, setWord] = useState(capabilities.wordRequired || capabilities.templateConfigured);
+  const operation = useStaffOperation();
+  const template = useStaffQuery(['leave-template'], signal => workScheduleApi.template(signal), word && capabilities.templateConfigured);
+  const request = useRef<{ body: Metadata & { templateVersionId?: string }; key: string; word: boolean } | null>(null);
+  const form = useForm<Metadata>({ resolver: zodResolver(leaveMetadataSchema), defaultValues: { startsAt: '', endsAt: '', reason: '' } });
+  const locked = operation.busy || Boolean(request.current);
+  const submit = form.handleSubmit(async values => {
+    if (word && (!capabilities.templateConfigured || !template.data || template.isError)) return;
+    request.current ??= { body: { startsAt: vietnamIso(values.startsAt), endsAt: vietnamIso(values.endsAt), reason: values.reason, ...(word ? { templateVersionId: template.data!.versionId } : {}) }, key: crypto.randomUUID(), word };
+    const sent = request.current;
+    await operation.run(async () => {
+      if (sent.word) return { id: (await workScheduleApi.createDraft(sent.body as Metadata & { templateVersionId: string }, sent.key)).id, draft: true };
+      // Legacy policy explicitly permits a text-only request; never use it when Word is required.
+      const policy = await workScheduleApi.capabilities();
+      if (policy.wordRequired) throw new Error('Chính sách đã yêu cầu Word. Đóng biểu mẫu và tạo đơn Word.');
+      return { id: (await staffingApi.requestLeave(sent.body)).id, draft: false };
+    }, result => result.draft ? onCreated(result.id) : onSubmitted(result.id), sent.word);
+  });
+  return <Modal open title="Tạo đơn xin nghỉ" description="Chọn thời gian nghỉ và lý do ngắn. Nội dung chi tiết được soạn trong bản Word riêng của bạn." onOpenChange={v => !v && !operation.busy && onClose()} footer={<><Button variant="outline" disabled={operation.busy} onClick={onClose}>Đóng</Button><Button disabled={operation.busy || (word && (!template.data || template.isError || !capabilities.templateConfigured)) || (!word && operation.review)} onClick={() => void submit()}>{operation.busy ? 'Đang lưu…' : request.current && operation.review && word ? 'Gửi lại cùng yêu cầu' : word ? 'Tạo nháp Word' : 'Gửi đơn không kèm Word'}</Button></>}>
+    {!capabilities.wordRequired && <label className="mb-4 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={word} disabled={locked} onChange={e => setWord(e.target.checked)} />Soạn đơn Word trực tiếp</label>}
+    {word && !capabilities.templateConfigured && <p role="alert" className="mb-4 text-red-800">Mẫu Word chưa được cấu hình. Vui lòng liên hệ quản trị viên.</p>}
+    {word && capabilities.templateConfigured && <QueryState query={template} />}
+    <form onSubmit={e => void submit(e)} noValidate className="space-y-4"><fieldset disabled={locked} className="space-y-4">
+      <label className="staff-field">Bắt đầu nghỉ (giờ Việt Nam)<input type="datetime-local" className={fieldClass} {...form.register('startsAt')} aria-invalid={Boolean(form.formState.errors.startsAt)} /></label>
+      <label className="staff-field">Kết thúc nghỉ (giờ Việt Nam)<input type="datetime-local" className={fieldClass} {...form.register('endsAt')} aria-invalid={Boolean(form.formState.errors.endsAt)} /></label>
+      <label className="staff-field">Lý do ngắn<textarea rows={3} maxLength={2000} className={fieldClass} {...form.register('reason')} aria-invalid={Boolean(form.formState.errors.reason)} /></label>
+    </fieldset>{Object.entries(form.formState.errors).map(([name, error]) => <p key={name} role="alert" className="text-sm text-red-800">{error.message}</p>)}</form>
+    <OperationError operation={operation} />
+    {request.current && operation.error && <p className="mt-3 text-sm text-slate-600">Kiểm tra danh sách nháp/đơn nếu đóng cửa sổ này. Khi gửi lại, hệ thống dùng đúng nội dung của lần gửi trước.</p>}
+  </Modal>;
+}
+
+function DraftWorkspace({ id, capabilities, onClose, onSubmitted }: { id: string; capabilities: LeaveCapabilities; onClose: () => void; onSubmitted: (id: string) => void }) {
+  const { user } = useStaffAccess();
+  const client = useQueryClient();
+  const query = useStaffQuery(['leave-draft', id], signal => workScheduleApi.draft(id, signal));
+  const [editor, setEditor] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [confirm, setConfirm] = useState<'submit' | 'delete'>();
+  const [saveError, setSaveError] = useState('');
+  const [savedRevision, setSavedRevision] = useState<string>();
+  const [savedMetadataVersion, setSavedMetadataVersion] = useState<number>();
+  const [editorDraft, setEditorDraft] = useState<LeaveDraft>();
+  const operation = useStaffOperation();
+  const submitRequest = useRef<{ draft: LeaveDraft; key: string } | null>(null);
+  const item = query.data;
+  const update = (draft: LeaveDraft) => { client.setQueriesData({ queryKey: ['staffing', user?.id], predicate: q => q.queryKey.includes('leave-draft') && q.queryKey.includes(id) }, draft); };
+  const replay = Boolean(submitRequest.current && operation.review);
+  const reopen = async () => {
+    const latest = await query.refetch();
+    if (latest.data && !latest.isError) { operation.reset(); submitRequest.current = null; setSavedRevision(undefined); }
+  };
+  return <Modal open title="Nháp đơn xin nghỉ" description="Lưu Word chỉ cập nhật nháp. Đơn chỉ được chuyển đến quản lý khi bạn bấm Nộp cho quản lý." className={editor ? wordDialogClass : 'sm:max-w-3xl'} onOpenChange={v => !v && !operation.busy && !editor && onClose()}>
+    <QueryState query={query} />
+    {!query.isError && item && <div className="space-y-4"><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><p className="text-sm text-slate-500">Lưu lần cuối: {dateText(item.updatedAtUtc)}</p>
+      {item.submittedLeaveId ? <><p role="status">Nháp đã được nộp.</p><Button onClick={() => onSubmitted(item.submittedLeaveId!)}>Xem đơn đã nộp</Button></> : <>
+        <div className="staff-actions"><Button disabled={operation.busy || operation.review || query.isFetching} onClick={() => { setEditorDraft(item); setSaveError(''); setEditor(true); }}>Soạn / mở lại Word</Button>
+          <Button variant="outline" disabled={operation.busy || operation.review || query.isFetching} onClick={() => setEdit(true)}>Sửa thông tin nghỉ</Button>
+          <Button variant="outline" disabled={operation.busy || operation.review || query.isFetching} onClick={() => setConfirm('delete')}>Xóa nháp</Button></div>
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">Trước khi nộp, hãy mở và lưu Word theo thông tin nghỉ hiện tại. Thời gian trong thông tin nghỉ được dùng để tính lịch; bạn cần đối chiếu với nội dung Word.</p>
+        <Button disabled={operation.busy || query.isFetching || (operation.review && !replay) || (!replay && (!savedRevision || savedRevision !== item.documentRevisionId || savedMetadataVersion !== item.metadataVersion))} onClick={() => setConfirm('submit')}>{replay ? 'Kiểm tra / gửi lại lần nộp trước' : 'Nộp cho quản lý'}</Button>
+        <Button variant="outline" disabled={operation.busy || query.isFetching} onClick={() => void reopen()}>Đọc lại trạng thái</Button>
+      </>}
+      <OperationError operation={operation} />{saveError && <p role="alert" className="text-sm text-red-800">{saveError}</p>}
+    </div>}
+    {editor && editorDraft && <Suspense fallback={<p role="status">Đang mở trình soạn Word…</p>}><DocxEditor sourceKey={`leave-${id}`} title="Đơn xin nghỉ" author={user?.username || 'Cán bộ'} subtitle="Lưu nháp Word, sau đó quay lại để nộp cho quản lý" saveLabel="Lưu nháp Word" savedLabel="Đã lưu nháp, chưa nộp" errorMessage={staffingError}
+      referenceData={[{ label: 'Bắt đầu nghỉ', value: dateText(editorDraft.startsAtUtc) }, { label: 'Kết thúc nghỉ', value: dateText(editorDraft.endsAtUtc) }, { label: 'Lý do ngắn', value: editorDraft.reason }]}
+      load={async signal => { const latest = await workScheduleApi.draft(id, signal); if (latest.version !== editorDraft.version || latest.submittedLeaveId) throw new Error('Nháp đã thay đổi. Quay lại và đọc lại trạng thái trước khi soạn.'); return workScheduleApi.draftDocx(id, signal); }}
+      onSave={async file => {
+        try { const result = await workScheduleApi.saveDocx(editorDraft, file, capabilities.maxDocxBytes); update(result); setEditorDraft(result); setSavedRevision(result.documentRevisionId ?? undefined); setSavedMetadataVersion(result.metadataVersion); setSaveError(''); toast.success('Đã lưu nháp Word. Bạn chưa nộp đơn.'); }
+        catch (error) { setSavedRevision(undefined); setSaveError(staffingError(error)); throw error; }
+      }} onClose={() => { setEditor(false); void query.refetch(); }} /></Suspense>}
+    {edit && item && <ActionForm title="Sửa thông tin nghỉ" fields={[{ name: 'startsAt', label: 'Bắt đầu nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'endsAt', label: 'Kết thúc nghỉ (giờ Việt Nam)', type: 'datetime-local' }, { name: 'reason', label: 'Lý do ngắn', type: 'textarea' }]} defaultValues={{ startsAt: vietnamLocal(item.startsAtUtc), endsAt: vietnamLocal(item.endsAtUtc), reason: item.reason }} validate={v => validatePeriod(v)} submit={async v => { const latest = await workScheduleApi.draft(id); if (latest.version !== item.version) throw new Error('Nháp đã thay đổi. Đóng biểu mẫu và đọc lại trạng thái.'); update(await workScheduleApi.editDraft(id, { startsAt: vietnamIso(v.startsAt), endsAt: vietnamIso(v.endsAt), reason: v.reason, expectedVersion: item.version })); setSavedRevision(undefined); }} onClose={() => setEdit(false)}><p className="mb-4 text-sm text-amber-900">Sau khi sửa, cần mở và lưu lại Word trước khi nộp.</p></ActionForm>}
+    {confirm && item && <Modal open title={confirm === 'delete' ? 'Xóa nháp đơn nghỉ?' : 'Nộp đơn cho quản lý?'} onOpenChange={v => !v && !operation.busy && setConfirm(undefined)} footer={<><Button variant="outline" disabled={operation.busy} onClick={() => setConfirm(undefined)}>Quay lại</Button><Button disabled={operation.busy} onClick={() => {
+      if (confirm === 'delete') void operation.run(() => workScheduleApi.deleteDraft(id, item.version), onClose);
+      else { submitRequest.current ??= { draft: item, key: crypto.randomUUID() }; const sent = submitRequest.current; void operation.run(() => workScheduleApi.submit(sent.draft, sent.key), receipt => onSubmitted(receipt.leaveId), true).finally(() => setConfirm(undefined)); }
+    }}>{operation.busy ? 'Đang xử lý…' : confirm === 'delete' ? 'Xóa nháp' : 'Xác nhận nộp'}</Button></>}><p>{confirm === 'delete' ? 'Nháp chưa nộp và nội dung Word riêng sẽ không còn trong danh sách.' : 'Bản Word đã lưu sẽ được gửi cho quản lý. Sau nộp bạn không thể sửa bản này.'}</p><OperationError operation={operation} /></Modal>}
+  </Modal>;
+}
+
+export function LeaveDraftsView({ capabilities, onSubmitted }: { capabilities: LeaveCapabilities; onSubmitted: (id: string) => void }) {
+  const [page, setPage] = useState(1);
+  const [create, setCreate] = useState(false);
+  const [selected, setSelected] = useState<string>();
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const template = useStaffQuery(['leave-template'], signal => workScheduleApi.template(signal), templateOpen);
+  const query = useStaffQuery(['leave-drafts', page], signal => workScheduleApi.drafts(page, signal));
+  return <div className="space-y-4"><div className="staff-actions"><Button onClick={() => setCreate(true)}>Xin nghỉ phép</Button><Button variant="outline" disabled={!capabilities.templateConfigured} onClick={() => setTemplateOpen(true)}>Xem mẫu Word chung</Button><Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Làm mới nháp</Button></div>
+    <QueryState query={query} empty={!query.data?.items.length} />{!query.isError && <div className="staff-grid">{query.data?.items.map(item => <article key={item.id} className="staff-card"><div className="staff-card-heading"><h3>Đơn nghỉ chưa nộp</h3><span className="staff-meta">Nháp riêng</span></div><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><div className="staff-card-footer"><Button variant="outline" onClick={() => setSelected(item.id)}>Mở nháp</Button></div></article>)}</div>}<Pager page={page} total={query.data?.total ?? 0} setPage={setPage} />
+    {create && <CreateLeave capabilities={capabilities} onClose={() => setCreate(false)} onCreated={id => { setCreate(false); setSelected(id); }} onSubmitted={id => { setCreate(false); onSubmitted(id); }} />}
+    {selected && <DraftWorkspace key={selected} id={selected} capabilities={capabilities} onClose={() => setSelected(undefined)} onSubmitted={id => { setSelected(undefined); onSubmitted(id); }} />}
+    {templateOpen && <Modal open title="Mẫu đơn nghỉ chung" onOpenChange={v => !v && setTemplateOpen(false)}><QueryState query={template} />{!template.isError && template.data && <WordViewer title="Mẫu đơn nghỉ chung — chỉ xem" load={signal => workScheduleApi.templateDocx(template.data.versionId, template.data.sha256, signal)} onClose={() => setTemplateOpen(false)} />}</Modal>}
+  </div>;
+}
