@@ -1,28 +1,58 @@
 import { useContext, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, Plus, X } from '@phosphor-icons/react';
+import { Check, Plus, X, Sliders, CaretDown, UploadSimple, Warning } from '@phosphor-icons/react';
 import { Button, Input, Badge, ListSkeleton } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
-import { formTemplateErrorMessage, getFormTemplates, type FormTemplateDto } from '@/lib/api/formTemplates';
+import { procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
 import { useAuthStore } from '@/stores/authStore';
 import { ProcedureErrorsContext } from '@/lib/procedureValidation';
+import { DirectTemplateUploadModal } from './DirectTemplateUploadModal';
 
 type Row = Record<string, unknown>;
-export function ProcedureFormPicker({ value, change, disabled, onEdit, cases = [], removedForms }: {
+export function ProcedureFormPicker({
+  value,
+  change,
+  disabled,
+  onEdit,
+  cases = [],
+  removedForms,
+  warnings,
+  onTemplateCreated,
+}: {
   value: unknown;
   change: (value: Row[]) => void;
   disabled: boolean;
   onEdit?: () => void;
   cases?: { code: string; name: string }[];
   removedForms: Record<string, Row>;
+  warnings?: string[];
+  onTemplateCreated?: (newTemplate: { id: string; code: string; title: string }, updatedList: Row[]) => void | Promise<void>;
 }) {
   const list: Row[] = Array.isArray(value) ? value.map(row => row && typeof row === 'object' && !Array.isArray(row) ? row : {}) : [];
   const user = useAuthStore(state => state.user);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [uploadModalData, setUploadModalData] = useState<{
+    open: boolean;
+    rowIndex: number | null;
+    initialCode: string;
+    initialName: string;
+  }>({
+    open: false,
+    rowIndex: null,
+    initialCode: '',
+    initialName: '',
+  });
+
+  const formWarnings = (warnings ?? []).filter(w =>
+    w.toLowerCase().includes('formdefinitions') ||
+    w.toLowerCase().includes('tệp mẫu') ||
+    (w.toLowerCase().includes('biểu mẫu') && !w.toLowerCase().includes('hợp lệ'))
+  );
+
   const errors = useContext(ProcedureErrorsContext);
   const query = useQuery({
-    queryKey: ['form-templates', user?.id, 'picker', search.trim(), page],
+    queryKey: ['procedure-document-forms', search.trim(), page],
     queryFn: async ({ signal }) => {
       if (search.trim()) await new Promise<void>((resolve, reject) => {
         const timer = window.setTimeout(resolve, 300);
@@ -31,16 +61,21 @@ export function ProcedureFormPicker({ value, change, disabled, onEdit, cases = [
           reject(new DOMException('Aborted', 'AbortError'));
         }, { once: true });
       });
-      return getFormTemplates({ page, pageSize: 10, isActive: true, searchCode: search.trim() }, signal);
+      return procedureApi.documentForms(search.trim(), page, 20, signal);
     },
     enabled: Boolean(user && !disabled),
   });
-  const toggle = (template: FormTemplateDto) => {
-    const selected = list.some(row => row.formTemplateId === template.id);
-    if (selected || !template.isActive || !template.fileDocxUrl) return;
-    change([...list, removedForms[template.id] ?? {
-      formTemplateId: template.id, formCode: template.code, formName: template.title,
-      formType: 'DOCX_TEMPLATE', caseCode: null, quantity: 1, isMandatory: true,
+  const toggle = (form: DocumentFormOption) => {
+    const selected = list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
+    if (selected) return;
+    change([...list, removedForms[form.id] ?? {
+      formTemplateId: form.id,
+      formCode: form.formCode,
+      formName: form.formName,
+      formType: form.formType || 'DOCX_TEMPLATE',
+      caseCode: null,
+      quantity: 1,
+      isMandatory: true,
     }]);
   };
   const remove = (index: number) => {
@@ -50,73 +85,266 @@ export function ProcedureFormPicker({ value, change, disabled, onEdit, cases = [
   };
   const update = (index: number, patch: Row) => change(list.map((row, i) => i === index ? { ...row, ...patch } : row));
 
+  const handleTemplateSuccess = async (created: { id: string; code: string; title: string }) => {
+    let nextList: Row[];
+    if (uploadModalData.rowIndex !== null) {
+      nextList = list.map((r, i) => i === uploadModalData.rowIndex ? {
+        ...r,
+        formTemplateId: created.id,
+        formCode: created.code,
+        formName: created.title,
+        formType: 'DOCX_TEMPLATE',
+      } : r);
+    } else {
+      nextList = [...list, {
+        formTemplateId: created.id,
+        formCode: created.code,
+        formName: created.title,
+        formType: 'DOCX_TEMPLATE',
+        quantity: 1,
+        isMandatory: true,
+        caseCode: null,
+      }];
+    }
+    change(nextList);
+    if (onTemplateCreated) {
+      await onTemplateCreated(created, nextList);
+    }
+    await query.refetch();
+  };
+
   const selectedForms = <section aria-label="Biểu mẫu đã gắn" className="min-w-0 rounded-xl border border-red-100 bg-red-50/30 p-4">
     <div className="mb-3 flex items-center justify-between gap-2">
       <h4 className="font-bold">Đã chọn cho thủ tục</h4><Badge variant="info">{list.length} mẫu</Badge>
     </div>
     {list.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm leading-6 text-slate-600">Thủ tục chưa được gắn biểu mẫu.{!disabled && ' Bấm “Chọn mẫu” trong kho bên cạnh để thêm.'}</p> : <div className="space-y-3">
-      {list.map((row, index) => <article key={String(row.formTemplateId ?? row.formCode) + index} className="rounded-lg border border-slate-200 bg-white p-3">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0"><span data-field={`formDefinitions.${index}.formCode`} tabIndex={-1} className="text-xs font-bold text-red-800">{String(row.formCode)}</span><p data-field={`formDefinitions.${index}.formName`} tabIndex={-1} className="mt-1 font-semibold leading-5">{String(row.formName)}</p></div>
-          {!disabled && <Button size="small" variant="ghost" className="shrink-0 px-2" aria-label={`Bỏ mẫu ${String(row.formName)}`} onClick={() => remove(index)}><X size={16} aria-hidden /></Button>}
-        </div>
-        {(errors[`formDefinitions.${index}.formCode`] || errors[`formDefinitions.${index}.formName`]) && <p className="mb-2 text-xs text-red-800">Mã hoặc tên biểu mẫu không hợp lệ. Hãy bỏ mẫu và chọn lại từ kho.</p>}
-        <p className="mb-2 text-xs text-slate-600">{row.quantity == null ? 'Chưa nhập số bản' : `${String(row.quantity)} bản`} · {row.isMandatory === false ? 'Không bắt buộc' : 'Bắt buộc'}{row.caseCode ? ` · Trường hợp ${String(row.caseCode)}` : ' · Mọi trường hợp'}</p>
-        <FormTemplateActions templateId={typeof row.formTemplateId === 'string' ? row.formTemplateId : null} name={String(row.formName)} />
-        {!disabled && <details className="mt-3 border-t border-slate-100 pt-2">
-          <summary className="min-h-8 cursor-pointer text-xs font-semibold text-slate-700">Thiết lập sử dụng mẫu</summary>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Input data-field={`formDefinitions.${index}.quantity`} label="Số lượng" type="number" min={1} step={1} value={String(row.quantity ?? '')} error={errors[`formDefinitions.${index}.quantity`] || (!Number.isInteger(row.quantity) || Number(row.quantity) < 1 ? 'Nhập số nguyên lớn hơn hoặc bằng 1.' : undefined)} onChange={event => update(index, { quantity: event.target.value === '' ? null : Number(event.target.value) })} />
-            <label className="grid gap-2 text-sm font-semibold">Yêu cầu<select aria-label="Yêu cầu" className="min-h-12 rounded-xl border border-slate-300 bg-white px-3" value={row.isMandatory === false ? 'optional' : 'required'} onChange={event => update(index, { isMandatory: event.target.value === 'required' })}><option value="required">Bắt buộc</option><option value="optional">Không bắt buộc</option></select></label>
-            <label data-field={`formDefinitions.${index}.caseCode`} className="grid gap-2 text-sm font-semibold">Trường hợp áp dụng
-              <select aria-label="Trường hợp áp dụng" className="min-h-12 rounded-xl border border-slate-300 bg-white px-3" aria-invalid={Boolean(row.caseCode && !cases.some(item => item.code === row.caseCode))} aria-describedby={Boolean(row.caseCode) && !cases.some(item => item.code === row.caseCode) ? `form-case-${index}-error` : undefined} value={String(row.caseCode ?? '')} onChange={event => update(index, { caseCode: event.target.value || null })}>
-                <option value="">Mọi trường hợp</option>
-                {Boolean(row.caseCode) && !cases.some(item => item.code === row.caseCode) && <option value={String(row.caseCode)} disabled>Trường hợp không còn tồn tại: {String(row.caseCode)}</option>}
-                {cases.filter(item => item.code).map((item, i) => <option key={item.code + i} value={item.code}>{item.code}{item.name ? ` · ${item.name}` : ''}</option>)}
-              </select>
-              {Boolean(row.caseCode) && !cases.some(item => item.code === row.caseCode) && <span id={`form-case-${index}-error`} className="text-xs text-red-800">Vui lòng chọn lại trường hợp áp dụng.</span>}
-            </label>
-            <p className="text-sm text-slate-600">Loại biểu mẫu: {row.formType === 'DOCX_TEMPLATE' ? 'Mẫu Word (DOCX)' : row.formType === 'ONLINE_INTERACTIVE' ? 'Mẫu điện tử tương tác (cấu hình hiện có)' : 'Cần kiểm tra loại biểu mẫu'}</p>
+      {list.map((row, index) => (
+        <article key={String(row.formTemplateId ?? row.formCode) + index} className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span data-field={`formDefinitions.${index}.formCode`} tabIndex={-1} className="font-mono text-xs font-bold text-red-900 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                  {String(row.formCode)}
+                </span>
+                {!row.formTemplateId && (
+                  <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                    Chưa gắn phôi Word
+                  </span>
+                )}
+                {row.isMandatory === false && (
+                  <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                    Không bắt buộc
+                  </span>
+                )}
+              </div>
+              <p data-field={`formDefinitions.${index}.formName`} tabIndex={-1} className="mt-1.5 font-bold text-sm text-slate-900 leading-snug">
+                {String(row.formName)}
+              </p>
+            </div>
+            {!disabled && (
+              <Button size="small" variant="ghost" className="shrink-0 text-slate-400 hover:text-red-700 hover:bg-red-50" aria-label={`Bỏ mẫu ${String(row.formName)}`} onClick={() => remove(index)}>
+                <X size={16} aria-hidden />
+              </Button>
+            )}
           </div>
-        </details>}
-      </article>)}
+
+          {(errors[`formDefinitions.${index}.formCode`] || errors[`formDefinitions.${index}.formName`]) && (
+            <p className="text-xs font-medium text-red-700 bg-red-50 p-2 rounded-lg border border-red-200">
+              Mã hoặc tên biểu mẫu không hợp lệ. Hãy kiểm tra lại thông tin.
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 bg-slate-50/80 px-3 py-2 rounded-lg border border-slate-100">
+            <span>Số lượng: <strong>{row.quantity == null ? '1 bản' : `${String(row.quantity)} bản`}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Loại: <strong>{row.formType === 'ONLINE_INTERACTIVE' ? 'Mẫu điện tử tương tác' : 'Mẫu Word (DOCX)'}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Áp dụng: <strong>{row.caseCode ? `Trường hợp ${String(row.caseCode)}` : 'Mọi trường hợp'}</strong></span>
+          </div>
+
+          <div className="pt-1 flex flex-wrap items-center gap-2">
+            <FormTemplateActions templateId={typeof row.formTemplateId === 'string' ? row.formTemplateId : null} name={String(row.formName)} />
+            {!row.formTemplateId && !disabled && (
+              <Button
+                size="small"
+                variant="outline"
+                className="gap-1.5 text-xs text-amber-900 border-amber-300 bg-amber-50/70 hover:bg-amber-100 hover:border-amber-400"
+                onClick={() => setUploadModalData({
+                  open: true,
+                  rowIndex: index,
+                  initialCode: String(row.formCode ?? ''),
+                  initialName: String(row.formName ?? ''),
+                })}
+              >
+                <UploadSimple size={14} className="text-amber-800" />
+                Tạo phôi & tải DOCX
+              </Button>
+            )}
+          </div>
+
+          {!disabled && (
+            <details className="group rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 transition-colors open:bg-slate-50 open:border-slate-300">
+              <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-bold text-slate-700 hover:text-red-900 transition-colors select-none">
+                <span className="flex items-center gap-1.5">
+                  <Sliders size={14} className="text-red-800 shrink-0" />
+                  <span>Thiết lập sử dụng mẫu</span>
+                </span>
+                <CaretDown size={14} className="transition-transform group-open:rotate-180 text-slate-400 shrink-0" />
+              </summary>
+              <div className="mt-3 pt-3 border-t border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Số lượng bản nộp</label>
+                  <input
+                    data-field={`formDefinitions.${index}.quantity`}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={String(row.quantity ?? '')}
+                    placeholder="1"
+                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    onChange={event => update(index, { quantity: event.target.value === '' ? null : Number(event.target.value) })}
+                  />
+                  {errors[`formDefinitions.${index}.quantity`] && (
+                    <p className="mt-1 text-[11px] text-red-600 font-medium">{errors[`formDefinitions.${index}.quantity`]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Quy định nộp</label>
+                  <select
+                    aria-label="Yêu cầu"
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    value={row.isMandatory === false ? 'optional' : 'required'}
+                    onChange={event => update(index, { isMandatory: event.target.value === 'required' })}
+                  >
+                    <option value="required">Bắt buộc</option>
+                    <option value="optional">Không bắt buộc (nếu có)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Loại biểu mẫu</label>
+                  <select
+                    aria-label="Loại biểu mẫu"
+                    data-field={`formDefinitions.${index}.formType`}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    value={row.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE'}
+                    onChange={event => update(index, { formType: event.target.value as 'DOCX_TEMPLATE' | 'ONLINE_INTERACTIVE' })}
+                  >
+                    <option value="DOCX_TEMPLATE">Mẫu Word (phôi DOCX)</option>
+                    <option value="ONLINE_INTERACTIVE">Mẫu điện tử tương tác</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Trường hợp áp dụng</label>
+                  <select
+                    aria-label="Trường hợp áp dụng"
+                    data-field={`formDefinitions.${index}.caseCode`}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium truncate"
+                    value={String(row.caseCode ?? '')}
+                    onChange={event => update(index, { caseCode: event.target.value || null })}
+                  >
+                    <option value="">Mọi trường hợp</option>
+                    {cases.filter(item => item.code).map((item, i) => (
+                      <option key={item.code + i} value={item.code}>
+                        {item.code}{item.name ? ` · ${item.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {Boolean(row.caseCode) && !cases.some(item => item.code === row.caseCode) && (
+                    <p className="mt-1 text-[11px] text-red-600 font-medium">Vui lòng chọn lại trường hợp áp dụng.</p>
+                  )}
+                </div>
+              </div>
+            </details>
+          )}
+        </article>
+      ))}
     </div>}
   </section>;
 
   return <section className="space-y-4">
+    {formWarnings.length > 0 && (
+      <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-2xs">
+        <Warning size={22} className="mt-0.5 shrink-0 text-amber-600" weight="fill" />
+        <div className="space-y-1">
+          <p className="font-bold">Lưu ý đối soát biểu mẫu từ AI:</p>
+          {formWarnings.map((warn, i) => (
+            <p key={i} className="leading-relaxed">
+              {warn.replace(/^formDefinitions:\s*/i, '')}
+            </p>
+          ))}
+        </div>
+      </div>
+    )}
+
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h3 className="font-bold">Biểu mẫu <span className="text-sm font-normal text-slate-500">({list.length} đã gắn)</span></h3>
       {disabled && onEdit && <Button size="small" variant="outline" onClick={onEdit}>{list.length ? 'Quản lý biểu mẫu' : 'Chọn biểu mẫu'}</Button>}
     </div>
-    {!disabled && <p className="text-sm text-slate-600">Chọn nhiều mẫu trong kho. Mẫu đã chọn sẽ được cung cấp cho công dân sau khi lưu thủ tục.</p>}
+    {!disabled && <p className="text-sm text-slate-600">Chọn nhiều mẫu trong kho hoặc tạo phôi trực tiếp. Mẫu đã chọn sẽ được cung cấp cho công dân sau khi lưu thủ tục.</p>}
     <div className={disabled ? '' : 'grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]'}>
       {!disabled && <section aria-label="Kho biểu mẫu" className="min-w-0 rounded-xl border border-slate-200 bg-white">
         <div className="space-y-3 border-b border-slate-200 p-4">
-          <h4 className="font-bold">Chọn từ kho biểu mẫu</h4>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-bold">Chọn từ kho biểu mẫu</h4>
+            <Button
+              size="small"
+              variant="outline"
+              className="gap-1.5 text-xs text-slate-700 hover:text-red-900"
+              onClick={() => setUploadModalData({
+                open: true,
+                rowIndex: null,
+                initialCode: '',
+                initialName: '',
+              })}
+            >
+              <Plus size={14} className="text-red-800" />
+              Tạo phôi mới
+            </Button>
+          </div>
           <Input label="Tìm biểu mẫu theo mã" placeholder="Nhập mã đơn, ví dụ: DON_01" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} />
           <p className="text-xs text-slate-500">Để trống để duyệt kho. Mẫu chưa có tệp Word chưa thể chọn.</p>
         </div>
-        {query.isPending ? <div className="p-4"><ListSkeleton rows={3} /></div> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{formTemplateErrorMessage(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
+        {query.isPending ? <div className="p-4"><ListSkeleton rows={3} /></div> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{procedureError(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
           <div className="divide-y divide-slate-100">
-            {query.data.items.length === 0 && <p className="p-4 text-sm text-slate-500">Không tìm thấy mẫu phù hợp. Hãy thử mã khác.</p>}
-            {query.data.items.map(template => {
-              const selected = list.some(row => row.formTemplateId === template.id);
-              return <article key={template.id} className={`space-y-2 p-3 ${selected ? 'bg-red-50/50' : ''}`}>
+            {query.data.length === 0 && <p className="p-4 text-sm text-slate-500">Không tìm thấy mẫu phù hợp. Hãy thử mã khác.</p>}
+            {query.data.map(form => {
+              const selected = list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
+              return <article key={form.id} className={`space-y-2 p-3 ${selected ? 'bg-red-50/50' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0"><span className="text-xs font-bold text-slate-500">{template.code}</span><p className="mt-1 text-sm font-semibold leading-5">{template.title}</p></div>
-                  <Button size="small" variant={selected ? 'primary' : 'outline'} className="shrink-0 px-3" disabled={selected || !template.fileDocxUrl || !template.isActive} aria-label={`${template.code} · ${template.title}`} aria-pressed={selected} onClick={() => toggle(template)}>{selected ? <Check size={16} aria-hidden /> : <Plus size={16} aria-hidden />}{selected ? 'Đã chọn' : 'Chọn mẫu'}</Button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-red-900 bg-red-50 border border-red-200 px-2 py-0.5 rounded">{form.formCode}</span>
+                      <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{form.formType === 'ONLINE_INTERACTIVE' ? 'Mẫu điện tử' : 'Phôi Word (DOCX)'}</span>
+                    </div>
+                    <p className="mt-1.5 text-sm font-semibold leading-5 text-slate-900">{form.formName}</p>
+                  </div>
+                  <Button size="small" variant={selected ? 'primary' : 'outline'} className="shrink-0 px-3" disabled={selected} aria-label={`${form.formCode} · ${form.formName}`} aria-pressed={selected} onClick={() => toggle(form)}>{selected ? <Check size={16} aria-hidden /> : <Plus size={16} aria-hidden />}{selected ? 'Đã chọn' : 'Chọn mẫu'}</Button>
                 </div>
-                {template.fileDocxUrl ? <FormTemplateActions templateId={template.id} name={template.title} hasFile /> : <p className="text-xs text-amber-800">Chưa có tệp Word</p>}
+                <FormTemplateActions templateId={form.id} name={form.formName} hasFile />
               </article>;
             })}
           </div>
           <nav aria-label="Phân trang kho biểu mẫu" className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 p-3">
-            <span className="text-xs text-slate-600">{query.data.totalCount} mẫu · Trang {page}/{query.data.totalPages || 1}</span>
-            <div className="flex gap-1"><Button size="small" variant="ghost" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trước</Button><Button size="small" variant="ghost" disabled={page >= query.data.totalPages} onClick={() => setPage(value => value + 1)}>Sau</Button></div>
+            <span className="text-xs text-slate-600">Trang {page} ({query.data.length} mẫu)</span>
+            <div className="flex gap-1">
+              <Button size="small" variant="ghost" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trước</Button>
+              <Button size="small" variant="ghost" disabled={query.data.length < 20} onClick={() => setPage(value => value + 1)}>Sau</Button>
+            </div>
           </nav>
         </>}
       </section>}
       {selectedForms}
     </div>
+
+    <DirectTemplateUploadModal
+      open={uploadModalData.open}
+      onOpenChange={(open) => setUploadModalData(prev => ({ ...prev, open }))}
+      initialCode={uploadModalData.initialCode}
+      initialName={uploadModalData.initialName}
+      onSuccess={handleTemplateSuccess}
+    />
   </section>;
 }

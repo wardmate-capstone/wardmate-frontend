@@ -14,9 +14,14 @@ type Field = {
   label: string;
   kind?: "number" | "boolean" | "date";
   options?: string[];
+  required?: boolean;
 };
-const box =
-  "min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-900 transition focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100";
+const getInputBoxClass = (hasError: boolean) =>
+  `min-h-11 w-full rounded-xl border p-3 text-sm transition focus:bg-white focus:outline-none focus:ring-2 ${
+    hasError
+      ? "border-red-400 bg-red-50/40 text-slate-900 placeholder:text-red-300 focus:border-red-600 focus:ring-red-100"
+      : "border-slate-200 bg-slate-50/60 text-slate-900 focus:border-slate-800 focus:ring-slate-100"
+  }`;
 const record = (value: unknown): Row =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Row)
@@ -36,15 +41,30 @@ function FieldInput({
   const prefix = useContext(ProcedureFieldPrefix);
   const path = field.path ?? prefix + field.key;
   const error = errors[path];
-  const errorText = error && <span id={path + '-error'} className="text-xs font-normal text-red-800">{error}</span>;
+  const hasError = Boolean(error);
+  const labelContent = (
+    <span className="flex items-center gap-1 text-slate-900">
+      <span>{field.label}</span>
+      {field.required && (
+        <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
+      )}
+    </span>
+  );
+  const errorText = error && (
+    <span id={path + '-error'} className="flex items-center gap-1 text-xs font-medium text-red-700">
+      <span>•</span>
+      <span>{error}</span>
+    </span>
+  );
   if (field.kind === "boolean" || field.options)
     return (
       <label data-field={path} className="grid gap-2 text-sm font-semibold">
-        {field.label}
+        {labelContent}
         <select
           aria-label={field.label}
-          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
-          className={box}
+          aria-invalid={hasError}
+          aria-describedby={hasError ? path + '-error' : undefined}
+          className={getInputBoxClass(hasError)}
           value={value == null ? "" : String(value)}
           onChange={(e) =>
             change(
@@ -68,13 +88,14 @@ function FieldInput({
     );
   return (
     <label data-field={path} className="grid gap-2 text-sm font-semibold">
-      {field.label}
+      {labelContent}
       {field.kind ? (
         <input
           aria-label={field.label}
-          className={box}
+          className={getInputBoxClass(hasError)}
           type={field.kind}
-          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
+          aria-invalid={hasError}
+          aria-describedby={hasError ? path + '-error' : undefined}
           min={field.key === 'quantity' ? 1 : ['feeAmount', 'estimatedDays'].includes(field.key) ? 0 : undefined}
           step={field.kind === "number" ? field.key === 'quantity' ? 1 : "any" : undefined}
           value={value == null ? "" : String(value)}
@@ -91,9 +112,10 @@ function FieldInput({
       ) : (
         <textarea
           aria-label={field.label}
-          className={box}
+          className={getInputBoxClass(hasError)}
           rows={2}
-          aria-invalid={Boolean(error)} aria-describedby={error ? path + '-error' : undefined}
+          aria-invalid={hasError}
+          aria-describedby={hasError ? path + '-error' : undefined}
           value={value == null ? "" : String(value)}
           onChange={(e) => change(e.target.value)}
         />
@@ -197,6 +219,8 @@ export function ProcedureApiEditor({
   onEditForms,
   onEditChecklist,
   validationError,
+  warnings,
+  onTemplateCreated,
 }: {
   value: Row;
   onChange: (value: Row) => void;
@@ -206,6 +230,8 @@ export function ProcedureApiEditor({
   onEditForms?: () => void;
   onEditChecklist?: () => void;
   validationError?: ProcedureValidationError | null;
+  warnings?: string[];
+  onTemplateCreated?: (newTemplate: { id: string; code: string; title: string }, updatedList: Row[]) => void | Promise<void>;
 }) {
   const [step, setStep] = useState(initialStep);
   const root = useRef<HTMLDivElement>(null);
@@ -269,11 +295,41 @@ export function ProcedureApiEditor({
               {index + 1}
             </span>
             <span>{label}</span>
+            {index === 4 && (warnings ?? []).some(w => /formDefinitions/i.test(w) || /tệp mẫu/i.test(w)) && (
+              <span className="flex size-2 rounded-full bg-amber-400 ring-2 ring-white" title="Có lưu ý từ AI về biểu mẫu" />
+            )}
             {issues.some(issue => issue.step === index) && <span className="rounded bg-red-100 px-1 text-red-800">Có lỗi</span>}
           </button>
         ))}
       </div>
-      {issues.length > 0 && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-semibold">Cần kiểm tra {issues.length} thông tin:</p><ul>{issues.map(issue => <li key={issue.path}><button type="button" className="min-h-9 text-left underline" onClick={() => goToIssue(issue)}>{issue.label}: {issue.message}</button></li>)}</ul></div>}
+      {issues.length > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50/70 p-4 text-sm text-red-900 shadow-xs">
+          <div className="flex items-center gap-2 font-bold text-red-800 mb-2">
+            <span className="flex size-5 items-center justify-center rounded-full bg-red-200 text-xs font-bold text-red-900">!</span>
+            <span>Cần kiểm tra và hoàn thiện {issues.length} mục thông tin:</span>
+          </div>
+          <ul className="grid gap-1.5 sm:grid-cols-2 text-xs">
+            {issues.map((issue) => (
+              <li key={issue.path}>
+                <button
+                  type="button"
+                  className="group flex w-full items-start gap-1.5 rounded-lg p-1.5 text-left transition hover:bg-red-100/60"
+                  onClick={() => goToIssue(issue)}
+                  title={`Bấm để chuyển đến phần ${tabItems[issue.step]}`}
+                >
+                  <span className="mt-0.5 shrink-0 rounded bg-red-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-red-800">
+                    {tabItems[issue.step]}
+                  </span>
+                  <span className="min-w-0 flex-1 leading-snug">
+                    <strong className="font-semibold text-red-950">{issue.label}:</strong>{" "}
+                    <span className="text-red-800">{issue.message}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {/* Biểu mẫu tự ẩn điều khiển sửa khi disabled; vẫn cho phép xem/tải phôi. */}
       <fieldset disabled={disabled && step !== 4} className="min-w-0 space-y-5">
         {step === 0 && (
@@ -282,13 +338,17 @@ export function ProcedureApiEditor({
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Định danh thủ tục</h4>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "procedureCode", label: "Mã thủ tục" }} value={value.procedureCode} change={(next) => set("procedureCode", next)} />
+                <FieldInput field={{ key: "procedureCode", label: "Mã thủ tục", required: true }} value={value.procedureCode} change={(next) => set("procedureCode", next)} />
                 <label data-field="categoryId" className="grid gap-2 text-sm font-semibold">
-                  Danh mục
+                  <span className="flex items-center gap-1 text-slate-900">
+                    <span>Danh mục</span>
+                    <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
+                  </span>
                   <select
                     aria-label="Danh mục"
-                    aria-invalid={Boolean(errors.categoryId)} aria-describedby={errors.categoryId ? 'category-error' : undefined}
-                    className={box}
+                    aria-invalid={Boolean(errors.categoryId)}
+                    aria-describedby={errors.categoryId ? 'category-error' : undefined}
+                    className={getInputBoxClass(Boolean(errors.categoryId))}
                     value={String(value.categoryId ?? "")}
                     onChange={(e) => set("categoryId", e.target.value ? Number(e.target.value) : null)}
                   >
@@ -299,13 +359,13 @@ export function ProcedureApiEditor({
                       </option>
                     ))}
                   </select>
-                  {errors.categoryId && <span id="category-error" className="text-xs text-red-800">{errors.categoryId}</span>}
+                  {errors.categoryId && <span id="category-error" className="flex items-center gap-1 text-xs font-medium text-red-700"><span>•</span><span>{errors.categoryId}</span></span>}
                 </label>
               </div>
-              <FieldInput field={{ key: "title", label: "Tên thủ tục" }} value={value.title} change={(next) => set("title", next)} />
+              <FieldInput field={{ key: "title", label: "Tên thủ tục", required: true }} value={value.title} change={(next) => set("title", next)} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "levelOfImplementation", label: "Cấp thực hiện" }} value={value.levelOfImplementation} change={(next) => set("levelOfImplementation", next)} />
-                <FieldInput field={{ key: "targetAudience", label: "Đối tượng thực hiện" }} value={value.targetAudience} change={(next) => set("targetAudience", next)} />
+                <FieldInput field={{ key: "levelOfImplementation", label: "Cấp thực hiện", required: true }} value={value.levelOfImplementation} change={(next) => set("levelOfImplementation", next)} />
+                <FieldInput field={{ key: "targetAudience", label: "Đối tượng thực hiện", required: true }} value={value.targetAudience} change={(next) => set("targetAudience", next)} />
               </div>
             </div>
 
@@ -326,17 +386,25 @@ export function ProcedureApiEditor({
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Thời hạn, Lệ phí & Kết quả</h4>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "feeSummary", label: "Tóm tắt lệ phí" }} value={value.feeSummary} change={(next) => set("feeSummary", next)} />
-                <FieldInput field={{ key: "processingTimeSummary", label: "Tóm tắt thời hạn" }} value={value.processingTimeSummary} change={(next) => set("processingTimeSummary", next)} />
+                <FieldInput field={{ key: "feeSummary", label: "Tóm tắt lệ phí", required: true }} value={value.feeSummary} change={(next) => set("feeSummary", next)} />
+                <FieldInput field={{ key: "processingTimeSummary", label: "Tóm tắt thời hạn", required: true }} value={value.processingTimeSummary} change={(next) => set("processingTimeSummary", next)} />
               </div>
               <label className="grid gap-2 text-sm font-semibold">
-                Kết quả giải quyết (mỗi kết quả một dòng)
+                <span className="flex items-center gap-1 text-slate-900">
+                  <span>Kết quả giải quyết (mỗi kết quả một dòng)</span>
+                  <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
+                </span>
                 <textarea
                   rows={2}
-                  className={box}
+                  className={getInputBoxClass(Boolean(errors['contentPayload.results.0']))}
                   value={Array.isArray(content.results) ? content.results.join("\n") : ""}
                   onChange={(e) => setContent("results", e.target.value.split("\n").filter((line) => line.trim()))}
                 />
+                {errors['contentPayload.results.0'] && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-red-700">
+                    <span>•</span><span>{errors['contentPayload.results.0']}</span>
+                  </span>
+                )}
               </label>
             </div>
           </div>
@@ -486,11 +554,14 @@ export function ProcedureApiEditor({
               cases={rows(content.cases).map(item => ({ code: String(item.caseCode ?? ""), name: String(item.caseName ?? "") }))}
               value={value.formDefinitions}
               disabled={disabled}
+              warnings={warnings}
+              onTemplateCreated={onTemplateCreated}
               change={(next) =>
                 set(
                   "formDefinitions",
                   next.map((row) => ({
                     ...row,
+                    formType: row.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE',
                     formTemplateId: row.formTemplateId || null,
                   })),
                 )

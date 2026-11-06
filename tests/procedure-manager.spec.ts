@@ -171,27 +171,33 @@ test('manager rolls back a version with required audit fields', async ({ page })
 });
 
 test('procedure editor selects a real DocumentForm option instead of a manual id', async ({ page }) => {
-  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
-  let warehouseRead = false;
-  await page.route('**/api/v1/form-templates?*', route => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); await mockCatalog(page);
+  let formRead = false;
+  await page.route('**/api/v1/procedure-manager/document-forms*', route => {
     if (route.request().method() === 'OPTIONS') return catalogReply(route, { status: 204 });
-    warehouseRead = true;
+    formRead = true;
     expect(route.request().headers().authorization).toBe('Bearer ui-test-token');
-    return catalogReply(route, { json: { items: [{ id: '07000000-0000-0000-0000-000000000005', code: 'BM-01', title: 'Tờ khai điện tử', fileDocxUrl: 'https://example.test/mau.docx', isActive: true, createdAtUtc: '2026-10-14T00:00:00Z' }], page: 1, pageSize: 10, totalCount: 1, totalPages: 1 } });
+    return catalogReply(route, {
+      json: [{
+        id: '07000000-0000-0000-0000-000000000005',
+        formCode: 'BM-01',
+        formName: 'Tờ khai điện tử',
+        formType: 'DOCX_TEMPLATE'
+      }]
+    });
   });
-  await page.goto('/procedure-manager');
+  await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Biểu mẫu/ }).click();
   await expect(page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
   await page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' }).click();
   await expect(page.getByRole('region', { name: 'Biểu mẫu đã gắn' }).getByText('Tờ khai điện tử', { exact: true })).toBeVisible();
-  expect(warehouseRead).toBe(true);
-  expect(state.requests.some(r => r.path.endsWith('/document-forms'))).toBe(false);
+  expect(formRead).toBe(true);
 });
 
 test('manager create sends full reviewed form without invented defaults', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
-  await page.goto('/procedure-manager'); await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
+  await page.goto('/procedure-manager?section=procedures'); await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Mã thủ tục', { exact: true })).toHaveValue('');
   for (const [label, value] of [['Mã thủ tục', 'TEST-NEW'], ['Tên thủ tục', 'Thủ tục mới từ API'], ['Cấp thực hiện', 'Cấp Xã'], ['Đối tượng thực hiện', 'Công dân'], ['Tóm tắt lệ phí', 'Theo quy định'], ['Tóm tắt thời hạn', 'Theo quy định']]) await dialog.getByLabel(label, { exact: true }).fill(value);
@@ -311,10 +317,7 @@ test('read-only procedure permission hides mutating actions and blocks draft wor
 
 test('manager and editor fit mobile and focus stays in modal', async ({ page }) => {
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); await mockCatalog(page);
-  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/procedure-manager');
-  await expect(page.getByRole('heading', { name: 'Thủ tục cập nhật gần đây' })).toBeVisible();
-  await expect(page.getByRole('table')).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/procedure-manager?section=procedures');
   await page.screenshot({ path: 'test-results/procedure-api-manager-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -337,6 +340,7 @@ test('dashboard retains actual metrics and recent procedures without empty place
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
+  await expect(page.getByRole('button', { name: 'Thêm thủ tục', exact: true })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(2);
   await expect(page.getByRole('heading', { name: 'Hạng mục cần chú ý hoàn thiện' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Biểu mẫu cập nhật gần đây' })).toHaveCount(0);

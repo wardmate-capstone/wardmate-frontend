@@ -89,7 +89,15 @@ export const procedureApi = {
   retryDraft: async (id: string, revision: string) => draftSchema.parse((await api.post(`${drafts}/${id}/retry`, { revision })).data),
   publishDraft: async (id: string, revision: string) => detailSchema.parse((await api.post(`${drafts}/${id}/publish`, { revision, confirmed: true })).data),
   deleteDraft: async (id: string) => { await api.delete(`${drafts}/${id}`); },
-  documentForms: async (searchCode = '', signal?: AbortSignal) => z.array(documentFormSchema).parse((await api.get(catalogPath('/api/v1/procedure-manager/document-forms'), { params: { page: 1, pageSize: 50, searchCode: searchCode || undefined }, signal })).data),
+  documentForms: async (searchCode = '', page = 1, pageSize = 50, signal?: AbortSignal) =>
+    z.array(documentFormSchema).parse(
+      (
+        await api.get(catalogPath('/api/v1/procedure-manager/document-forms'), {
+          params: { page, pageSize, searchCode: searchCode || undefined },
+          signal,
+        })
+      ).data
+    ),
   source: async (id: string, draft = false) => {
     return sourceLink((await api.get(draft ? `${drafts}/${id}/source` : catalogPath(`/api/v1/procedures/${id}/source`), { skipAuth: !draft })).data);
   },

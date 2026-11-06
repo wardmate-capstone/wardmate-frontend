@@ -66,7 +66,11 @@ export async function mockCatalog(page: Page) {
       }
       if (method === 'PUT') {
         if (state.conflict) return reply({ title: 'Bản nháp đã thay đổi. Vui lòng tải lại.', code: 'draft.conflict' }, 409);
-        state.revision = savedRevision; return reply(draft());
+        state.revision = savedRevision;
+        if (body?.payload && typeof body.payload === 'object') {
+          state.detail = { ...state.detail, ...body.payload } as ProcedureDetail;
+        }
+        return reply(draft());
       }
       state.draftReads++;
       if (state.queued && ['Queued', 'Processing'].includes(state.draftStatus) && state.draftReads > 1) state.draftStatus = 'NeedsReview';
