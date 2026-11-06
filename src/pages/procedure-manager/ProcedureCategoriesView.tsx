@@ -25,8 +25,10 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
   const lock = useRef(false);
   const visibleCategories = useMemo(() => {
     const keyword = search.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    if (!keyword) return categories;
-    return categories.filter((category) =>
+    // S\u1eafp x\u1ebfp theo m\u00e3 t\u0103ng d\u1ea7n \u0111\u1ec3 danh s\u00e1ch \u1ed5n \u0111\u1ecbnh, d\u1ec5 d\u00f2
+    const sorted = [...categories].sort((a, b) => a.id - b.id);
+    if (!keyword) return sorted;
+    return sorted.filter((category) =>
       `${category.categoryName} ${category.description ?? ''}`
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -77,75 +79,98 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative block w-full sm:max-w-md">
           <span className="sr-only">Tìm danh mục</span>
-          <MagnifyingGlass size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <MagnifyingGlass size={18} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm danh mục..."
-            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+            placeholder="Tìm theo tên hoặc mô tả..."
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-700 focus:ring-2 focus:ring-red-100"
           />
         </label>
-        {canManage && <Button className="shrink-0" onClick={() => open(null)}>
-          <Plus size={18} /> Thêm danh mục
+        <p className="text-sm text-slate-500" aria-live="polite">
+          {search.trim()
+            ? <><span className="font-semibold text-slate-900">{visibleCategories.length}</span> / {categories.length} danh mục</>
+            : <><span className="font-semibold text-slate-900">{categories.length}</span> danh mục</>}
+        </p>
+        {canManage && <Button className="h-11 min-h-0 shrink-0 gap-1.5 px-4 sm:ml-auto" onClick={() => open(null)}>
+          <Plus size={18} weight="bold" aria-hidden /> Thêm danh mục
         </Button>}
       </div>
 
-      {/* Categories Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleCategories.map((cat) => (
-          <div
-            key={cat.id}
-            className="admin-card p-5 space-y-3 transition-all hover:border-red-200 hover:shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <div className="grid size-10 place-items-center rounded-xl bg-red-50 text-red-800">
-                <FolderSimple size={22} weight="duotone" />
-              </div>
-              <span className="font-mono text-xs font-bold text-slate-400">
-                #{cat.id}
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 line-clamp-1">{cat.categoryName}</h3>
-              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                {cat.description || 'Chưa có mô tả chi tiết cho lĩnh vực này.'}
-              </p>
-            </div>
-            {canManage && <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <Button size="small" variant="outline" className="flex-1" onClick={() => open(cat)}>
-                <PencilSimple size={15} /> Chỉnh sửa
-              </Button>
-              <Button
-                size="small"
-                variant="ghost"
-                className="text-slate-600 hover:bg-red-50 hover:text-red-700"
-                onClick={() => {
-                  setDeleting(cat);
-                  setDeleteError('');
-                }}
-              >
-                <Trash size={15} /> Xóa
-              </Button>
-            </div>}
-          </div>
-        ))}
+      {/* Bảng danh mục */}
+      <section className="admin-card overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <caption className="sr-only">Danh sách danh mục thủ tục</caption>
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th scope="col" className="w-20 px-4 py-3">Mã</th>
+                <th scope="col" className="px-4 py-3">Tên danh mục</th>
+                <th scope="col" className="px-4 py-3">Mô tả</th>
+                {canManage && <th scope="col" className="w-28 px-4 py-3 text-right"><span className="sr-only">Thao tác</span></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleCategories.map((cat) => (
+                <tr key={cat.id} className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/70">
+                  <td className="px-4 py-3">
+                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-500">#{cat.id}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800">
+                        <FolderSimple size={17} weight="duotone" aria-hidden />
+                      </span>
+                      <span className="font-semibold text-slate-900">{cat.categoryName}</span>
+                    </div>
+                  </td>
+                  <td className="max-w-md px-4 py-3">
+                    {cat.description
+                      ? <p className="line-clamp-2 text-slate-600">{cat.description}</p>
+                      : <p className="italic text-slate-400">Chưa có mô tả</p>}
+                  </td>
+                  {canManage && <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        aria-label="Chỉnh sửa"
+                        title="Chỉnh sửa"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                        onClick={() => open(cat)}
+                      >
+                        <PencilSimple size={18} aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Xóa"
+                        title="Xóa"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                        onClick={() => {
+                          setDeleting(cat);
+                          setDeleteError('');
+                        }}
+                      >
+                        <Trash size={18} aria-hidden />
+                      </button>
+                    </div>
+                  </td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {!categories.length && (
-          <div className="col-span-full py-12 text-center text-sm text-slate-500 admin-card">
-            Chưa có danh mục thủ tục.
-          </div>
+          <p className="py-12 text-center text-sm text-slate-500">Chưa có danh mục thủ tục.</p>
         )}
         {!!categories.length && !visibleCategories.length && (
-          <div className="col-span-full py-12 text-center text-sm text-slate-500 admin-card">
-            Không tìm thấy danh mục phù hợp.
-          </div>
+          <p className="py-12 text-center text-sm text-slate-500">Không tìm thấy danh mục phù hợp.</p>
         )}
-      </div>
+      </section>
 
       {/* Modal Thêm / Chỉnh sửa */}
       <Modal
