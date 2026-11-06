@@ -14,6 +14,7 @@ import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/usePro
 import { getPublicWards } from '@/lib/api';
 import {
   useCitizenApplications,
+  useCitizenApplicationsInfinite,
   useSubmitApplicationMutation,
   useResubmitApplicationMutation,
   useCreateApplicationMutation,
@@ -101,6 +102,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   // TanStack Query: Lấy danh sách hồ sơ công dân từ backend
   const [dossierPage, setDossierPage] = useState(1);
   const citizenAppsQuery = useCitizenApplications(dossierPage, 50);
+  // Danh sách "Hồ sơ của tôi" tải dần khi cuộn xuống (20 hồ sơ mỗi lần)
+  const dossierListQuery = useCitizenApplicationsInfinite(20);
   const submitMutation = useSubmitApplicationMutation();
   const resubmitMutation = useResubmitApplicationMutation();
   const createMutation = useCreateApplicationMutation();
@@ -152,18 +155,15 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     setSelectedCaseCode(nextCase);
   }, [availableCases, requestedCaseCode, requestedProcedureId, selectedProcedureId]);
 
-  // Khởi tạo phường mặc định khi danh sách phường tải xong
-  useEffect(() => {
-    if (availableWards.length > 0 && !newWardCode) {
-      setNewWardCode(availableWards[0].code);
-    }
-  }, [availableWards, newWardCode]);
-
   // Map API items sang CitizenDossier
   const dossiers: CitizenDossier[] = useMemo(() => {
     if (!citizenAppsQuery.data?.items) return [];
     return citizenAppsQuery.data.items.map(mapSummaryDtoToCitizenDossier);
   }, [citizenAppsQuery.data?.items]);
+  const listedDossiers: CitizenDossier[] = useMemo(
+    () => (dossierListQuery.data?.pages ?? []).flatMap(page => (page.items ?? []).map(mapSummaryDtoToCitizenDossier)),
+    [dossierListQuery.data?.pages],
+  );
 
   // State Chi tiết hồ sơ đang chọn
   const [selectedDossierDetail, setSelectedDossierDetail] = useState<CitizenDossier | null>(null);
@@ -301,7 +301,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         return;
       }
       if (!values.wardCode) {
-        toast.error('Vui lòng chọn đơn vị hành chính tiếp nhận.');
+        toast.error('Phải chọn phường/xã tiếp nhận.');
         return;
       }
       if (availableCases.length > 0 && !values.caseCode) {
@@ -325,6 +325,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
       toast.success(`Đã khởi tạo thành công hồ sơ tiền kiểm ${created.applicationCode}!`);
       setIsCreateModalOpen(false);
+      setNewWardCode('');
       queryClient.invalidateQueries({ queryKey: workflowQueryKeys.citizenApplications() });
 
       // Mở ngay chi tiết hồ sơ vừa tạo
@@ -466,7 +467,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
         {/* NỘI DUNG CHÍNH (MAIN) */}
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
-          {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => void citizenAppsQuery.refetch()}>Thử tải lại hồ sơ</Button></div>}
+          {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => { void citizenAppsQuery.refetch(); void dossierListQuery.refetch(); }}>Thử tải lại hồ sơ</Button></div>}
           {/* Header Trang */}
           <div className="admin-page-heading mb-6">
             <div>
@@ -477,15 +478,6 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {activeSection === 'dashboard' && (
-                <button
-                  className="admin-primary-action"
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  <Plus size={18} weight="bold" /> Chuẩn bị hồ sơ mới
-                </button>
-              )}
               {isDossierSection && (
                 <button
                   className="admin-primary-action"
@@ -515,21 +507,20 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           {isDossierSection && (
             <CitizenDossiersView
               activeSection={activeSection}
-              dossiers={dossiers}
+              dossiers={listedDossiers}
               onOpenFeedback={handleOpenFeedback}
               onSelectSection={selectSection}
               onOpenDossierDetail={handleOpenDossierDetail}
-              onRefresh={() => void citizenAppsQuery.refetch()}
-              isRefreshing={citizenAppsQuery.isFetching}
-              isLoading={citizenAppsQuery.isPending}
-              pagination={citizenAppsQuery.data ? {
-                currentPage: dossierPage,
-                totalItems: citizenAppsQuery.data.total,
-                pageSize: 50,
-                isFetching: citizenAppsQuery.isFetching,
-                onPrevPage: () => setDossierPage(p => Math.max(1, p - 1)),
-                onNextPage: () => setDossierPage(p => p + 1),
-              } : undefined}
+              onRefresh={() => void dossierListQuery.refetch()}
+              isRefreshing={dossierListQuery.isFetching && !dossierListQuery.isFetchingNextPage}
+              isLoading={dossierListQuery.isPending}
+              infinite={{
+                totalItems: dossierListQuery.data?.pages[0]?.total ?? 0,
+                hasMore: Boolean(dossierListQuery.hasNextPage),
+                isLoadingMore: dossierListQuery.isFetchingNextPage,
+                isError: dossierListQuery.isError,
+                onLoadMore: () => { if (dossierListQuery.hasNextPage && !dossierListQuery.isFetchingNextPage) void dossierListQuery.fetchNextPage(); },
+              }}
             />
           )}
 

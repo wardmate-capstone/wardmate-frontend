@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import {
   MagnifyingGlass,
   Eye,
@@ -11,13 +11,12 @@ import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
 import { Button, TableSkeletonRows } from '@/components/ui';
 
-export interface CitizenPaginationProps {
-  currentPage: number;
+export interface CitizenInfiniteListProps {
   totalItems: number;
-  pageSize: number;
-  isFetching?: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  isError?: boolean;
+  onLoadMore: () => void;
 }
 
 interface CitizenDossiersViewProps {
@@ -29,7 +28,7 @@ interface CitizenDossiersViewProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   isLoading?: boolean;
-  pagination?: CitizenPaginationProps;
+  infinite?: CitizenInfiniteListProps;
 }
 
 export function CitizenDossiersView({
@@ -41,8 +40,22 @@ export function CitizenDossiersView({
   onRefresh,
   isRefreshing = false,
   isLoading = false,
-  pagination,
+  infinite,
 }: CitizenDossiersViewProps) {
+  // Cuộn tới cuối danh sách thì tự tải thêm hồ sơ
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef(infinite?.onLoadMore);
+  loadMoreRef.current = infinite?.onLoadMore;
+  const canLoadMore = Boolean(infinite?.hasMore && !infinite.isError);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !canLoadMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMoreRef.current?.();
+    }, { rootMargin: '200px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [canLoadMore, infinite?.isLoadingMore]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState('all');
 
@@ -242,37 +255,23 @@ export function CitizenDossiersView({
         </p>
       )}
 
-      {/* Bottom Pagination Footer */}
-      {pagination && (
-        <nav
-          aria-label="Phân trang danh sách hồ sơ"
-          className="flex flex-wrap items-center justify-between border-t border-slate-200 bg-slate-50/70 px-5 py-3 gap-3"
-        >
-          <div className="text-xs text-slate-600">
-            Trang <strong className="font-semibold text-slate-900">{pagination.currentPage}</strong> · <strong className="font-semibold text-slate-900">{pagination.totalItems}</strong> hồ sơ. Bộ lọc áp dụng trên trang hiện tại.
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="small"
-              disabled={pagination.currentPage <= 1 || pagination.isFetching}
-              onClick={pagination.onPrevPage}
-            >
-              Trang trước
-            </Button>
-            <span className="text-xs font-semibold px-2 text-slate-700">
-              Trang {pagination.currentPage}
+      {/* Cuộn vô hạn: điểm kích hoạt tải thêm + trạng thái */}
+      {infinite && !isLoading && (
+        <div ref={sentinelRef} className="flex flex-col items-center gap-2 border-t border-slate-100 px-5 py-4 text-xs text-slate-500">
+          {infinite.isLoadingMore ? (
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-red-700 border-r-transparent" />
+              Đang tải thêm hồ sơ…
             </span>
-            <Button
-              variant="outline"
-              size="small"
-              disabled={pagination.isFetching || pagination.currentPage * pagination.pageSize >= pagination.totalItems}
-              onClick={pagination.onNextPage}
-            >
-              Trang sau
-            </Button>
-          </div>
-        </nav>
+          ) : infinite.isError ? (
+            <Button variant="outline" size="small" onClick={infinite.onLoadMore}>Tải thêm không thành công · Thử lại</Button>
+          ) : infinite.hasMore ? (
+            <Button variant="ghost" size="small" onClick={infinite.onLoadMore}>Tải thêm hồ sơ</Button>
+          ) : null}
+          <p role="status">
+            Đã hiển thị <strong className="font-semibold text-slate-800">{dossiers.length}</strong> / <strong className="font-semibold text-slate-800">{infinite.totalItems}</strong> hồ sơ
+          </p>
+        </div>
       )}
     </section>
   );
