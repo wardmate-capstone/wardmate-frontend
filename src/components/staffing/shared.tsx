@@ -36,7 +36,34 @@ export function useStaffAccess() {
 }
 export function useStaffQuery<T>(key: readonly unknown[], fn: (signal: AbortSignal) => Promise<T>, enabled = true) {
   const { user } = useStaffAccess();
-  return useQuery({ queryKey: ['staffing', user?.id, ...key], queryFn: ({ signal }) => fn(signal), enabled: Boolean(user) && enabled, retry: false });
+  return useQuery({ queryKey: ['staffing', user?.id, user?.wardId, user?.roles.slice().sort().join('|'), user?.permissions.slice().sort().join('|'), ...key], queryFn: ({ signal }) => fn(signal), enabled: Boolean(user) && enabled, retry: false, refetchOnMount: 'always' });
+}
+export function useStaffOperation() {
+  const client = useQueryClient();
+  const lock = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [review, setReview] = useState(false);
+  const refresh = () => Promise.all(['staffing', 'workflow', 'document-form'].map(key => client.invalidateQueries({ queryKey: [key] })));
+  const run = async <T,>(fn: () => Promise<T>, success?: (value: T) => void, replay = false, readOnly = false) => {
+    if (lock.current || (review && !replay)) return;
+    lock.current = true; setBusy(true); setError('');
+    try {
+      const result = await fn();
+      if (!readOnly) await refresh(); setReview(false); success?.(result);
+      if (!readOnly) toast.success('Đã lưu thay đổi.');
+      return result;
+    } catch (e) {
+      const status = axios.isAxiosError(e) ? e.response?.status : undefined;
+      const needsReview = status === undefined || [403, 404, 409, 422].includes(status) || status >= 500;
+      setReview(needsReview); setError(staffingError(e));
+      if (needsReview) await refresh();
+    } finally { lock.current = false; setBusy(false); }
+  };
+  return { busy, error, review, run, refresh, reset: () => { setReview(false); setError(''); } };
+}
+export function OperationError({ operation }: { operation: { error: string; review: boolean } }) {
+  return operation.error ? <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{operation.error}</p>{operation.review && <p className="mt-2">Đọc lại dữ liệu trước khi thao tác tiếp. Nội dung đang soạn được giữ lại.</p>}</div> : null;
 }
 export function useStaffDirectory(enabled: boolean) {
   return useStaffQuery(['directory'], async () => {
@@ -59,9 +86,9 @@ export function Pager({ page, total, setPage }: { page: number; total: number; s
   return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
 }
 type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select'; options?: { value: string; label: string; disabled?: boolean }[]; max?: number };
-export function ActionForm({ title, description, fields, validate, submit, onClose, children }: {
+export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues }: {
   title: string; description?: string; fields: Field[]; validate?: (values: Record<string, string>) => string | undefined;
-  submit: (values: Record<string, string>) => Promise<unknown>; onClose: () => void; children?: ReactNode;
+  submit: (values: Record<string, string>) => Promise<unknown>; onClose: () => void; children?: ReactNode; defaultValues?: Record<string, string>;
 }) {
   const formId = useId();
   const client = useQueryClient();
@@ -69,7 +96,7 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const pendingFocus = useRef<string | null>(null);
-  const form = useForm<Record<string, string>>({ resolver: zodResolver(staffingFormSchema(fields)), defaultValues: Object.fromEntries(fields.map(f => [f.name, ''])) });
+  const form = useForm<Record<string, string>>({ resolver: zodResolver(staffingFormSchema(fields)), defaultValues: defaultValues ?? Object.fromEntries(fields.map(f => [f.name, ''])) });
   const busy = form.formState.isSubmitting;
   useEffect(() => {
     if (!busy && pendingFocus.current) { form.setFocus(pendingFocus.current); pendingFocus.current = null; }
@@ -105,7 +132,7 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
         setConflict(true);
         await Promise.all(['staffing', 'workflow', 'document-form'].map(key => client.invalidateQueries({ queryKey: [key] })));
       }
-      setError(status === 409 ? 'Dữ liệu hoặc trạng thái đã thay đổi/trùng lịch. Đã tải lại dữ liệu; đóng hộp thoại và kiểm tra trước khi thao tác lại.' : `${staffingError(e)}${review ? ' Đóng hộp thoại và kiểm tra dữ liệu mới nhất trước khi thao tác lại.' : ''}`);
+      setError(`${staffingError(e)}${review ? ' Đóng hộp thoại và kiểm tra dữ liệu mới nhất trước khi thao tác lại.' : ''}`);
     } finally { lock.current = false; }
   });
   return <Modal open onOpenChange={open => !open && !busy && onClose()} title={title} description={description} footer={<><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" form={formId} disabled={busy || conflict}>{busy ? 'Đang lưu…' : 'Xác nhận'}</Button></>}>
