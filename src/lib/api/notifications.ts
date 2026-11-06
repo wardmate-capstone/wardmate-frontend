@@ -50,12 +50,21 @@ export function isConnected(connection: HubConnection | null) {
  * Tránh trường hợp Backend gửi URL REST như "/applications/{id}" hoặc "/api/v1/..." làm người dùng bị 404.
  */
 export function resolveNotificationUrl(
-  notification: { actionUrl?: string | null; applicationId?: string | null },
+  notification: { actionUrl?: string | null; applicationId?: string | null; title?: string; content?: string; type?: string },
   roles?: string[]
 ): string {
   const isOfficer = Boolean(roles?.some((r) => r.includes('OFFICER') || r.includes('FRONT_DESK')));
   const isManager = Boolean(roles?.some((r) => r.includes('MANAGER')));
   const appId = notification.applicationId;
+  // Staffing v3 notifications currently carry no resource ID or actionUrl.
+  // Route to the matching list; never interpret a staffing event as a citizen application.
+  if (notification.type === 'SYSTEM_ALERT' && notification.title === 'Cập nhật lịch và nghỉ phép') {
+    const home = isManager ? '/manager' : isOfficer ? '/officer' : '/citizen';
+    if (!isManager && !isOfficer) return home;
+    if (notification.content?.includes('đơn nghỉ')) return `${home}?section=leaves`;
+    if (notification.content?.includes('đổi giờ ca')) return `${home}?section=shifts&view=changes`;
+    return `${home}?section=shifts&view=month`;
+  }
 
   // Nếu actionUrl là đường dẫn nội bộ hợp lệ của Frontend SPA
   if (
