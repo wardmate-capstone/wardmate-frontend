@@ -145,8 +145,8 @@ export function CitizenQrCodeView({
               </div>
             )}
 
-            {/* Danh sách thẻ hồ sơ (Có scrollbar mượt mà khi có 5-10+ hồ sơ) */}
-            <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
+            {/* Danh sách thẻ hồ sơ: khung cố định khoảng 3 thẻ, phần còn lại cuộn xuống */}
+            <div className="max-h-[340px] space-y-2 overflow-y-auto overscroll-contain pr-1.5 [scrollbar-color:var(--color-slate-300)_transparent] [scrollbar-width:thin]">
               {!filteredEligible.length ? (
                 <p className="py-6 text-center text-xs text-slate-500">
                   Không tìm thấy hồ sơ khớp với từ khóa.
