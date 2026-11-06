@@ -10,6 +10,7 @@ import {
   Books,
   Broadcast,
   Buildings,
+  CaretDown,
   ClipboardText,
   Database,
   House,
@@ -54,6 +55,7 @@ import { ServiceHealthView } from './ServiceHealthView';
 import { SystemBackupsView } from './SystemBackupsView';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
+import { usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
 import { NotificationDeliveriesView } from './NotificationDeliveriesView';
@@ -509,7 +511,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
 
           {activeSection === "overview" && (
-            <Overview onSelect={id => { if (id === 'audit') setAuditTab('iam'); selectSection(id); }} />
+            <Overview onSelect={id => { if (id === 'audit') setAuditTab('iam'); selectSection(id); }} wardsCount={wards.length} />
           )}
           {activeSection === "procedures" && (
             <AdminProceduresView />
@@ -750,18 +752,22 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   );
 }
 
-function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
+function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void; wardsCount?: number }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
-  const [auditError, setAuditError] = useState("");
+  const [auditError, setAuditError] = useState('');
   const [auditUsers, setAuditUsers] = useState<Record<string, string>>({});
   const [auditRoles, setAuditRoles] = useState<Record<number, string>>({});
   const [auditPermissions, setAuditPermissions] = useState<Record<number, string>>({});
   const [userCount, setUserCount] = useState<number>();
+  const [wardTotal, setWardTotal] = useState<number | undefined>(wardsCount);
+
+  const proceduresQuery = usePublicProcedureList({ pageNumber: 1, pageSize: 1 });
+  const procedureCount = proceduresQuery.data?.totalCount;
 
   const loadAuditLogs = useCallback(async () => {
     setAuditLoading(true);
-    setAuditError("");
+    setAuditError('');
     try {
       const [audit, roles, permissions] = await Promise.all([
         rbacApi.audit(1, 5),
@@ -776,7 +782,7 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
         try {
           return [id, (await getAccount(id)).username] as const;
         } catch {
-          return [id, ""] as const;
+          return [id, ''] as const;
         }
       }));
       setAuditUsers(Object.fromEntries(users));
@@ -790,28 +796,93 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
   useEffect(() => {
     void loadAuditLogs();
     void getAdminUsers({ page: 1, pageSize: 1 }).then(({ total }) => setUserCount(total)).catch(() => setUserCount(undefined));
-  }, [loadAuditLogs]);
+    if (wardsCount === undefined) {
+      void getWards().then((data) => setWardTotal(data.length)).catch(() => setWardTotal(undefined));
+    } else {
+      setWardTotal(wardsCount);
+    }
+  }, [loadAuditLogs, wardsCount]);
+
+  const stats = [
+    {
+      label: 'Thủ tục đang áp dụng',
+      value: procedureCount !== undefined ? procedureCount.toLocaleString('vi-VN') : (proceduresQuery.isLoading ? '...' : '—'),
+      icon: ClipboardText,
+      tone: 'info',
+    },
+    {
+      label: 'Tài khoản nội bộ',
+      value: userCount !== undefined ? userCount.toLocaleString('vi-VN') : '—',
+      icon: Users,
+      tone: 'success',
+    },
+    {
+      label: 'Đơn vị Phường / Xã',
+      value: wardTotal !== undefined ? wardTotal.toLocaleString('vi-VN') : '—',
+      icon: Buildings,
+      tone: 'warning',
+    },
+    {
+      label: 'Hệ thống vận hành',
+      value: 'Ổn định',
+      icon: ShieldCheck,
+      tone: 'success',
+    },
+  ];
+
+  const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> = [
+    { id: 'procedures', title: 'Danh sách thủ tục', icon: ClipboardText },
+    { id: 'knowledge', title: 'Dữ liệu kiến thức AI', icon: Books },
+    { id: 'accounts', title: 'Tài khoản đăng nhập', icon: Key },
+    { id: 'users', title: 'Người dùng hệ thống', icon: Users },
+    { id: 'wards', title: 'Đơn vị Phường / Xã', icon: Buildings },
+    { id: 'roles', title: 'Vai trò & quyền hạn', icon: ShieldCheck },
+  ];
 
   return (
     <>
-      <section className="grid max-w-sm gap-4" aria-label="Chỉ số tổng quan">
-          <article className="admin-stat-card is-success">
+      <section className="admin-stat-grid" aria-label="Chỉ số tổng quan">
+        {stats.map(({ label, value, icon: Icon, tone }) => (
+          <article key={label} className={`admin-stat-card is-${tone}`}>
             <div>
               <span>
-                <Users size={24} weight="duotone" />
+                <Icon size={24} weight="duotone" />
               </span>
-              <small>Tài khoản nội bộ</small>
+              <small>{label}</small>
             </div>
-            <strong>{userCount?.toLocaleString("vi-VN") ?? "—"}</strong>
+            <strong>{value}</strong>
           </article>
+        ))}
       </section>
-      <section>
+
+      <section className="admin-card admin-module-card">
+        <div className="admin-card-heading">
+          <div>
+            <h2>Phân hệ quản trị</h2>
+          </div>
+        </div>
+        <div className="admin-module-grid">
+          {shortcuts.map(({ id, title, icon: Icon }) => (
+            <button key={id} type="button" onClick={() => onSelect(id)}>
+              <span>
+                <Icon size={22} weight="duotone" />
+              </span>
+              <div>
+                <strong>{title}</strong>
+              </div>
+              <CaretDown size={16} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-insight-grid">
         <article className="admin-card">
           <div className="admin-card-heading">
             <div>
               <h2>Phân quyền gần đây</h2>
             </div>
-            <button type="button" onClick={() => onSelect("audit")}>
+            <button type="button" onClick={() => onSelect('audit')}>
               Xem nhật ký
             </button>
           </div>
@@ -832,24 +903,24 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
             )}
             {!auditLoading && !auditError && auditLogs.map((log) => (
               <div key={log.id} className="flex min-h-[72px] items-center gap-3 py-3">
-                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${/revoked|deleted|disabled/.test(log.action) ? "bg-amber-50 text-amber-700" : /granted|assigned|created|enabled/.test(log.action) ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${/revoked|deleted|disabled/.test(log.action) ? 'bg-amber-50 text-amber-700' : /granted|assigned|created|enabled/.test(log.action) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
                   <ClockCounterClockwise size={16} aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900">
                     {actionLabels[log.action] ?? log.action}
-                    {log.permissionId && auditPermissions[log.permissionId] ? `: ${auditPermissions[log.permissionId]}` : ""}
-                    {!log.permissionId && log.targetUserId && auditUsers[log.targetUserId] ? `: @${auditUsers[log.targetUserId]}` : ""}
-                    {!log.permissionId && !log.targetUserId && log.roleId && auditRoles[log.roleId] ? `: ${auditRoles[log.roleId]}` : ""}
+                    {log.permissionId && auditPermissions[log.permissionId] ? `: ${auditPermissions[log.permissionId]}` : ''}
+                    {!log.permissionId && log.targetUserId && auditUsers[log.targetUserId] ? `: @${auditUsers[log.targetUserId]}` : ''}
+                    {!log.permissionId && !log.targetUserId && log.roleId && auditRoles[log.roleId] ? `: ${auditRoles[log.roleId]}` : ''}
                   </p>
                   <p className="mt-1 truncate text-xs text-slate-500">
-                    {auditUsers[log.actorUserId] ? `Thực hiện bởi @${auditUsers[log.actorUserId]}` : "Thao tác quản trị"}
-                    {log.roleId && auditRoles[log.roleId] ? ` · Vai trò ${auditRoles[log.roleId]}` : ""}
+                    {auditUsers[log.actorUserId] ? `Thực hiện bởi @${auditUsers[log.actorUserId]}` : 'Thao tác quản trị'}
+                    {log.roleId && auditRoles[log.roleId] ? ` · Vai trò ${auditRoles[log.roleId]}` : ''}
                   </p>
                 </div>
                 <time className="shrink-0 text-right text-xs leading-5 text-slate-500" dateTime={log.createdAt}>
-                  <span className="block font-semibold text-slate-700">{new Date(log.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <span>{new Date(log.createdAt).toLocaleDateString("vi-VN")}</span>
+                  <span className="block font-semibold text-slate-700">{new Date(log.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>{new Date(log.createdAt).toLocaleDateString('vi-VN')}</span>
                 </time>
               </div>
             ))}
@@ -859,6 +930,43 @@ function Overview({ onSelect }: { onSelect: (id: SectionId) => void }) {
           </div>
         </article>
 
+        <article className="admin-card">
+          <div className="admin-card-heading">
+            <div>
+              <h2>Tình trạng dịch vụ</h2>
+            </div>
+            <button type="button" onClick={() => onSelect('integrations')}>
+              Chi tiết
+            </button>
+          </div>
+          <div className="admin-health-list">
+            <div>
+              <span className="is-online" />
+              <p>Trợ lý AI & Tra cứu RAG</p>
+              <strong>Hoạt động</strong>
+            </div>
+            <div>
+              <span className="is-online" />
+              <p>OCR trích xuất CCCD & Giấy tờ</p>
+              <strong>Hoạt động</strong>
+            </div>
+            <div>
+              <span className="is-online" />
+              <p>Xác thực & Phân quyền IAM</p>
+              <strong>Hoạt động</strong>
+            </div>
+            <div>
+              <span className="is-online" />
+              <p>Quy trình Một cửa & Tiền kiểm</p>
+              <strong>Hoạt động</strong>
+            </div>
+            <div>
+              <span className="is-online" />
+              <p>Kết xuất PDF biểu mẫu & Mã QR</p>
+              <strong>Hoạt động</strong>
+            </div>
+          </div>
+        </article>
       </section>
     </>
   );

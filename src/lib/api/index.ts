@@ -441,6 +441,14 @@ export async function getAdminUsers(filter: DirectoryFilter = {}): Promise<Direc
   return response.data;
 }
 
+export async function getUsers(filter: DirectoryFilter = {}): Promise<DirectoryPage> {
+  const response = await api.get<DirectoryPage>('/api/v1/users', {
+    ...cookieConfig,
+    params: filter,
+  });
+  return response.data;
+}
+
 export async function assignOfficerCategories(userId: string, categories: number[]): Promise<void> {
   const sanitized = Array.from(new Set(categories))
     .filter(id => Number.isInteger(id) && id > 0)
