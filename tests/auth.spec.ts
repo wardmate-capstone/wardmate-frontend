@@ -269,3 +269,67 @@ test('two tabs serialize cookie rotation and share logout invalidation without s
   })).toBe(false);
   await second.close();
 });
+
+test('tự động làm mới token sau khi access token hết hạn 15 phút mà không bị đăng xuất (FE-05 / KB-02 #10)', async ({ page, context }) => {
+  let refreshes = 0;
+  let accessCount = 0;
+  let currentToken = 'mock-access-initial';
+
+  await mock(context, async (route) => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+
+    if (path === '/api/v1/auth/login') {
+      return reply(route, 200, tokenResponse(currentToken), cookie);
+    }
+
+    if (path === '/api/v1/auth/refresh-token') {
+      refreshes++;
+      expect(req.headers()['x-csrf-protection']).toBe('1');
+      expect(req.headers().cookie).toContain('refreshToken=mock-refresh');
+      // Trả về access token mới
+      currentToken = 'mock-renewed-token-v2';
+      return reply(route, 200, tokenResponse(currentToken), cookie);
+    }
+
+    if (path === '/mock-private') {
+      accessCount++;
+      const authHeader = req.headers().authorization;
+      // Mô phỏng: sau 15 phút, token ban đầu mock-access-initial bị server từ chối 401 (hết hạn)
+      if (authHeader === 'Bearer mock-access-initial') {
+        return reply(route, 401, { code: 'auth.expired_token', message: 'Token đã hết hạn' });
+      }
+      // Khi token mới mock-renewed-token-v2 được gửi lên -> chấp nhận 200
+      if (authHeader === 'Bearer mock-renewed-token-v2') {
+        return reply(route, 200, { ok: true, refreshed: true });
+      }
+      return reply(route, 401, { message: 'Unauthorized' });
+    }
+
+    return reply(route, 404, {});
+  });
+
+  // 1. Đăng nhập vào hệ thống
+  await page.goto('/dang-nhap?returnTo=%2Fcitizen');
+  await fillLogin(page);
+  await expect(page).toHaveURL(/\/citizen$/);
+  expect(refreshes).toBe(0);
+
+  // 2. Gọi request API sau 15 phút (mô phỏng token ban đầu đã hết hạn)
+  // Kỳ vọng: Request gặp 401 -> Axios interceptor tự động gọi refresh-token -> nhận token mới -> retry thành công 200
+  const status = await requestPrivate(page);
+  expect(status).toBe(200);
+
+  // Xác nhận: Đã tự động gọi refresh-token 1 lần
+  expect(refreshes).toBe(1);
+  expect(accessCount).toBe(2); // 1 lần bị 401, 1 lần retry thành công
+
+  // Xác nhận: Người dùng KHÔNG bị văng ra màn hình đăng nhập
+  await expect(page).toHaveURL(/\/citizen$/);
+  await expect(page.getByRole('heading', { name: 'Tổng quan công dân', exact: true })).toBeVisible();
+
+  // Xác nhận token mới tiếp tục dùng cho các request tiếp theo mà không cần refresh lại
+  const secondStatus = await requestPrivate(page);
+  expect(secondStatus).toBe(200);
+  expect(refreshes).toBe(1); // Không tăng thêm
+});
