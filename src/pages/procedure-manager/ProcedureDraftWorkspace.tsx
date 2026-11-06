@@ -189,6 +189,23 @@ export function PdfSource({
   );
 }
 
+function normalizeDraftPayload(rawPayload: Record<string, unknown>): Record<string, unknown> {
+  if (!rawPayload || typeof rawPayload !== 'object') return rawPayload;
+  const forms = (rawPayload as { formDefinitions?: unknown[] }).formDefinitions;
+  if (!Array.isArray(forms)) return rawPayload;
+  return {
+    ...rawPayload,
+    formDefinitions: forms.map((f: unknown) => {
+      const item = (f && typeof f === 'object' ? f : {}) as Record<string, unknown>;
+      return {
+        ...item,
+        formType: item.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE',
+        formTemplateId: item.formTemplateId || null,
+      };
+    }),
+  };
+}
+
 export function ProcedureDraftWorkspace({
   categories,
   onPublished,
@@ -232,6 +249,8 @@ export function ProcedureDraftWorkspace({
   const [fullscreenPreviewPdf, setFullscreenPreviewPdf] = useState(false);
   const [showWarningsModal, setShowWarningsModal] = useState(false);
   const [deleting, setDeleting] = useState<{ id: string; name: string }>();
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const previewController = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const lock = useRef(false);
@@ -267,7 +286,7 @@ export function ProcedureDraftWorkspace({
         const next = await procedureApi.draft(id, controller.signal);
         if (controller.signal.aborted) return;
         setDraft(next);
-        setPayload(next.payload);
+        setPayload(normalizeDraftPayload(next.payload));
         setLoading(false);
         if (["Queued", "Processing"].includes(next.status))
           timer = setTimeout(load, 4000);
@@ -377,7 +396,8 @@ export function ProcedureDraftWorkspace({
                   className="h-9 px-2 text-slate-700 hover:bg-slate-100"
                   disabled={busy}
                   onClick={() => {
-                    if (dirty && !window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát về danh sách?")) {
+                    if (dirty) {
+                      setConfirmLeaveOpen(true);
                       return;
                     }
                     select();
@@ -463,6 +483,24 @@ export function ProcedureDraftWorkspace({
                       }}
                       categories={categories}
                       disabled={!editable || busy}
+                      warnings={draft.warnings}
+                      onTemplateCreated={async (newTemplate, updatedForms) => {
+                        const updatedPayload = { ...payload, formDefinitions: updatedForms };
+                        setPayload(updatedPayload);
+                        try {
+                          const next = await procedureApi.saveDraft(
+                            draft.id,
+                            draft.revision,
+                            updatedPayload,
+                          );
+                          setDraft(next);
+                          setPayload(next.payload);
+                          setDirty(false);
+                          toast.success(`Đã tạo phôi và tự động lưu vào bản nháp cho biểu mẫu "${newTemplate.title}".`);
+                        } catch {
+                          setDirty(true);
+                        }
+                      }}
                     />
 
                     <div className="mt-8 border-t border-slate-100 pt-4">
@@ -498,11 +536,7 @@ export function ProcedureDraftWorkspace({
                           size="small"
                           disabled={!dirty || busy}
                           onClick={() => {
-                            if (window.confirm("Hủy mọi thay đổi chưa lưu và khôi phục nội dung ban đầu?")) {
-                              setPayload(draft.payload);
-                              setDirty(false);
-                              setConfirmed(false);
-                            }
+                            setConfirmResetOpen(true);
                           }}
                         >
                           Hủy thay đổi
@@ -564,7 +598,7 @@ export function ProcedureDraftWorkspace({
                               void run(async () => {
                                 setPublishingDraft(true);
                                 try {
-                                  const validated = validateProcedure(payload);
+                                  const validated = validateProcedure(normalizeDraftPayload(payload));
                                   const saved = await procedureApi.saveDraft(
                                     draft.id,
                                     draft.revision,
@@ -584,7 +618,18 @@ export function ProcedureDraftWorkspace({
                                       .catch(() => undefined);
                                     if (latest?.status !== "Published") throw e;
                                   }
-                                  toast.success("Đã xuất bản thủ tục thành công.");
+                                  const forms = (payload as { formDefinitions?: Array<{ formTemplateId?: unknown; formName?: string }> }).formDefinitions;
+                                  const unlinked = Array.isArray(forms) ? forms.filter((f) => !f.formTemplateId) : [];
+                                  if (unlinked.length > 0) {
+                                    const sampleNames = unlinked.map(f => f.formName ? `"${f.formName}"` : '').filter(Boolean).slice(0, 2);
+                                    const namesHint = sampleNames.length ? `: ${sampleNames.join(', ')}${unlinked.length > 2 ? '...' : ''}` : '';
+                                    toast.warning(
+                                      `Đã xuất bản thủ tục thành công. Lưu ý: Có ${unlinked.length} biểu mẫu chưa gắn tệp phôi DOCX${namesHint}. Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu".`,
+                                      { duration: 8000 }
+                                    );
+                                  } else {
+                                    toast.success("Đã xuất bản thủ tục thành công.");
+                                  }
                                   select();
                                   list.refresh();
                                   onPublished?.();
@@ -629,6 +674,67 @@ export function ProcedureDraftWorkspace({
             </div>
           </Modal>
         )}
+
+        {/* Modal xác nhận thoát về danh sách khi có thay đổi chưa lưu */}
+        <Modal
+          open={confirmLeaveOpen}
+          onOpenChange={setConfirmLeaveOpen}
+          title="Bỏ thay đổi chưa lưu?"
+          description="Các thông tin bạn vừa chỉnh sửa trên bản nháp sẽ không được lưu nếu bạn quay lại danh sách."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setConfirmLeaveOpen(false)}>
+                Tiếp tục chỉnh sửa
+              </Button>
+              <Button
+                className="bg-red-700 text-white hover:bg-red-800"
+                onClick={() => {
+                  setConfirmLeaveOpen(false);
+                  select();
+                }}
+              >
+                Rời khỏi và bỏ thay đổi
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Bạn có thể bấm <strong>Lưu bản nháp</strong> trước khi rời đi để giữ lại các thông tin đã đối soát.
+          </p>
+        </Modal>
+
+        {/* Modal xác nhận hủy thay đổi và khôi phục nội dung ban đầu */}
+        <Modal
+          open={confirmResetOpen}
+          onOpenChange={setConfirmResetOpen}
+          title="Khôi phục nội dung ban đầu?"
+          description="Toàn bộ nội dung bạn vừa chỉnh sửa sẽ bị hủy và khôi phục về dữ liệu trích xuất ban đầu từ tệp PDF gốc."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setConfirmResetOpen(false)}>
+                Tiếp tục chỉnh sửa
+              </Button>
+              <Button
+                className="bg-red-700 text-white hover:bg-red-800"
+                onClick={() => {
+                  if (draft) {
+                    setPayload(draft.payload);
+                    setDirty(false);
+                    setConfirmed(false);
+                    setConfirmResetOpen(false);
+                    toast.info("Đã khôi phục nội dung ban đầu của bản nháp.");
+                  }
+                }}
+              >
+                Xác nhận hủy thay đổi
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Thao tác này sẽ đặt lại tất cả các trường thông tin về trạng thái trích xuất ban đầu.
+          </p>
+        </Modal>
         <ConfirmDeleteModal
           open={!!deleting}
           onOpenChange={(open) => {
@@ -804,13 +910,39 @@ export function ProcedureDraftWorkspace({
                 )}
                 <details open className="rounded-xl border border-slate-200 bg-white">
                   <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-700">Kiểm tra thông tin đã nhận diện</summary>
-                  <div className="border-t border-slate-200 p-4"><ProcedureApiEditor validationError={validationError} value={preview.payload} onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }} categories={categories} disabled={!can("procedure.publish") || busy} /></div>
+                  <div className="border-t border-slate-200 p-4">
+                    <ProcedureApiEditor
+                      validationError={validationError}
+                      value={preview.payload}
+                      onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }}
+                      categories={categories}
+                      disabled={!can("procedure.publish") || busy}
+                      warnings={preview.warnings}
+                    />
+                  </div>
                 </details>
                 {can("procedure.publish") && (
                   <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
                     <p className="text-sm leading-6 text-red-950"><strong>Kiểm tra kỹ trước khi công khai.</strong> Nếu trùng mã thủ tục, nội dung hiện tại sẽ được thay bằng nội dung này.</p>
                     <label className="flex items-start gap-3 text-sm font-medium text-slate-800"><input type="checkbox" className="mt-1" checked={previewConfirmed} disabled={busy} onChange={(event) => setPreviewConfirmed(event.target.checked)} /><span>Tôi đã kiểm tra nội dung và đồng ý công khai.</span></label>
-                    <Button disabled={!previewConfirmed || busy} loading={busy} onClick={() => void run(async () => { const data = validateProcedure(preview.payload); await procedureApi.publish(data); toast.success("Đã công khai thủ tục."); resetUpload(); onPublished(); })}>Công khai thủ tục</Button>
+                    <Button disabled={!previewConfirmed || busy} loading={busy} onClick={() => void run(async () => {
+                      const data = validateProcedure(normalizeDraftPayload(preview.payload));
+                      await procedureApi.publish(data);
+                      const forms = (preview.payload as { formDefinitions?: Array<{ formTemplateId?: unknown; formName?: string }> }).formDefinitions;
+                      const unlinked = Array.isArray(forms) ? forms.filter((f) => !f.formTemplateId) : [];
+                      if (unlinked.length > 0) {
+                        const sampleNames = unlinked.map(f => f.formName ? `"${f.formName}"` : '').filter(Boolean).slice(0, 2);
+                        const namesHint = sampleNames.length ? `: ${sampleNames.join(', ')}${unlinked.length > 2 ? '...' : ''}` : '';
+                        toast.warning(
+                          `Đã công khai thủ tục thành công. Lưu ý: Có ${unlinked.length} biểu mẫu chưa gắn tệp phôi DOCX${namesHint}. Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu".`,
+                          { duration: 8000 }
+                        );
+                      } else {
+                        toast.success("Đã công khai thủ tục thành công.");
+                      }
+                      resetUpload();
+                      onPublished();
+                    })}>Công khai thủ tục</Button>
                   </div>
                 )}
                 </div>
