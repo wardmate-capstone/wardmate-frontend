@@ -176,11 +176,28 @@ export function validateChecklistItems(
 }
 export function getProcedureIssues(value: unknown): ProcedureIssue[] {
   const result = saveSchema.safeParse(value);
-  return result.success ? [] : result.error.issues.map(issue => {
+  if (result.success) return [];
+  const rawIssues = result.error.issues.map(issue => {
     const path = issue.path.join('.');
     const message = issue.code === 'custom' ? issue.message : path.endsWith('.quantity') ? 'Nhập số nguyên từ 1 đến 2147483647.' : path === 'title' ? 'Tên thủ tục phải có từ 10 đến 500 ký tự.' : path === 'procedureCode' ? 'Mã thủ tục phải có từ 1 đến 50 ký tự.' : undefined;
     return procedureIssue(path, message);
-  }).sort((a, b) => a.step - b.step);
+  });
+
+  // Khử trùng lặp issue theo path: giữ thông báo cụ thể nhất cho mỗi trường
+  const uniqueIssues = new Map<string, ProcedureIssue>();
+  for (const item of rawIssues) {
+    const existing = uniqueIssues.get(item.path);
+    if (!existing) {
+      uniqueIssues.set(item.path, item);
+    } else {
+      const isGeneric = existing.message.startsWith('Vui lòng nhập') && existing.message.endsWith('hợp lệ.');
+      if (isGeneric) {
+        uniqueIssues.set(item.path, item);
+      }
+    }
+  }
+
+  return Array.from(uniqueIssues.values()).sort((a, b) => a.step - b.step);
 }
 export class ProcedureValidationError extends Error {
   constructor(public issues: ProcedureIssue[]) {

@@ -75,8 +75,12 @@ export function ProcedureApiDetail({
     try {
       await action();
     } catch (e) {
-      if (e instanceof ProcedureValidationError) setValidationError(e);
-      setError(procedureError(e));
+      if (e instanceof ProcedureValidationError) {
+        setValidationError(e);
+        setError("");
+      } else {
+        setError(procedureError(e));
+      }
     } finally {
       setBusy(false);
       lock.current = false;

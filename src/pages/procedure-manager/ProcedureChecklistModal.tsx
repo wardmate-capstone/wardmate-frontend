@@ -217,6 +217,16 @@ export function ProcedureChecklistModal({
 
           {!isConflict && <ProcedureFeedback error={error} />}
 
+          <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3.5 text-xs text-sky-950 flex items-start gap-2.5">
+            <span className="text-base shrink-0 select-none">💡</span>
+            <div className="space-y-1">
+              <p className="font-bold">Lưu ý phân biệt Giấy tờ đính kèm và Biểu mẫu:</p>
+              <p className="leading-relaxed text-sky-900">
+                Khu vực này dùng để quản lý <strong>danh mục giấy tờ, chứng từ công dân cần nộp hoặc xuất trình</strong> (như CMND/CCCD, Giấy chứng sinh, Hộ khẩu...). Mẫu đơn, tờ khai điện tử (phôi Word DOCX) được liên kết tại mục <strong>&ldquo;Biểu mẫu&rdquo;</strong> trong màn hình Chỉnh sửa thủ tục.
+              </p>
+            </div>
+          </div>
+
           {/* Nhóm thông tin pháp lý ban hành */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
