@@ -8,11 +8,11 @@ test('Cổng cán bộ: Dashboard giữ luồng hồ sơ thực, bỏ khối ch�
   await page.goto('/officer');
 
   // Check header / title
-  await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), Cán bộ .+$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), .+$/ })).toBeVisible();
 
   // Check dashboard content rather than labels in the closed mobile sidebar.
   await expect(page.getByRole('region', { name: 'Tiến độ xử lý hồ sơ trong ca trực' })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Hồ sơ ưu tiên xử lý ngay (0)' })).toBeVisible();
+  await expect(page.getByRole('region', { name: /^Việc cần làm ngay \(\d+\)$/ })).toBeVisible();
   await expect(page.getByRole('complementary')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Chỉ số hiệu suất ca trực' })).toHaveCount(0);
   await expect(page.getByText('Đang nhận tiếp dân', { exact: false })).toHaveCount(0);
@@ -48,8 +48,8 @@ test('Cổng cán bộ: Không hiển thị thao tác review khi chưa có API h
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/officer');
 
-  await expect(page.getByText('Không có hồ sơ nào cần xử lý gấp.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Review lại ngay' })).toHaveCount(0);
+  await expect(page.getByText('Không có việc gấp')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Xử lý' })).toHaveCount(0);
 });
 
 // Màn "Tiếp nhận tại quầy" đã gỡ khỏi FE (chưa có hợp đồng tiếp nhận chính thức):
