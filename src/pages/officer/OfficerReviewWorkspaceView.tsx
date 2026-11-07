@@ -42,7 +42,7 @@ interface Props {
 }
 
 const commentSchema = z.object({
-  targetId: z.string().min(1, 'Chọn mục cần nhận xét.').max(100, 'Mã mục tối đa 100 ký tự.'),
+  targetId: z.string().min(1, 'Chọn mục cần nhận xét.').max(100, 'Mục giấy tờ không hợp lệ. Vui lòng tải lại hồ sơ.'),
   commentText: z.string().trim().min(1, 'Nhập nội dung nhận xét.').max(4000, 'Nhận xét tối đa 4.000 ký tự.'),
 });
 
@@ -60,7 +60,7 @@ const QUICK_COMMENT_TEMPLATES = [
 ];
 
 const QUICK_REVISION_TEMPLATES = [
-  'Ảnh chụp/bản scan giấy tờ bị mờ, lóa hoặc mất góc, không đối soát được thông tin.',
+  'Ảnh chụp/bản scan giấy tờ bị mờ, lóa hoặc mất góc, không đối chiếu được thông tin.',
   'Tờ khai còn thiếu chữ ký hoặc thông tin chưa trùng khớp với giấy tờ tùy thân.',
   'Thiếu thành phần hồ sơ bắt buộc theo quy định, vui lòng bổ sung đầy đủ.',
 ];
@@ -151,9 +151,9 @@ export function OfficerReviewWorkspaceView({
 
   const tabs: { id: Tab; label: string; count?: number; icon: React.ReactNode }[] = [
     { id: 'info', label: 'Thông tin & giấy tờ', count: checklists.length, icon: <FileText className="h-4 w-4" /> },
-    { id: 'documents', label: 'Bản khai & giấy tờ', count: submissions.data?.length, icon: <FileCheck className="h-4 w-4" /> },
+    { id: 'documents', label: 'Tờ khai & giấy tờ', count: submissions.data?.length, icon: <FileCheck className="h-4 w-4" /> },
     { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <AlertTriangle className="h-4 w-4" /> },
-    { id: 'versions', label: 'Phiên bản & so sánh', icon: <GitCompare className="h-4 w-4" /> },
+    { id: 'versions', label: 'So sánh các lần gửi', icon: <GitCompare className="h-4 w-4" /> },
     ...(user?.permissions.includes('workflow.consultation.read') ? [{ id: 'consultations' as const, label: 'Tham vấn chuyên môn', icon: <FileText className="h-4 w-4" /> }] : []),
     { id: 'timeline', label: 'Lịch sử', icon: <History className="h-4 w-4" /> },
     { id: 'pdf', label: 'PDF sau tiền kiểm', icon: <ShieldCheck className="h-4 w-4" /> },
@@ -167,7 +167,7 @@ export function OfficerReviewWorkspaceView({
     }
     // Chặn sớm: yêu cầu bổ sung phải dựa trên nhận xét cụ thể để công dân biết cần sửa gì.
     if (next === 'revision' && comments.isSuccess && openComments.length === 0) {
-      setDecisionWarning(`Bạn chưa ghi nhận xét nào cho lần nộp này. Hãy ghi rõ điểm công dân cần sửa ở mục “Thêm nhận xét mới” bên dưới, bấm Lưu nhận xét, rồi bấm lại Yêu cầu bổ sung.`);
+      setDecisionWarning(`Bạn chưa ghi nhận xét nào cho lần gửi này. Hãy ghi rõ điểm công dân cần sửa ở mục “Thêm nhận xét mới” bên dưới, bấm Lưu nhận xét, rồi bấm lại Yêu cầu bổ sung.`);
       setTab('comments');
       return;
     }
@@ -288,7 +288,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
       if (latestSubmissions.isError) throw latestSubmissions.error;
       const linked = latestSubmissions.data ?? [];
       if (decisionContext.hadSubmissions && !linked.length) {
-        setActionError('Danh sách bản khai đã thay đổi. Đóng hộp thoại và kiểm tra lại hồ sơ.');
+        setActionError('Danh sách tờ khai đã thay đổi. Đóng hộp thoại và kiểm tra lại hồ sơ.');
         return;
       }
       if (
@@ -301,7 +301,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             currentApplication.checklists?.some(item => item.id === x.checklistId && item.formTemplateId === x.templateId),
         )
       ) {
-        setSelectionError('Chọn bản khai liên kết đúng mục giấy tờ của hồ sơ hiện tại.');
+        setSelectionError('Chọn tờ khai liên kết đúng mục giấy tờ của hồ sơ hiện tại.');
         submissionSelect.current?.focus();
         return;
       }
@@ -382,7 +382,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               toast.success('Đã cập nhật dữ liệu hồ sơ mới nhất.');
             }}
             className="gap-2 text-xs font-semibold text-slate-700 hover:text-slate-900"
-            title="Làm mới dữ liệu hồ sơ từ máy chủ (không cần F5)"
+            title="Làm mới dữ liệu hồ sơ"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-red-600' : 'text-slate-500'}`} />
             <span>{isRefreshing ? 'Đang cập nhật…' : 'Làm mới dữ liệu'}</span>
@@ -470,9 +470,9 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
-              <span className="text-xs font-medium text-slate-500">Bản khai Word</span>
+              <span className="text-xs font-medium text-slate-500">Tờ khai Word</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {submissions.data?.length ?? 0} bản khai liên kết
+                {submissions.data?.length ?? 0} tờ khai liên kết
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
@@ -493,7 +493,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           {submissions.isError && (
             <div role="alert" className="mt-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <p>{documentFormError(submissions.error)}</p>
-              <Button size="small" variant="outline" onClick={() => void submissions.refetch()}>Tải lại bản khai</Button>
+              <Button size="small" variant="outline" onClick={() => void submissions.refetch()}>Tải lại tờ khai</Button>
             </div>
           )}
 
@@ -542,7 +542,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         {tab === 'info' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Thông tin người nộp</h3>
+              <h3 className="text-lg font-bold text-slate-900">Thông tin người gửi</h3>
               <p className="mt-0.5 text-xs text-slate-500">Thông tin kê khai chưa phải xác minh danh tính hay xác nhận đủ điều kiện pháp lý.</p>
               <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {fields.map(x => (
@@ -603,7 +603,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                             variant="ghost"
                             onClick={() => setTab('documents')}
                             className="gap-1.5 text-xs font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50"
-                            title="Mở tab tài liệu để xem tệp và đối soát AI"
+                            title="Mở tab tài liệu để xem tệp và đối chiếu bằng AI"
                           >
                             <Sparkles className="h-3.5 w-3.5 text-purple-600" />
                             <span>Tài liệu & AI</span>
@@ -653,6 +653,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
             <OfficerDocumentsPanel
               applicationId={application.id}
+              applicationNumber={application.applicationNumber}
               editable={editable && !busy}
               canVerify={canVerifyAi}
               onComment={id => {
@@ -783,7 +784,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 }
                 if (!target.label.trim() || target.label.length > 255) {
                   commentForm.setError('targetId', {
-                    message: 'Tên mục nhận xét phải có nội dung và không vượt quá 255 ký tự. Vui lòng kiểm tra dữ liệu hồ sơ.',
+                    message: 'Mục giấy tờ không hợp lệ. Vui lòng tải lại hồ sơ.',
                   });
                   return;
                 }
@@ -921,7 +922,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         {tab === 'versions' && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Phiên bản và so sánh dữ liệu</h3>
+              <h3 className="text-lg font-bold text-slate-900">So sánh các lần gửi</h3>
               <p className="mt-0.5 text-xs text-slate-500">
                 So sánh dữ liệu JSON đã chụp; chưa hỗ trợ xem lại tệp nhị phân theo phiên bản cũ.
               </p>
@@ -932,7 +933,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div className="flex flex-wrap items-center gap-3">
               {(['from', 'to'] as const).map(side => (
                 <label key={side} className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  {side === 'from' ? 'Phiên bản nguồn' : 'Phiên bản đích'}
+                  {side === 'from' ? 'Lần gửi trước' : 'Lần gửi sau'}
                   <select
                     className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm"
                     value={side === 'from' ? from : to}
@@ -1044,7 +1045,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 <ShieldCheck className="mx-auto h-10 w-10 text-slate-400" />
                 <h4 className="mt-3 font-semibold text-slate-700">Bản PDF chưa sẵn sàng</h4>
                 <p className="mt-1 text-sm text-slate-500">
-                  PDF chỉ được tạo khi hồ sơ đã được xác nhận giấy tờ sẵn sàng. Mở tab “Bản khai & giấy tờ” để xem DOCX hiện tại.
+                  PDF chỉ được tạo khi hồ sơ đã được xác nhận giấy tờ sẵn sàng. Mở tab “Tờ khai & giấy tờ” để xem DOCX hiện tại.
                 </p>
               </div>
             )}
@@ -1059,7 +1060,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           if (!open && !busy) setDecision(undefined);
         }}
         title={decision === 'ready' ? 'Xác nhận giấy tờ sẵn sàng' : 'Yêu cầu bổ sung hồ sơ'}
-        description="Thao tác áp dụng cho toàn bộ hồ sơ và các bản khai liên quan. Xác nhận giấy tờ sẵn sàng không phải tiếp nhận chính thức hay quyết định giải quyết thủ tục."
+        description="Thao tác áp dụng cho toàn bộ hồ sơ và các tờ khai liên quan. Xác nhận giấy tờ sẵn sàng không phải tiếp nhận chính thức hay quyết định giải quyết thủ tục."
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">Lần nộp đang kiểm tra: {decisionContext?.version}</p>
@@ -1096,7 +1097,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           )}
 
           {submissions.isPending && (
-            <div role="status" aria-label="Đang tải bản khai" className="space-y-2 py-2">
+            <div role="status" aria-label="Đang tải tờ khai" className="space-y-2 py-2">
               <Skeleton className="h-10 w-full rounded-xl" />
             </div>
           )}
@@ -1104,14 +1105,14 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <p>{documentFormError(submissions.error)}</p>
               <Button size="small" variant="outline" className="mt-2" onClick={() => void submissions.refetch()}>
-                Tải lại bản khai
+                Tải lại tờ khai
               </Button>
             </div>
           )}
 
           {Boolean(submissions.data?.length) && (
             <label className="grid gap-1.5 text-sm font-semibold" htmlFor="decision-submission">
-              Bản khai đang kiểm tra
+              Tờ khai đang kiểm tra
               <select
                 ref={submissionSelect}
                 id="decision-submission"
@@ -1125,7 +1126,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   setSelectionError('');
                 }}
               >
-                <option value="">Chọn bản khai</option>
+                <option value="">Chọn tờ khai</option>
                 {submissions.data?.map(x => (
                   <option key={x.id} value={x.id}>
                     {x.fileName}
@@ -1142,7 +1143,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
           {submissions.isSuccess && !submissions.data?.length && (
             <p className="text-sm text-slate-600">
-              Hồ sơ không có bản khai điện tử. Thao tác được thực hiện trực tiếp trên hồ sơ.
+              Hồ sơ không có tờ khai điện tử. Thao tác được thực hiện trực tiếp trên hồ sơ.
             </p>
           )}
 
@@ -1157,7 +1158,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   disabled={isGeneratingAiReason || busy}
                   onClick={() => void handleGenerateAiReason()}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors disabled:opacity-50"
-                  title="Dùng AI tổng hợp lỗi checklist thành văn bản hành chính lịch sự"
+                  title="Dùng AI soạn lý do bổ sung từ các mục giấy tờ chưa đạt"
                 >
                   <Sparkles className={`size-3.5 ${isGeneratingAiReason ? 'animate-spin text-purple-600' : ''}`} />
                   <span>{isGeneratingAiReason ? 'Đang tạo văn bản...' : 'AI gợi ý lý do'}</span>

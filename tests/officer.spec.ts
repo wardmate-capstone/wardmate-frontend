@@ -93,10 +93,10 @@ test('Cổng cán bộ: hồ sơ công dân gửi lại chỉ cho cán bộ ph�
 
   await expect(mine.getByText('Đã gửi lại')).toBeVisible();
   await expect(mine.getByRole('button', { name: 'Nhận xử lý' })).toHaveCount(0);
-  await expect(other.getByRole('button', { name: 'Review lại' })).toHaveCount(0);
+  await expect(other.getByRole('button', { name: 'Xem lại' })).toHaveCount(0);
   await expect(other.getByText('Chờ cán bộ phụ trách')).toBeVisible();
   await expect(fresh.getByRole('button', { name: 'Nhận xử lý' })).toBeVisible();
 
-  await mine.getByRole('button', { name: 'Review lại' }).click();
+  await mine.getByRole('button', { name: 'Xem lại' }).click();
   await expect.poll(() => assigned).toEqual(['aaaaaaaa-0000-4000-8000-000000000001']);
 });

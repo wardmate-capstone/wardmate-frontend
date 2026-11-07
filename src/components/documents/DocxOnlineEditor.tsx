@@ -380,7 +380,7 @@ export default function DocxOnlineEditor({
               loading={busy}
               onClick={() => void save(true)}
               className="gap-1.5 text-xs"
-              title="Lưu Word và thoát để nộp cho quản lý"
+              title="Lưu tệp Word và đóng trình soạn"
             >
               <CheckCircle size={16} weight="bold" />
               <span>{saveAndCloseLabel}</span>
@@ -757,7 +757,7 @@ export default function DocxOnlineEditor({
                   <span>Hướng dẫn tiền kiểm:</span>
                 </p>
                 <p className="leading-relaxed">
-                  Đối chiếu từng thông tin của người nộp bên dưới với các trường trong tờ khai Word. Nếu phát hiện thông tin sai lệch, hãy sửa hoặc bôi màu ghi chú trước khi lưu.
+                  Đối chiếu từng thông tin của người gửi bên dưới với các trường trong tờ khai Word. Nếu phát hiện thông tin sai lệch, hãy sửa hoặc bôi màu ghi chú trước khi lưu.
                 </p>
               </div>
 

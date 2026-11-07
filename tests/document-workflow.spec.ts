@@ -54,13 +54,13 @@ test('cán bộ discovery, DOCX thật, annotate và lỗi nhận xét không si
   await page.goto('/officer');
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
-  await page.getByRole('button', { name: 'Bản khai & giấy tờ', exact: true }).click();
+  await page.getByRole('button', { name: 'Tờ khai & giấy tờ', exact: true }).click();
   await expect.poll(() => state.reads.some(x => x.includes('/by-application/'))).toBe(true);
   await expect.poll(() => state.reads.filter(x => x.endsWith('/download-docx')).length).toBe(0);
-  await page.getByRole('button', { name: 'Mở bản khai', exact: true }).click();
+  await page.getByRole('button', { name: 'Mở tờ khai', exact: true }).click();
   await expect(page.frameLocator('iframe[title="Nội dung biểu mẫu Word"]').getByText('ĐƠN ĐỀ NGHỊ KIỂM THỬ')).toBeVisible();
-  await page.getByLabel('Tải lại DOCX có ghi chú').setInputFiles(docx);
-  await expect(page.getByText('Đã lưu bản khai có ghi chú.', { exact: false })).toBeVisible();
+  await page.getByLabel('Tải lên tờ khai Word có ghi chú').setInputFiles(docx);
+  await expect(page.getByText('Đã lưu tờ khai có ghi chú.', { exact: false })).toBeVisible();
   expect(state.status).toBe('UNDER_REVIEW');
   await page.getByRole('button', { name: 'Nhận xét mục giấy tờ', exact: true }).first().click();
   state.failComment = true;

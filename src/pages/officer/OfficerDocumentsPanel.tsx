@@ -16,12 +16,14 @@ function isSupportedAiDocument(fileName: string): boolean {
 
 export function OfficerDocumentsPanel({
   applicationId,
+  applicationNumber,
   editable,
   canVerify = false,
   onComment,
   referenceData,
 }: {
   applicationId: string;
+  applicationNumber?: string;
   editable: boolean;
   canVerify?: boolean;
   onComment: (checklistId: string) => void;
@@ -57,8 +59,8 @@ export function OfficerDocumentsPanel({
     finally { lock.current = false; }
   }
   return <section className="space-y-4">
-    <h3 className="font-bold">Bản khai và giấy tờ đã lưu</h3>
-    <p className="text-sm text-slate-600">{editable ? 'Có thể chỉnh sửa DOCX trực tuyến.' : 'Hồ sơ hiện chỉ được xem và tải xuống.'} Để thêm hoặc đọc đầy đủ bình luận Word, tải bản khai và mở bằng Word rồi tải lại. Bình luận Word chưa phải nhận xét yêu cầu bổ sung của hồ sơ.</p>
+    <h3 className="font-bold">Tờ khai và giấy tờ đã lưu</h3>
+    <p className="text-sm text-slate-600">{editable ? 'Có thể sửa tờ khai trực tuyến.' : 'Hồ sơ hiện chỉ được xem và tải xuống.'} Để thêm hoặc đọc đầy đủ bình luận Word, tải tờ khai và mở bằng Word rồi tải lại. Bình luận Word chưa phải nhận xét yêu cầu bổ sung của hồ sơ.</p>
     {(contents.isPending || submissions.isPending) && <ListSkeleton rows={3} />}
     {(contents.isError || submissions.isError) && <div role="alert"><p>{documentFormError(contents.error || submissions.error)}</p><Button variant="outline" onClick={() => { void contents.refetch(); void submissions.refetch(); }}>Thử tải lại danh sách</Button></div>}
     {submissions.data?.map(item => {
@@ -76,7 +78,7 @@ export function OfficerDocumentsPanel({
               {item.submittedAt && <p className="text-xs text-slate-500 mt-1">Ngày gửi: {new Date(item.submittedAt).toLocaleString('vi-VN')}</p>}
               {item.officerComment && <p className="whitespace-pre-wrap break-words text-sm mt-1">Ghi chú: {item.officerComment}</p>}
               <p className="text-sm mt-1">
-                {(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MiB{evidence && !evidence.fileExists && ' · Không tìm thấy tệp trong kho'}
+                {(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MB{evidence && !evidence.fileExists && ' · Không tìm thấy tệp'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -85,7 +87,7 @@ export function OfficerDocumentsPanel({
                 variant={isSelected ? 'primary' : 'outline'}
                 onClick={() => setSelected(prev => (prev?.id === item.id ? undefined : { id: item.id, name: item.fileName, form: true }))}
               >
-                {isSelected ? 'Đóng bản khai' : 'Mở bản khai'}
+                {isSelected ? 'Đóng tờ khai' : 'Mở tờ khai'}
               </Button>
               {item.checklistId && editable && (
                 <Button size="small" variant="outline" onClick={() => onComment(item.checklistId!)}>
@@ -96,9 +98,9 @@ export function OfficerDocumentsPanel({
           </div>
           {canAnnotate && (
             <label className="relative grid min-w-0 cursor-pointer gap-2 rounded-lg text-sm font-semibold focus-within:ring-2 focus-within:ring-red-700 focus-within:ring-offset-2">
-              Tải lại DOCX có ghi chú
+              Tải lên tờ khai Word có ghi chú
               <span aria-hidden="true" className="flex min-h-12 min-w-0 items-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 font-normal text-slate-600">
-                Chọn tệp DOCX · Tối đa 20 MiB
+                Chọn tệp Word · Tối đa 20 MB
               </span>
               <input
                 disabled={mutations.annotate.isPending}
@@ -117,10 +119,10 @@ export function OfficerDocumentsPanel({
           )}
           {canAnnotate && retryFiles[item.id] && (
             <Button size="small" variant="outline" loading={mutations.annotate.isPending} onClick={() => void saveAnnotation(item.id, retryFiles[item.id]!)}>
-              Thử lưu lại DOCX: {retryFiles[item.id]!.name}
+              Thử lưu lại tờ khai: {retryFiles[item.id]!.name}
             </Button>
           )}
-          {saved[item.id] && <p role="status" className="text-sm text-emerald-800">Đã lưu bản khai có ghi chú. Thêm nhận xét vào hồ sơ trước khi yêu cầu bổ sung.</p>}
+          {saved[item.id] && <p role="status" className="text-sm text-emerald-800">Đã lưu tờ khai có ghi chú. Thêm nhận xét vào hồ sơ trước khi yêu cầu bổ sung.</p>}
           {errors[item.id] && <p id={`annotate-${item.id}`} role="status" className="text-sm">{errors[item.id]}</p>}
 
           {isSelected && (
@@ -148,7 +150,7 @@ export function OfficerDocumentsPanel({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h4 className="break-all font-semibold">{item.fileName}</h4>
-              <p className="text-sm text-slate-600">{item.quantity} bản{!item.fileExists && ' · Không tìm thấy tệp trong kho'}</p>
+              <p className="text-sm text-slate-600">{item.quantity} bản{!item.fileExists && ' · Không tìm thấy tệp'}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -202,10 +204,10 @@ export function OfficerDocumentsPanel({
     {editing && (
       <Suspense
         fallback={
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở DOCX Studio">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở tờ khai">
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-800/90 px-6 py-5 shadow-2xl border border-slate-700">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-              <p className="text-sm font-medium">Đang khởi tạo WardMate DOCX Studio…</p>
+              <p className="text-sm font-medium">Đang mở tờ khai…</p>
             </div>
           </div>
         }
@@ -213,7 +215,7 @@ export function OfficerDocumentsPanel({
         <DocxOnlineEditor
           sourceKey={`${applicationId}-${editing.id}`}
           title={editing.name}
-          subtitle={`Hồ sơ ${applicationId}`}
+          subtitle={applicationNumber ? `Hồ sơ ${applicationNumber}` : undefined}
           author={user?.profile?.fullName || user?.username || 'Cán bộ'}
           referenceData={referenceData}
           load={signal => documentFormApi.officerDownloadSubmission(editing.id, signal)}
@@ -221,7 +223,7 @@ export function OfficerDocumentsPanel({
             if (!editable) throw new Error('Hồ sơ không còn cho phép chỉnh sửa. Vui lòng tải lại trạng thái.');
             await mutations.annotate.mutateAsync({ applicationId, submissionId: editing.id, file });
             setRevision(value => value + 1);
-            toast.success('Đã lưu bản DOCX vào hồ sơ.');
+            toast.success('Đã lưu tờ khai vào hồ sơ.');
           }}
           onClose={() => setEditing(undefined)}
         />

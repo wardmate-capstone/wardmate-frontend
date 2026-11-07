@@ -211,7 +211,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </span>
         );
       case 'APPROVED':
-        return <span className="text-xs text-slate-600">Đã duyệt (luồng cũ)</span>;
+        return <span className="text-xs text-slate-600">Đã duyệt</span>;
       case 'READY_TO_SUBMIT':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
@@ -471,7 +471,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               type="button"
               onClick={onRefresh}
               disabled={isRefreshing || isLoading}
-              title="Làm mới danh sách hồ sơ từ máy chủ (không cần F5)"
+              title="Làm mới danh sách hồ sơ"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
             >
               <ArrowCounterClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
@@ -657,7 +657,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                               onClick={() => onTakeApplication(app.id)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-700 font-bold text-white hover:bg-purple-800 shadow-2xs transition-colors"
                             >
-                              <span>Review lại</span>
+                              <span>Xem lại</span>
                             </button>
                           ) : (
                             <span className="text-[11px] text-slate-500">Chờ cán bộ phụ trách</span>

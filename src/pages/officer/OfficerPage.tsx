@@ -221,7 +221,7 @@ export const OfficerPage: React.FC = () => {
     try {
       // Kết quả nhận hồ sơ đã chứa chi tiết đầy đủ; workspace tự tải nhận xét nên không gọi thêm 2 request.
       const result = await assignMutation.mutateAsync(appId);
-      toast.success(`Đã nhận xử lý hồ sơ ${appNumber}. Đang mở không gian thẩm định.`);
+      toast.success(`Đã nhận xử lý hồ sơ ${appNumber}. Đang mở hồ sơ để kiểm tra.`);
       const mappedApp = mapApplicationDtoToOfficerApplication(result.application, [], officerLookup);
       setReviewingApp(mappedApp);
     } catch (err) {
@@ -505,7 +505,7 @@ export const OfficerPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="block font-bold uppercase text-[10px] text-slate-400">Thông tin người nộp</span>
+                <span className="block font-bold uppercase text-[10px] text-slate-400">Thông tin người gửi</span>
                 <p><strong>Họ tên:</strong> {quickPreviewApp.citizen.fullName}</p>
                 <p><strong>CCCD:</strong> <span className="font-mono">{quickPreviewApp.citizen.citizenId}</span></p>
                 <p><strong>SĐT:</strong> {quickPreviewApp.citizen.phoneNumber}</p>
@@ -516,14 +516,14 @@ export const OfficerPage: React.FC = () => {
                 <span className="block font-bold uppercase text-[10px] text-slate-400">Thông tin thủ tục</span>
                 <p><strong>Thủ tục:</strong> {quickPreviewApp.procedureName}</p>
                 <p><strong>Lĩnh vực:</strong> {quickPreviewApp.procedureCategory}</p>
-                <p><strong>Thời gian nộp:</strong> {quickPreviewApp.submittedAt}</p>
-                <p><strong>Phiên bản:</strong> V{quickPreviewApp.currentVersion}</p>
+                <p><strong>Thời gian gửi:</strong> {quickPreviewApp.submittedAt}</p>
+                <p><strong>Lần gửi:</strong> {quickPreviewApp.currentVersion}</p>
               </div>
             </div>
 
             {/* Checklist summary */}
             <div className="space-y-1.5">
-              <span className="block text-xs font-bold text-slate-800">Thành phần giấy tờ đã nộp:</span>
+              <span className="block text-xs font-bold text-slate-800">Giấy tờ đã gửi:</span>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {quickPreviewApp.documents.map((d) => (
                   <li key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
@@ -568,7 +568,7 @@ export const OfficerPage: React.FC = () => {
                   }}
                   className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 shadow-2xs"
                 >
-                  <span>Mở workspace đầy đủ</span>
+                  <span>Mở hồ sơ đầy đủ</span>
                   <ArrowRight size={14} />
                 </button>
               </div>
