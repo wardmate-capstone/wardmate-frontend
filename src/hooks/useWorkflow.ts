@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   workflowApi,
   type OfficerPendingInput,
@@ -244,6 +244,20 @@ export function useCitizenApplications(page = 1, pageSize = 20) {
   return useQuery({
     queryKey: ['workflow', 'citizen', 'applications', userId, { page, pageSize }],
     queryFn: ({ signal }) => workflowApi.listCitizenApplications(page, pageSize, signal),
+    enabled: Boolean(userId),
+    refetchInterval: false,
+  });
+}
+
+// Danh sách "Hồ sơ của tôi" tải dần khi cuộn: mỗi lần lấy thêm một trang pageSize hồ sơ
+export function useCitizenApplicationsInfinite(pageSize = 20) {
+  const userId = useAuthStore((state) => state.user?.id);
+  return useInfiniteQuery({
+    // Chung tiền tố với useCitizenApplications để các mutation invalidate cả hai
+    queryKey: ['workflow', 'citizen', 'applications', userId, 'infinite', pageSize],
+    queryFn: ({ pageParam, signal }) => workflowApi.listCitizenApplications(pageParam, pageSize, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
     enabled: Boolean(userId),
     refetchInterval: false,
   });
