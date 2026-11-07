@@ -32,13 +32,13 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
       if (sent.word) return { id: (await workScheduleApi.createDraft(sent.body as Metadata & { templateVersionId: string }, sent.key)).id, draft: true };
       // Legacy policy explicitly permits a text-only request; never use it when Word is required.
       const policy = await workScheduleApi.capabilities();
-      if (policy.wordRequired) throw new Error('Chính sách đã yêu cầu Word. Đóng biểu mẫu và tạo đơn Word.');
+      if (policy.wordRequired) throw new Error('Đơn nghỉ cần kèm tệp Word. Vui lòng đóng biểu mẫu và tạo đơn Word.');
       return { id: (await staffingApi.requestLeave(sent.body)).id, draft: false };
     }, result => result.draft ? onCreated(result.id) : onSubmitted(result.id), sent.word);
   });
   return <Modal open title="Tạo đơn xin nghỉ" description="Chọn thời gian nghỉ và lý do ngắn. Nội dung chi tiết được soạn trong bản Word riêng của bạn." onOpenChange={v => !v && !operation.busy && onClose()} footer={<><Button variant="outline" disabled={operation.busy} onClick={onClose}>Đóng</Button><Button disabled={operation.busy || (word && (!template.data || template.isError || !capabilities.templateConfigured)) || (!word && operation.review)} onClick={() => void submit()}>{operation.busy ? 'Đang lưu…' : request.current && operation.review && word ? 'Gửi lại cùng yêu cầu' : word ? 'Tạo nháp Word' : 'Gửi đơn không kèm Word'}</Button></>}>
     {!capabilities.wordRequired && <label className="mb-4 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={word} disabled={locked} onChange={e => setWord(e.target.checked)} />Soạn đơn Word trực tiếp</label>}
-    {word && !capabilities.templateConfigured && <p role="alert" className="mb-4 text-red-800">Mẫu Word chưa được cấu hình. Vui lòng liên hệ quản trị viên.</p>}
+    {word && !capabilities.templateConfigured && <p role="alert" className="mb-4 text-red-800">Chưa có mẫu đơn Word. Vui lòng liên hệ quản trị viên.</p>}
     {word && capabilities.templateConfigured && <QueryState query={template} />}
     <form onSubmit={e => void submit(e)} noValidate className="space-y-4"><fieldset disabled={locked} className="space-y-4">
       <label className="staff-field">Bắt đầu nghỉ (giờ Việt Nam)<input type="datetime-local" className={fieldClass} {...form.register('startsAt')} aria-invalid={Boolean(form.formState.errors.startsAt)} /></label>
@@ -92,7 +92,7 @@ function DraftWorkspace({ id, capabilities, onClose, onSubmitted }: { id: string
         </section>
         <section aria-label="Bước 2: Soạn Word" className="space-y-3 rounded-xl border border-slate-200 p-4">
           <h3 className="font-bold text-slate-900">2. Soạn Word</h3>
-          <p className="text-sm text-slate-600">Kiểm tra nội dung Word khớp với ngày giờ ở bước 1, rồi bấm <strong>Xuất bản</strong> để lưu và thoát. Đơn chưa được gửi ở bước này.</p>
+          <p className="text-sm text-slate-600">Kiểm tra nội dung Word khớp với ngày giờ ở bước 1, rồi bấm <strong>Lưu và đóng</strong>. Đơn chưa được gửi ở bước này.</p>
           <Button disabled={metadataDirty || operation.busy || operation.review || query.isFetching} onClick={() => { setEditorDraft(item); setSaveError(''); setEditor(true); }}>Soạn / mở lại Word</Button>
           {wordReady && !metadataDirty && <p role="status" className="text-sm font-medium text-emerald-800">Word đã lưu. Bạn có thể nộp đơn ở bước 3.</p>}
         </section>
@@ -106,7 +106,7 @@ function DraftWorkspace({ id, capabilities, onClose, onSubmitted }: { id: string
       </>}
       <OperationError operation={operation} />{saveError && <p role="alert" className="text-sm text-red-800">{saveError}</p>}
     </div>}
-    {editor && editorDraft && <Suspense fallback={<p role="status">Đang mở trình soạn Word…</p>}><DocxEditor sourceKey={`leave-${id}`} title="Đơn xin nghỉ" author={user?.username || 'Cán bộ'} subtitle="Bấm Xuất bản để lưu Word và thoát, sau đó nộp cho quản lý" saveLabel="Lưu nháp Word" savedLabel="Đã lưu nháp, chưa nộp" saveAndCloseLabel="Xuất bản" errorMessage={staffingError}
+    {editor && editorDraft && <Suspense fallback={<p role="status">Đang mở trình soạn Word…</p>}><DocxEditor sourceKey={`leave-${id}`} title="Đơn xin nghỉ" author={user?.username || 'Cán bộ'} subtitle="Bấm Lưu và đóng khi soạn xong, sau đó nộp đơn cho quản lý ở bước 3" saveLabel="Lưu nháp Word" savedLabel="Đã lưu nháp, chưa nộp" saveAndCloseLabel="Lưu và đóng" errorMessage={staffingError}
       referenceData={[{ label: 'Bắt đầu nghỉ', value: dateText(editorDraft.startsAtUtc) }, { label: 'Kết thúc nghỉ', value: dateText(editorDraft.endsAtUtc) }, { label: 'Lý do ngắn', value: editorDraft.reason }]}
       load={async signal => { const latest = await workScheduleApi.draft(id, signal); if (latest.version !== editorDraft.version || latest.submittedLeaveId) throw new Error('Nháp đã thay đổi. Quay lại và đọc lại trạng thái trước khi soạn.'); return workScheduleApi.draftDocx(id, signal); }}
       onSave={async file => {

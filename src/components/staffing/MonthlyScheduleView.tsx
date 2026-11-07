@@ -52,7 +52,7 @@ function CalendarLoader(props: BoardProps & { month: string }) {
     const [data, shifts] = await Promise.all([workScheduleApi.month(props.month, signal), staffingApi.shifts(start, vietnamIso(nextDate(nextMonth) + 'T00:00'), signal)]);
     // Boundary shifts are context only, including next month's shifts that may overlap an overnight edit.
     const carry = shifts.filter(s => !s.cancelledAtUtc && (Date.parse(s.startsAtUtc) < Date.parse(start) || Date.parse(s.startsAtUtc) >= Date.parse(end))).map(s => {
-      if (s.version === undefined) throw new Error('Ca ở tháng liền kề thiếu phiên bản. Vui lòng lấy lịch mới.');
+      if (s.version === undefined) throw new Error('Lịch tháng bên cạnh chưa tải đủ. Vui lòng bấm Lấy lịch mới.');
       return { shiftId: s.id, officerId: s.officerId, startsAt: s.startsAtUtc, endsAt: s.endsAtUtc, shiftVersion: s.version };
     });
     return { ...data, carry };

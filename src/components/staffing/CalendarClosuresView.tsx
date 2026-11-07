@@ -131,7 +131,7 @@ export function CalendarClosuresView() {
   const rows = query.data?.filter(item => (scope === 'all' || (scope === 'national' ? item.wardCode === null : item.wardCode !== null)) &&
     (status === 'all' || (status === 'cancelled' ? item.cancelled : !item.cancelled))) ?? [];
   return <section className="staff-workspace" aria-label="Lịch ngày nghỉ">
-    <StaffHeading title={national ? 'Lịch ngày lễ toàn quốc' : 'Lịch đóng cửa phường và ngày lễ'} description={`${national ? 'Phạm vi toàn quốc theo quyền quản lý lịch của tài khoản.' : 'Lịch toàn quốc và phường bạn đang công tác.'} Ngày và giờ hiển thị theo Việt Nam (UTC+07).`}>
+    <StaffHeading title={national ? 'Lịch ngày lễ toàn quốc' : 'Lịch đóng cửa phường và ngày lễ'} description={`${national ? 'Phạm vi toàn quốc theo quyền quản lý lịch của tài khoản.' : 'Lịch toàn quốc và phường bạn đang công tác.'} Ngày và giờ hiển thị theo giờ Việt Nam.`}>
       {(national || manageWard) && <Button onClick={() => setAction({ context })}>{national ? 'Thêm ngày lễ toàn quốc' : 'Thêm ngày nghỉ phường'}</Button>}
     </StaffHeading>
     <div className="staff-filter staff-filter-fields">
@@ -141,7 +141,7 @@ export function CalendarClosuresView() {
       <label className="grid gap-2 text-sm font-semibold">Trạng thái<select className={fieldClass} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Tất cả trạng thái</option><option value="active">Chưa hủy</option><option value="cancelled">Đã hủy</option></select></label>
       <Button variant="outline" disabled={!valid || query.isFetching} onClick={() => void query.refetch()}>{query.isFetching ? 'Đang tải…' : 'Làm mới'}</Button>
     </div>
-    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Lịch đóng cửa dùng điều chỉnh hạn tiền kiểm nội bộ. Ca làm và phân công cán bộ được quản lý riêng. Lịch trùng toàn quốc và phường không làm lùi hạn hai lần.</p>
+    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Ngày nghỉ, ngày lễ được trừ khi tính hạn tiền kiểm. Ngày trùng cả lễ toàn quốc và nghỉ của phường chỉ tính một lần. Ca làm và phân công cán bộ được quản lý riêng.</p>
     {!valid ? <p role="alert" className="text-red-800">Chọn khoảng ngày hợp lệ, tối đa 400 ngày gồm cả hai đầu.</p> : <>
       <QueryState query={query} empty={!rows.length} />
       {!query.isError && !query.isPending && <div className="staff-grid">{rows.map(item => <article key={item.id} className="staff-card space-y-3">

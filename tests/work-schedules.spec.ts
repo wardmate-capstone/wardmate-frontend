@@ -39,7 +39,7 @@ test('Word thật: tạo/sửa metadata, giữ nội dung khi upload lỗi, lưu
   await editor.getByRole('textbox', { name: 'Nội dung tài liệu' }).click({ position: { x: 180, y: 150 } });
   await page.keyboard.press('Control+End'); await page.keyboard.type(' NOI DUNG DON NGHI RIENG');
   state.uploadFail = true;
-  await editor.getByRole('button', { name: 'Xuất bản', exact: true }).click();
+  await editor.getByRole('button', { name: 'Lưu và đóng', exact: true }).click();
   await expect(editor.getByRole('alert')).toContainText('Chưa đọc hoặc lưu được Word');
   await expect(editor).toBeVisible();
   expect(state.submitted).toBe(false);
@@ -50,7 +50,7 @@ test('Word thật: tạo/sửa metadata, giữ nội dung khi upload lỗi, lưu
   await editor.getByRole('textbox', { name: 'Nội dung tài liệu' }).click({ position: { x: 180, y: 150 } });
   await page.keyboard.press('Control+End');
   await page.keyboard.type(' BAN CUOI');
-  await editor.getByRole('button', { name: 'Xuất bản', exact: true }).click();
+  await editor.getByRole('button', { name: 'Lưu và đóng', exact: true }).click();
   await expect(editor).not.toBeVisible();
   expect(state.submitted).toBe(false);
   await expect(page.getByRole('button', { name: 'Nộp cho quản lý', exact: true })).toBeEnabled();
