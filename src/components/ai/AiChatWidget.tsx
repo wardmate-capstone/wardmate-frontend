@@ -107,7 +107,7 @@ function generateGuestAssistantAnswer(query: string, wardName?: string): string 
     return `Chào bạn! Quy trình chuẩn bị và tiền kiểm hồ sơ trên WardMate gồm 4 bước:
 1. Chọn thủ tục hành chính cần làm tại UBND cấp xã/phường.
 2. Điền thông tin vào các tờ khai trực tuyến được hướng dẫn từng trường.
-3. Tải lên tệp giấy tờ đính kèm và bấm "Tiền kiểm AI" để phát hiện trước các lỗi mờ, lóa hoặc thiếu trang.
+3. Tải lên tệp giấy tờ đính kèm và bấm "Kiểm tra sơ bộ bằng AI" để phát hiện trước các lỗi mờ, lóa hoặc thiếu trang.
 4. Nộp hồ sơ và theo dõi tiến độ phản hồi từ cán bộ Một cửa.
 
 💡 Bạn có thể Đăng nhập để lưu tiến độ chuẩn bị hồ sơ bất kỳ lúc nào.`;
@@ -347,7 +347,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
         const assistantMessage: ChatMessage = {
           id: String(Date.now() + 1),
           sender: 'assistant',
-          text: `${quotaText}\n\n💡 Đăng nhập tài khoản công dân để tiếp tục trò chuyện không giới hạn, lưu lại lịch sử tư vấn và tiền kiểm hồ sơ AI tự động.`,
+          text: `${quotaText}\n\n💡 Đăng nhập tài khoản công dân để được hỏi thêm (30 lượt mỗi ngày), lưu lại lịch sử tư vấn và kiểm tra sơ bộ giấy tờ bằng AI.`,
           timestamp: new Date(),
         };
         const finalMessages = [...nextMessages, assistantMessage];
@@ -422,7 +422,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
         const assistantMessage: ChatMessage = {
           id: String(Date.now() + 1),
           sender: 'assistant',
-          text: `${fallbackAnswer}\n\n*(Lưu ý: Dịch vụ AI máy chủ tạm thời gián đoạn. Đây là cẩm nang thủ tục hành chính tham khảo, không phải câu trả lời trực tiếp của AI).*`,
+          text: `${fallbackAnswer}\n\n*(Lưu ý: Trợ lý AI đang tạm gián đoạn. Dưới đây là hướng dẫn tham khảo, không phải câu trả lời trực tiếp của AI.)*`,
           timestamp: new Date(),
         };
         const finalMessages = [...nextMessages, assistantMessage];
@@ -841,7 +841,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                         </h4>
                         <p className="mt-0.5 text-[11px] leading-relaxed text-amber-900/90">
                           {quotaNotice.type === 'guest_quota_exceeded' || quotaNotice.type === 'guest_limit_reached'
-                            ? 'Đăng nhập tài khoản công dân để tiếp tục trò chuyện không giới hạn, lưu lại lịch sử tư vấn và tiền kiểm hồ sơ AI tự động.'
+                            ? 'Đăng nhập tài khoản công dân để được hỏi thêm (30 lượt mỗi ngày), lưu lại lịch sử tư vấn và kiểm tra sơ bộ giấy tờ bằng AI.'
                             : 'Hạn mức hỏi đáp sẽ được làm mới tự động vào ngày mai.'}
                         </p>
                       </div>
@@ -929,7 +929,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                       >
                         Đăng nhập
                       </Link>
-                      <span>để lưu phiên và tiền kiểm hồ sơ AI</span>
+                      <span>để lưu lịch sử hỏi đáp và kiểm tra sơ bộ giấy tờ bằng AI</span>
                     </p>
                   ) : (
                     <p className="text-[10px] text-slate-400 text-center">

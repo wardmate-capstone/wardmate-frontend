@@ -356,7 +356,7 @@ export const aiOcrApi = {
           status === 504
         ) {
           throw new Error(
-            `Dịch vụ AI OCR tạm thời chưa phản hồi hoặc chưa sẵn sàng (HTTP ${status}). Vui lòng nhập thông tin vào biểu mẫu hoặc thử lại sau.`,
+            'Chưa đọc được ảnh CCCD lúc này. Bạn có thể tự nhập thông tin hoặc thử lại sau.',
           );
         }
         const serverMsg =
@@ -448,7 +448,7 @@ export const aiOcrApi = {
         const status = err.response?.status;
         const code = (err.response?.data)?.code;
         if (code === "chat.database_unavailable" || status === 502 || status === 503 || status === 504) {
-          throw new Error("Hệ thống tiền kiểm AI đang được bảo trì hoặc nâng cấp máy chủ. Bạn vui lòng đối soát giấy tờ trực tiếp để tiếp tục xử lý hồ sơ.");
+          throw new Error("Tính năng kiểm tra bằng AI đang tạm bảo trì. Bạn vẫn có thể tự đối chiếu giấy tờ và tiếp tục chuẩn bị hồ sơ.");
         }
         if (code === "ai.checklist_required") {
           throw new Error("Giấy tờ chưa được liên kết với mục trong hồ sơ. Vui lòng tải lại trang.");
@@ -465,7 +465,7 @@ export const aiOcrApi = {
           );
         }
         if (status === 413) {
-          throw new Error("Kích thước tệp quá lớn để quét tự động (tối đa 8 MB). Vui lòng nén nhỏ ảnh hoặc đối soát trực tiếp.");
+          throw new Error("Kích thước tệp quá lớn để quét tự động (tối đa 8 MB). Vui lòng chọn ảnh nhỏ hơn hoặc tự đối chiếu giấy tờ.");
         }
         if (status === 429) {
           throw new Error("Hệ thống đang tiếp nhận nhiều yêu cầu. Vui lòng đợi trong giây lát rồi thử lại.");

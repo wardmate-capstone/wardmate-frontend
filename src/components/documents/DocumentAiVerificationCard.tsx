@@ -43,7 +43,7 @@ export function DocumentAiVerificationCard({
       setResult(data);
       setExpanded(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Không thể thực hiện tiền kiểm AI.');
+      setError(err instanceof Error ? err.message : 'Chưa kiểm tra được bằng AI.');
     } finally {
       setLoading(false);
     }
@@ -59,17 +59,17 @@ export function DocumentAiVerificationCard({
           disabled={disabled || loading}
           onClick={() => void handleVerify()}
           className="gap-1.5 text-xs font-semibold text-purple-700 border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 hover:border-purple-300"
-          title={`Tiền kiểm AI đối soát ${fileName}`}
+          title={`Kiểm tra sơ bộ bằng AI: ${fileName}`}
         >
           <Sparkle size={15} weight="fill" className="text-purple-600 shrink-0" aria-hidden />
-          <span>Tiền kiểm AI</span>
+          <span>Kiểm tra sơ bộ bằng AI</span>
         </Button>
       )}
 
       {loading && (
         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50/60 px-3 py-1.5 text-xs text-purple-800">
           <ArrowsClockwise size={15} className="animate-spin text-purple-600 shrink-0" aria-hidden />
-          <span>AI đang phân tích và đối soát giấy tờ...</span>
+          <span>AI đang kiểm tra giấy tờ...</span>
         </div>
       )}
 
@@ -97,7 +97,7 @@ export function DocumentAiVerificationCard({
                   aria-hidden
                 />
                 <span>
-                  {isServerUnavailable ? 'Dịch vụ AI đang bảo trì' : 'Chưa thể tiền kiểm AI'}
+                  {isServerUnavailable ? 'Dịch vụ AI đang bảo trì' : 'Chưa kiểm tra được bằng AI'}
                 </span>
               </div>
               <Button
@@ -115,7 +115,7 @@ export function DocumentAiVerificationCard({
             <p className="text-[11px] leading-relaxed opacity-90">{error}</p>
             {isServerUnavailable && (
               <p className="text-[10px] text-amber-700 italic border-t border-amber-200/60 pt-1">
-                * Bạn có thể đối soát giấy tờ trực tiếp và tiếp tục xử lý hồ sơ bình thường.
+                * Bạn có thể tự đối chiếu giấy tờ và tiếp tục xử lý hồ sơ bình thường.
               </p>
             )}
           </div>
@@ -146,7 +146,7 @@ export function DocumentAiVerificationCard({
                 )}
               </span>
               <span className="font-bold text-slate-800">
-                {result.isValid ? 'AI đánh giá: Hợp lệ' : 'AI cảnh báo: Cần đối soát'}
+                {result.isValid ? 'AI đánh giá: Hợp lệ' : 'AI lưu ý: Cần kiểm tra lại'}
               </span>
               <Badge
                 variant={result.isValid ? 'success' : 'warning'}
@@ -190,7 +190,7 @@ export function DocumentAiVerificationCard({
 
               {result.expectedType && (
                 <div className="flex flex-wrap items-baseline gap-1.5 text-[11px] text-slate-700">
-                  <span className="font-semibold text-slate-500">Mục checklist đối chiếu:</span>
+                  <span className="font-semibold text-slate-500">Đối chiếu với giấy tờ:</span>
                   <span className="text-slate-800">{result.expectedType}</span>
                 </div>
               )}
@@ -209,7 +209,7 @@ export function DocumentAiVerificationCard({
               )}
 
               <p className="text-[10px] text-slate-400 italic mt-1">
-                * Kết quả tiền kiểm AI mang tính chất khuyến nghị chất lượng tệp. Thẩm định pháp lý
+                * Kết quả kiểm tra bằng AI chỉ mang tính gợi ý về chất lượng tệp. Thẩm định pháp lý
                 cuối cùng do Cán bộ Một cửa quyết định.
               </p>
             </div>

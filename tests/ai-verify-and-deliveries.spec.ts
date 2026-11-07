@@ -66,7 +66,7 @@ test('AI document verification: hiển thị nút và quét giấy tờ trả v�
   await page.goto(`/citizen?section=dossiers&id=${appId}`);
 
   // Find verify button
-  const verifyBtn = page.getByRole('button', { name: /Tiền kiểm AI/i }).first();
+  const verifyBtn = page.getByRole('button', { name: /Kiểm tra sơ bộ bằng AI/i }).first();
   if (await verifyBtn.isVisible()) {
     await verifyBtn.click();
     await expect(page.getByText('AI đánh giá: Hợp lệ')).toBeVisible();

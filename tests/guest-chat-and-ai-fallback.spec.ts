@@ -88,12 +88,12 @@ test.describe('Chế độ khách Chatbot AI & Xử lý lỗi 503 Tiền kiểm'
     await page.goto('/cong-dan/ho-so/app-test-1234/chuan-bi');
 
     // Nút tiền kiểm AI hiển thị
-    const verifyBtn = page.getByRole('button', { name: 'Tiền kiểm AI' }).first();
+    const verifyBtn = page.getByRole('button', { name: 'Kiểm tra sơ bộ bằng AI' }).first();
     if (await verifyBtn.isVisible()) {
       await verifyBtn.click();
       // Khối cảnh báo dịch vụ AI bảo trì xuất hiện thân thiện theo hướng người dùng
       await expect(page.getByText('Dịch vụ AI đang bảo trì')).toBeVisible();
-      await expect(page.getByText('đối soát giấy tờ trực tiếp')).toBeVisible();
+      await expect(page.getByText('tự đối chiếu giấy tờ')).toBeVisible();
     }
   });
 
