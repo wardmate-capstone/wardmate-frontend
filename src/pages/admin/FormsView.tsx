@@ -46,7 +46,7 @@ export function FormsView() {
     try {
       const template = await create.mutateAsync(values);
       setCreateOpen(false); form.reset();
-      toast.success('Đã tạo biểu mẫu. Hãy tải lên phôi Word.');
+      toast.success('Đã tạo biểu mẫu. Hãy tải lên mẫu Word.');
       openUpload(template);
       await invalidate();
     } catch { /* Lỗi hiển thị trong form. */ }
@@ -56,13 +56,13 @@ export function FormsView() {
     event.preventDefault();
     if (!canManage || !uploadTarget || uploadLock.current) return;
     if (!file || !file.name.toLowerCase().endsWith('.docx') || file.size === 0 || file.size > 20 * 1024 * 1024) {
-      setUploadError('Chọn tệp .docx không rỗng, tối đa 20 MiB.'); return;
+      setUploadError('Chọn tệp Word không rỗng, tối đa 20 MB.'); return;
     }
-    if (uploadTarget.fileDocxUrl && !replaceConfirmed) { setUploadError('Vui lòng xác nhận thay phôi Word hiện tại.'); return; }
+    if (uploadTarget.fileDocxUrl && !replaceConfirmed) { setUploadError('Vui lòng xác nhận thay mẫu Word hiện tại.'); return; }
     uploadLock.current = true;
     try {
       await upload.mutateAsync({ id: uploadTarget.id, file });
-      setUploadTarget(null); setFile(null); toast.success('Đã cập nhật phôi Word.');
+      setUploadTarget(null); setFile(null); toast.success('Đã cập nhật mẫu Word.');
       await invalidate();
     } catch { /* Giữ file để người dùng thử lại. */ }
     finally { uploadLock.current = false; }
@@ -71,7 +71,7 @@ export function FormsView() {
   const totalPages = list.data?.totalPages || 1;
   return <div className="space-y-5">
     {guard.confirmation}
-    {!canManage && user?.roles.includes('IT_ADMIN') && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Bạn có thể xem kho biểu mẫu. Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.</p>}
+    {!canManage && user?.roles.includes('IT_ADMIN') && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Bạn có thể xem kho biểu mẫu. Tạo hoặc thay mẫu Word cần vai trò Quản lý thủ tục.</p>}
     <section className="admin-card space-y-4 p-6">
       <div className="flex flex-wrap items-center gap-3">
         <form role="search" className="flex min-w-[280px] flex-1 items-center sm:max-w-md" onSubmit={event => { event.preventDefault(); setSearchCode(searchInput.trim()); setPage(1); }}>
@@ -95,7 +95,7 @@ export function FormsView() {
         <>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <caption className="sr-only">Danh sách phôi biểu mẫu Word</caption>
+              <caption className="sr-only">Danh sách mẫu Word</caption>
               <thead>
                 <tr className="border-b bg-slate-50">
                   {['Mã / Tên biểu mẫu', 'Tệp Word', 'Trạng thái', 'Thao tác'].map((label, idx) => (
@@ -118,7 +118,7 @@ export function FormsView() {
                   list.data.items.map((item) => (
                     <tr key={item.id} className="border-b border-slate-100">
             <td className="min-w-44 p-3"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
-            <td className="p-3"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có DOCX' : 'Chưa có tệp'}</Badge></td>
+            <td className="p-3"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
             <td className="p-3">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
             <td className="w-[380px] min-w-[350px] p-3">
               <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
@@ -158,7 +158,7 @@ export function FormsView() {
         </>
       )}
     </section>
-    <Modal open={createOpen && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setCreateOpen(false)); }} title="Tạo phôi biểu mẫu" description="Tạo mã và tên trước, sau đó tải lên file Word gốc.">
+    <Modal open={createOpen && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setCreateOpen(false)); }} title="Tạo biểu mẫu" description="Tạo mã và tên trước, sau đó tải lên file Word gốc.">
       <form onSubmit={submitCreate} className="space-y-4" noValidate>
         <Input label="Mã biểu mẫu" maxLength={50} required {...form.register('code')} error={form.formState.errors.code?.message} disabled={create.isPending} />
         <Input label="Tên biểu mẫu" maxLength={255} required {...form.register('title')} error={form.formState.errors.title?.message} disabled={create.isPending} />
@@ -166,12 +166,12 @@ export function FormsView() {
         <Button type="submit" loading={create.isPending}>Tạo biểu mẫu</Button>
       </form>
     </Modal>
-    <Modal open={Boolean(uploadTarget) && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setUploadTarget(null)); }} title={`Tải lên phôi: ${uploadTarget?.code ?? ''}`} description="Chọn tệp Word .docx không rỗng, tối đa 20 MiB.">
+    <Modal open={Boolean(uploadTarget) && canManage} onOpenChange={open => { if (!open) guard.requestClose(() => setUploadTarget(null)); }} title={`Tải lên mẫu Word: ${uploadTarget?.code ?? ''}`} description="Chọn tệp Word không rỗng, tối đa 20 MB.">
       <form onSubmit={submitUpload} className="space-y-4">
         <Input key={uploadTarget?.id} label="Tệp Word" type="file" accept=".docx" disabled={upload.isPending} onChange={event => { setFile(event.target.files?.[0] ?? null); setUploadError(''); upload.reset(); }} />
-        {uploadTarget?.fileDocxUrl && <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" checked={replaceConfirmed} disabled={upload.isPending} onChange={event => setReplaceConfirmed(event.target.checked)} />Tôi xác nhận thay phôi Word đang được cung cấp cho các thủ tục liên kết.</label>}
+        {uploadTarget?.fileDocxUrl && <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" checked={replaceConfirmed} disabled={upload.isPending} onChange={event => setReplaceConfirmed(event.target.checked)} />Tôi xác nhận thay mẫu Word đang được cung cấp cho các thủ tục liên kết.</label>}
         {(uploadError || upload.isError) && <p role="alert" className="text-sm text-red-800">{uploadError || formTemplateErrorMessage(upload.error)}</p>}
-        <Button type="submit" loading={upload.isPending}>Tải lên phôi Word</Button>
+        <Button type="submit" loading={upload.isPending}>Tải lên mẫu Word</Button>
       </form>
     </Modal>
   </div>;

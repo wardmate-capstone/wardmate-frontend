@@ -266,7 +266,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
               }`}
             >
               <Files size={18} weight={activeTab === 'electronic-documents' ? 'bold' : 'regular'} />
-              <span>3. Giấy tờ điện tử đã nộp</span>
+              <span>3. Giấy tờ điện tử đã gửi</span>
               <span className="ml-1 px-2 py-0.5 text-[11px] rounded-full bg-slate-100 text-slate-700 font-mono">
                 0
               </span>
@@ -535,7 +535,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                   <div>
-                    <span className="text-slate-400 block text-[11px] mb-1">Tên đăng nhập (Username):</span>
+                    <span className="text-slate-400 block text-[11px] mb-1">Tên đăng nhập:</span>
                     <strong className="text-slate-900 font-mono text-xs bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block">
                       @{accountInfo.username}
                     </strong>
@@ -652,7 +652,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                         <span className="font-medium text-slate-800">{dossier.field}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[11px]">Thời gian nộp:</span>
+                        <span className="text-slate-400 block text-[11px]">Thời gian gửi:</span>
                         <span className="font-medium text-slate-800">{dossier.submittedAt}</span>
                       </div>
                       <div>
@@ -693,14 +693,14 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
         </div>
       )}
 
-      {/* TAB CONTENT 3: Giấy tờ điện tử đã nộp */}
+      {/* TAB CONTENT 3: Giấy tờ điện tử đã gửi */}
       {activeTab === 'electronic-documents' && (
         <section className="admin-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <Files size={18} className="text-red-800" />
-                Giấy tờ điện tử đã nộp
+                Giấy tờ điện tử đã gửi
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Các tệp đính kèm, ảnh chụp bản chính và bản số hóa công dân đã tải lên kho hồ sơ

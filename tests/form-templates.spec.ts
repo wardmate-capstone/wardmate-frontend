@@ -55,14 +55,14 @@ test('manager creates and uploads a template, validates input and retries upload
   await page.getByRole('button', { name: 'Tạo biểu mẫu', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('MAU_MOI');
-  await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('không rỗng');
   await dialog.getByLabel('Tệp Word', { exact: true }).setInputFiles({ name: 'mau.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('mock-upload') });
   state.uploadFailed = true;
-  await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Tệp DOCX không hợp lệ');
   state.uploadFailed = false;
-  await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText('Biểu mẫu mới', { exact: true })).toBeVisible();
   expect(state.writes).toHaveLength(3);
@@ -93,19 +93,19 @@ for (const replace of [false, true]) {
           ? { code: 'document.blob_upload_failed', message: 'Failed to upload file to storage: internal-storage-exception' }
           : { type: 'https://www.rfc-editor.org/rfc/rfc9110#section-15.6.1', status: 500, title: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.', instance: `/api/v1/form-templates/${formTemplateId}/upload-docx`, traceId: 'mock-upload-trace' } });
       });
-      await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
       await expect(dialog.getByRole('alert')).toContainText(storageFailure ? 'Kho lưu trữ chưa thể lưu tệp Word' : 'Chưa xác nhận được kết quả thao tác');
       if (!storageFailure) await expect(dialog.getByRole('alert')).toContainText('Mã hỗ trợ: mock-upload-trace');
       await expect(dialog.getByRole('alert')).not.toContainText('internal-storage-exception');
       await expect(dialog.getByLabel('Tệp Word', { exact: true })).toHaveValue(/mau\.docx$/);
       if (replace) await expect(dialog.getByRole('checkbox')).toBeChecked();
-      await expect(page.getByText('Đã cập nhật phôi Word.', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Đã cập nhật mẫu Word.', { exact: true })).toHaveCount(0);
       expect(attempts).toBe(1);
       expect(state.item.fileDocxUrl).toBe(replace ? original.fileDocxUrl : null);
       failed = false;
-      await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByText('Đã có DOCX', { exact: true })).toBeVisible();
+      await expect(page.getByText('Đã có tệp Word', { exact: true })).toBeVisible();
       expect(attempts).toBe(2);
     });
   }
@@ -133,7 +133,7 @@ test('replacing a template requires confirmation and clears stale file selection
   await page.getByRole('button', { name: 'Thay đổi' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Tệp Word', { exact: true }).setInputFiles({ name: 'mau.docx', mimeType: 'application/octet-stream', buffer: Buffer.from('mock') });
-  await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('xác nhận');
   expect(state.writes).toHaveLength(0);
   await page.keyboard.press('Escape');
@@ -142,7 +142,7 @@ test('replacing a template requires confirmation and clears stale file selection
   await expect(dialog.getByLabel('Tệp Word', { exact: true })).toHaveValue('');
   await dialog.getByLabel('Tệp Word', { exact: true }).setInputFiles({ name: 'mau.docx', mimeType: 'application/octet-stream', buffer: Buffer.from('mock') });
   await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Tải lên phôi Word', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Tải lên mẫu Word', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect(state.writes).toHaveLength(1);
 });
@@ -233,7 +233,7 @@ test('dual-role user uploads an empty template in procedure-manager workspace', 
   await expect(row.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true })).toHaveCount(0);
   await expect(row.getByRole('button', { name: 'Tải lên', exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Tải lên', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Tải lên phôi');
+  await expect(page.getByRole('dialog')).toContainText('Tải lên mẫu Word');
   await page.keyboard.press('Escape');
   state.item.fileDocxUrl = original.fileDocxUrl;
   await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
@@ -268,7 +268,7 @@ test('IT_ADMIN without PROCEDURE_MANAGER reads templates without write controls'
   const state = await mockForms(page);
   await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
-  await expect(page.getByText('Tạo hoặc thay phôi cần vai trò Quản lý thủ tục.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Tạo hoặc thay mẫu Word cần vai trò Quản lý thủ tục.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thay đổi', exact: true })).toHaveCount(0);
   expect(state.writes).toHaveLength(0);

@@ -193,7 +193,7 @@ export function formTemplateErrorMessage(error: unknown): string {
         'document.invalid_template': 'Mã biểu mẫu cần 1–50 ký tự và tên cần 1–255 ký tự.',
         'document.invalid_docx_file': 'Tệp Word không hợp lệ hoặc bị hỏng. Vui lòng chọn tệp .docx khác.',
         'document.empty_file': 'Tệp đã chọn không có nội dung.',
-        'document.file_too_large': 'Tệp Word vượt quá giới hạn 20 MiB.',
+        'document.file_too_large': 'Tệp Word vượt quá giới hạn 20 MB.',
       };
       if ('code' in data && typeof data.code === 'string' && messages[data.code]) return messages[data.code];
       if ('message' in data && typeof data.message === 'string' && data.message.trim()) {

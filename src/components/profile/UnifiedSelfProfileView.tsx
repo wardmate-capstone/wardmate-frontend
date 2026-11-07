@@ -566,7 +566,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px] mb-1">Tên đăng nhập (Username):</span>
+              <span className="text-slate-400 block text-[11px] mb-1">Tên đăng nhập:</span>
               <strong className="text-slate-900 font-mono text-xs bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block">
                 @{user?.username}
               </strong>
