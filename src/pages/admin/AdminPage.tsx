@@ -114,7 +114,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
     title: "Vận hành hệ thống",
     items: [
-      { id: "analytics-jobs", label: "Job thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
+      { id: "analytics-jobs", label: "Tác vụ thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "notification-deliveries", label: "Phát thông báo", icon: Broadcast, permissions: ['notifications.deliveries.read'], fallbackRoles: ['IT_ADMIN'] },
       { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
       { id: "integrations", label: "Giám sát dịch vụ", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
@@ -133,7 +133,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 const sectionMeta: Record<SectionId, { title: string }> = {
   'system-settings': { title: 'Cấu hình hệ thống' },
   closures: { title: 'Lịch ngày lễ toàn quốc' },
-  'analytics-jobs': { title: 'Quản lý job thống kê' },
+  'analytics-jobs': { title: 'Quản lý tác vụ thống kê' },
   'notification-deliveries': { title: 'Quản trị phát thông báo' },
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
@@ -822,12 +822,6 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
       icon: Buildings,
       tone: 'warning',
     },
-    {
-      label: 'Hệ thống vận hành',
-      value: 'Ổn định',
-      icon: ShieldCheck,
-      tone: 'success',
-    },
   ];
 
   const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> = [
@@ -841,7 +835,7 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
 
   return (
     <>
-      <section className="admin-stat-grid" aria-label="Chỉ số tổng quan">
+      <section className="admin-stat-grid xl:grid-cols-3!" aria-label="Chỉ số tổng quan">
         {stats.map(({ label, value, icon: Icon, tone }) => (
           <article key={label} className={`admin-stat-card is-${tone}`}>
             <div>
@@ -876,7 +870,7 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
         </div>
       </section>
 
-      <section className="admin-insight-grid">
+      <section className="mt-4">
         <article className="admin-card">
           <div className="admin-card-heading">
             <div>
@@ -927,44 +921,6 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
             {!auditLoading && !auditError && auditLogs.length === 0 && (
               <p className="py-5 text-sm text-slate-500">Chưa có hoạt động quản trị nào.</p>
             )}
-          </div>
-        </article>
-
-        <article className="admin-card">
-          <div className="admin-card-heading">
-            <div>
-              <h2>Tình trạng dịch vụ</h2>
-            </div>
-            <button type="button" onClick={() => onSelect('integrations')}>
-              Chi tiết
-            </button>
-          </div>
-          <div className="admin-health-list">
-            <div>
-              <span className="is-online" />
-              <p>Trợ lý AI & Tra cứu RAG</p>
-              <strong>Hoạt động</strong>
-            </div>
-            <div>
-              <span className="is-online" />
-              <p>OCR trích xuất CCCD & Giấy tờ</p>
-              <strong>Hoạt động</strong>
-            </div>
-            <div>
-              <span className="is-online" />
-              <p>Xác thực & Phân quyền IAM</p>
-              <strong>Hoạt động</strong>
-            </div>
-            <div>
-              <span className="is-online" />
-              <p>Quy trình Một cửa & Tiền kiểm</p>
-              <strong>Hoạt động</strong>
-            </div>
-            <div>
-              <span className="is-online" />
-              <p>Kết xuất PDF biểu mẫu & Mã QR</p>
-              <strong>Hoạt động</strong>
-            </div>
           </div>
         </article>
       </section>
