@@ -372,12 +372,12 @@ export function AdminRolesView() {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <select
-                  aria-label="Lọc theo module"
+                  aria-label="Lọc theo phân hệ"
                   value={moduleFilter}
                   onChange={(event) => setModuleFilter(event.target.value)}
                   className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                 >
-                  <option value="ALL">Tất cả module</option>
+                  <option value="ALL">Tất cả phân hệ</option>
                   {modules.map((module) => (
                     <option key={module} value={module}>
                       {moduleLabels[module] ?? module}
@@ -883,7 +883,7 @@ function AuditDetailModal({
 
             {staffCreatedActions.includes(log.action) && (
               <div className="text-xs">
-                <span className="text-slate-500">Ủy ban nhân dân công tác:</span>{" "}
+                <span className="text-slate-500">Đơn vị công tác:</span>{" "}
                 <strong>{parsed.wardId ? (wardsMap[parsed.wardId] ?? "Ủy ban Nhân dân") : "Không gắn phường / xã"}</strong>
               </div>
             )}
@@ -906,7 +906,7 @@ function AuditDetailModal({
         {log.details && log.details !== "{}" && (
           <details className="group">
             <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-800 select-none">
-              Xem dữ liệu kiểm toán gốc
+              Xem dữ liệu gốc
             </summary>
             <pre className="mt-2 max-h-48 overflow-y-auto rounded-xl bg-slate-900 p-3 text-xs font-mono text-emerald-400">
               {JSON.stringify(parsed, null, 2)}

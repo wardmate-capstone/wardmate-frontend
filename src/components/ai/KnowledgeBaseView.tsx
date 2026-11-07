@@ -51,9 +51,9 @@ function IndexStatusCard() {
           <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {([
               ['Đang dùng', data.activeDocuments],
-              ['Chờ tạo vector', data.chunked],
+              ['Đang chuẩn bị cho AI', data.chunked],
               ['Sẵn sàng', data.embedded],
-              ['Lỗi tạo vector', data.embeddingFailed],
+              ['Lỗi chuẩn bị cho AI', data.embeddingFailed],
               ['Ngừng dùng', data.inactive],
               ['Đoạn tìm kiếm được', `${data.searchableChunks.toLocaleString('vi-VN')}/${data.maxIndexedChunks.toLocaleString('vi-VN')}`],
             ] as const).map(([label, value]) => (
@@ -64,8 +64,8 @@ function IndexStatusCard() {
             ))}
           </dl>
           <p className="mt-3 text-xs leading-5 text-slate-500">
-            Thứ tự bật trên máy chủ: (1) nhập hoặc đồng bộ tài liệu → (2) bật tạo vector và chờ tài liệu “Sẵn sàng” → (3) tìm thử để kiểm tra nguồn → (4) bật trả lời theo nguồn.
-            Các công tắc do quản trị máy chủ cấu hình, không bật được từ màn này.
+            Thứ tự bật: (1) nhập hoặc đồng bộ tài liệu → (2) bật chuẩn bị dữ liệu cho AI và chờ tài liệu “Sẵn sàng” → (3) tìm thử để kiểm tra nguồn → (4) bật trả lời theo nguồn.
+            Các công tắc do bộ phận vận hành hệ thống cấu hình, không bật được từ màn này.
           </p>
         </>
       )}
@@ -91,7 +91,7 @@ function SearchTestPanel() {
   return (
     <section className="admin-card p-5" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="text-base font-bold text-slate-950">Tìm thử nguồn</h2>
-      <p className="mt-1 text-xs text-amber-800">Mỗi lần bấm “Tìm thử” máy chủ tạo một embedding và có tính phí. Chỉ dùng để kiểm tra chất lượng nguồn.</p>
+      <p className="mt-1 text-xs text-amber-800">Mỗi lần bấm “Tìm thử” sẽ gọi dịch vụ AI và có tính phí. Chỉ dùng để kiểm tra chất lượng nguồn.</p>
       <form noValidate onSubmit={run} className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="grid flex-1 gap-2">
           <label htmlFor={`${id}-query`} className="text-sm font-semibold text-slate-800">Câu hỏi thử</label>
@@ -165,7 +165,7 @@ export function KnowledgeBaseView() {
     return (
       <section className="admin-card p-6">
         <h2 className="text-lg font-bold text-slate-950">Bạn chưa có quyền quản lý dữ liệu kiến thức AI</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Chức năng này cần quyền knowledge.manage. Liên hệ quản trị hệ thống nếu bạn cần quản lý nguồn cho trợ lý AI.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Chức năng này cần quyền Quản lý dữ liệu kiến thức AI. Liên hệ quản trị hệ thống nếu bạn cần quản lý nguồn cho trợ lý AI.</p>
       </section>
     );
   }
@@ -254,8 +254,8 @@ export function KnowledgeBaseView() {
                         <Button size="small" variant="ghost" onClick={() => setAction({ action: doc.isActive ? 'deactivate' : 'activate', doc })} aria-label={`${doc.isActive ? 'Ngừng dùng' : 'Dùng lại'} ${doc.title}`}>
                           {doc.isActive ? 'Ngừng dùng' : 'Dùng lại'}
                         </Button>
-                        <Button size="small" variant="ghost" onClick={() => setAction({ action: 'rechunk', doc })} aria-label={`Chia đoạn lại ${doc.title}`}>Chia lại</Button>
-                        <Button size="small" variant="ghost" onClick={() => setAction({ action: 'reindex', doc })} aria-label={`Tạo lại vector ${doc.title}`}>Tạo lại vector</Button>
+                        <Button size="small" variant="ghost" onClick={() => setAction({ action: 'rechunk', doc })} aria-label={`Chia lại nội dung ${doc.title}`}>Chia lại</Button>
+                        <Button size="small" variant="ghost" onClick={() => setAction({ action: 'reindex', doc })} aria-label={`Chuẩn bị lại cho AI ${doc.title}`}>Chuẩn bị lại cho AI</Button>
                       </div>
                     </td>
                   </tr>

@@ -20,7 +20,7 @@ test('admin loads dynamic permission modules and changes one permission', async 
   await page.locator('aside').getByRole('button', { name: 'Vai trò & quyền hạn' }).click();
   await expect(page.getByRole('button', { name: /CUSTOM_REVIEWER/ })).toBeVisible();
   await page.getByRole('button', { name: /Quản trị hệ thống IT_ADMIN/ }).click();
-  await page.getByLabel('Lọc theo module').selectOption('DocumentForm');
+  await page.getByLabel('Lọc theo phân hệ').selectOption('DocumentForm');
   await page.getByRole('switch', { name: /Tạo biểu mẫu và tải DOCX gốc/ }).click();
   await expect.poll(() => state.requests.some(request => request.method === 'PUT' && request.path === '/api/v1/rbac/roles/5/permissions/26')).toBe(true);
 });

@@ -19,11 +19,11 @@ export function AuditFilterForm({ business = false, onApply }: { business?: bool
   return <form noValidate onSubmit={form.handleSubmit(onApply)} className="space-y-4 border-b border-slate-200 pb-5">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {business && <><div className="grid content-start gap-2"><label htmlFor={sourceId} className="text-sm font-semibold">Nguồn phát sinh</label><select id={sourceId} {...form.register('source')} className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-base"><option value="">Tất cả nguồn</option>{Object.entries(auditSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
-        <Input label="Thực thể" hint="Tên chính xác, ví dụ: applications" {...form.register('entity')} error={errors.entity?.message} /></>}
+        <Input label="Loại dữ liệu" hint="Nhập đúng tên loại dữ liệu cần tra cứu" {...form.register('entity')} error={errors.entity?.message} /></>}
       <Input label="Từ ngày" type="date" {...form.register('from')} error={errors.from?.message} />
       <Input label="Đến ngày" type="date" {...form.register('to')} error={errors.to?.message} />
     </div>
-    {business && <details className="rounded-xl border border-slate-200 p-3" open={!!errors.actorId || !!errors.traceId}><summary className="cursor-pointer text-sm font-semibold">Lọc theo người thực hiện và mã tra cứu</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><Input label="Mã người thực hiện" hint="Mã định danh GUID; khớp chính xác." {...form.register('actorId')} error={errors.actorId?.message} /><Input label="Mã tra cứu" hint="Mã yêu cầu cần đối chiếu; khớp chính xác." {...form.register('traceId')} error={errors.traceId?.message} /></div></details>}
+    {business && <details className="rounded-xl border border-slate-200 p-3" open={!!errors.actorId || !!errors.traceId}><summary className="cursor-pointer text-sm font-semibold">Lọc theo người thực hiện và mã tra cứu</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><Input label="Mã tài khoản người thực hiện" hint="Sao chép mã tài khoản từ trang Người dùng hệ thống." {...form.register('actorId')} error={errors.actorId?.message} /><Input label="Mã tra cứu" hint="Mã yêu cầu cần đối chiếu; khớp chính xác." {...form.register('traceId')} error={errors.traceId?.message} /></div></details>}
     <div className="flex flex-wrap gap-3"><Button type="submit">Áp dụng</Button><Button variant="outline" onClick={() => { form.reset(emptyAuditFilters); onApply({ ...emptyAuditFilters }); }}>Xóa bộ lọc</Button></div>
     <p className="text-sm text-slate-600">Khoảng ngày tính theo giờ Việt Nam. Bỏ trống để tra cứu mọi thời điểm.</p>
   </form>;

@@ -11,11 +11,11 @@ test('business audit filters on server, uses Vietnam UTC boundaries and resets p
   await page.getByRole('button', { name: 'Trang sau' }).click();
   await expect(page.getByText('Trang 2 / 2')).toBeVisible();
   await page.getByLabel('Nguồn phát sinh').selectOption('workflow');
-  await page.getByLabel('Thực thể', { exact: true }).fill(' applications ');
+  await page.getByLabel('Loại dữ liệu', { exact: true }).fill(' applications ');
   await page.getByLabel('Từ ngày').fill('2026-11-03');
   await page.getByLabel('Đến ngày').fill('2026-11-03');
   await page.getByText('Lọc theo người thực hiện và mã tra cứu').click();
-  await page.getByLabel('Mã người thực hiện').fill(actorId);
+  await page.getByLabel('Mã tài khoản người thực hiện').fill(actorId);
   await page.getByLabel('Mã tra cứu', { exact: true }).fill(' trace-audit-test ');
   await page.getByRole('button', { name: 'Áp dụng' }).click();
   await expect.poll(() => state.requests.at(-1)?.query).toEqual({ page: '1', pageSize: '20', source: 'workflow', entity: 'applications', actorId, traceId: 'trace-audit-test', from: '2026-11-02T17:00:00.000Z', to: '2026-11-03T16:59:59.999Z' });
@@ -31,7 +31,7 @@ test('audit detail fetches selected ID, explains redaction, supports keyboard ta
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('UNDER_REVIEW', { exact: false }).first()).toBeVisible();
   await expect(dialog.getByText('Không có thông tin người thực hiện')).toBeVisible();
-  await expect(dialog.getByText('[REDACTED]: Đã ẩn dữ liệu nhạy cảm.')).toBeVisible();
+  await expect(dialog.getByText('[Đã ẩn]: Dữ liệu nhạy cảm.')).toBeVisible();
   expect(state.requests.some(item => item.path.endsWith('/audit-events/' + eventId))).toBe(true);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: `Chi tiết sự kiện ${eventId}`, exact: true })).toBeFocused();
@@ -56,7 +56,7 @@ test('audit rejects reversed dates and invalid actor without sending filters', a
   await expect(page.getByText('Ngày kết thúc phải từ ngày bắt đầu trở đi.')).toBeVisible();
   await page.getByLabel('Đến ngày').fill('2026-11-03');
   await page.getByText('Lọc theo người thực hiện và mã tra cứu').click();
-  await page.getByLabel('Mã người thực hiện').fill('not-a-guid');
+  await page.getByLabel('Mã tài khoản người thực hiện').fill('not-a-guid');
   await page.getByRole('button', { name: 'Áp dụng' }).click();
   await expect(page.getByText('Nhập mã định danh GUID hợp lệ.')).toBeVisible();
   expect(state.requests.length).toBe(count);

@@ -33,19 +33,19 @@ test('Manager: 403 và response sai cấu trúc không hiện số liệu giả'
 
 test('Admin: xác nhận POST 202 rồi GET theo dõi job, validation ID', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']); const state = await mockAnalytics(page);
-  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Job thống kê' }).click();
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Tác vụ thống kê' }).click();
   await page.getByRole('button', { name: 'Tính lại thống kê', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận xếp lịch' }).click();
   await expect(page.getByText('Trạng thái: Hoàn tất')).toBeVisible();
   expect(state.requests.filter(item => item.method === 'POST')).toHaveLength(1);
   expect(state.requests.some(item => item.path.endsWith('/jobs/123'))).toBe(true);
-  await page.getByLabel('Mã job', { exact: true }).fill('abc'); await page.getByRole('button', { name: 'Tra cứu' }).click();
-  await expect(page.getByText('Mã job gồm 1–30 chữ số.')).toBeVisible();
+  await page.getByLabel('Mã tác vụ', { exact: true }).fill('abc'); await page.getByRole('button', { name: 'Tra cứu' }).click();
+  await expect(page.getByText('Mã tác vụ gồm 1–30 chữ số.')).toBeVisible();
 });
 
 test('Admin: jobs_disabled giữ form và không báo hoàn tất', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']); const state = await mockAnalytics(page); state.fail = 'analytics.jobs_disabled';
-  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Job thống kê' }).click();
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Tác vụ thống kê' }).click();
   await page.getByRole('button', { name: 'Tính lại thống kê', exact: true }).click(); await page.getByRole('button', { name: 'Xác nhận xếp lịch' }).click();
   await expect(page.getByRole('alert')).toContainText('Chức năng chưa được bật.'); await expect(page.getByText('Trạng thái: Hoàn tất')).toHaveCount(0);
 });
@@ -82,7 +82,7 @@ test('Manager: đổi kỳ đưa trang về 1, từ chối khoảng ngày đảo
 
 test('Admin: job còn xếp hàng không báo hoàn tất và cập nhật qua polling', async ({ page }) => {
   await mockWorkspaceAuth(page, ['IT_ADMIN']); const state = await mockAnalytics(page); state.jobState = 'Enqueued';
-  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Job thống kê' }).click();
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Tác vụ thống kê' }).click();
   await page.getByRole('button', { name: 'Tính lại thống kê', exact: true }).click(); await page.getByRole('button', { name: 'Xác nhận xếp lịch' }).click();
   await expect(page.getByText('Trạng thái: Đã xếp hàng')).toBeVisible(); await expect(page.getByText('Trạng thái: Hoàn tất')).toHaveCount(0);
   state.jobState = 'Succeeded'; await expect(page.getByText('Trạng thái: Hoàn tất')).toBeVisible({ timeout: 10000 });
@@ -124,7 +124,7 @@ test('Admin: lỗi ngày từ BE đóng xác nhận và focus đúng ô ngày', 
     const { authReply } = await import('./fixtures/auth');
     return authReply(route, { status: 400, json: { title: 'Khoảng ngày chưa hợp lệ.', errors: { To: ['Kiểm tra lại ngày kết thúc.'] } } });
   });
-  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Job thống kê' }).click();
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Tác vụ thống kê' }).click();
   await page.getByRole('button', { name: 'Tính lại thống kê', exact: true }).click(); await page.getByRole('button', { name: 'Xác nhận xếp lịch' }).click();
   await expect(page.getByRole('dialog', { name: 'Xác nhận tính lại thống kê' })).toHaveCount(0);
   await expect(page.getByText('Kiểm tra lại ngày kết thúc.', { exact: true })).toBeVisible();

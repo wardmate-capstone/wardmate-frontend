@@ -25,7 +25,7 @@ const staffSchema = z.object({
   email: z.string().trim().min(1, 'Vui lòng nhập email.').email('Email không hợp lệ.').max(255, 'Email tối đa 255 ký tự.'),
   password: z.string()
     .min(8, 'Mật khẩu phải có ít nhất 8 ký tự.')
-    .refine(value => new TextEncoder().encode(value).length <= 72, 'Mật khẩu không được vượt quá 72 byte UTF-8.')
+    .refine(value => new TextEncoder().encode(value).length <= 72, 'Mật khẩu quá dài (tối đa khoảng 70 ký tự không dấu).')
     .refine(value => /\p{Lu}/u.test(value), 'Mật khẩu phải có ít nhất một chữ hoa.')
     .refine(value => /\p{Ll}/u.test(value), 'Mật khẩu phải có ít nhất một chữ thường.')
     .refine(value => /\d/.test(value), 'Mật khẩu phải có ít nhất một chữ số.')

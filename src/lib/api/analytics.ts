@@ -42,7 +42,7 @@ export const feedbackSummarySchema = z.object({ totalCount: count, averageRating
 function pageSchema<T extends z.ZodType>(item: T) {
   return z.object({ items: z.array(item), page: z.number().int().min(1).max(100000), pageSize: z.number().int().min(1).max(100), totalCount: count, coverage: coverageSchema.nullish(), unassignedDeadlines: deadlinesSchema.nullish() });
 }
-export const jobIdSchema = z.string().regex(/^[0-9]{1,30}$/, 'Mã job gồm 1–30 chữ số.');
+export const jobIdSchema = z.string().regex(/^[0-9]{1,30}$/, 'Mã tác vụ gồm 1–30 chữ số.');
 export const jobSchema = z.object({ jobId: jobIdSchema, state: z.string().min(1), createdAtUtc: timestamp });
 const path = (route: string) => servicePath(serviceUrls.analytics, '/api/v1/' + route);
 async function read<T extends z.ZodType>(route: string, schema: T, query: AnalyticsQuery, signal?: AbortSignal): Promise<z.infer<T>> {
@@ -93,12 +93,12 @@ export const analyticsApi = {
   },
   rebuild: async (input: z.infer<typeof dateRangeSchema>) => {
     const response = await api.post(path('analytics/jobs/rebuild'), dateRangeSchema.parse(input));
-    if (response.status !== 202) throw new Error('Chưa xác nhận được job đã xếp lịch. Không tự gửi lại; hãy kiểm tra mã job.');
+    if (response.status !== 202) throw new Error('Chưa xác nhận được tác vụ đã xếp lịch. Không tự gửi lại; hãy kiểm tra mã tác vụ.');
     return z.object({ jobId: jobIdSchema }).parse(response.data);
   },
   job: async (id: string, signal?: AbortSignal) => {
     const result = jobSchema.parse((await api.get(path(`analytics/jobs/${jobIdSchema.parse(id)}`), { signal })).data);
-    if (result.jobId !== id) throw new Error('Mã job trả về không khớp.');
+    if (result.jobId !== id) throw new Error('Mã tác vụ trả về không khớp.');
     return result;
   },
 };
