@@ -82,7 +82,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
         </div>
         {!connected && <p role="status" className="flex items-center gap-1.5 text-xs text-slate-500">
           {connecting ? <CircleNotch size={14} className="animate-spin" aria-hidden="true" /> : <WifiSlash size={14} aria-hidden="true" />}
-          {connecting ? 'Đang tải thông báo…' : 'Chưa kết nối được máy chủ thông báo'}
+          {connecting ? 'Đang tải thông báo…' : 'Chưa cập nhật được thông báo mới'}
         </p>}
         <button type="button" className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-red-800 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent" disabled={!connected || !unread || pending !== null} onClick={() => void perform('all', onMarkAllRead)}>
           {pending === 'all' ? <CircleNotch size={16} className="animate-spin" aria-hidden="true" /> : <Checks size={16} aria-hidden="true" />} Đánh dấu tất cả đã đọc
@@ -90,7 +90,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
       </div>
       {connectionStatus === 'offline' && <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
         <WifiSlash size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <p>Hệ thống sẽ tự kết nối lại. {notifications.length ? 'Bạn vẫn có thể xem thông báo đã tải và mở hồ sơ; việc đánh dấu đã đọc sẽ khả dụng khi kết nối trở lại.' : 'Thông báo sẽ xuất hiện khi kết nối thành công.'}</p>
+        <p>Hệ thống sẽ tự kết nối lại. {notifications.length ? 'Bạn vẫn có thể xem các thông báo đang hiển thị và mở hồ sơ; việc đánh dấu đã đọc sẽ dùng được khi kết nối trở lại.' : 'Thông báo sẽ xuất hiện khi kết nối thành công.'}</p>
       </div>}
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       <div aria-busy={connecting}>
@@ -144,7 +144,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
             <Button variant="outline" size="small" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>Sau</Button>
           </div>
         </nav>}
-        {notifications.length > 0 && <p className="mt-3 text-xs leading-5 text-slate-500">Bạn đang xem các thông báo gần nhất. Đánh dấu tất cả chỉ áp dụng cho các thông báo đã tải.</p>}
+        {notifications.length > 0 && <p className="mt-3 text-xs leading-5 text-slate-500">Bạn đang xem các thông báo gần nhất.</p>}
       </div>
     </section>
   );

@@ -74,12 +74,12 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   dossier_detail: { title: 'Chi tiết hồ sơ' },
   submissions: {
     title: 'Tờ khai của tôi',
-    subtitle: 'Quản lý các mẫu tờ khai hành chính trực tuyến (.docx). Bạn có thể xem lại, chỉnh sửa hoặc liên kết vào hồ sơ.',
+    subtitle: 'Các tờ khai bạn đã điền. Bạn có thể xem lại, sửa hoặc gắn vào hồ sơ.',
   },
   notifications: { title: 'Thông báo & Cập nhật' },
   qr_code: {
     title: 'Mã QR hồ sơ điện tử',
-    subtitle: 'Thẻ tra cứu và đối soát hồ sơ nhanh tại Bộ phận tiếp nhận Một cửa UBND.',
+    subtitle: 'Mã QR để tra cứu và đối chiếu hồ sơ nhanh tại Bộ phận Một cửa UBND.',
   },
   feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
   profile: { title: 'Hồ sơ cá nhân & Định danh' },
@@ -222,7 +222,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         if (status !== item.status) await workflowApi.updateChecklist(fresh.id, item.checklistId, { status });
       }
       const updated = await submitMutation.mutateAsync(fresh.id);
-      toast.success(`Hồ sơ ${updated.applicationCode} đã được nộp tiền kiểm trực tuyến thành công! Cán bộ sẽ sớm phản hồi.`);
+      toast.success(`Đã gửi hồ sơ ${updated.applicationCode} để cán bộ tiền kiểm. Cán bộ sẽ sớm phản hồi.`);
       setSelectedDossierDetail(mapApplicationDtoToCitizenDossier(updated));
       queryClient.invalidateQueries({ queryKey: workflowQueryKeys.citizenApplications() });
     } catch (err) {
@@ -254,7 +254,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           checklists: resubmitChecklists,
         },
       });
-      toast.success(`Đã gửi lại hồ sơ ${updated.application.applicationCode} (phiên bản v${updated.application.currentVersionNumber}) cho cán bộ thành công!`);
+      toast.success(`Đã gửi lại hồ sơ ${updated.application.applicationCode} cho cán bộ thành công!`);
       setSelectedDossierDetail(mapApplicationDtoToCitizenDossier(updated.application));
       queryClient.invalidateQueries({ queryKey: workflowQueryKeys.citizenApplications() });
       queryClient.invalidateQueries({ queryKey: workflowQueryKeys.applicationComments(selectedDossierDetail.id) });

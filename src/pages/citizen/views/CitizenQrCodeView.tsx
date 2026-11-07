@@ -75,7 +75,7 @@ export function CitizenQrCodeView({
   return (
     <div className="space-y-6">
       {/* Tiêu đề ẩn hỗ trợ trợ năng */}
-      <h2 className="sr-only">Mã QR đối soát hồ sơ điện tử</h2>
+      <h2 className="sr-only">Mã QR đối chiếu hồ sơ</h2>
 
 
       {!eligible.length ? (
@@ -84,7 +84,7 @@ export function CitizenQrCodeView({
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
             <QrCode size={32} weight="duotone" />
           </div>
-          <h3 className="mt-4 text-base font-bold text-slate-800">Chưa có mã QR đối soát</h3>
+          <h3 className="mt-4 text-base font-bold text-slate-800">Chưa có mã QR hồ sơ</h3>
           <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-500 leading-relaxed">
             Sau khi hồ sơ chuyển sang trạng thái{' '}
             <strong className="text-slate-700">"Giấy tờ sẵn sàng"</strong>, bạn có thể mở hồ sơ và tạo PDF để nhận mã QR từ hệ thống.
@@ -278,7 +278,7 @@ function ApprovedQr({
       <div className="border-b border-slate-100 bg-slate-50/50 p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Mã hồ sơ đối soát
+            Mã hồ sơ
           </span>
           <div className="flex items-center gap-2 mt-0.5">
             <strong className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">

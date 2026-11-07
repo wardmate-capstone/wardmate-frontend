@@ -22,7 +22,7 @@ export function CitizenFeedbackView({ dossiers, onOpenFeedback, loading, error, 
       : error ? <div role="alert" className="flex flex-col items-center gap-3 px-5 py-10 text-center text-sm text-slate-600"><p>Chưa tải được danh sách hồ sơ.</p><Button variant="outline" size="small" onClick={onRetry}>Thử lại</Button></div>
       : eligible.length === 0 ? <div role="status" className="flex flex-col items-center gap-2 px-5 py-12 text-center">
           <span className="grid size-12 place-items-center rounded-xl bg-slate-50 text-slate-400"><Star size={24} weight="duotone" aria-hidden /></span>
-          <p className="text-sm text-slate-500">Chưa có hồ sơ đủ điều kiện đánh giá trong danh sách đã tải.</p>
+          <p className="text-sm text-slate-500">Chưa có hồ sơ nào đủ điều kiện đánh giá.</p>
         </div>
       : <ul className="divide-y divide-slate-100">
           {eligible.map(item => <li key={item.id} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50/70">

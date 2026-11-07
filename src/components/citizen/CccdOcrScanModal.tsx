@@ -214,10 +214,10 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
       const data = await aiOcrApi.extractCccd(frontFile, backFile || undefined, controller.signal);
       if (controller.signal.aborted) return;
       setResult(data);
-      toast.success('Bóc tách thông tin CCCD thành công!');
+      toast.success('Đã đọc thông tin từ CCCD.');
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
-      const message = err instanceof Error ? err.message : 'Không thể bóc tách CCCD. Vui lòng thử lại với ảnh rõ nét hơn.';
+      const message = err instanceof Error ? err.message : 'Chưa đọc được thông tin CCCD. Vui lòng thử lại với ảnh rõ nét hơn.';
       setError(message);
     } finally {
       if (scanRequest.current === controller) {
@@ -248,8 +248,8 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
       <Modal
         open={open}
         onOpenChange={handleClose}
-        title="Quét thông tin Căn cước công dân (AI OCR)"
-        description="Bóc tách thông tin từ ảnh chụp CCCD để tự động điền hồ sơ."
+        title="Quét CCCD tự động"
+        description="Đọc thông tin từ ảnh chụp CCCD để tự động điền hồ sơ."
         className="sm:max-w-2xl"
       >
         <div className="space-y-4 text-xs">
@@ -363,7 +363,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                           type="button"
                           onClick={() => openLightbox(frontPreview, 'Ảnh mặt trước Căn cước công dân', frontRotation)}
                           className="size-7 rounded-lg bg-slate-900/85 text-white flex items-center justify-center hover:bg-slate-800 transition-colors shadow-sm border border-white/10 cursor-pointer"
-                          title="Xem ảnh kích thước đầy đủ (100%)"
+                          title="Xem ảnh kích thước đầy đủ"
                         >
                           <ArrowsOut size={13} weight="bold" />
                         </button>
@@ -466,7 +466,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                           type="button"
                           onClick={() => openLightbox(backPreview, 'Ảnh mặt sau Căn cước công dân', backRotation)}
                           className="size-7 rounded-lg bg-slate-900/85 text-white flex items-center justify-center hover:bg-slate-800 transition-colors shadow-sm border border-white/10 cursor-pointer"
-                          title="Xem ảnh kích thước đầy đủ (100%)"
+                          title="Xem ảnh kích thước đầy đủ"
                         >
                           <ArrowsOut size={13} weight="bold" />
                         </button>
@@ -637,7 +637,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       type="text"
                       value={manualForm.dateOfBirth || ''}
                       onChange={(e) => setManualForm({ ...manualForm, dateOfBirth: e.target.value })}
-                      placeholder="Ví dụ: 2004-08-10 hoặc 10/08/2004"
+                      placeholder="Ví dụ: 10/08/2004"
                       className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
                     />
                   </div>
@@ -757,7 +757,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                 <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
                   <span className="font-bold text-emerald-950 flex items-center gap-1.5">
                     <CheckCircle size={18} weight="fill" className="text-emerald-600" />
-                    Kết quả nhận diện CCCD (AI OCR)
+                    Thông tin đọc được từ CCCD
                   </span>
                   {result.confidenceScore != null && (
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
@@ -854,7 +854,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                 type="button"
                 onClick={() => setLightboxZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
                 className="p-1.5 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer disabled:opacity-40"
-                title="Thu nhỏ (-)"
+                title="Thu nhỏ"
                 disabled={lightboxZoom <= 0.5}
               >
                 <MagnifyingGlassMinus size={16} weight="bold" />
@@ -868,7 +868,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                 type="button"
                 onClick={() => setLightboxZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
                 className="p-1.5 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer disabled:opacity-40"
-                title="Phóng to (+)"
+                title="Phóng to"
                 disabled={lightboxZoom >= 3}
               >
                 <MagnifyingGlassPlus size={16} weight="bold" />
@@ -892,7 +892,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                 type="button"
                 onClick={() => setLightboxImage(null)}
                 className="p-1.5 text-white hover:bg-red-600 rounded-lg transition-colors cursor-pointer"
-                title="Đóng (Esc)"
+                title="Đóng"
               >
                 <X size={18} weight="bold" />
               </button>

@@ -205,7 +205,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             <h3 className="mt-1 text-base font-bold text-slate-900">{preparing ? 'Hoàn thiện hồ sơ' : statusLabel}</h3>
             {dossier.dueAtUtc && dossier.status !== 'Giấy tờ sẵn sàng' && dossier.status !== 'Đã tiếp nhận tại quầy' && (
               <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs">
-                <span className="block text-[11px] font-semibold text-slate-500">Hạn tiền kiểm (45h làm việc):</span>
+                <span className="block text-[11px] font-semibold text-slate-500">Thời hạn phản hồi (trong 45 giờ làm việc):</span>
                 <strong className="text-slate-900 block mt-0.5">
                   {new Date(dossier.dueAtUtc).toLocaleString('vi-VN')}
                 </strong>
@@ -288,7 +288,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   <span>Hủy hồ sơ tiền kiểm</span>
                 </Button>
                 <p className="text-[11px] text-center text-slate-400">
-                  {documentBusy ? 'Lưu bản khai đang mở trước khi gửi.' : missing.length ? 'Cần đủ giấy tờ để gửi kiểm tra.' : 'Gửi để cán bộ rà soát hồ sơ.'}
+                  {documentBusy ? 'Lưu tờ khai đang mở trước khi gửi.' : missing.length ? 'Cần đủ giấy tờ để gửi kiểm tra.' : 'Gửi để cán bộ rà soát hồ sơ.'}
                 </p>
               </div>
             )}

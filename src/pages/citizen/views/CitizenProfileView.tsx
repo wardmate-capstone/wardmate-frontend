@@ -283,7 +283,7 @@ export function CitizenProfileView({
                   onClick={() => setIsOcrModalOpen(true)}
                 >
                   <Scan size={16} weight="bold" />
-                  <span>Quét CCCD (AI OCR)</span>
+                  <span>Quét CCCD tự động</span>
                 </button>
                 {!isEditing ? (
                   <>

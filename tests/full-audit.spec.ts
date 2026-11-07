@@ -182,8 +182,8 @@ test('OCR: ảnh rỗng/sai định dạng xóa lựa chọn cũ; đóng lúc qu
     completed = true;
   });
   await page.goto('/citizen?section=profile');
-  await page.getByRole('button', { name: 'Quét CCCD (AI OCR)' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Quét thông tin Căn cước công dân (AI OCR)' });
+  await page.getByRole('button', { name: 'Quét CCCD tự động' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Quét CCCD tự động' });
   const file = dialog.getByLabel('Ảnh CCCD mặt trước');
   const scan = dialog.getByRole('button', { name: 'Bắt đầu quét AI' });
   const image = { name: 'front.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6TqMAAAAASUVORK5CYII=', 'base64') };
@@ -199,7 +199,7 @@ test('OCR: ảnh rỗng/sai định dạng xóa lựa chọn cũ; đóng lúc qu
   await expect.poll(() => requested).toBe(true);
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('button', { name: 'Quét CCCD (AI OCR)' }).click();
+  await page.getByRole('button', { name: 'Quét CCCD tự động' }).click();
   release();
   await expect.poll(() => completed).toBe(true);
   await expect(scan).toBeDisabled();

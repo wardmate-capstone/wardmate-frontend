@@ -139,7 +139,7 @@ export function CitizenDossiersView({
               type="button"
               onClick={onRefresh}
               disabled={isRefreshing || isLoading}
-              title="Làm mới danh sách hồ sơ (không cần F5)"
+              title="Làm mới danh sách hồ sơ"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
             >
               <ArrowClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
