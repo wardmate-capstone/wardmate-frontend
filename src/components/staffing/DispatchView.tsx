@@ -39,11 +39,14 @@ function AssignmentHistory({ application, onClose }: { application: DispatchAppl
   return <Modal open onOpenChange={v => !v && onClose()} title="Lịch sử phân công" description={application.applicationCode || application.id}><QueryState query={query} empty={!query.data?.length} />{!query.isError && query.data?.map(row => <article key={row.id} className="mb-3 rounded-lg border p-3 text-sm"><strong>{reasons[row.reasonCode as keyof typeof reasons] || row.action}</strong><p>{row.reason}</p><p>Từ: {row.fromOfficerId || 'Chưa phân công'} → {row.toOfficerId}</p><p>Thực hiện: {row.actorId}</p><time>{dateText(row.createdAt)}</time></article>)}</Modal>;
 }
 
+// Mỗi trang điều phối hiển thị 10 hồ sơ
+const DISPATCH_PAGE_SIZE = 10;
+
 export function DispatchView() {
   const { manager, can } = useStaffAccess();
   const [page, setPage] = useState(1);
   const [selection, setSelection] = useState<{ app: DispatchApplication; mode: 'assign' | 'history' | 'consult' }>();
-  const query = useStaffQuery(['dispatch', page], signal => staffingApi.applications(page, signal), manager && can('workflow.dispatch.read'));
+  const query = useStaffQuery(['dispatch', page], signal => staffingApi.applications(page, signal, DISPATCH_PAGE_SIZE), manager && can('workflow.dispatch.read'));
 
   // Nạp danh bạ cán bộ để ánh xạ GUID sang Tên đầy đủ
   const officersQuery = useStaffQuery(['managerOfficersDirectory'], () => getManagerOfficers({ pageSize: 100 }), manager);
@@ -117,91 +120,84 @@ export function DispatchView() {
 
       <QueryState query={query} empty={!query.data?.items.length} />
 
-      {!query.isError && !query.isPending && (
-        <div className="grid gap-3">
-          {query.data?.items.map(app => (
-            <article
-              key={app.id}
-              className="staff-card space-y-4"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-xs font-bold text-slate-800 border border-slate-200">
-                      <FileText size={14} className="text-slate-500" />
-                      <span className="break-all">{app.applicationCode || `HS-${app.id.slice(0, 8).toUpperCase()}`}</span>
-                    </span>
-                    {renderStatusBadge(app.status)}
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 leading-snug">
-                    {app.procedureTitle || 'Thủ tục hành chính'}
-                  </h3>
-                </div>
-
-                <div className="flex min-w-0 max-w-full items-center sm:max-w-[45%]">
-                  <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200/80 px-3 py-2 text-sm">
-                    <User size={15} className="text-slate-500" />
-                    <span className="text-slate-500">Cán bộ phụ trách:</span>
-                    {app.assignedOfficerId ? (
-                      <span className="font-semibold text-slate-900 [overflow-wrap:anywhere]">{formatOfficer(app.assignedOfficerId)}</span>
-                    ) : (
-                      <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                        Chưa phân công
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="staff-card-footer">
-                <div className="flex flex-wrap items-center gap-2">
-                  {can('workflow.dispatch.write') && ['SUBMITTED', 'UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'].includes(app.status) && (
-                    <Button
-                      size="small"
-                      onClick={() => setSelection({ app, mode: 'assign' })}
-                      className="gap-1.5 bg-red-800 hover:bg-red-900 text-white shadow-xs font-semibold"
-                    >
-                      {app.assignedOfficerId ? (
-                        <>
-                          <UserSwitch size={15} weight="bold" />
-                          <span>Chuyển cán bộ</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus size={15} weight="bold" />
-                          <span>Phân công</span>
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  <Button
-                    size="small"
-                    variant="outline"
-                    onClick={() => setSelection({ app, mode: 'history' })}
-                    className="gap-1.5 font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <ClockCounterClockwise size={15} />
-                    <span>Lịch sử</span>
-                  </Button>
-                  {can('workflow.consultation.read') && (
-                    <Button
-                      size="small"
-                      variant="outline"
-                      onClick={() => setSelection({ app, mode: 'consult' })}
-                      className="gap-1.5 font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      <ChatCircleText size={15} />
-                      <span>Tham vấn</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
+      {!query.isError && !query.isPending && !!query.data?.items.length && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] text-left text-sm">
+              <caption className="sr-only">Danh sách hồ sơ điều phối</caption>
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th scope="col" className="px-4 py-3">Hồ sơ</th>
+                  <th scope="col" className="px-4 py-3">Trạng thái</th>
+                  <th scope="col" className="px-4 py-3">Cán bộ phụ trách</th>
+                  <th scope="col" className="px-4 py-3 text-right"><span className="sr-only">Thao tác</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {query.data.items.map(app => {
+                  const canAssign = can('workflow.dispatch.write') && ['SUBMITTED', 'UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'].includes(app.status);
+                  return (
+                    <tr key={app.id} className="border-b border-slate-100 align-middle transition-colors last:border-0 hover:bg-slate-50/70">
+                      <td className="max-w-md px-4 py-3">
+                        <p className="truncate font-semibold text-slate-900">{app.procedureTitle || 'Thủ tục hành chính'}</p>
+                        <p className="mt-0.5 font-mono text-xs text-slate-500">{app.applicationCode || `HS-${app.id.slice(0, 8).toUpperCase()}`}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">{renderStatusBadge(app.status)}</td>
+                      <td className="px-4 py-3">
+                        {app.assignedOfficerId ? (
+                          <span className="inline-flex items-center gap-2 text-slate-800">
+                            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500"><User size={14} aria-hidden /></span>
+                            <span className="font-medium [overflow-wrap:anywhere]">{formatOfficer(app.assignedOfficerId)}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Chưa phân công</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {canAssign && (
+                            <Button
+                              size="small"
+                              variant={app.assignedOfficerId ? 'outline' : 'primary'}
+                              onClick={() => setSelection({ app, mode: 'assign' })}
+                              className="mr-1 gap-1.5 whitespace-nowrap font-semibold"
+                            >
+                              {app.assignedOfficerId ? <UserSwitch size={15} weight="bold" aria-hidden /> : <UserPlus size={15} weight="bold" aria-hidden />}
+                              <span>{app.assignedOfficerId ? 'Chuyển cán bộ' : 'Phân công'}</span>
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            aria-label="Lịch sử"
+                            title="Lịch sử phân công"
+                            onClick={() => setSelection({ app, mode: 'history' })}
+                            className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                          >
+                            <ClockCounterClockwise size={18} aria-hidden />
+                          </button>
+                          {can('workflow.consultation.read') && (
+                            <button
+                              type="button"
+                              aria-label="Tham vấn"
+                              title="Tham vấn theo hồ sơ"
+                              onClick={() => setSelection({ app, mode: 'consult' })}
+                              className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                            >
+                              <ChatCircleText size={18} aria-hidden />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <Pager page={page} total={query.data?.total ?? 0} setPage={setPage} />
+      <Pager page={page} total={query.data?.total ?? 0} setPage={setPage} pageSize={DISPATCH_PAGE_SIZE} />
       {selection?.mode === 'assign' && <AssignDialog application={selection.app} onClose={() => setSelection(undefined)} />}
       {selection?.mode === 'history' && <AssignmentHistory application={selection.app} onClose={() => setSelection(undefined)} />}
       {selection?.mode === 'consult' && <Modal open onOpenChange={v => !v && setSelection(undefined)} title="Tham vấn theo hồ sơ" description={selection.app.applicationCode || selection.app.id}><ConsultationPanel application={query.data?.items.find(app => app.id === selection.app.id) ?? selection.app} /></Modal>}

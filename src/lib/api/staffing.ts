@@ -27,7 +27,7 @@ export type Leave = z.infer<typeof leaveSchema>;
 export type Shift = z.infer<typeof shiftSchema>;
 export type AssignmentInput = { officerId: string; expectedAssignmentVersion: number; reasonCode: string; reason: string };
 export const staffingApi = {
-  applications: (p: number, signal?: AbortSignal) => get(manager, page(dispatchSchema), { page: p, pageSize: 20 }, signal),
+  applications: (p: number, signal?: AbortSignal, pageSize = 20) => get(manager, page(dispatchSchema), { page: p, pageSize }, signal),
   candidates: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignment-candidates`, z.array(candidateSchema), undefined, signal),
   assign: (app: string, input: AssignmentInput) => post(`${manager}/${app}/assignments`, assignmentSchema, input),
   assignments: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignments`, z.array(assignmentSchema), undefined, signal),

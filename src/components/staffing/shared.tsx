@@ -82,8 +82,8 @@ export function QueryState({ query, empty }: { query: { isPending: boolean; isEr
   if (query.isError) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800"><p>{staffingError(query.error)}</p><Button variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div>;
   return empty ? <div className="staff-state"><Tray size={32} aria-hidden="true" /><p className="font-semibold text-slate-700">Chưa có dữ liệu trong phạm vi đang xem.</p><p className="text-sm">Bạn có thể đổi bộ lọc hoặc làm mới để kiểm tra lại.</p></div> : null;
 }
-export function Pager({ page, total, setPage }: { page: number; total: number; setPage: (page: number) => void }) {
-  return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
+export function Pager({ page, total, setPage, pageSize = 20 }: { page: number; total: number; setPage: (page: number) => void; pageSize?: number }) {
+  return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * pageSize >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
 }
 type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select'; options?: { value: string; label: string; disabled?: boolean }[]; max?: number };
 export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues, inline = false, onDirtyChange }: {
