@@ -13,7 +13,7 @@ test('health renders configured services, unknown/stale states, detail and UTC h
   await expect(page.getByRole('dialog').getByText('45 ms', { exact: true })).toBeVisible();
   expect(state.requests.some(item => item.path.endsWith('/health/services/iam'))).toBe(true);
   await page.keyboard.press('Escape');
-  await page.getByLabel('Mã dịch vụ', { exact: true }).fill(' iam ');
+  await page.getByLabel('Dịch vụ (mã)', { exact: true }).fill(' iam ');
   await page.getByLabel('Từ ngày').fill('2026-11-03'); await page.getByLabel('Đến ngày').fill('2026-11-03');
   await page.getByRole('button', { name: 'Áp dụng' }).click();
   await expect.poll(() => state.requests.at(-1)?.query).toEqual({ service: 'iam', from: '2026-11-02T17:00:00.000Z', to: '2026-11-03T16:59:59.999Z', page: '1', pageSize: '20' });
@@ -45,7 +45,7 @@ test('backup creates a queued request, follows status and verifies file integrit
   await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
   await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Mã dịch vụ cần sao lưu').fill(' iam ');
+  await dialog.getByLabel('Dịch vụ cần sao lưu').selectOption('iam');
   await dialog.getByLabel('Lý do sao lưu').fill('   ');
   await dialog.getByRole('button', { name: 'Xếp hàng sao lưu' }).click();
   await expect(dialog.getByText('Lý do cần ít nhất 3 ký tự.')).toBeVisible();
@@ -91,7 +91,7 @@ for (const code of ['system.backup_in_progress', 'system.backup_runner_unavailab
     await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
     await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Mã dịch vụ cần sao lưu').fill('iam'); await dialog.getByLabel('Lý do sao lưu').fill('Lý do kiểm thử');
+    await dialog.getByLabel('Dịch vụ cần sao lưu').selectOption('iam'); await dialog.getByLabel('Lý do sao lưu').fill('Lý do kiểm thử');
     await dialog.getByRole('button', { name: 'Xếp hàng sao lưu' }).click();
     await expect(dialog.getByRole('alert')).toBeVisible();
     await expect(dialog.getByLabel('Lý do sao lưu')).toHaveValue('Lý do kiểm thử');
