@@ -8,7 +8,7 @@ import { Button, TableSkeletonRows } from '@/components/ui';
 import { useOfficerActivity } from '@/hooks/useWorkflow';
 import { workflowError, type OfficerActivityAction, type OfficerActivityDto } from '@/lib/api/workflow';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 type Tone = 'info' | 'success' | 'warning' | 'danger';
 
