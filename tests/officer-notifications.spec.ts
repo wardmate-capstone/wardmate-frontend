@@ -41,7 +41,7 @@ test.beforeEach(async ({ page }) => {
 test('cán bộ nhận thông báo thật, thấy thông báo mới đẩy về và đánh dấu đã đọc', async ({ page }) => {
   const hub = await mockHub(page);
   await page.goto('/officer');
-  await expect(page.getByRole('button', { name: 'Thông báo ca trực, có 1 thông báo mới' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Thông báo, có 1 thông báo mới' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
   const view = page.getByRole('region', { name: 'Danh sách thông báo ca trực' });
@@ -65,7 +65,7 @@ test('mất kết nối máy chủ thông báo thì báo rõ, không hiện dữ
   await page.goto('/officer');
   await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
   const view = page.getByRole('region', { name: 'Danh sách thông báo ca trực' });
-  await expect(view.getByText('Mất kết nối máy chủ thông báo. Hệ thống sẽ tự thử lại.')).toBeVisible();
+  await expect(view.getByText('Chưa cập nhật được thông báo mới. Hệ thống sẽ tự thử lại.')).toBeVisible();
   await expect(view.getByText('Chưa có thông báo.')).toBeVisible();
   await expect(view.getByRole('button', { name: 'Đánh dấu đã đọc tất cả' })).toBeDisabled();
 });

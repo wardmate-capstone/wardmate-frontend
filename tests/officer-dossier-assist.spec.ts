@@ -76,7 +76,7 @@ test.describe('Cán bộ thụ lý dùng Trợ lý AI kiểm tra hồ sơ (AI-OF
     await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
 
     // Chuyển sang tab "Bản khai & giấy tờ"
-    const documentsTab = page.getByRole('button', { name: /Bản khai & giấy tờ/ });
+    const documentsTab = page.getByRole('button', { name: /Tờ khai & giấy tờ/ });
     await expect(documentsTab).toBeVisible();
     await documentsTab.click();
 
@@ -90,7 +90,7 @@ test.describe('Cán bộ thụ lý dùng Trợ lý AI kiểm tra hồ sơ (AI-OF
     await expect.poll(() => assistCalled).toBe(true);
 
     // Kiểm tra kết quả hiển thị
-    await expect(page.getByText('Cần lưu ý kiểm tra đối soát')).toBeVisible();
+    await expect(page.getByText('Cần lưu ý kiểm tra đối chiếu')).toBeVisible();
     await expect(page.getByText('Tờ khai Word khớp số CCCD; chưa có giấy xác nhận cư trú CT07.')).toBeVisible();
 
     // Bảng đối chiếu chéo
@@ -138,7 +138,7 @@ test.describe('Cán bộ thụ lý dùng Trợ lý AI kiểm tra hồ sơ (AI-OF
     await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
     await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
 
-    const documentsTab = page.getByRole('button', { name: /Bản khai & giấy tờ/ });
+    const documentsTab = page.getByRole('button', { name: /Tờ khai & giấy tờ/ });
     await expect(documentsTab).toBeVisible();
     await documentsTab.click();
 

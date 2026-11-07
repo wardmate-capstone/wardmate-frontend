@@ -34,8 +34,8 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
             <h3 className="text-base font-bold text-slate-950">Thông báo ca làm việc</h3>
             <p role="status" className="text-xs text-slate-500">
               {connectionStatus === 'connected' ? 'Đang nhận thông báo mới tự động.'
-                : connectionStatus === 'connecting' ? 'Đang kết nối máy chủ thông báo…'
-                : 'Mất kết nối máy chủ thông báo. Hệ thống sẽ tự thử lại.'}
+                : connectionStatus === 'connecting' ? 'Đang tải thông báo…'
+                : 'Chưa cập nhật được thông báo mới. Hệ thống sẽ tự thử lại.'}
             </p>
           </div>
         </div>

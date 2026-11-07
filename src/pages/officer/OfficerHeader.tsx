@@ -30,7 +30,7 @@ const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string 
   'apps-resubmitted': { title: 'Hồ sơ đã gửi lại' },
   'apps-approved': { title: 'Hồ sơ có giấy tờ sẵn sàng' },
   'audit-log': { title: 'Lịch sử xử lý của cán bộ' },
-  notifications: { title: 'Thông báo ca trực' },
+  notifications: { title: 'Thông báo' },
   profile: { title: 'Hồ sơ cá nhân' },
 };
 
@@ -113,8 +113,8 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
           className="relative grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           aria-label={
             unreadNotifsCount > 0
-              ? `Thông báo ca trực, có ${unreadNotifsCount} thông báo mới`
-              : 'Thông báo ca trực'
+              ? `Thông báo, có ${unreadNotifsCount} thông báo mới`
+              : 'Thông báo'
           }
         >
           <Bell size={20} />

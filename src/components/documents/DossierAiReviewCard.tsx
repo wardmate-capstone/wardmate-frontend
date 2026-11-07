@@ -58,7 +58,7 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
               </span>
             </h3>
             <p className="text-xs text-slate-500">
-              Tự động trích xuất bản khai DOCX, đối chiếu chéo CCCD và phát hiện sai sót giấy tờ.
+              Tự động đọc tờ khai Word, đối chiếu chéo CCCD và phát hiện sai sót giấy tờ.
             </p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
           <div className="space-y-0.5">
             <p className="font-semibold">AI đang phân tích tờ khai Word và các tài liệu đính kèm...</p>
             <p className="text-purple-700/80 text-[11px]">
-              Quá trình bóc tách dữ liệu và đối soát chéo có thể mất từ 10 đến 45 giây. Vui lòng giữ nguyên màn hình.
+              Quá trình đọc dữ liệu và đối chiếu chéo có thể mất từ 10 đến 45 giây. Vui lòng giữ nguyên màn hình.
             </p>
           </div>
         </div>
@@ -136,8 +136,8 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
                     {result.overallAssessment === 'NO_ISSUES_FOUND'
                       ? 'Không phát hiện vấn đề bất thường'
                       : result.overallAssessment === 'NEEDS_ATTENTION'
-                      ? 'Cần lưu ý kiểm tra đối soát'
-                      : 'Chưa đủ dữ liệu đối soát'}
+                      ? 'Cần lưu ý kiểm tra đối chiếu'
+                      : 'Chưa đủ dữ liệu để đối chiếu'}
                   </span>
                   <Badge
                     variant={
