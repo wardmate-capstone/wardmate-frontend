@@ -28,7 +28,7 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   const writesBefore = state.writes.length;
   await form.getByLabel('Thay tệp Word đã điền').setInputFiles({ name: 'to-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('corrected-docx') });
   await expect(form.getByText('Đã lưu bản nháp', { exact: true })).toBeVisible();
-  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await form.getByRole('button', { name: 'Xác nhận tờ khai', exact: true }).click();
   await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
   expect(state.writes.slice(writesBefore).some(x => x.path.includes('/checklists/'))).toBe(false);
   await page.getByRole('button', { name: 'Gửi lại hồ sơ đã sửa', exact: true }).first().click();
@@ -63,7 +63,7 @@ test('validation file chặn tệp rỗng, sai đuôi và quá 20 MiB trước u
   await upload.setInputFiles({ name: 'sai.pdf', mimeType: 'application/pdf', buffer: Buffer.from('abc') });
   await expect(form.getByRole('alert')).toContainText('chọn tệp DOCX');
   await upload.setInputFiles({ name: 'qua-lon.docx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(20 * 1024 * 1024 + 1) });
-  await expect(form.getByRole('alert')).toContainText('20 MiB');
+  await expect(form.getByRole('alert')).toContainText('20 MB');
   expect(state.writes).toHaveLength(0);
   await page.setViewportSize({ width: 360, height: 800 });
   await expect.poll(() => page.locator('.admin-workspace').evaluate(element => getComputedStyle(element).marginLeft)).toBe('0px');

@@ -513,7 +513,7 @@ export const workflowApi = {
 
 export function workflowError(error: unknown): string {
   if (error instanceof z.ZodError) {
-    return 'Dữ liệu phản hồi từ máy chủ không đúng định dạng chuẩn.';
+    return 'Đã có lỗi khi tải dữ liệu. Vui lòng thử lại sau.';
   }
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;

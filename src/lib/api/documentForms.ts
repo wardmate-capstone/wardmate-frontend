@@ -234,7 +234,7 @@ export const documentFormApi = {
 
 export function validateDocumentFile(file: File, docxOnly = false): string | null {
   if (!file.size) return 'Tệp đã chọn không có nội dung.';
-  if (file.size > DOCUMENT_MAX_BYTES) return 'Tệp vượt quá giới hạn 20 MiB.';
+  if (file.size > DOCUMENT_MAX_BYTES) return 'Tệp vượt quá giới hạn 20 MB.';
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (docxOnly ? extension !== 'docx' : !SUPPORTING_EXTENSIONS.includes(extension as typeof SUPPORTING_EXTENSIONS[number]))
     return docxOnly ? 'Vui lòng chọn tệp DOCX.' : 'Chỉ hỗ trợ PDF, JPG, JPEG, PNG, DOC và DOCX.';
@@ -242,26 +242,26 @@ export function validateDocumentFile(file: File, docxOnly = false): string | nul
 }
 
 export function documentFormError(error: unknown): string {
-  if (error instanceof z.ZodError) return 'Dữ liệu tài liệu từ máy chủ không đúng định dạng.';
+  if (error instanceof z.ZodError) return 'Đã có lỗi khi tải tài liệu. Vui lòng thử lại sau.';
   if (axios.isAxiosError(error)) {
     const body = error.response?.data;
     const code = body && typeof body === 'object' ? body.code : undefined;
     const messages: Record<string, string> = {
-      'document.draft_exists': 'Mục này đã có bản khai. Vui lòng cập nhật bản hiện có.',
+      'document.draft_exists': 'Mục này đã có tờ khai. Vui lòng cập nhật tờ khai hiện có.',
       'document.application_locked': 'Trạng thái hồ sơ hiện tại không cho phép sửa tài liệu.',
       'document.template_mismatch': 'Biểu mẫu không đúng với mục giấy tờ của hồ sơ.',
-      'document.legacy_unlinked': 'Bản khai cũ chưa liên kết với hồ sơ này.',
-      'document.concurrent_edit': 'Bản khai vừa được thay đổi. Vui lòng tải lại rồi thử lại.',
+      'document.legacy_unlinked': 'Tờ khai này chưa gắn với hồ sơ.',
+      'document.concurrent_edit': 'Tờ khai vừa được thay đổi. Vui lòng tải lại rồi thử lại.',
       'document.workflow_unavailable': 'Chưa thể xác minh hồ sơ với dịch vụ tiền kiểm.',
       'document.storage_unavailable': 'Kho lưu trữ tài liệu tạm thời không phản hồi.',
       'document.blob_upload_failed': 'Kho lưu trữ chưa thể lưu tệp Word. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
       'document.empty_file': 'Tệp đã chọn không có nội dung.',
       'document.invalid_docx_file': 'Tệp DOCX không hợp lệ hoặc bị hỏng. Vui lòng kiểm tra lại bằng Word.',
-      'document.file_too_large': 'Tệp vượt quá giới hạn 20 MiB.',
+      'document.file_too_large': 'Tệp vượt quá giới hạn 20 MB.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
-      'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Bạn có thể tạo PDF từ bản khai sẵn sàng rồi tải lại mã QR.',
+      'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Bạn có thể tạo PDF từ tờ khai sẵn sàng rồi tải lại mã QR.',
       'document.concurrent_update': 'Dữ liệu vừa thay đổi. Vui lòng tải lại hồ sơ.',
-      'document.sync_unavailable': 'Chưa đồng bộ được trạng thái bản khai. Vui lòng tải lại trước khi thử tiếp.',
+      'document.sync_unavailable': 'Chưa cập nhật được trạng thái tờ khai. Vui lòng tải lại trước khi thử tiếp.',
       'document.application_not_approved': 'Hồ sơ thuộc luồng cũ, chưa được xác nhận giấy tờ sẵn sàng.',
       'document.application_not_ready': 'Hồ sơ chưa được xác nhận giấy tờ sẵn sàng để tải PDF.',
       'document.readiness_invalid': 'Hồ sơ thiếu thông tin cán bộ xác nhận. Vui lòng liên hệ đơn vị phụ trách.',
@@ -282,7 +282,7 @@ export function documentFormError(error: unknown): string {
 }
 
 export function submissionStatusLabel(status: string) {
-  return ({ Draft: 'Nháp đã lưu', Submitted: 'Đã chốt', RevisionRequested: 'Cần sửa', Approved: 'Đã duyệt', ReadyForDownload: 'Giấy tờ sẵn sàng' } as Record<string, string>)[status] ?? 'Chưa xác định';
+  return ({ Draft: 'Bản nháp', Submitted: 'Đã xác nhận', RevisionRequested: 'Cần chỉnh sửa', Approved: 'Đã duyệt', ReadyForDownload: 'Giấy tờ sẵn sàng' } as Record<string, string>)[status] ?? 'Chưa xác định';
 }
 
 export function safeDocumentLink(value: string) {
