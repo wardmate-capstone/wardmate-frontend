@@ -49,7 +49,7 @@ export function UnifiedOfficerSidebar({ activeSection, onSelectSection, isOpen, 
 export function UnifiedProcedureSidebar({ currentSection, onSelectSection, isOpenMobile, onCloseMobile, isCollapsedDesktop }: CommonProps<ProcedureNavSection> & { publishedCount?: number; activeFormsCount?: number; onToggleCollapseDesktop?: () => void }) {
   const role = ['PROCEDURE_MANAGER', 'IT_ADMIN'];
   const groups: WorkspaceNavGroup<ProcedureNavSection>[] = [
-    { title: 'Tổng quan', items: [{ id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['procedure.', 'document.templates.'], fallbackRoles: role }] },
+    { title: 'Tổng quan', items: [{ id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['procedure.', 'document.templates.manage'], fallbackRoles: role }] },
     { title: 'Thủ tục hành chính', items: [
       { id: 'procedures', label: 'Danh sách thủ tục', icon: ClipboardText, permissions: ['procedure.read', 'procedure.create', 'procedure.update', 'procedure.publish', 'procedure.status'] },
       { id: 'drafts', label: 'PDF và bản nháp', icon: FilePdf, permissions: ['procedure.drafts.'] }, { id: 'categories', label: 'Danh mục thủ tục', icon: FolderSimple, permissions: ['procedure.categories.manage'] },

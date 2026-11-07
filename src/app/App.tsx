@@ -65,7 +65,7 @@ export function App() {
                   <Route path="manager/*" element={<ManagerPage />} />
                   <Route path="quan-ly/*" element={<ManagerPage />} />
                 </Route>
-                <Route element={<ProtectedRoute roles={['PROCEDURE_MANAGER', 'IT_ADMIN']} permissions={['procedure.', 'document.templates.']} />}>
+                <Route element={<ProtectedRoute roles={['PROCEDURE_MANAGER', 'IT_ADMIN']} permissions={['procedure.', 'document.templates.manage']} />}>
                   <Route path="procedure-manager/*" element={<ProcedureManagerPage />} />
                   <Route path="quan-ly-thu-tuc/*" element={<ProcedureManagerPage />} />
                 </Route>
