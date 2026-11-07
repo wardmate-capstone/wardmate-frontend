@@ -37,6 +37,7 @@ import {
 import { Button } from '@/components/ui';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { documentFormError, downloadBlob, validateDocumentFile } from '@/lib/api/documentForms';
+import { displayDocumentFileName } from '@/lib/documentFileName';
 
 const fonts = packagedFonts();
 
@@ -213,7 +214,7 @@ export default function DocxOnlineEditor({
       editor.on('change', update),
       editor.on('error', () => {
         if (editor.snapshot().parseError) {
-          setError('Không mở được tài liệu. Hãy tải DOCX về để kiểm tra bằng Word.');
+          setError('Không mở được tài liệu. Hãy tải về và mở bằng Word để kiểm tra.');
         } else {
           setCompatibilityWarning(true);
         }
@@ -310,7 +311,7 @@ export default function DocxOnlineEditor({
 
           <div className="min-w-0 max-w-[200px] sm:max-w-xs md:max-w-md lg:max-w-lg">
             <h1 className="truncate text-xs sm:text-sm font-bold text-slate-900" title={name}>
-              {name}
+              {displayDocumentFileName(name)}
             </h1>
             <p className="truncate text-[11px] text-slate-500">
               {subtitle ? `${subtitle} · ` : ''}Tác giả: <span className="font-medium text-slate-700">{author}</span>
@@ -407,7 +408,7 @@ export default function DocxOnlineEditor({
             title="Tải tệp Word về máy"
           >
             <DownloadSimple size={16} />
-            <span className="hidden sm:inline">Tải DOCX</span>
+            <span className="hidden sm:inline">Tải về (Word)</span>
           </Button>
         </div>
       </header>
@@ -586,7 +587,7 @@ export default function DocxOnlineEditor({
                       engine?.focus();
                     }}
                   >
-                    <option value="portrait">Trang dọc (Portrait)</option>
+                    <option value="portrait">Trang dọc</option>
                     <option value="landscape">Trang ngang (Landscape)</option>
                   </select>
                 </label>
@@ -654,7 +655,7 @@ export default function DocxOnlineEditor({
       {snapshot?.hasReviewContent && (
         <div className="flex shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-900">
           <Info size={16} weight="bold" className="shrink-0 text-amber-700" />
-          <p>Tài liệu có bình luận hoặc theo dõi thay đổi. Để đọc đầy đủ các bình luận gốc, bạn có thể tải DOCX và mở bằng Word.</p>
+          <p>Tài liệu có bình luận hoặc theo dõi thay đổi. Để đọc đầy đủ các bình luận gốc, bạn có thể tải về và mở bằng Word.</p>
         </div>
       )}
 
@@ -684,7 +685,7 @@ export default function DocxOnlineEditor({
           {loading && (
             <div className="flex h-full flex-col items-center justify-center gap-3 bg-slate-100 text-slate-600">
               <div className="size-8 animate-spin rounded-full border-3 border-red-800 border-t-transparent" />
-              <p className="text-sm font-semibold">Đang tải và dựng bản Word lên bàn làm việc…</p>
+              <p className="text-sm font-semibold">Đang mở tờ khai…</p>
             </div>
           )}
 
@@ -722,7 +723,7 @@ export default function DocxOnlineEditor({
               role="alert"
               className="absolute inset-x-4 top-4 rounded-xl border border-red-300 bg-red-50 p-4 shadow-lg text-sm text-red-800 space-y-2"
             >
-              <p className="font-bold">Không thể hiển thị tệp DOCX này trên Web.</p>
+              <p className="font-bold">Không mở được tờ khai này trên trình duyệt.</p>
               <p>Tệp có thể bị mã hóa hoặc cấu trúc không tương thích. Hãy đóng trình soạn thảo và tải tệp về để mở bằng Microsoft Word.</p>
             </div>
           )}

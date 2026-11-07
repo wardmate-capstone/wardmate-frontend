@@ -44,10 +44,10 @@ test('draft is not counted as complete until confirmed; file selection remains a
   const chooserPromise = page.waitForEvent('filechooser');
   await form.getByText('Tải lên tệp Word đã điền', { exact: true }).click();
   await (await chooserPromise).setFiles({ name: 'ban-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('mock-docx-upload') });
-  await expect(form.getByText('Cần xác nhận bản khai', { exact: true })).toBeVisible();
+  await expect(form.getByText('Cần xác nhận tờ khai', { exact: true })).toBeVisible();
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
   await expect(page.getByRole('button', { name: 'Gửi hồ sơ tiền kiểm', exact: true })).toBeDisabled();
-  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await form.getByRole('button', { name: 'Xác nhận tờ khai', exact: true }).click();
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
   await expect(form.getByText('Đã hoàn tất', { exact: true })).toBeVisible();
   await page.locator(`#checklist-${documentIds.evidence}`).getByLabel('Đính kèm giấy tờ').setInputFiles({ name: 'giay-to.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-test') });

@@ -68,7 +68,7 @@ export function FormTemplateActions({ templateId, name, hasFile, managementActio
         </div>
       ) : detail.isError ? <div role="alert"><p>{formTemplateErrorMessage(detail.error)}</p><Button variant="outline" onClick={() => void detail.refetch()}>Thử lại</Button></div> : detail.data && <div className="space-y-4">
         <p className="font-semibold">{detail.data.code} · {detail.data.title}</p>
-        <p>{!detail.data.isActive ? 'Đã tạm ngừng cung cấp.' : detail.data.fileDocxUrl ? 'Đã có phôi Word.' : 'Chưa có tệp Word.'}</p>
+        <p>{!detail.data.isActive ? 'Đã tạm ngừng cung cấp.' : detail.data.fileDocxUrl ? 'Đã có mẫu Word.' : 'Chưa có tệp Word.'}</p>
         {detail.data.isActive && detail.data.fileDocxUrl && (preview.isPending ? (
           <div role="status" aria-label="Đang tải nội dung biểu mẫu" className="py-2">
             <Skeleton className="h-64 w-full rounded-xl" />

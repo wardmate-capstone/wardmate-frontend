@@ -18,35 +18,21 @@ import {
   submissionStatusLabel,
   type UserSubmissionDto,
 } from '@/lib/api/documentForms';
+import { displayDocumentFileName } from '@/lib/documentFileName';
 
 const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
-
-/**
- * Làm sạch tên file biểu mẫu để thân thiện với người dùng:
- * 1. Cắt bỏ tiền tố mã băm GUID 32 hex ở đầu (vd: `dccb6f4a..._don-nhap.docx` -> `don-nhap.docx`)
- * 2. Loại bỏ đuôi kép `.docx.docx` -> `.docx`
- */
-function cleanSubmissionFileName(rawName: string): string {
-  if (!rawName) return 'Tờ khai chưa đặt tên.docx';
-  let name = rawName.replace(/^[a-f0-9]{32}_/i, '');
-  name = name.replace(/(\.docx)+$/i, '.docx');
-  if (!name.toLowerCase().endsWith('.docx') && !name.toLowerCase().endsWith('.doc')) {
-    name = `${name}.docx`;
-  }
-  return name;
-}
 
 function getSubmissionBadge(status: string) {
   switch (status) {
     case 'Draft':
       return {
-        label: 'Nháp đã lưu',
+        label: 'Bản nháp',
         className: 'bg-slate-100 text-slate-700 border-slate-200',
         dot: 'bg-slate-400',
       };
     case 'Submitted':
       return {
-        label: 'Đã chốt',
+        label: 'Đã xác nhận',
         className: 'bg-sky-50 text-sky-700 border-sky-200',
         dot: 'bg-sky-500',
       };
@@ -98,7 +84,7 @@ export function CitizenSubmissionsView({
     if (!searchTerm.trim()) return query.data.items;
     const term = searchTerm.toLowerCase().trim();
     return query.data.items.filter((item) => {
-      const cleanName = cleanSubmissionFileName(item.fileName).toLowerCase();
+      const cleanName = displayDocumentFileName(item.fileName).toLowerCase();
       const rawName = item.fileName.toLowerCase();
       return cleanName.includes(term) || rawName.includes(term);
     });
@@ -140,11 +126,11 @@ export function CitizenSubmissionsView({
           {/* Lọc theo trạng thái */}
           <div className="flex items-center gap-1.5">
             <label htmlFor="submission-status-filter" className="sr-only">
-              Trạng thái bản khai
+              Trạng thái tờ khai
             </label>
             <select
               id="submission-status-filter"
-              aria-label="Trạng thái bản khai"
+              aria-label="Trạng thái tờ khai"
               className="h-10 cursor-pointer rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-red-600 focus:ring-1 focus:ring-red-600"
               value={status}
               onChange={(e) => {
@@ -214,7 +200,7 @@ export function CitizenSubmissionsView({
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-800">
           <p>{documentFormError(query.error)}</p>
           <Button variant="outline" size="small" className="mt-2" onClick={() => void query.refetch()}>
-            Thử tải lại bản khai
+            Thử tải lại tờ khai
           </Button>
         </div>
       ) : (
@@ -229,7 +215,7 @@ export function CitizenSubmissionsView({
               <p className="mt-1 max-w-sm text-xs text-slate-500">
                 {searchTerm || status
                   ? 'Không tìm thấy tờ khai nào khớp với bộ lọc hiện tại. Vui lòng thử tìm từ khóa khác.'
-                  : 'Bạn chưa có bản khai trực tuyến nào. Khi bắt đầu kê khai thủ tục, các biểu mẫu sẽ được lưu tại đây.'}
+                  : 'Bạn chưa có tờ khai trực tuyến nào. Khi bắt đầu kê khai thủ tục, các biểu mẫu sẽ được lưu tại đây.'}
               </p>
               {(searchTerm || status) && (
                 <Button
@@ -252,7 +238,7 @@ export function CitizenSubmissionsView({
           <div className="space-y-3">
             {filteredItems.map((item) => {
               const badge = getSubmissionBadge(item.status);
-              const cleanName = cleanSubmissionFileName(item.fileName);
+              const cleanName = displayDocumentFileName(item.fileName);
 
               return (
                 <article
@@ -310,7 +296,7 @@ export function CitizenSubmissionsView({
                       onClick={() => setSelected(item)}
                     >
                       <Eye size={15} weight="bold" />
-                      <span>Xem bản khai</span>
+                      <span>Xem tờ khai</span>
                     </Button>
 
                     {item.applicationId ? (
@@ -337,7 +323,7 @@ export function CitizenSubmissionsView({
                     ) : (
                       <p className="flex items-center gap-1 px-1 text-xs font-medium text-amber-700">
                         <WarningCircle size={14} className="shrink-0" />
-                        <span>Bản khai cũ chưa liên kết hồ sơ.</span>
+                        <span>Tờ khai này chưa gắn với hồ sơ nào.</span>
                       </p>
                     )}
                   </div>
@@ -349,7 +335,7 @@ export function CitizenSubmissionsView({
           {/* Phân trang dưới đáy */}
           {query.data && query.data.totalPages > 1 && (
             <nav
-              aria-label="Phân trang bản khai"
+              aria-label="Phân trang tờ khai"
               className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs"
             >
               <p className="font-medium text-slate-600">
@@ -363,7 +349,7 @@ export function CitizenSubmissionsView({
                   onClick={() => setPage((x) => x - 1)}
                   className="rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
                 >
-                  Bản khai trước
+                  Tờ khai trước
                 </Button>
                 <Button
                   variant="outline"
@@ -372,7 +358,7 @@ export function CitizenSubmissionsView({
                   onClick={() => setPage((x) => x + 1)}
                   className="rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
                 >
-                  Bản khai sau
+                  Tờ khai sau
                 </Button>
               </div>
             </nav>
@@ -387,18 +373,18 @@ export function CitizenSubmissionsView({
             <div
               className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white"
               role="status"
-              aria-label="Đang mở DOCX Studio"
+              aria-label="Đang mở tờ khai"
             >
               <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-800/90 px-6 py-5 shadow-2xl border border-slate-700">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-                <p className="text-sm font-medium">Đang khởi tạo WardMate DOCX Studio…</p>
+                <p className="text-sm font-medium">Đang mở tờ khai…</p>
               </div>
             </div>
           }
         >
           <DocxOnlineEditor
             sourceKey={selected.id}
-            title={cleanSubmissionFileName(selected.fileName)}
+            title={displayDocumentFileName(selected.fileName)}
             subtitle="Xem nội dung tờ khai trực tuyến"
             author={user.profile?.fullName || user.username}
             readOnly

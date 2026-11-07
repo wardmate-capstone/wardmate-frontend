@@ -19,10 +19,10 @@ test('lưu nháp tách chốt, phục hồi chốt/PATCH lỗi và số bản th
   await expect(form.getByText('Đã lưu bản nháp', { exact: true })).toBeVisible();
   expect(state.writes.filter(x => /submissions\/.+\/submit$/.test(x.path))).toHaveLength(0);
   state.failChot = true;
-  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await form.getByRole('button', { name: 'Xác nhận tờ khai', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('Kho lưu trữ');
   state.failPatch = true;
-  await form.getByRole('button', { name: 'Xác nhận bản khai', exact: true }).click();
+  await form.getByRole('button', { name: 'Xác nhận tờ khai', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('Tệp đã lưu nhưng chưa cập nhật trạng thái giấy tờ');
   await form.getByRole('button', { name: 'Kiểm tra lại giấy tờ' }).click();
   await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
@@ -87,7 +87,7 @@ test('QR chưa có không giả mã; PDF tạo xong tải ảnh thật và tách
   await expect(page.locator('img[alt^="ma-qr-"]')).toHaveCount(0);
   expect(state.writes).toHaveLength(0);
   await detail(page);
-  await expect(page.getByRole('heading', { name: 'PDF chưa xác định bản khai nguồn' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bản PDF chưa gắn với tờ khai nào' })).toBeVisible();
   await page.getByRole('button', { name: 'Tạo PDF: to-khai.docx', exact: true }).click();
   await expect.poll(() => state.pdfs.length).toBe(2);
   expect(state.pdfs[1].submissionId).toBe(documentIds.submission);

@@ -116,7 +116,7 @@ test('read permission permits viewing and downloading but hides writes', async (
   await expect(page.getByRole('button', { name: 'Thêm đơn', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thay đổi' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Đã có phôi Word');
+  await expect(page.getByRole('dialog')).toContainText('Đã có mẫu Word');
   await page.keyboard.press('Escape');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true }).click();
@@ -185,7 +185,7 @@ test('procedure editor previews a real linked template and saves the selected ID
   const editor = page.getByRole('dialog', { name: 'Chỉnh sửa thủ tục', exact: true });
   await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
   await editor.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Biểu mẫu: Tờ khai kiểm thử', exact: true })).toContainText('Đã có phôi Word');
+  await expect(page.getByRole('dialog', { name: 'Biểu mẫu: Tờ khai kiểm thử', exact: true })).toContainText('Đã có mẫu Word');
   await page.keyboard.press('Escape');
   await editor.getByRole('button', { name: 'BM-01 · Tờ khai kiểm thử', exact: true }).click();
   await editor.getByLabel('Ngày hiệu lực của thay đổi').fill('2026-10-14');

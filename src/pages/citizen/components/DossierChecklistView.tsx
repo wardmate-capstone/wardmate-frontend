@@ -71,7 +71,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       const existing = contents.data?.submissions.find(x => x.checklistId === item.checklistId);
       if (existing) await mutations.updateDraft.mutateAsync({ submissionId: existing.id, applicationId, applicantId: user.id, file });
       else await mutations.uploadFilledDocx.mutateAsync({ templateId: item.formTemplateId!, applicationId, checklistId: item.checklistId, applicantId: user.id, file });
-      toast.success('Đã lưu bản nháp. Hãy kiểm tra nội dung và xác nhận bản khai.');
+      toast.success('Đã lưu bản nháp. Hãy kiểm tra nội dung và xác nhận tờ khai.');
       await syncChecklist(item);
     }, rethrow);
   }
@@ -79,7 +79,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     if (!applicationId || !user?.id) return;
     await perform(item, async () => {
       await mutations.submitDraft.mutateAsync({ submissionId, applicationId, applicantId: user.id });
-      await syncChecklist(item); toast.success('Đã xác nhận bản khai. Bạn có thể gửi hồ sơ khi đã đủ giấy tờ.');
+      await syncChecklist(item); toast.success('Đã xác nhận tờ khai. Bạn có thể gửi hồ sơ khi đã đủ giấy tờ.');
     });
   }
   async function download(id: string, isForm: boolean, name: string) {
@@ -107,7 +107,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                   : 'Tải lên tệp Word đã điền'
                 : 'Chọn tệp đính kèm'}
             </span>
-            <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp .docx (tối đa 20 MiB)' : 'PDF, JPG/PNG hoặc Word · Tối đa 20 MiB'}</span>
+            <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp Word, tối đa 20 MB' : 'PDF, JPG/PNG hoặc Word · Tối đa 20 MB'}</span>
           </span>
           <input
             aria-label={item.formTemplateId ? (submissions.length ? 'Thay tệp Word đã điền' : 'Tải lên tệp Word đã điền') : 'Đính kèm giấy tờ'}
@@ -153,7 +153,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                 </div>
               </div>
               <Badge variant={complete ? 'success' : needsConfirmation ? 'warning' : 'neutral'} className="px-2.5 py-0.5 text-[11px] shrink-0">
-                {complete ? 'Đã hoàn tất' : needsConfirmation ? 'Cần xác nhận bản khai' : 'Chưa hoàn tất'}
+                {complete ? 'Đã hoàn tất' : needsConfirmation ? 'Cần xác nhận tờ khai' : 'Chưa hoàn tất'}
               </Badge>
             </div>
 
@@ -175,7 +175,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                   onClick={() => setEditing({ item, submissionId: undefined, readOnly: !editable })}
                 >
                   <PencilSimple size={15} aria-hidden />
-                  <span>{editable ? 'Điền trực tuyến' : 'Xem bản khai trực tuyến'}</span>
+                  <span>{editable ? 'Điền trực tuyến' : 'Xem tờ khai trực tuyến'}</span>
                 </Button>
               </div>
             )}
@@ -188,7 +188,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                   <div className="min-w-0">
                     <button
                       type="button"
-                      title="Tải bản khai đã lưu"
+                      title="Tải tờ khai đã lưu"
                       className="inline-flex items-center gap-1.5 break-all text-left text-xs sm:text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 hover:text-red-800"
                       onClick={() => void download(x.id, true, x.fileName)}
                     >
@@ -196,7 +196,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                       <DownloadSimple size={14} className="shrink-0 text-slate-400" aria-hidden />
                     </button>
                     <p className="text-[11px] text-slate-500">
-                      {x.status === 'Draft' ? 'Đã lưu bản nháp' : x.status === 'Submitted' ? 'Đã xác nhận' : submissionStatusLabel(x.status)}
+                      {x.status === 'Draft' ? 'Bản nháp' : x.status === 'Submitted' ? 'Đã xác nhận' : submissionStatusLabel(x.status)}
                       {!x.fileExists && ' · Không tìm thấy tệp'}
                     </p>
                   </div>
@@ -209,7 +209,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                     onClick={() => setEditing({ item, submissionId: x.id, readOnly: !editable || ['Approved', 'ReadyForDownload'].includes(x.status ?? '') })}
                   >
                     <PencilSimple size={14} aria-hidden />
-                    <span>{editable && !['Approved', 'ReadyForDownload'].includes(x.status ?? '') ? 'Chỉnh sửa trực tuyến' : 'Xem bản khai trực tuyến'}</span>
+                    <span>{editable && !['Approved', 'ReadyForDownload'].includes(x.status ?? '') ? 'Chỉnh sửa trực tuyến' : 'Xem tờ khai trực tuyến'}</span>
                   </Button>
                   {editable && x.fileExists && x.status === 'Draft' && (
                     <Button
@@ -219,7 +219,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                       onClick={() => void finishForm(item, x.id)}
                     >
                       <CheckCircle size={14} aria-hidden />
-                      <span>Xác nhận bản khai</span>
+                      <span>Xác nhận tờ khai</span>
                     </Button>
                   )}
                 </div>
@@ -330,10 +330,10 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     {editing && user && (
       <Suspense
         fallback={
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở DOCX Studio">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white" role="status" aria-label="Đang mở tờ khai">
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-800/90 px-6 py-5 shadow-2xl border border-slate-700">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-              <p className="text-sm font-medium">Đang khởi tạo WardMate DOCX Studio…</p>
+              <p className="text-sm font-medium">Đang mở tờ khai…</p>
             </div>
           </div>
         }
@@ -347,7 +347,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
           load={async signal => {
             if (!editing.submissionId) return downloadFormTemplateDocx(editing.item.formTemplateId!, signal);
             const metadata = await documentFormApi.getSubmission(editing.submissionId, user.id, signal);
-            if (metadata.applicationId !== applicationId || metadata.checklistId !== editing.item.checklistId) throw new Error('Bản khai không thuộc mục giấy tờ hiện tại.');
+            if (metadata.applicationId !== applicationId || metadata.checklistId !== editing.item.checklistId) throw new Error('Tờ khai không thuộc mục giấy tờ này.');
             return documentFormApi.downloadSubmission(editing.submissionId, user.id, signal);
           }}
           onSave={file => saveForm(editing.item, file, true)}

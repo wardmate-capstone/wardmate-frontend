@@ -124,11 +124,11 @@ test('citizen submission list filters and paginates without linking legacy recor
   });
   await page.goto('/citizen?section=submissions');
   await expect(page.getByRole('heading', { name: 'Tờ khai của tôi' })).toBeVisible();
-  await expect(page.getByText('Bản khai cũ chưa liên kết hồ sơ.')).toBeVisible();
+  await expect(page.getByText('Tờ khai này chưa gắn với hồ sơ nào.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mở hồ sơ liên quan', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Bản khai sau', exact: true }).click();
+  await page.getByRole('button', { name: 'Tờ khai sau', exact: true }).click();
   await expect.poll(() => reads.at(-1)?.get('page')).toBe('2');
-  await page.getByLabel('Trạng thái bản khai').selectOption('Draft');
+  await page.getByLabel('Trạng thái tờ khai').selectOption('Draft');
   await expect.poll(() => reads.at(-1)?.get('status')).toBe('Draft');
   expect(reads.at(-1)?.get('page')).toBe('1');
   expect(reads.at(-1)?.get('applicantId')).toBe(documentIds.citizen);
@@ -140,9 +140,9 @@ test('submitted citizen dossier opens the online document for viewing without sa
   await page.route(`**/api/v1/citizen/submissions/${documentIds.submission}?*`, route => authReply(route, { json: { id: documentIds.submission, templateId: documentIds.template, applicantId: documentIds.citizen, applicationId: documentIds.application, checklistId: documentIds.checklist, status: 'Submitted', fileName: 'to-khai.docx', fileSizeBytes: 1234, createdAt: '2026-10-16T01:00:00Z' } }));
   await page.goto('/citizen?section=dossiers_all');
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
-  await page.getByRole('button', { name: 'Xem bản khai trực tuyến', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem tờ khai trực tuyến', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Tờ khai thử nghiệm', exact: true });
-  await expect(editor.getByRole('button', { name: 'Tải DOCX', exact: true })).toBeEnabled({ timeout: 30000 });
+  await expect(editor.getByRole('button', { name: 'Tải về (Word)', exact: true })).toBeEnabled({ timeout: 30000 });
   await expect(editor.getByRole('button', { name: 'Lưu vào hồ sơ', exact: true })).toHaveCount(0);
   await expect(editor.getByRole('toolbar')).toHaveCount(0);
   await expect(page.getByLabel('Thay tệp Word đã điền')).toHaveCount(0);

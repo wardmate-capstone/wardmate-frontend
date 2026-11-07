@@ -65,7 +65,7 @@ test('Word thật: tạo/sửa metadata, giữ nội dung khi upload lỗi, lưu
   expect(sent.body).toEqual({ expectedVersion: state.version, documentRevisionId: state.documentRevisionId, metadataVersion: state.metadataVersion });
   expect(state.requests.some(r => r.method === 'POST' && r.path === '/api/v1/staffing/leaves')).toBe(false);
   await page.getByRole('button', { name: 'Xem Word đã nộp', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Đơn nghỉ đã nộp — chỉ xem', exact: true }).getByRole('button', { name: 'Tải DOCX', exact: true })).toBeEnabled();
+  await expect(page.getByRole('dialog', { name: 'Đơn nghỉ đã nộp — chỉ xem', exact: true }).getByRole('button', { name: 'Tải về (Word)', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Lưu nháp Word', exact: true })).toHaveCount(0);
 });
 
@@ -114,7 +114,7 @@ test('Nháp lưu trên server mở lại được, xem mẫu chung và xóa có 
   await page.getByRole('button', { name: 'Nháp của tôi / Xin nghỉ', exact: true }).click();
   await page.getByRole('button', { name: 'Xem mẫu Word chung', exact: true }).click();
   const template = page.getByRole('dialog', { name: 'Mẫu đơn nghỉ chung — chỉ xem', exact: true });
-  await expect(template.getByRole('button', { name: 'Tải DOCX', exact: true })).toBeEnabled({ timeout: 45000 });
+  await expect(template.getByRole('button', { name: 'Tải về (Word)', exact: true })).toBeEnabled({ timeout: 45000 });
   await template.getByRole('button', { name: 'Đóng hộp thoại', exact: true }).click();
   await page.getByRole('button', { name: 'Mở nháp', exact: true }).click();
   await page.getByRole('button', { name: 'Xóa nháp', exact: true }).click();
