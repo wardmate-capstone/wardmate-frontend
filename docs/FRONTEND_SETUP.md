@@ -1,5 +1,59 @@
 # Nền tảng FE Web
 
+## Xem/tải phôi không đăng nhập — 09/11/2026
+
+- Chỉ sửa FE theo quyết định mới nhất. Trang chi tiết thủ tục truyền publicAccess cho FormTemplateActions, hiển thị Xem mẫu/Tải mẫu cho cả khách vãng lai. Dùng hai GET hiện có `/api/v1/form-templates/{id}` và `.../download-docx` với skipAuth=true, không gửi token hoặc refresh/chuyển đăng nhập khi API lỗi. Cache tách chế độ public với quản trị; dùng Blob và DocxPreview hiện có. Không dùng route `/public/` mới.
+- BE hiện tại giữ nguyên DocumentUser trên các route này, nên việc hiển thị nút đã làm ở FE nhưng truy cập thật không đăng nhập vẫn phụ thuộc API cho phép. Không coi kết quả mock là chứng minh tải được trên Azure. Không mở trực tiếp URL Blob để bỏ qua quyền API.
+
+## Analytics: đối chiếu đầy đủ API và cập nhật UI — 09/11/2026
+
+- Đặc tả Azure tải lại có 29 API nghiệp vụ (22 GET, 6 POST, 1 PUT) và GET `/` nhận diện service. Bảng route → màn hình tại `ANALYTICS_API_COVERAGE_2026-11-03.md`, đã cập nhật ngày 09/11. Script `node tests/analytics-api-coverage-check.mjs <swagger.json>` so tập method/path với mapping, kiểm tra adapter và consumer UI/hook; không thay cho kiểm thử runtime.
+- Probe đủ 22 GET trực tiếp Analytics và 22 GET qua Gateway FE dùng đều trả 401 không token. Giữ nhóm system qua prefix `/api/analytics-system`; các nhóm Analytics/jobs/citizen-feedback/notification-admin vẫn đi tuyến ngắn đã kiểm tra. Không coi 401 là nghiệm thu auth, worker hoặc dữ liệu thật.
+- `feedbackSchema` giữ applicationCode/procedureTitle/applicantName nullable từ BE mới; bảng Manager dùng trực tiếp, chỉ tra Workflow khi dữ liệu cũ thiếu. Danh bạ hiệu suất cán bộ có kiểm tra role/quyền trước request, đọc hết phân trang và không hiển thị GUID làm tên. Góp ý dài xem trong Modal; bảng có hướng dẫn vuốt ngang mobile và vùng cuộn nhận focus.
+- Radio chọn sao của CitizenFeedbackModal có vùng input phủ đủ biểu tượng, SVG không chặn pointer; giữ điều khiển native bằng bàn phím và trạng thái focus. Sao lưu dùng combobox/datalist cho chọn gợi ý hoặc nhập mã target khác; không suy gợi ý thành target đã được provision vì BE chưa có API discovery.
+- Đã đối chiếu role/permission, request/query, DTO/null và status: rebuild/check-now/create-backup/replay 202 là xếp hàng, create-feedback 201, verify 200 phải kiểm tra metadata. Swagger check-now/create-backup còn mô tả 200 nhưng source trả 202; giữ logic FE theo source, không sửa BE trong lượt này.
+
+## Khung giờ mặc định cho mọi cán bộ — 09/11/2026
+
+- Người dùng chốt đây là ca mặc định để lưu thật, không chỉ giờ tham khảo: Thứ Hai–Thứ Sáu 07:30–11:30, 13:00–17:00; Thứ Bảy 07:30–11:30, giờ Việt Nam. Không tự thêm ca Chủ nhật; ca ngoại lệ đã có vẫn giữ nguyên.
+- `src/lib/defaultStaffSchedule.ts` tạo các ca mới cho cán bộ Frontdesk đang hoạt động thuộc danh bạ Manager trong phường. `MonthlyScheduleView.tsx` đặt **Điền lịch mặc định cho tất cả cán bộ** ngay trên lịch Manager; điền vào bản đang soạn của tháng đã chọn, rồi dùng Lưu bản nháp/Xác nhận công bố lịch hiện có. Không tự ghi khi mở trang và không giả ca đã công bố ở Frontdesk. Frontdesk có dòng giải thích giờ mặc định và tiếp tục đọc ca thực tế từ BE.
+- Giữ ngày có ca hoặc đã sửa tay (kể cả ngày vừa bỏ hết ca), bỏ ngày lễ/đóng cửa, ca đã bắt đầu, buổi giao với nghỉ phép được duyệt hoặc ca qua đêm từ tháng bên cạnh. Thông báo số ca thêm; bấm lần nữa không thêm trùng. Sau công bố, ca được dùng trong xác nhận/đổi ca/xin nghỉ như trước.
+- BE hiện giới hạn tổng 500 ca/tháng. FE chặn nếu điền tất cả vượt giới hạn, không ghi một phần; cần BE tăng giới hạn nếu số cán bộ khiến cả tháng vượt mức này. Không đổi hợp đồng hoặc tự né giới hạn. Mẫu tuần tùy chỉnh và ca đang có không bị ghi đè.
+
+## Form tạo đơn nghỉ theo gợi ý UI — 09/11/2026
+
+- Theo yêu cầu mới nhất ngày 09/11, `CreateLeave` trong `LeaveDraftsView.tsx` chỉ chọn ngày: bỏ Từ giờ/Đến giờ. Đơn tạo mới nghỉ trọn các ngày đã chọn, từ 00:00 ngày bắt đầu đến 00:00 ngày kế tiếp sau ngày kết thúc (giờ Việt Nam), rồi đổi UTC theo hợp đồng startsAt/endsAt cũ. Nghỉ 1 ngày tạo khoảng đúng 24 giờ; ngày kết thúc trên UI vẫn là ngày cuối cùng được nghỉ. Form sửa metadata của bản nháp cũ giữ nguyên trong phạm vi task này.
+- Hiển thị tổng ngày lịch tính cả hai đầu, chưa loại cuối tuần/lễ và không phải số ngày phép bị trừ. Tùy chọn Word nằm dưới lý do; khi chính sách bắt buộc Word thì vẫn hiển thị nhưng không cho bỏ chọn. Footer có Đặt lại và Tạo nháp Word (hoặc gửi không Word theo capability).
+- RHF/Zod kiểm tra ngày, tái sử dụng validatePeriod với khoảng trọn ngày (kết thúc sau bắt đầu, tối đa 93 ngày, chưa kết thúc trong quá khứ). Đặt lại chỉ xóa lựa chọn cục bộ trước khi gửi; bị khóa khi đã có request cố định nhằm giữ body/key retry tạo nháp. Không đổi endpoint/request DTO hoặc luồng Word sau khi tạo.
+
+## Nghỉ phép cá nhân: thao tác rõ ràng — 09/11/2026
+
+- `LeaveRequestsView.tsx`: nút **Tạo đơn nghỉ phép** ở tiêu đề trang, có thể dùng từ cả hai danh sách. Frontdesk mặc định mở **Đơn đang soạn**; tab còn lại là **Đơn đã gửi**. Nút tạo chuyển về danh sách đang soạn và mở form một lần, chỉ gọi API tạo khi người dùng xác nhận trong form. Luồng Manager không đổi.
+- `LeaveDraftsView.tsx`: điều khiển mở form tạo từ parent, giữ chọn/mở workspace đơn mới sau khi tạo thành công. Đổi Mở nháp thành **Tiếp tục soạn đơn**, mẫu Word thành **Xem mẫu đơn nghỉ phép**, làm mới thành **Tải lại danh sách**. Trạng thái trống hướng dẫn bấm nút tạo ở đầu trang; ẩn phân trang khi không cần. Đơn đã gửi có nhãn **Xem đơn và kết quả duyệt** và hướng dẫn riêng khi trống.
+- Giữ nguyên form RHF/Zod, capability Word, idempotency tạo/nộp, lưu metadata/Word và xác thực/quyền. Không tự gửi đơn chỉ vì mở form hoặc chuyển tab.
+
+## Bỏ danh sách ca trùng ở Frontdesk — 09/11/2026
+
+- `StaffingView.tsx`: cán bộ chỉ có **Lịch tháng** và **Yêu cầu đổi ca**; bỏ tab Danh sách ca và đổi nhãn Sắp xếp lịch tháng thành Lịch tháng cho chế độ chỉ xem. URL cũ `/officer?section=shifts&view=list` vẫn mở lịch tháng, không render ScheduleListView.
+- Lãnh đạo giữ danh sách ca và chức năng xếp lịch hiện tại; không xóa component/API còn dùng trong workspace Lãnh đạo. Nút xác nhận đã xem và đề nghị đổi giờ trong lịch tháng giữ nguyên.
+
+## Xác nhận đã xem lịch — 09/11/2026
+
+- Frontdesk chỉ thấy nút Xác nhận đã xem lịch khi lịch cá nhân chưa có confirmedAtUtc từ BE. POST thành công phải khớp officerId/month/fingerprint; ẩn nút theo fingerprint đã xác nhận, không lưu cờ vào localStorage.
+- BE trả confirmations tương ứng fingerprint ca hiện tại: F5 vẫn ẩn nếu đã xác nhận, giờ/ca cá nhân thay đổi thì lần đọc lịch mới trả xác nhận rỗng và nút xuất hiện lại. CalendarLoader remount bản chỉ xem khi fingerprint/trạng thái xác nhận đổi để không giữ snapshot lịch cũ khi Query refetch; Manager giữ nguyên snapshot nhằm bảo toàn nội dung đang soạn.
+- GET được làm mới qua Lấy lịch mới hoặc invalidation staffing hiện có. Không thêm polling hoặc cam kết nhận thay đổi tức thì khi chưa có thông báo/refetch. Lỗi POST giữ nút và cơ chế yêu cầu kiểm tra lại hiện có; không coi bấm nút là xác nhận thành công.
+
+## Tên cán bộ trên đơn nghỉ — 09/11/2026
+
+- `LeaveRequestsView.tsx` dùng fullName từ danh bạ IAM, fallback username khi thiếu họ tên, không fallback sang GUID. Đối chiếu ID không phân biệt hoa/thường; đơn của chính người đăng nhập dùng profile hiện tại. Modal chi tiết dùng cùng cách lấy tên với thẻ đơn.
+- Khi danh bạ lỗi, hiển thị lỗi và nút Thử lại; trong khi tải dùng nhãn chờ, khi không tìm được dùng Chưa tìm thấy tên cán bộ. Không tự bịa tên khi cán bộ không thuộc danh bạ. API `/api/v1/manager/officers` theo source IAM yêu cầu MANAGER + iam.accounts.read và scope phường; FE không tự nới quyền hoặc bổ sung endpoint.
+
+## Tiện ích xếp lịch và metadata cấu hình — 09/11/2026
+
+- `MonthlyScheduleView.tsx` chia tiện ích thành **Dùng giờ hằng tuần** (thiết lập rồi điền theo tuần) và **Sao chép từ tháng khác**. Tháng/năm nguồn dùng hai select, mặc định chưa chọn tháng; thông báo rõ chưa chọn/trùng tháng đích, hiển thị nguồn → đích và cán bộ đang áp dụng. Lịch sử công bố nằm ở cuối, độc lập thao tác điền.
+- Điền vẫn gọi API preview, chỉ thêm vào ngày trống chưa chỉnh của cán bộ đang chọn; không thay ca đã có, không tự lưu/công bố. UI báo số ngày được điền hoặc không có ngày phù hợp. Giữ khóa sửa, quyền, kiểm tra fingerprint và xung đột hiện có.
+- `analytics.lookbackDays` trả `updatedBy=null`, `updatedAtUtc=null`, `version=0` khi BE chưa có bản ghi SystemSettings và dùng giá trị fallback `Analytics:LookbackDays` (mặc định 7). Đây là hợp đồng hiện có, không phải lỗi parse FE; PUT thành công mới ghi actor, timestamp và tăng version. Không tự thay null bằng người/thời điểm giả.
+
 ## UI bộ lọc ngày và Cập nhật thống kê — 09/11/2026
 
 - Bộ lọc dùng chung `AnalyticsFilters` căn theo đầu hàng, nút Áp dụng căn với ô ngày trên desktop. Lỗi validation nằm dưới ô, không đẩy lệch ô bên cạnh; `aria-invalid`/`aria-describedby` liên kết lỗi. Sửa ngày thủ công bỏ đánh dấu kỳ chọn nhanh.
