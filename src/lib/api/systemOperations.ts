@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { api } from './index';
-import { servicePath, serviceUrls } from './serviceUrls';
+import { systemAdministrationPath as path } from './serviceUrls';
 import { auditParams, dateInput, emptyAuditFilters } from './systemAdministration';
 
 const guid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Mã định danh không hợp lệ.');
@@ -30,7 +30,6 @@ export const backupSchema = z.object({
   verifiedAtUtc: timestamp.nullable(), restoreTestedAtUtc: timestamp.nullable(), errorCode: z.string().nullable(),
 });
 export type Backup = z.infer<typeof backupSchema>;
-const path = (route: string) => servicePath(serviceUrls.analytics, '/api/v1/system/' + route);
 function params(query: OperationsQuery, backup: boolean) {
   const filters = operationsFilterSchema.parse(query);
   return { ...auditParams({ ...emptyAuditFilters, ...query }, false), ...(filters.service ? { service: filters.service } : {}), ...(backup && filters.status ? { status: filters.status } : {}) };
