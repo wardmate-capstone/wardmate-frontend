@@ -10,9 +10,38 @@ import { useCitizenFeedback } from '@/hooks/useAnalytics';
 import { analyticsApi, analyticsError, applyAnalyticsFieldErrors, feedbackInputSchema, type FeedbackInput } from '@/lib/api/analytics';
 import { useAuthStore } from '@/stores/authStore';
 import { AnalyticsStatus } from '@/components/analytics/AnalyticsFilters';
-import { Star } from '@phosphor-icons/react';
+import { CheckCircle, Star } from '@phosphor-icons/react';
 
 const RATING_LABELS = ['Rất không hài lòng', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];
+
+// Đánh giá đã gửi: hiện lại bằng sao như lúc chấm, góp ý trong khung riêng
+function SubmittedFeedback({ rating, comment, createdAtUtc, onClose }: { rating: number; comment?: string | null; createdAtUtc: string; onClose: () => void }) {
+  const date = new Date(createdAtUtc);
+  const when = `${date.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}, ${date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  return <div role="status" className="space-y-5">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 text-center">
+      <div className="flex items-center gap-1" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map(star => <Star key={star} size={32} weight={star <= rating ? 'fill' : 'regular'} className={star <= rating ? 'text-gold-400' : 'text-slate-300'} />)}
+      </div>
+      <p className="text-base font-bold text-slate-900">{RATING_LABELS[rating - 1]}</p>
+      <p className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-xs text-slate-500">
+        <CheckCircle size={14} weight="fill" className="text-emerald-600" aria-hidden="true" />
+        <span>Đánh giá đã được ghi nhận: {rating}/5 sao</span>
+        <span aria-hidden="true">·</span>
+        <time dateTime={createdAtUtc}>{when}</time>
+      </p>
+    </div>
+    <div>
+      <p className="mb-2 text-sm font-semibold text-slate-900">Góp ý của bạn</p>
+      {comment
+        ? <blockquote className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">{comment}</blockquote>
+        : <p className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm italic text-slate-400">Không có góp ý thêm.</p>}
+    </div>
+    <div className="flex justify-end border-t border-slate-100 pt-4">
+      <Button variant="outline" onClick={onClose}>Đóng</Button>
+    </div>
+  </div>;
+}
 
 export function CitizenFeedbackModal({ open, onOpenChange, applicationId, procedureName, applicationCode, onRefreshApplication }: {
   open: boolean; onOpenChange: (open: boolean) => void; applicationId?: string; procedureName?: string; applicationCode?: string; onRefreshApplication?: () => void;
@@ -66,7 +95,7 @@ function FeedbackForm({ id, onClose, onRefreshApplication, description }: { id: 
   });
   return <><Modal open onOpenChange={open => { if (!open) guard.requestClose(onClose); }} title="Đánh giá trải nghiệm dịch vụ" description={description}><div className="space-y-4">
     <AnalyticsStatus pending={existing.isPending} error={existing.error} retry={() => void existing.refetch()} />
-    {existing.data ? <div role="status" className="space-y-3"><p className="font-bold">Đánh giá đã được ghi nhận: {existing.data.rating}/5 sao</p><p className="whitespace-pre-wrap break-words">{existing.data.comment || 'Không có góp ý thêm.'}</p><p className="text-sm text-slate-600">{new Date(existing.data.createdAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p><Button onClick={onClose}>Đóng</Button></div> : !existing.isPending && !existing.isError && <form onSubmit={submit} className="space-y-5">
+    {existing.data ? <SubmittedFeedback rating={existing.data.rating} comment={existing.data.comment} createdAtUtc={existing.data.createdAtUtc} onClose={onClose} /> : !existing.isPending && !existing.isError && <form onSubmit={submit} className="space-y-5">
       <fieldset disabled={mutation.isPending} className="space-y-5">
         <fieldset>
           <legend className="mb-3 text-sm font-semibold text-slate-900">Mức độ hài lòng <span className="text-red-700">*</span></legend>
