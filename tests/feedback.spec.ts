@@ -50,7 +50,7 @@ test('Công dân: Escape xác nhận bỏ dữ liệu, modal vừa mobile', asyn
 
 test('Công dân: hồ sơ bản nháp chưa được đánh giá', async ({ page }) => {
   await mockDocumentWorkflow(page, 'citizen', 'DRAFT'); const state = await mockAnalytics(page); await page.goto('/citizen?section=feedback');
-  await expect(page.getByText('Chưa có hồ sơ đủ điều kiện đánh giá trong danh sách đã tải.')).toBeVisible();
+  await expect(page.getByText('Chưa có hồ sơ nào đủ điều kiện đánh giá.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Xem / gửi đánh giá' })).toHaveCount(0); expect(state.postCount).toBe(0);
 });
 
