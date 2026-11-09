@@ -24,6 +24,47 @@ async function publishCalendar(page: Page) {
   return dialog;
 }
 
+test('Lịch mặc định đúng giờ cho mọi cán bộ, giữ sửa tay và bỏ lễ/nghỉ phép', async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  await page.route('**/api/v1/staffing/schedules/2026-11-01', route => authReply(route, { json: {
+    month: '2026-11-01', slots: state.slots, baseFingerprint: state.fingerprint, draft: state.draft, confirmations: [],
+    leaves: [{ id: ids.leave, officerId: ids.officer, startsAtUtc: '2026-11-12T00:30:00Z', endsAtUtc: '2026-11-12T04:30:00Z' }],
+    closures: [{ id: ids.leave, closureDate: '2026-11-11', wardCode: 'P01' }],
+  } }));
+  await openCalendar(page);
+  await setHours(page, '10/11/2026', '09:00', '12:00');
+  await page.getByRole('button', { name: /^Ngày 07\/11\/2026/ }).click();
+  const editor = page.getByRole('dialog', { name: 'Giờ làm ngày 07/11/2026', exact: true });
+  await editor.getByRole('button', { name: 'Bỏ ca 1', exact: true }).click();
+  await editor.getByRole('button', { name: 'Áp dụng vào lịch', exact: true }).click();
+  await page.getByText('Tiện ích xếp lịch', { exact: true }).click();
+  await page.getByRole('button', { name: 'Điền lịch mặc định cho tất cả cán bộ', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('ca mặc định');
+  await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('07:30');
+  await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('13:00');
+  await expect(page.getByRole('button', { name: /^Ngày 14\/11\/2026/ })).toContainText('07:30');
+  expect(state.requests.some(r => r.method === 'PUT' || r.path.endsWith('/publish'))).toBe(false);
+  const defaults = page.getByRole('region', { name: 'Lịch mặc định cho tất cả cán bộ', exact: true });
+  await defaults.screenshot({ path: 'test-results/default-schedule-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await expect.poll(async () => (await defaults.boundingBox())!.x).toBeLessThan(32);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await defaults.screenshot({ path: 'test-results/default-schedule-mobile.png' });
+  await expect(await publishCalendar(page)).not.toBeVisible();
+  for (const officerId of [ids.officer, ids.officer2]) {
+    const monday = state.slots.filter(s => s.officerId === officerId && s.startsAt.startsWith('2026-11-09'));
+    expect(monday.map(s => [s.startsAt, s.endsAt])).toEqual([
+      ['2026-11-09T00:30:00.000Z', '2026-11-09T04:30:00.000Z'],
+      ['2026-11-09T06:00:00.000Z', '2026-11-09T10:00:00.000Z'],
+    ]);
+    expect(state.slots.filter(s => s.officerId === officerId && s.startsAt.startsWith('2026-11-14'))).toHaveLength(1);
+    expect(state.slots.some(s => s.officerId === officerId && (s.startsAt.startsWith('2026-11-11') || s.startsAt.startsWith('2026-11-15')))).toBe(false);
+  }
+  expect(state.slots.some(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-07'))).toBe(false);
+  expect(state.slots.filter(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-10')).map(s => s.startsAt)).toEqual(['2026-11-10T02:00:00.000Z']);
+  expect(state.slots.filter(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-12')).map(s => s.startsAt)).toEqual(['2026-11-12T06:00:00.000Z']);
+});
+
 test('Chọn cán bộ trước tháng; sửa giờ và công bố giữ đủ lịch người khác', async ({ page }) => {
   const state = await mockWorkSchedules(page, true);
   const other = { ...state.slots[0], officerId: ids.officer2, shiftId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' };
@@ -108,19 +149,47 @@ test('Bản soạn cũ yêu cầu xác nhận trước khi lập lại từ lị
 test('Tiện ích giờ tuần, sao chép và lịch sử vẫn dùng API, chưa ghi lịch khi xem trước', async ({ page }) => {
   const state = await mockWorkSchedules(page, true);
   await openCalendar(page); await page.getByText('Tiện ích xếp lịch', { exact: true }).click();
-  await page.getByRole('button', { name: 'Thiết lập giờ hằng tuần', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sao chép vào ngày trống', exact: true })).toBeDisabled();
+  await page.getByRole('combobox', { name: 'Tháng nguồn', exact: true }).selectOption('11');
+  await expect(page.getByText('Chọn tháng nguồn khác tháng đang xem.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sao chép vào ngày trống', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Thiết lập giờ tuần', exact: true }).click();
   const week = page.getByRole('dialog', { name: 'Giờ làm lặp lại hằng tuần', exact: true });
   await week.getByRole('button', { name: 'Thêm giờ làm', exact: true }).click();
   await week.getByRole('combobox', { name: 'Cán bộ', exact: true }).selectOption(ids.officer);
   await week.getByRole('button', { name: 'Lưu thiết lập', exact: true }).click();
   await expect(week).not.toBeVisible();
-  await page.getByLabel('Tháng muốn sao chép').fill('2026-10');
-  await page.getByRole('button', { name: 'Điền ngày trống từ tháng này', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tháng nguồn', exact: true }).selectOption('10');
+  await page.getByRole('button', { name: 'Sao chép vào ngày trống', exact: true }).click();
   await expect.poll(() => state.requests.some(r => r.path.endsWith('/preview'))).toBe(true);
   expect(state.requests.find(r => r.path.endsWith('/preview'))?.query).toBe('?copyFrom=2026-10-01');
   expect(state.requests.some(r => r.path.endsWith('/draft') || r.path.endsWith('/publish'))).toBe(false);
-  await page.getByRole('button', { name: 'Xem các lần công bố', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Không có ngày trống phù hợp để điền.');
+  const tools = page.getByText('Tiện ích xếp lịch', { exact: true }).locator('..');
+  await tools.screenshot({ path: 'test-results/schedule-tools-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await expect.poll(async () => (await tools.boundingBox())!.x).toBeLessThan(32);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await tools.screenshot({ path: 'test-results/schedule-tools-mobile.png' });
+  await page.getByRole('button', { name: 'Lịch sử công bố', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dữ liệu ban đầu', exact: true })).toBeVisible();
+});
+
+test('Điền lịch báo đúng số ngày, giữ ngày sửa tay và chưa lưu hoặc công bố', async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  await page.route('**/api/v1/staffing/schedules/*/preview*', route => authReply(route, { json: {
+    month: '2026-11-01', baseFingerprint: state.fingerprint, conflicts: [], closures: [],
+    slots: [8, 9].map(day => ({ ...state.slots[0], shiftId: `cccccccc-cccc-4ccc-8ccc-${String(day).padStart(12, '0')}`, startsAt: `2026-11-${String(day).padStart(2, '0')}T01:00:00Z`, endsAt: `2026-11-${String(day).padStart(2, '0')}T05:00:00Z` })),
+  } }));
+  await openCalendar(page);
+  await setHours(page, '08/11/2026', '10:00', '12:00');
+  await page.getByText('Tiện ích xếp lịch', { exact: true }).click();
+  await page.getByRole('button', { name: 'Điền theo giờ tuần', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Đã điền giờ cho 1 ngày trống.');
+  await expect(page.getByRole('button', { name: /^Ngày 08\/11\/2026/ })).toContainText('10:00');
+  await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('08:00');
+  expect(state.requests.some(r => r.path.endsWith('/draft') || r.path.endsWith('/publish'))).toBe(false);
+  expect(state.slots).toHaveLength(1);
 });
 
 test('Ngày lễ yêu cầu xác nhận ngoại lệ; nghỉ phép được duyệt chặn giờ trùng', async ({ page }) => {
