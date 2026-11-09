@@ -1,5 +1,18 @@
 # Nền tảng FE Web
 
+## UI bộ lọc ngày và Cập nhật thống kê — 09/11/2026
+
+- Bộ lọc dùng chung `AnalyticsFilters` căn theo đầu hàng, nút Áp dụng căn với ô ngày trên desktop. Lỗi validation nằm dưới ô, không đẩy lệch ô bên cạnh; `aria-invalid`/`aria-describedby` liên kết lỗi. Sửa ngày thủ công bỏ đánh dấu kỳ chọn nhanh.
+- Admin dùng nhãn **Cập nhật thống kê**, tiêu đề **Cập nhật số liệu thống kê**. Theo yêu cầu thu gọn tiếp ngày 09/11, màn hình chỉ có một card tối đa 4xl: hai ô ngày và nút cập nhật; kết quả chỉ xuất hiện sau khi gửi/tra cứu. Bỏ số thứ tự, khối chờ rỗng và các hướng dẫn lặp. Mã/thời gian/nút kiểm tra nằm trong **Chi tiết lần cập nhật**, tra mã cũ nằm trong **Tra cứu lần cập nhật cũ**; mặc định đều thu gọn. Không có API danh sách/lịch sử tác vụ nên không dựng danh sách giả hoặc tự lưu mã vào storage.
+- BE `AnalyticsAggregationJob.Rebuild` đọc Workflow và thay số liệu tổng hợp theo ngày cho thủ tục/cán bộ. UI chỉ yêu cầu tổng hợp lại và đọc trạng thái; không sửa dữ liệu hồ sơ. Giữ khoảng 1–366 ngày, role IT_ADMIN, POST 202 có xác nhận và không tự retry; GET polling 3 giây khi còn chờ/xử lý, dừng khi lỗi/kết thúc. Không hiển thị phần trăm hoặc thời điểm hoàn tất thiếu hợp đồng.
+
+## Khắc phục 404 quản trị hệ thống qua Gateway — 09/11/2026
+
+- Bốn chức năng Giám sát dịch vụ, Cấu hình hệ thống, Nhật ký hoạt động (nghiệp vụ/thay đổi cấu hình) và Sao lưu dữ liệu dùng `systemAdministrationPath` tại `src/lib/api/serviceUrls.ts`: `/api/analytics-system/api/v1/system/...`. Tab Phân quyền IAM giữ API IAM hiện có.
+- Khi gọi khác origin, helper dùng `VITE_DOCUMENT_FORM_API_URL` là origin **Gateway**, giống hub thông báo; không thêm prefix vào biến môi trường. Khi `VITE_USE_API_PROXY=true`, URL tương đối đi qua proxy `/api/analytics-system` có sẵn của Vite tới Gateway. Hosting dùng proxy production cần hỗ trợ cùng tuyến này.
+- Chỉ đổi đường đi qua Gateway, giữ method/body/query và JWT client. Không đổi URL chung của Analytics, thống kê, phản hồi hoặc job.
+- Kiểm tra Azure ngày 09/11: GET health/services, settings, audit-logs, audit-events, backups trực tiếp Analytics và qua prefix Gateway trả 401 khi chưa có token; đường ngắn `/api/v1/system/...` qua Gateway trả 404. Source YARP local đã có route ngắn nhưng cấu hình triển khai hiệu lực chưa được xác minh. Chưa nghiệm thu nghiệp vụ bằng phiên IT_ADMIN thật; 401 chỉ xác nhận request tới lớp xác thực.
+
 ## Lịch tháng: hợp đồng đang dùng — 06/11/2026
 
 - Đối chiếu source hiện tại tại `E:/wardmate-backend`: MonthlyView gồm `month, slots, baseFingerprint, draft, leaves, closures, confirmations`; ScheduleDraftInput nhận `expectedVersion, baseFingerprint, slots, reason`. FE dùng đúng các trường này. Không yêu cầu hoặc tự tạo `daysOff/isPublished/canEdit/editDeadlineUtc`.
@@ -34,7 +47,7 @@
 - **Nhật ký hoạt động** có tab Nghiệp vụ toàn hệ thống, Thay đổi cấu hình và Phân quyền IAM. Hai tab mới và cấu hình chỉ dùng role `IT_ADMIN`; IAM giữ quyền `iam.audit.read`. Route Admin hiện có còn cho phép quyền IAM được ủy quyền, không suy rằng vào route là đủ quyền gọi Analytics.
 - API/validation tại `src/lib/api/systemAdministration.ts`, hook Query tại `src/hooks/useSystemAdministration.ts`: đủ 7 method đọc/sửa cấu hình, danh sách/chi tiết audit. Query key có user ID, loại dữ liệu, bộ lọc/trang/ID; AbortSignal và không tự retry; dữ liệu và modal tách theo danh tính.
 - Audit mới lọc/phân trang phía server; ngày chọn theo Việt Nam được chuyển UTC có Z, không áp giới hạn kỳ 366 ngày của thống kê sang audit. `action` không có query hỗ trợ và `payloadHash` không có trong response nên không dựng bộ lọc/cột đó. Actor/IP thiếu không được suy đoán; `[REDACTED]` là dữ liệu đã che tại nguồn.
-- Vite định tuyến `/api/v1/system` tới `VITE_ANALYTICS_API_URL` hoặc Gateway fallback trước `/api` của IAM. Hosting bật proxy phải có tuyến tương đương, không trả SPA HTML cho API; `vercel.json` hiện chưa cấu hình reverse proxy production.
+- Client quản trị hiện đi qua prefix Gateway theo mục khắc phục 09/11 ở đầu tài liệu. Tuyến Vite `/api/v1/system` cũ vẫn có nhưng client không sử dụng; `vercel.json` hiện chưa cấu hình reverse proxy production.
 - Kiểm thử mock tại `tests/admin-system-audit.spec.ts`, `tests/admin-system-settings.spec.ts`; proxy bằng `node tests/api-proxy-check.mjs`. Các test này không xác minh Azure, migrations, cờ quản trị hoặc relay thật. Chi tiết phạm vi/nghiệp vụ ở `ADMIN_SYSTEM_AUDIT_INTEGRATION_PLAN_2026-11-03.md`.
 
 ## Danh sách thủ tục trong Admin — 23/10/2026
