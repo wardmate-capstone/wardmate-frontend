@@ -120,7 +120,7 @@ test('late detail response cannot replace another selected event', async ({ page
   await mockSystemAdministration(page);
   let release!: () => void;
   const barrier = new Promise<void>(resolve => { release = resolve; });
-  await page.route('http://localhost:5000/api/v1/system/audit-events/' + eventId, async route => {
+  await page.route('http://localhost:5000/api/analytics-system/api/v1/system/audit-events/' + eventId, async route => {
     await barrier;
     await authReply(route, { json: auditEvent });
   });
