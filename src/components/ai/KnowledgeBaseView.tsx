@@ -21,6 +21,7 @@ import {
   statusLabels,
   type KnowledgeAction,
 } from './KnowledgeModals';
+import { AiUsageCard } from './AiUsageCard';
 
 const PAGE_SIZE = 20;
 const selectClass = 'min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100';
@@ -173,6 +174,7 @@ export function KnowledgeBaseView() {
   return (
     <div className="space-y-5">
       <IndexStatusCard />
+      <AiUsageCard />
 
       <section className="admin-card admin-table-card !mt-0" aria-labelledby="knowledge-documents-title">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">

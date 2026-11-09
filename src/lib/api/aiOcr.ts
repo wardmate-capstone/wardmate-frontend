@@ -264,6 +264,32 @@ const procedureSyncAllSchema = z.object({
   complete: z.boolean(),
   failedProcedureIds: z.array(z.string()),
 });
+// Thống kê lượt gọi Gemini (GET /api/v1/ai/knowledge/usage), ngày tính theo giờ UTC+07
+const aiUsageDaySchema = z.object({
+  date: z.string(),
+  operation: z.string(),
+  success: z.number(),
+  failed: z.number(),
+  rejected: z.number(),
+  promptTokens: z.number(),
+  outputTokens: z.number(),
+  totalTokens: z.number(),
+});
+const aiUsageReportSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  dailyRequestsPerUser: z.number(),
+  dailyRequestsTotal: z.number(),
+  maxOutputTokens: z.number(),
+  usedToday: z.number(),
+  days: z.array(aiUsageDaySchema),
+  dailyGuestRequestsTotal: z.number().default(0),
+  dailyGuestRequestsPerIp: z.number().default(0),
+  guestUsedToday: z.number().default(0),
+});
+export type AiUsageDay = z.infer<typeof aiUsageDaySchema>;
+export type AiUsageReport = z.infer<typeof aiUsageReportSchema>;
+
 const knowledgePageSchema = pageSchema(knowledgeSummarySchema);
 const knowledgeChunkPageSchema = pageSchema(knowledgeChunkSchema);
 
@@ -624,6 +650,10 @@ export const knowledgeApi = {
           expectedRevision,
         })
       ).data,
+    ),
+  usage: async (from: string, to: string, signal?: AbortSignal) =>
+    aiUsageReportSchema.parse(
+      (await api.get(kb("/usage"), { params: { from, to }, signal })).data,
     ),
   indexStatus: async (signal?: AbortSignal) =>
     knowledgeIndexStatusSchema.parse(

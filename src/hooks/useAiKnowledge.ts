@@ -54,6 +54,19 @@ export function useKnowledgeIndexStatus() {
   });
 }
 
+// Thống kê lượt dùng AI theo khoảng ngày (tối đa 93 ngày)
+export function useAiUsage(from: string, to: string) {
+  const key = useKnowledgeKey();
+  const enabled = useCanManageKnowledge();
+  return useQuery({
+    queryKey: [...key, 'usage', from, to],
+    queryFn: ({ signal }) => knowledgeApi.usage(from, to, signal),
+    enabled,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
 // The server may persist before a timeout/sync error, so refresh the knowledge cache after both outcomes.
 export function useKnowledgeMutation<TInput, TResult>(mutationFn: (input: TInput) => Promise<TResult>) {
   const queryClient = useQueryClient();
