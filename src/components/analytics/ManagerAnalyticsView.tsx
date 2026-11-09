@@ -13,6 +13,7 @@ import { procedureApi } from '@/lib/api/procedures';
 import { getManagerOfficers } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 
 const labels = { receivedCount: 'Lượt gửi tiền kiểm', readyCount: 'Giấy tờ sẵn sàng', revisionRequestedCount: 'Lượt yêu cầu bổ sung', resubmittedCount: 'Lượt gửi lại', cancelledCount: 'Hồ sơ đã hủy' } as const;
 function metric(value: number | null | undefined, suffix = '') { return value == null ? 'Chưa đủ dữ liệu' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + suffix; }
@@ -63,10 +64,19 @@ function ProcedureName({ id }: { id: string }) {
   return <span className="font-medium text-slate-900">{query.data?.title ?? `Thủ tục ${id}`}</span>;
 }
 function OfficerName({ id }: { id: string }) {
-  const userId = useAuthStore(state => state.user?.id);
-  const query = useQuery({ queryKey: ['analytics', userId, 'officer-directory'], queryFn: () => getManagerOfficers({ page: 1, pageSize: 100 }), retry: false });
-  const officer = query.data?.items.find(item => item.id === id);
-  return <span className="font-medium text-slate-900">{officer?.fullName || officer?.username || `Cán bộ ${id}`}</span>;
+  const user = useAuthStore(state => state.user);
+  const query = useQuery({ queryKey: ['analytics', user?.id, 'officer-directory'], enabled: !!user?.roles.includes('MANAGER') && user.permissions.includes('iam.accounts.read'), queryFn: async () => {
+    const first = await getManagerOfficers({ page: 1, pageSize: 100 });
+    const items = [...first.items];
+    for (let page = 2; items.length < first.total; page++) {
+      const next = await getManagerOfficers({ page, pageSize: 100 });
+      if (!next.items.length) throw new Error('Danh sách cán bộ chưa đầy đủ. Vui lòng tải lại.');
+      items.push(...next.items);
+    }
+    return items;
+  }, retry: false });
+  const officer = query.data?.find(item => item.id.toLowerCase() === id.toLowerCase());
+  return <span className="font-medium text-slate-900">{officer?.fullName?.trim() || officer?.username || 'Chưa có tên cán bộ'}</span>;
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -77,7 +87,7 @@ function Stars({ rating }: { rating: number }) {
 
 const RATING_LABELS = ['Rất không hài lòng', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];
 
-// Phản hồi chỉ lưu ID hồ sơ (service Thống kê); tra mã HS và tên thủ tục từ chi tiết hồ sơ của Manager
+// Chỉ tra Workflow cho dữ liệu cũ chưa được Analytics bổ sung thông tin hồ sơ.
 function useFeedbackApplication(id: string) {
   const userId = useAuthStore(state => state.user?.id);
   return useQuery({
@@ -96,13 +106,24 @@ function FeedbackCitizen({ id }: { id: string }) {
     : <span className="italic text-slate-400" title="Hồ sơ không lưu tên người gửi">Không có tên trong hồ sơ</span>;
 }
 
-function FeedbackApplication({ id }: { id: string }) {
+function FeedbackIdentity({ row }: { row: z.infer<typeof feedbackSchema> }) {
+  return <>
+    <td className="px-5 py-3.5">{row.applicantName?.trim()
+      ? <span className="font-medium text-slate-900">{row.applicantName}</span>
+      : <FeedbackCitizen id={row.applicationId} />}</td>
+    <td className="max-w-72 px-5 py-3.5">{row.applicationCode?.trim() && row.procedureTitle?.trim()
+      ? <span className="block min-w-0"><span className="block font-mono text-xs font-semibold text-slate-900">{row.applicationCode}</span><span className="mt-0.5 block truncate text-sm text-slate-600" title={row.procedureTitle}>{row.procedureTitle}</span></span>
+      : <FeedbackApplication id={row.applicationId} code={row.applicationCode} title={row.procedureTitle} />}</td>
+  </>;
+}
+
+function FeedbackApplication({ id, code, title }: { id: string; code?: string | null; title?: string | null }) {
   const query = useFeedbackApplication(id);
-  if (query.isPending) return <span className="inline-block h-4 w-40 animate-pulse rounded bg-slate-100" aria-label="Đang tải mã hồ sơ" />;
-  if (!query.data) return <span className="text-sm italic text-slate-400" title={id}>Hồ sơ không còn trong phạm vi xem</span>;
+  if (query.isPending && !code && !title) return <span className="inline-block h-4 w-40 animate-pulse rounded bg-slate-100" aria-label="Đang tải mã hồ sơ" />;
+  if (!query.data && !code && !title) return <span className="text-sm italic text-slate-400" title={id}>Hồ sơ không còn trong phạm vi xem</span>;
   return <span className="block min-w-0">
-    <span className="block font-mono text-xs font-semibold text-slate-900">{query.data.applicationCode || 'Chưa có mã hồ sơ'}</span>
-    <span className="mt-0.5 block truncate text-sm text-slate-600">{query.data.procedureTitle || 'Thủ tục hành chính'}</span>
+    <span className="block font-mono text-xs font-semibold text-slate-900">{code?.trim() || query.data?.applicationCode || 'Chưa có mã hồ sơ'}</span>
+    <span className="mt-0.5 block truncate text-sm text-slate-600">{title?.trim() || query.data?.procedureTitle || 'Thủ tục hành chính'}</span>
   </span>;
 }
 
@@ -114,6 +135,7 @@ function feedbackTime(value: string) {
 }
 
 function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]; total: number }) {
+  const [reading, setReading] = useState<z.infer<typeof feedbackSchema> | null>(null);
   const average = rows.length ? rows.reduce((sum, row) => sum + row.rating, 0) / rows.length : null;
   return <section className="admin-card min-w-0 overflow-hidden">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
@@ -123,7 +145,8 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
         {average != null && <> · Trung bình trang này <span className="font-semibold text-slate-900">{average.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span> <Star size={13} weight="fill" className="inline -translate-y-px text-amber-500" aria-hidden="true" /></>}
       </p>
     </div>
-    {rows.length > 0 && <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm">
+    {rows.length > 0 && <p className="px-5 py-2 text-xs text-slate-500 sm:hidden">Vuốt ngang bảng để xem hồ sơ, đánh giá và góp ý.</p>}
+    {rows.length > 0 && <div className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="w-full min-w-[900px] text-left text-sm">
       <caption className="sr-only">Danh sách phản hồi người dân</caption>
       <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
         <th scope="col" className="w-36 px-5 py-3">Thời gian</th>
@@ -134,14 +157,16 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
       </tr></thead>
       <tbody>{rows.map(row => <tr key={row.id} className="border-b border-slate-100 align-top last:border-0 hover:bg-slate-50/70">
         <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{feedbackTime(row.createdAtUtc)}</td>
-        <td className="px-5 py-3.5"><FeedbackCitizen id={row.applicationId} /></td>
-        <td className="max-w-72 px-5 py-3.5"><FeedbackApplication id={row.applicationId} /></td>
+        <FeedbackIdentity row={row} />
         <td className="px-5 py-3.5"><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
-        <td className="px-5 py-3.5">{row.comment
-          ? <p className="line-clamp-3 whitespace-pre-wrap break-words text-slate-800" title={row.comment}>{row.comment}</p>
+        <td className="min-w-48 px-5 py-3.5">{row.comment
+          ? row.comment.length > 160
+            ? <div className="space-y-2"><p className="line-clamp-2 break-words text-slate-700">{row.comment.slice(0, 120)}…</p><Button size="small" variant="outline" onClick={() => setReading(row)}>Xem đầy đủ góp ý</Button></div>
+            : <p className="whitespace-pre-wrap break-words text-slate-800">{row.comment}</p>
           : <span className="italic text-slate-400">Không có góp ý thêm.</span>}</td>
       </tr>)}</tbody>
     </table></div>}
+    {reading && <Modal open title="Góp ý của người dân" description={reading.applicationCode?.trim() || undefined} onOpenChange={open => !open && setReading(null)}><div className="space-y-4 text-sm">{reading.applicantName?.trim() && <p className="font-semibold">{reading.applicantName}</p>}<Stars rating={reading.rating} /><p className="whitespace-pre-wrap break-words leading-relaxed text-slate-700">{reading.comment}</p></div></Modal>}
   </section>;
 }
 
