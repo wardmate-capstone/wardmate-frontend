@@ -104,16 +104,16 @@ export function AnalyticsFilters({
       </div>
 
       {/* Bộ lọc chi tiết trên một hàng */}
-      <div className={`grid gap-3 sm:grid-cols-2 lg:items-end ${showProcedure ? 'lg:grid-cols-[repeat(2,minmax(0,160px))_minmax(0,1fr)_auto]' : 'lg:grid-cols-[repeat(2,minmax(0,180px))_auto] lg:justify-start'}`}>
+      <div className={`grid items-start gap-3 sm:grid-cols-2 ${showProcedure ? 'lg:grid-cols-[repeat(2,minmax(0,160px))_minmax(0,1fr)_auto]' : 'lg:grid-cols-[repeat(2,minmax(0,180px))_auto] lg:justify-start'}`}>
         <div>
           <label htmlFor="analytics-filter-from" className={labelClass}>Từ ngày</label>
-          <input id="analytics-filter-from" type="date" min="2000-01-01" max={vietnamToday()} {...register('from')} className={fieldClass(!!errors.from)} />
-          {errors.from && <p role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.from.message}</p>}
+          <input id="analytics-filter-from" type="date" min="2000-01-01" max={vietnamToday()} {...register('from', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.from} aria-describedby={errors.from ? 'analytics-filter-from-error' : undefined} className={fieldClass(!!errors.from)} />
+          {errors.from && <p id="analytics-filter-from-error" role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.from.message}</p>}
         </div>
         <div>
           <label htmlFor="analytics-filter-to" className={labelClass}>Đến ngày</label>
-          <input id="analytics-filter-to" type="date" min="2000-01-01" max={vietnamToday()} {...register('to')} className={fieldClass(!!errors.to)} />
-          {errors.to && <p role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.to.message}</p>}
+          <input id="analytics-filter-to" type="date" min="2000-01-01" max={vietnamToday()} {...register('to', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.to} aria-describedby={errors.to ? 'analytics-filter-to-error' : undefined} className={fieldClass(!!errors.to)} />
+          {errors.to && <p id="analytics-filter-to-error" role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.to.message}</p>}
         </div>
         {showProcedure && (
         <div className="sm:col-span-2 lg:col-span-1">
@@ -149,7 +149,7 @@ export function AnalyticsFilters({
           {errors.procedureId && <p role="alert" className="mt-1 text-xs font-medium text-red-600">Chọn thủ tục hợp lệ.</p>}
         </div>
         )}
-        <Button type="submit" className="h-10 min-h-0 px-5 sm:col-span-2 lg:col-span-1">Áp dụng</Button>
+        <Button type="submit" className="h-10 min-h-0 px-5 sm:col-span-2 lg:col-span-1 lg:mt-[22px]">Áp dụng</Button>
       </div>
     </form>
   );
