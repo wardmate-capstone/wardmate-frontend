@@ -103,9 +103,9 @@ function FeedbackForm({ id, onClose, onRefreshApplication, description }: { id: 
             const shown = hoverRating || field.value;
             return <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-5">
               <div className="flex items-center gap-1" onMouseLeave={() => setHoverRating(0)}>
-                {[1, 2, 3, 4, 5].map(star => <label key={star} className="cursor-pointer rounded-lg p-1 transition hover:scale-110 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-red-200" onMouseEnter={() => setHoverRating(star)}>
-                  <input type="radio" className="sr-only" aria-label={`${star} sao`} name={field.name} ref={star === 1 ? field.ref : undefined} value={star} checked={field.value === star} onBlur={field.onBlur} onChange={() => field.onChange(star)} />
-                  <Star size={36} weight={star <= shown ? 'fill' : 'regular'} className={star <= shown ? 'text-gold-400' : 'text-slate-300'} aria-hidden />
+                {[1, 2, 3, 4, 5].map(star => <label key={star} className="relative cursor-pointer rounded-lg p-1 transition hover:scale-110 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-red-200" onMouseEnter={() => setHoverRating(star)}>
+                  <input type="radio" className="absolute inset-0 z-10 size-full cursor-pointer opacity-0" aria-label={`${star} sao`} name={field.name} ref={star === 1 ? field.ref : undefined} value={star} checked={field.value === star} onBlur={field.onBlur} onChange={() => field.onChange(star)} />
+                  <Star size={36} weight={star <= shown ? 'fill' : 'regular'} className={`pointer-events-none ${star <= shown ? 'text-gold-400' : 'text-slate-300'}`} aria-hidden />
                 </label>)}
               </div>
               <p className={`min-h-5 text-sm font-semibold ${shown ? 'text-slate-800' : 'text-slate-400'}`} aria-live="polite">{shown ? RATING_LABELS[shown - 1] : 'Chọn số sao để đánh giá'}</p>
