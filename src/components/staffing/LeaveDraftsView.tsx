@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Modal, toast } from '@/components/ui';
 import { staffingApi } from '@/lib/api/staffing';
@@ -17,16 +18,34 @@ export function WordViewer({ title, load, onClose }: { title: string; load: (sig
   return <Modal open onOpenChange={v => !v && onClose()} title="Trình đọc Word" className={wordDialogClass}><Suspense fallback={<p role="status">Đang mở trình đọc Word…</p>}><DocxEditor sourceKey={title} title={title} readOnly author={user?.username || 'Cán bộ'} load={load} onClose={onClose} errorMessage={staffingError} /></Suspense></Modal>;
 }
 type Metadata = { startsAt: string; endsAt: string; reason: string };
+const fullDayPeriod = (from: string, to: string) => ({
+  startsAt: `${from}T00:00`,
+  endsAt: new Date(Date.parse(`${to}T00:00:00Z`) + 86400000).toISOString().slice(0, 10) + 'T00:00',
+});
+const createLeaveSchema = z.object({
+  range: z.enum(['single', 'multiple']), from: z.iso.date('Chọn ngày bắt đầu nghỉ.'), to: z.string(),
+  reason: leaveMetadataSchema.shape.reason,
+}).superRefine((v, ctx) => {
+  if (v.range === 'multiple' && !z.iso.date().safeParse(v.to).success) {
+    ctx.addIssue({ code: 'custom', path: ['to'], message: 'Chọn ngày kết thúc nghỉ.' }); return;
+  }
+  if (!z.iso.date().safeParse(v.from).success) return;
+  const issue = validatePeriod(fullDayPeriod(v.from, v.range === 'single' ? v.from : v.to));
+  if (issue) ctx.addIssue({ code: 'custom', path: [v.range === 'single' ? 'from' : 'to'], message: issue });
+});
 function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabilities: LeaveCapabilities; onClose: () => void; onCreated: (id: string) => void; onSubmitted: (id: string) => void }) {
   const [word, setWord] = useState(capabilities.wordRequired || capabilities.templateConfigured);
   const operation = useStaffOperation();
   const template = useStaffQuery(['leave-template'], signal => workScheduleApi.template(signal), word && capabilities.templateConfigured);
   const request = useRef<{ body: Metadata & { templateVersionId?: string }; key: string; word: boolean } | null>(null);
-  const form = useForm<Metadata>({ resolver: zodResolver(leaveMetadataSchema), defaultValues: { startsAt: '', endsAt: '', reason: '' } });
+  const form = useForm<z.infer<typeof createLeaveSchema>>({ resolver: zodResolver(createLeaveSchema), defaultValues: { range: 'single', from: '', to: '', reason: '' } });
+  const range = form.watch('range'), from = form.watch('from'), to = range === 'single' ? from : form.watch('to');
+  const days = z.iso.date().safeParse(from).success && z.iso.date().safeParse(to).success && to >= from ? Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1 : 0;
   const locked = operation.busy || Boolean(request.current);
   const submit = form.handleSubmit(async values => {
     if (word && (!capabilities.templateConfigured || !template.data || template.isError)) return;
-    request.current ??= { body: { startsAt: vietnamIso(values.startsAt), endsAt: vietnamIso(values.endsAt), reason: values.reason, ...(word ? { templateVersionId: template.data!.versionId } : {}) }, key: crypto.randomUUID(), word };
+    const period = fullDayPeriod(values.from, values.range === 'single' ? values.from : values.to);
+    request.current ??= { body: { startsAt: vietnamIso(period.startsAt), endsAt: vietnamIso(period.endsAt), reason: values.reason, ...(word ? { templateVersionId: template.data!.versionId } : {}) }, key: crypto.randomUUID(), word };
     const sent = request.current;
     await operation.run(async () => {
       if (sent.word) return { id: (await workScheduleApi.createDraft(sent.body as Metadata & { templateVersionId: string }, sent.key)).id, draft: true };
@@ -36,15 +55,20 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
       return { id: (await staffingApi.requestLeave(sent.body)).id, draft: false };
     }, result => result.draft ? onCreated(result.id) : onSubmitted(result.id), sent.word);
   });
-  return <Modal open title="Tạo đơn xin nghỉ" description="Chọn thời gian nghỉ và lý do ngắn. Nội dung chi tiết được soạn trong bản Word riêng của bạn." onOpenChange={v => !v && !operation.busy && onClose()} footer={<><Button variant="outline" disabled={operation.busy} onClick={onClose}>Đóng</Button><Button disabled={operation.busy || (word && (!template.data || template.isError || !capabilities.templateConfigured)) || (!word && operation.review)} onClick={() => void submit()}>{operation.busy ? 'Đang lưu…' : request.current && operation.review && word ? 'Gửi lại cùng yêu cầu' : word ? 'Tạo nháp Word' : 'Gửi đơn không kèm Word'}</Button></>}>
-    {!capabilities.wordRequired && <label className="mb-4 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={word} disabled={locked} onChange={e => setWord(e.target.checked)} />Soạn đơn Word trực tiếp</label>}
+  return <Modal open title="Tạo đơn xin nghỉ" className="sm:max-w-3xl sm:rounded-2xl" description="Chọn thời gian nghỉ và lý do để tạo đơn Word." onOpenChange={v => !v && !operation.busy && onClose()} footer={<><Button variant="outline" disabled={locked} onClick={() => { form.reset(); setWord(capabilities.wordRequired || capabilities.templateConfigured); }}>Đặt lại</Button><Button disabled={operation.busy || (word && (!template.data || template.isError || !capabilities.templateConfigured)) || (!word && operation.review)} onClick={() => void submit()}>{operation.busy ? 'Đang lưu…' : request.current && operation.review && word ? 'Gửi lại cùng yêu cầu' : word ? 'Tạo nháp Word' : 'Gửi đơn không kèm Word'}</Button></>}>
     {word && !capabilities.templateConfigured && <p role="alert" className="mb-4 text-red-800">Chưa có mẫu đơn Word. Vui lòng liên hệ quản trị viên.</p>}
     {word && capabilities.templateConfigured && <QueryState query={template} />}
-    <form onSubmit={e => void submit(e)} noValidate className="space-y-4"><fieldset disabled={locked} className="space-y-4">
-      <label className="staff-field">Bắt đầu nghỉ (giờ Việt Nam)<input type="datetime-local" className={fieldClass} {...form.register('startsAt')} aria-invalid={Boolean(form.formState.errors.startsAt)} /></label>
-      <label className="staff-field">Kết thúc nghỉ (giờ Việt Nam)<input type="datetime-local" className={fieldClass} {...form.register('endsAt')} aria-invalid={Boolean(form.formState.errors.endsAt)} /></label>
-      <label className="staff-field">Lý do ngắn<textarea rows={3} maxLength={2000} className={fieldClass} {...form.register('reason')} aria-invalid={Boolean(form.formState.errors.reason)} /></label>
-    </fieldset>{Object.entries(form.formState.errors).map(([name, error]) => <p key={name} role="alert" className="text-sm text-red-800">{error.message}</p>)}</form>
+    <form onSubmit={e => void submit(e)} noValidate className="space-y-5"><fieldset disabled={locked} className="space-y-5">
+      <fieldset className="space-y-3"><legend className="font-semibold text-slate-900">Thời gian nghỉ</legend><div className="flex flex-wrap gap-x-6 gap-y-2">{([['single', 'Nghỉ 1 ngày'], ['multiple', 'Nghỉ nhiều ngày']] as const).map(([value, label]) => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm"><input type="radio" value={value} {...form.register('range')} className="size-4 accent-red-700" />{label}</label>)}</div></fieldset>
+      <div className={`grid gap-4 ${range === 'multiple' ? 'sm:grid-cols-2' : ''}`}>
+        <label className="staff-field">{range === 'single' ? 'Ngày nghỉ' : 'Từ ngày'}<input type="date" className={fieldClass} {...form.register('from')} aria-invalid={Boolean(form.formState.errors.from)} aria-describedby={form.formState.errors.from ? 'create-leave-from-error' : undefined} /></label>
+        {range === 'multiple' && <label className="staff-field">Đến ngày<input type="date" className={fieldClass} {...form.register('to')} aria-invalid={Boolean(form.formState.errors.to)} aria-describedby={form.formState.errors.to ? 'create-leave-to-error' : undefined} /></label>}
+      </div>
+      <p className="text-xs text-slate-500">Nghỉ trọn các ngày đã chọn, theo giờ Việt Nam.</p>
+      {!!days && <div role="status" className="space-y-1 rounded-xl bg-slate-50 p-3"><p className="text-sm font-semibold text-slate-900">Tổng thời gian: {days} ngày lịch</p><p className="text-xs text-slate-500">Tính cả ngày bắt đầu và kết thúc, chưa loại trừ cuối tuần hoặc ngày lễ. Không phải số ngày phép được trừ.</p></div>}
+      <label className="staff-field">Lý do nghỉ<textarea rows={3} maxLength={2000} placeholder="Ví dụ: Giải quyết công việc cá nhân…" className={fieldClass} {...form.register('reason')} aria-invalid={Boolean(form.formState.errors.reason)} aria-describedby={form.formState.errors.reason ? 'create-leave-reason-error' : undefined} /></label>
+      <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={word} disabled={capabilities.wordRequired || locked} onChange={e => setWord(e.target.checked)} className="size-4 accent-red-700" />Soạn đơn Word trực tiếp</label>
+    </fieldset>{Object.entries(form.formState.errors).map(([name, error]) => <p id={`create-leave-${name}-error`} key={name} role="alert" className="text-sm text-red-800">{error.message}</p>)}</form>
     <OperationError operation={operation} />
     {request.current && operation.error && <p className="mt-3 text-sm text-slate-600">Kiểm tra danh sách nháp/đơn nếu đóng cửa sổ này. Khi gửi lại, hệ thống dùng đúng nội dung của lần gửi trước.</p>}
   </Modal>;
@@ -118,16 +142,18 @@ function DraftWorkspace({ id, capabilities, onClose, onSubmitted }: { id: string
   </Modal>;
 }
 
-export function LeaveDraftsView({ capabilities, onSubmitted }: { capabilities: LeaveCapabilities; onSubmitted: (id: string) => void }) {
+export function LeaveDraftsView({ capabilities, createOpen, onCreateClose, onSubmitted }: { capabilities: LeaveCapabilities; createOpen: boolean; onCreateClose: () => void; onSubmitted: (id: string) => void }) {
   const [page, setPage] = useState(1);
-  const [create, setCreate] = useState(false);
   const [selected, setSelected] = useState<string>();
   const [templateOpen, setTemplateOpen] = useState(false);
   const template = useStaffQuery(['leave-template'], signal => workScheduleApi.template(signal), templateOpen);
   const query = useStaffQuery(['leave-drafts', page], signal => workScheduleApi.drafts(page, signal));
-  return <div className="space-y-4"><div className="staff-actions"><Button onClick={() => setCreate(true)}>Xin nghỉ phép</Button><Button variant="outline" disabled={!capabilities.templateConfigured} onClick={() => setTemplateOpen(true)}>Xem mẫu Word chung</Button><Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Làm mới nháp</Button></div>
-    <QueryState query={query} empty={!query.data?.items.length} />{!query.isError && <div className="staff-grid">{query.data?.items.map(item => <article key={item.id} className="staff-card"><div className="staff-card-heading"><h3>Đơn nghỉ chưa nộp</h3><span className="staff-meta">Nháp riêng</span></div><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><div className="staff-card-footer"><Button variant="outline" onClick={() => setSelected(item.id)}>Mở nháp</Button></div></article>)}</div>}<Pager page={page} total={query.data?.total ?? 0} setPage={setPage} />
-    {create && <CreateLeave capabilities={capabilities} onClose={() => setCreate(false)} onCreated={id => { setCreate(false); setSelected(id); }} onSubmitted={id => { setCreate(false); onSubmitted(id); }} />}
+  return <div className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-slate-600">Các đơn đang soạn chưa được gửi cho quản lý.</p><div className="staff-actions"><Button size="small" variant="outline" disabled={!capabilities.templateConfigured} onClick={() => setTemplateOpen(true)}>Xem mẫu đơn nghỉ phép</Button><Button size="small" variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Tải lại danh sách</Button></div></div>
+    <QueryState query={query} />
+    {query.isSuccess && !query.data.items.length && <div role="status" className="staff-state"><p className="font-semibold text-slate-800">Bạn chưa có đơn đang soạn</p><p>Bấm Tạo đơn nghỉ phép ở đầu trang để chọn thời gian nghỉ và bắt đầu viết đơn.</p></div>}
+    {!query.isError && <div className="staff-grid">{query.data?.items.map(item => <article key={item.id} className="staff-card"><div className="staff-card-heading"><h3>Đơn nghỉ phép đang soạn</h3><span className="staff-meta">Chưa gửi</span></div><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><div className="staff-card-footer"><Button onClick={() => setSelected(item.id)}>Tiếp tục soạn đơn</Button></div></article>)}</div>}
+    {query.data && (page > 1 || query.data.total > query.data.pageSize) && <Pager page={page} total={query.data.total} setPage={setPage} pageSize={query.data.pageSize} />}
+    {createOpen && <CreateLeave capabilities={capabilities} onClose={onCreateClose} onCreated={id => { onCreateClose(); setSelected(id); }} onSubmitted={id => { onCreateClose(); onSubmitted(id); }} />}
     {selected && <DraftWorkspace key={selected} id={selected} capabilities={capabilities} onClose={() => setSelected(undefined)} onSubmitted={id => { setSelected(undefined); onSubmitted(id); }} />}
     {templateOpen && <Modal open title="Mẫu đơn nghỉ chung" onOpenChange={v => !v && setTemplateOpen(false)}><QueryState query={template} />{!template.isError && template.data && <WordViewer title="Mẫu đơn nghỉ chung — chỉ xem" load={signal => workScheduleApi.templateDocx(template.data.versionId, template.data.sha256, signal)} onClose={() => setTemplateOpen(false)} />}</Modal>}
   </div>;
