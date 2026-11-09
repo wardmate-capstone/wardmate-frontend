@@ -1,6 +1,6 @@
-# Yêu cầu Backend: Tên cán bộ trong lịch sử phân công & các mục Portal còn tồn đọng
+# Yêu cầu Backend: Hiển thị tên thay cho mã ID & các mục Portal còn tồn đọng
 
-*Ngày tạo: 06/11/2026 · Frontend gửi Backend*
+*Ngày tạo: 06/11/2026 · Cập nhật: 07/11/2026 (thêm BE-D, BE-E) · Frontend gửi Backend*
 *Đã đối chiếu mã nguồn `D:/wardmate-backend` tại thời điểm tạo file*
 *Liên quan: `docs/PORTAL_REFINEMENT_TASKS_CHECKLIST.md` (mục 7, 10) và `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md` (03/11)*
 
@@ -13,6 +13,8 @@
 | **BE-A** | Trả kèm tên cán bộ trong lịch sử phân công hồ sơ | ApplicationWorkflow | 🟡 Trung bình | ✅ Có (3 cột) | Một phần: FE đã tự bỏ lệnh gọi gây 403 |
 | **BE-B** | Tìm kiếm user theo `Username` (Checklist mục 10) | IAM | 🟡 Trung bình | ❌ Không | Một phần: FE bỏ tiền tố `@` |
 | **BE-C** | Ràng buộc mỗi người dùng một vai trò & bảo vệ `IT_ADMIN` (Checklist mục 7) | IAM | 🔴 Cao | ❌ Không | Một phần: FE chuyển sang chọn 1 vai trò, nhưng chưa an toàn nếu BE không chặn |
+| **BE-D** | Báo cáo phản hồi: trả mã hồ sơ, tên thủ tục, tên người dân; bổ sung tên người dân cho hồ sơ cũ | AnalyticsSystem + ApplicationWorkflow | 🟡 Trung bình | ✅ Có (snapshot) | Một phần: FE tự tra mã hồ sơ (N+1 request); **không** lấy được tên hồ sơ cũ |
+| **BE-E** | Tham vấn & Lịch ngày nghỉ: trả tên thay vì chỉ ID (hồ sơ, người được hỏi, người khai báo/hủy, phường) | ApplicationWorkflow | 🟢 Thấp | Tùy cách làm | Không: FE đang tạm hiện mã ID thô, chờ BE |
 
 ---
 
@@ -138,6 +140,77 @@ Chi tiết gốc: `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md` mục 3.
 
 ---
 
+## BE-D. Báo cáo phản hồi người dân: mã hồ sơ, tên thủ tục, tên người dân
+
+### Hiện trạng (đã kiểm tra 07/11)
+
+- Màn **Manager → Báo cáo phản hồi** gọi `GET /api/analytics-system/.../analytics/feedback`. Mỗi dòng chỉ có (`AnalyticsContracts.cs:45`):
+  ```csharp
+  public sealed record FeedbackDto(Guid Id, Guid ApplicationId, int Rating, string? Comment, DateTime CreatedAtUtc);
+  ```
+  Không có mã hồ sơ `HS-…`, tên thủ tục hay tên người dân.
+- **FE đang tạm xử lý:** với mỗi phản hồi, FE gọi thêm `GET` chi tiết hồ sơ (Manager có `workflow.read`) để lấy `applicationCode`, `procedureTitle`, `applicantName`. Mỗi trang phát sinh thêm tối đa 20 request.
+- **Tên người dân vẫn trống với hồ sơ cũ.** `ApplicationRecord.ApplicantName` chỉ được ghi lúc công dân bấm gửi (`ApplicationsController.cs:75`, lấy claim `officer_name` qua `SnapshotApplicantName`). Ví dụ hồ sơ `HS-20261024-00000036` có `applicantName = null`.
+- **FE không có đường khác để lấy tên:** `GET /api/v1/users/{userId}/profile` bị `ManagementScope` (IAM, dòng 29 và 41) loại trừ tài khoản `REGISTERED_CITIZEN`, nên Manager gọi sẽ bị 403. **Không đề nghị mở quyền này.**
+
+### Thay đổi đề xuất
+
+1. **Bổ sung `ApplicantName` cho hồ sơ cũ (backfill)** trong Workflow: điền họ tên từ hồ sơ cá nhân IAM cho các bản ghi `applications` đã gửi mà `applicant_name IS NULL`. Chỉ chạy một lần, bằng script SQL hoặc job.
+2. **Kiểm tra claim `officer_name` có trong token của công dân**, để hồ sơ gửi mới luôn lưu được tên. Nếu claim chỉ cấp cho cán bộ thì cần thêm cho `REGISTERED_CITIZEN` hoặc lấy tên từ IAM lúc gửi.
+3. **(Khuyến nghị) Trả kèm thông tin hồ sơ trong `FeedbackDto`** để FE bỏ được N+1 request:
+   - Lúc ghi đánh giá, `AnalyticsService` đã đọc hồ sơ qua `FeedbackApplication` (`AnalyticsContracts.cs:11`). Lưu thêm snapshot `ApplicationCode`, `ProcedureTitle`, `ApplicantName` vào `CitizenFeedback` (thêm cột + migration Analytics).
+   - Mở rộng `FeedbackDto`: thêm `ApplicationCode`, `ProcedureTitle`, `ApplicantName` (cho phép null).
+   - Phản hồi cũ: điền bù từ Workflow, hoặc để null (FE sẽ tự tra như hiện tại).
+
+### Tiêu chí nghiệm thu
+
+- [ ] Hồ sơ đã gửi trước đây hiện đúng họ tên người dân ở Báo cáo phản hồi và màn chi tiết hồ sơ của cán bộ.
+- [ ] Hồ sơ công dân gửi mới luôn có `applicantName`.
+- [ ] (Nếu làm mục 3) `GET .../analytics/feedback` trả `applicationCode`, `procedureTitle`, `applicantName` cho từng dòng.
+- [ ] Manager vẫn **không** đọc được hồ sơ cá nhân của công dân qua IAM.
+
+### Triển khai Azure
+
+- Mục 1–2: chạy script điền bù trên DB Workflow; deploy lại `wardmate-application-workflow` nếu sửa code. Nếu sửa cách cấp claim thì deploy lại cả IAM.
+- Mục 3: chạy migration cho DB Analytics (Analytics đang để `AutoMigrate` mặc định, kiểm tra runbook trước), rồi deploy lại `wardmate-analytics-system`.
+
+### Phía FE sau khi BE xong
+
+- Mục 3: thêm 3 trường vào `feedbackSchema` (`src/lib/api/analytics.ts`) và dùng trực tiếp, bỏ phần tra chi tiết hồ sơ trong `ManagerAnalyticsView.tsx`.
+
+---
+
+## BE-E. Tham vấn & Lịch ngày nghỉ: hiển thị tên thay cho mã ID
+
+### Hiện trạng (đã kiểm tra 07/11)
+
+FE đang phải hiện **mã ID thô** cho cán bộ và lãnh đạo, vì dữ liệu không có tên:
+
+| Màn hình | Trường đang hiện ID | Nguồn |
+|---|---|---|
+| Tham vấn chuyên môn | "Hồ sơ (mã định danh)": `applicationId`; "Người được hỏi (mã tài khoản)": `specialistId` | `consultationSchema` (`src/lib/api/staffing.ts:13`), chỉ có `applicationId`, `specialistId`, `requestedBy` |
+| Lịch ngày nghỉ | "Người khai báo (mã tài khoản)": `createdBy`; "Người hủy (mã tài khoản)": `cancelledBy`; "Phường `{wardCode}`" | `closureSchema` (`src/lib/api/calendarClosures.ts:8`) |
+
+Front Desk không có quyền danh bạ (`iam.accounts.read`), nên FE không tự đổi ID ra tên được (cùng lý do với BE-A).
+
+### Thay đổi đề xuất
+
+1. **Tham vấn:** trả thêm `applicationCode`, `specialistName`, `requestedByName`. Nên lưu snapshot lúc tạo tham vấn, giống cách `AssignedOfficerName` đang làm.
+2. **Lịch ngày nghỉ:** trả thêm `createdByName`, `cancelledByName` (snapshot lúc khai báo/hủy) và `wardName` bên cạnh `wardCode`.
+3. Chỉ trả **họ tên**, không trả email hay số điện thoại.
+
+### Tiêu chí nghiệm thu
+
+- [ ] Front Desk và Manager xem Tham vấn thấy mã hồ sơ `HS-…` và tên người được hỏi, không còn GUID.
+- [ ] Lịch ngày nghỉ hiện tên người khai báo/hủy và tên phường.
+- [ ] Không mở thêm quyền đọc danh bạ cho Front Desk.
+
+### Phía FE sau khi BE xong
+
+- Thêm các trường mới vào `consultationSchema` và `closureSchema`, thay các dòng "(mã định danh)" / "(mã tài khoản)" bằng tên.
+
+---
+
 ## Việc FE làm song song (không chờ BE)
 
 | Việc | File | Liên quan |
@@ -145,3 +218,4 @@ Chi tiết gốc: `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md` mục 3.
 | Chỉ gọi `/manager/officers` khi có quyền `iam.accounts.read` (hết 403 với Front Desk) | `src/pages/officer/OfficerPage.tsx` | BE-A |
 | Bỏ tiền tố `@` trước khi gửi `search` | `src/pages/admin/AdminPage.tsx` | BE-B |
 | Modal phân quyền chọn 1 vai trò, ẩn `IT_ADMIN` | `src/pages/admin/AdminRbacViews.tsx` | BE-C |
+| ✅ Đã làm: tra mã hồ sơ, tên thủ tục, tên người dân qua chi tiết hồ sơ; hiện "Không có tên trong hồ sơ" khi trống | `src/components/analytics/ManagerAnalyticsView.tsx` | BE-D |
