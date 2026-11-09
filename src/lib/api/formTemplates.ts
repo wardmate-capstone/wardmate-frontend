@@ -81,8 +81,8 @@ export async function getFormTemplates(params: GetFormTemplatesParams = {}, sign
 /**
  * Xem chi tiết một phôi biểu mẫu kèm cờ onlineReady
  */
-export async function getFormTemplateById(templateId: string, signal?: AbortSignal): Promise<FormTemplateDetailDto> {
-  const response = await api.get<FormTemplateDetailDto>(documentPath(`/api/v1/form-templates/${templateId}`), { signal });
+export async function getFormTemplateById(templateId: string, signal?: AbortSignal, publicAccess = false): Promise<FormTemplateDetailDto> {
+  const response = await api.get<FormTemplateDetailDto>(documentPath(`/api/v1/form-templates/${templateId}`), { signal, skipAuth: publicAccess });
   return detailSchema.parse(response.data);
 }
 
@@ -121,8 +121,9 @@ export async function uploadFormTemplateDocx(templateId: string, file: File): Pr
 /**
  * Tải trực tiếp file nhị phân DOCX của biểu mẫu
  */
-export async function downloadFormTemplateDocx(templateId: string, signal?: AbortSignal): Promise<{ blob: Blob; fileName: string }> {
+export async function downloadFormTemplateDocx(templateId: string, signal?: AbortSignal, publicAccess = false): Promise<{ blob: Blob; fileName: string }> {
   const response = await api.get<Blob>(documentPath(`/api/v1/form-templates/${templateId}/download-docx`), {
+    skipAuth: publicAccess,
     responseType: 'blob',
     signal,
   }).catch(async error => {
