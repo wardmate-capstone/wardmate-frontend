@@ -4,7 +4,7 @@ export const analyticsIds = { procedure: '10000000-0000-4000-8000-000000000003',
 export const savedFeedback = { id: analyticsIds.feedback, applicationId: analyticsIds.application, rating: 5, comment: 'Hỗ trợ tận tình', createdAtUtc: '2026-10-20T01:00:00Z' };
 export async function mockAnalytics(page: Page) {
   const requests: { path: string; method: string; body: unknown; query: URLSearchParams }[] = [];
-  const state = { requests, fail: '', empty: false, malformed: false, wrongPeriod: false, wrongPage: false, duplicateDay: false, jobState: 'Succeeded', saved: false, conflict: false, wrongApplication: false, postCount: 0 };
+  const state = { requests, fail: '', empty: false, malformed: false, wrongPeriod: false, wrongPage: false, duplicateDay: false, jobState: 'Succeeded', saved: false, conflict: false, wrongApplication: false, postCount: 0, enrichedFeedback: false };
   await page.route('**/api/v1/analytics/**', async route => {
     if (route.request().method() === 'OPTIONS') return authReply(route, { status: 204 });
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
@@ -31,7 +31,7 @@ export async function mockAnalytics(page: Page) {
     else if (path.endsWith('/procedures')) json = paged([{ procedureId: analyticsIds.procedure, totals, deadlines }]);
     else if (path.endsWith('/officers')) json = paged([{ officerId: analyticsIds.officer, readyCount: 8, revisionRequestedCount: 3, durationSampleCount: 2, averageElapsedMinutes: 45, deadlines }]);
     else if (path.endsWith('/feedback/summary')) json = { totalCount: state.empty ? 0 : 1, averageRating: state.empty ? null : 5, satisfactionRate: state.empty ? null : 100, ratingCounts: { '1': 0, '2': 0, '3': 0, '4': 0, '5': state.empty ? 0 : 1 } };
-    else if (path.endsWith('/feedback')) json = paged([savedFeedback]);
+    else if (path.endsWith('/feedback')) json = paged([{ ...savedFeedback, ...(state.enrichedFeedback ? { applicantName: 'Nguyễn Văn An', applicationCode: 'HS-P01-2026-001', procedureTitle: 'Chứng thực bản sao', comment: 'Cán bộ hướng dẫn rõ ràng. '.repeat(15) } : {}) }]);
     else if (path.endsWith('/rebuild')) return authReply(route, { status: 202, json: { jobId: '123' } });
     else json = { jobId: path.split('/').pop(), state: state.jobState, createdAtUtc: '2026-10-23T01:00:00Z' };
     return authReply(route, { json });

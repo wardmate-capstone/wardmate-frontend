@@ -3,6 +3,26 @@ import { mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog } from './fixtures/procedures';
 import { mockAnalytics } from './fixtures/analytics';
 
+test('Manager đọc tên từ API phản hồi, không tra hồ sơ thừa và mở được góp ý dài', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['MANAGER']); await mockCatalog(page);
+  const state = await mockAnalytics(page); state.enrichedFeedback = true;
+  const extraLookups: string[] = [];
+  page.on('request', request => { if (/\/api\/v1\/officer\/applications\/[^/?]+(?:\?|$)/.test(request.url())) extraLookups.push(request.url()); });
+  await page.goto('/manager');
+  await page.locator('aside').getByRole('button', { name: 'Báo cáo phản hồi', exact: true }).click();
+  await expect(page.getByRole('cell', { name: 'Nguyễn Văn An', exact: true })).toBeVisible();
+  await expect(page.getByText('HS-P01-2026-001', { exact: true })).toBeVisible();
+  await expect(page.getByText('Chứng thực bản sao', { exact: true })).toBeVisible();
+  expect(extraLookups).toHaveLength(0);
+  await page.getByText('Xem đầy đủ góp ý', { exact: true }).click();
+  await expect(page.getByText('Cán bộ hướng dẫn rõ ràng. '.repeat(15).trim(), { exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/analytics-feedback-enriched-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await expect.poll(async () => (await page.getByRole('dialog', { name: 'Góp ý của người dân', exact: true }).boundingBox())!.width).toBeLessThanOrEqual(390);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/analytics-feedback-enriched-mobile.png', fullPage: true });
+});
+
 test('Manager: đủ sáu GET, phân trang và dữ liệu thiếu/null', async ({ page }) => {
   await mockWorkspaceAuth(page, ['MANAGER']); await mockCatalog(page); const state = await mockAnalytics(page);
   await page.goto('/manager');
