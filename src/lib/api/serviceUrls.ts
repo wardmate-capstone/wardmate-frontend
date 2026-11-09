@@ -19,6 +19,12 @@ export function servicePath(baseUrl: string, path: string) {
   return baseUrl ? `${baseUrl}${path}` : path;
 }
 
+// Gateway Azure hỗ trợ prefix này; route ngắn /api/v1/system hiện trả 404.
+// Dùng origin Gateway như hub thông báo, kể cả khi Analytics được cấu hình gọi trực tiếp.
+export function systemAdministrationPath(route: string) {
+  return servicePath(serviceUrls.documentForm, '/api/analytics-system/api/v1/system/' + route);
+}
+
 export const configuredServiceOrigins = Object.values(serviceUrls)
   .filter(Boolean)
   .map((url) => new URL(url).origin);
