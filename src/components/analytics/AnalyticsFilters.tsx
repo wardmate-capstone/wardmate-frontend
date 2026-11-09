@@ -10,29 +10,29 @@ import {
 } from '@/lib/api/analytics';
 import type { z } from 'zod';
 import { Button } from '@/components/ui/Button';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { procedureApi } from '@/lib/api/procedures';
-import {
-  CalendarBlank,
-  MagnifyingGlass,
-  FunnelSimple,
-  ArrowsClockwise,
-  CheckCircle,
-  FileText,
-} from '@phosphor-icons/react';
+import { MagnifyingGlass, ArrowsClockwise, CheckCircle } from '@phosphor-icons/react';
 
 export function AnalyticsFilters({
   value,
   onChange,
+  actions,
+  showProcedure = false,
 }: {
   value: AnalyticsQuery;
   onChange: (value: AnalyticsQuery) => void;
+  /** Nút phụ hiển thị cùng hàng chọn kỳ (ví dụ Làm mới dữ liệu) */
+  actions?: ReactNode;
+  /** Hiện ô lọc theo thủ tục (mặc định ẩn ở các trang thống kê của Manager) */
+  showProcedure?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [activePeriod, setActivePeriod] = useState<string>('Tháng này');
   const procedures = useQuery({
     queryKey: ['analytics-procedure-options', search],
+    enabled: showProcedure,
     queryFn: ({ signal }) =>
       procedureApi.list(
         { keyword: search.trim() || undefined, pageNumber: 1, pageSize: 50 },
@@ -74,178 +74,84 @@ export function AnalyticsFilters({
     onChange(next);
   };
 
-  return (
-    <div className="admin-card overflow-hidden border border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md">
-      {/* Header bar của Card Bộ lọc */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 px-5 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-red-50 text-red-700">
-            <FunnelSimple size={18} weight="bold" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-800">Bộ lọc & Phạm vi thời gian</h3>
-            <p className="text-xs text-slate-500">Tùy chỉnh khoảng thời gian và tiêu chí thống kê số liệu</p>
-          </div>
-        </div>
+  const fieldClass = (invalid?: boolean) => `h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-800 transition focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 ${invalid ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'}`;
+  const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
 
-        {/* Nút chọn nhanh kỳ báo cáo */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100/70 p-1">
-          {['Tháng này', 'Quý này', 'Năm nay'].map((label, index) => {
-            const isActive = activePeriod === label;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setQuickPeriod(label, index)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                  isActive
-                    ? 'bg-white text-red-800 shadow-sm ring-1 ring-slate-200/50'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
+  return (
+    <form
+      onSubmit={handleSubmit((data) => {
+        setActivePeriod('');
+        onChange({ ...data, page: 1 });
+      })}
+      className="admin-card space-y-4 p-4 sm:p-5"
+    >
+      {/* Chọn nhanh kỳ báo cáo + thao tác phụ (làm mới) */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Chọn nhanh kỳ báo cáo" className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+          {['Tháng này', 'Quý này', 'Năm nay'].map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={activePeriod === label}
+              onClick={() => setQuickPeriod(label, index)}
+              className={`h-8 rounded-md px-3 text-xs font-semibold transition ${activePeriod === label ? 'bg-white text-red-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
+        {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
       </div>
 
-      {/* Form bộ lọc chi tiết */}
-      <form
-        onSubmit={handleSubmit((data) => {
-          setActivePeriod('');
-          onChange({ ...data, page: 1 });
-        })}
-        className="p-5"
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-          {/* Từ ngày */}
-          <div className="space-y-1.5 lg:col-span-3">
-            <label htmlFor="analytics-filter-from" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-              <CalendarBlank size={15} className="text-slate-400" />
-              <span>Từ ngày</span>
-            </label>
-            <div className="relative">
-              <input
-                id="analytics-filter-from"
-                type="date"
-                min="2000-01-01"
-                max={vietnamToday()}
-                {...register('from')}
-                className={`h-11 w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 text-sm text-slate-800 transition-all focus:border-red-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 ${
-                  errors.from ? 'border-red-500 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              />
-            </div>
-            {errors.from && (
-              <p role="alert" className="text-xs font-medium text-red-600">
-                {errors.from.message}
-              </p>
-            )}
-          </div>
-
-          {/* Đến ngày */}
-          <div className="space-y-1.5 lg:col-span-3">
-            <label htmlFor="analytics-filter-to" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-              <CalendarBlank size={15} className="text-slate-400" />
-              <span>Đến ngày</span>
-            </label>
-            <div className="relative">
-              <input
-                id="analytics-filter-to"
-                type="date"
-                min="2000-01-01"
-                max={vietnamToday()}
-                {...register('to')}
-                className={`h-11 w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 text-sm text-slate-800 transition-all focus:border-red-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 ${
-                  errors.to ? 'border-red-500 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              />
-            </div>
-            {errors.to && (
-              <p role="alert" className="text-xs font-medium text-red-600">
-                {errors.to.message}
-              </p>
-            )}
-          </div>
-
-          {/* Tìm & Chọn thủ tục */}
-          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                <FileText size={15} className="text-slate-400" />
-                <span>Thủ tục áp dụng</span>
-              </label>
-              {selectedId && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                  <CheckCircle size={12} weight="fill" />
-                  Đã lọc thủ tục
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="relative">
-                <MagnifyingGlass
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="text"
-                  placeholder="Gõ để lọc..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/40 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus:border-red-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 hover:border-slate-300"
-                />
-              </div>
-
-              <select
-                className="h-11 w-full truncate rounded-xl border border-slate-200 bg-slate-50/40 px-3 text-sm text-slate-800 transition-all focus:border-red-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 hover:border-slate-300"
-                {...register('procedureId', {
-                  setValueAs: (val) => val || undefined,
-                })}
-              >
-                <option value="">Tất cả thủ tục</option>
-                {selectedId &&
-                  !procedures.data?.items.some((item) => item.id === selectedId) && (
-                    <option value={selectedId}>Thủ tục đang chọn</option>
-                  )}
-                {procedures.data?.items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {procedures.isError && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
-                onClick={() => void procedures.refetch()}
-              >
-                <ArrowsClockwise size={12} /> Chưa tải được danh sách. Thử lại
-              </button>
-            )}
-            {errors.procedureId && (
-              <p role="alert" className="text-xs font-medium text-red-600">
-                Chọn thủ tục hợp lệ.
-              </p>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-2">
-            <Button
-              type="submit"
-              className="h-11 w-full shadow-sm hover:shadow-md"
-            >
-              Áp dụng
-            </Button>
-          </div>
+      {/* Bộ lọc chi tiết trên một hàng */}
+      <div className={`grid gap-3 sm:grid-cols-2 lg:items-end ${showProcedure ? 'lg:grid-cols-[repeat(2,minmax(0,160px))_minmax(0,1fr)_auto]' : 'lg:grid-cols-[repeat(2,minmax(0,180px))_auto] lg:justify-start'}`}>
+        <div>
+          <label htmlFor="analytics-filter-from" className={labelClass}>Từ ngày</label>
+          <input id="analytics-filter-from" type="date" min="2000-01-01" max={vietnamToday()} {...register('from')} className={fieldClass(!!errors.from)} />
+          {errors.from && <p role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.from.message}</p>}
         </div>
-      </form>
-    </div>
+        <div>
+          <label htmlFor="analytics-filter-to" className={labelClass}>Đến ngày</label>
+          <input id="analytics-filter-to" type="date" min="2000-01-01" max={vietnamToday()} {...register('to')} className={fieldClass(!!errors.to)} />
+          {errors.to && <p role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.to.message}</p>}
+        </div>
+        {showProcedure && (
+        <div className="sm:col-span-2 lg:col-span-1">
+          <label htmlFor="analytics-filter-procedure" className={labelClass}>Thủ tục</label>
+          {/* Ô tìm và ô chọn gộp thành một khối: gõ để thu hẹp danh sách thủ tục */}
+          <div className="flex rounded-lg border border-slate-300 bg-white transition focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100">
+            <div className="relative w-40 shrink-0 border-r border-slate-200">
+              <MagnifyingGlass size={15} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                aria-label="Tìm thủ tục"
+                placeholder="Tìm thủ tục…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-10 w-full rounded-l-lg bg-transparent pl-8 pr-2 text-sm outline-none placeholder:text-slate-400"
+              />
+            </div>
+            <select
+              id="analytics-filter-procedure"
+              className="h-10 min-w-0 flex-1 truncate rounded-r-lg bg-transparent px-2 text-sm text-slate-800 outline-none"
+              {...register('procedureId', { setValueAs: (val) => val || undefined })}
+            >
+              <option value="">Tất cả thủ tục</option>
+              {selectedId && !procedures.data?.items.some((item) => item.id === selectedId) && <option value={selectedId}>Thủ tục đang chọn</option>}
+              {procedures.data?.items.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+            </select>
+          </div>
+          {procedures.isError && (
+            <button type="button" className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:underline" onClick={() => void procedures.refetch()}>
+              <ArrowsClockwise size={12} /> Chưa tải được danh sách thủ tục. Thử lại
+            </button>
+          )}
+          {errors.procedureId && <p role="alert" className="mt-1 text-xs font-medium text-red-600">Chọn thủ tục hợp lệ.</p>}
+        </div>
+        )}
+        <Button type="submit" className="h-10 min-h-0 px-5 sm:col-span-2 lg:col-span-1">Áp dụng</Button>
+      </div>
+    </form>
   );
 }
 export function AnalyticsStatus({ pending, error, retry }: { pending: boolean; error: unknown; retry: () => void }) {
@@ -294,6 +200,8 @@ export function CoverageNotice({ data }: { data?: z.infer<typeof coverageSchema>
 }
 
 export function AnalyticsPagination({ page, total, size, onChange }: { page: number; total: number; size: number; onChange: (page: number) => void }) {
+  // Chỉ có một trang thì không cần thanh chuyển trang
+  if (page <= 1 && total <= size) return null;
   return (
     <nav aria-label="Phân trang thống kê" className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
       <span className="text-xs text-slate-500">

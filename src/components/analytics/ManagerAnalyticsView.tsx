@@ -5,7 +5,8 @@ import { AnalyticsTrendChart } from './AnalyticsTrendChart';
 import { OverviewCountChart } from './OverviewCountChart';
 import { StatTile, chartColors, numberVi } from './chartKit';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { analyticsApi, initialAnalyticsQuery, type deadlinesSchema } from '@/lib/api/analytics';
+import { analyticsApi, initialAnalyticsQuery, type deadlinesSchema, type feedbackSchema } from '@/lib/api/analytics';
+import { workflowApi } from '@/lib/api/workflow';
 import type { z } from 'zod';
 import { AnalyticsFilters, AnalyticsPagination, AnalyticsStatus, CoverageNotice } from './AnalyticsFilters';
 import { procedureApi } from '@/lib/api/procedures';
@@ -74,6 +75,76 @@ function Stars({ rating }: { rating: number }) {
   </span>;
 }
 
+const RATING_LABELS = ['Rất không hài lòng', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Rất hài lòng'];
+
+// Phản hồi chỉ lưu ID hồ sơ (service Thống kê); tra mã HS và tên thủ tục từ chi tiết hồ sơ của Manager
+function useFeedbackApplication(id: string) {
+  const userId = useAuthStore(state => state.user?.id);
+  return useQuery({
+    queryKey: ['workflow', 'application', id, 'feedback-ref', userId],
+    queryFn: ({ signal }) => workflowApi.getOfficerApplication(id, signal),
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}
+
+function FeedbackCitizen({ id }: { id: string }) {
+  const query = useFeedbackApplication(id);
+  if (query.isPending) return <span className="inline-block h-4 w-28 animate-pulse rounded bg-slate-100" aria-label="Đang tải tên người dân" />;
+  return query.data?.applicantName
+    ? <span className="font-medium text-slate-900">{query.data.applicantName}</span>
+    : <span className="italic text-slate-400" title="Hồ sơ không lưu tên người gửi">Không có tên trong hồ sơ</span>;
+}
+
+function FeedbackApplication({ id }: { id: string }) {
+  const query = useFeedbackApplication(id);
+  if (query.isPending) return <span className="inline-block h-4 w-40 animate-pulse rounded bg-slate-100" aria-label="Đang tải mã hồ sơ" />;
+  if (!query.data) return <span className="text-sm italic text-slate-400" title={id}>Hồ sơ không còn trong phạm vi xem</span>;
+  return <span className="block min-w-0">
+    <span className="block font-mono text-xs font-semibold text-slate-900">{query.data.applicationCode || 'Chưa có mã hồ sơ'}</span>
+    <span className="mt-0.5 block truncate text-sm text-slate-600">{query.data.procedureTitle || 'Thủ tục hành chính'}</span>
+  </span>;
+}
+
+function feedbackTime(value: string) {
+  const date = new Date(value);
+  const time = date.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
+  const day = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' });
+  return `${time}, ${day}`;
+}
+
+function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]; total: number }) {
+  const average = rows.length ? rows.reduce((sum, row) => sum + row.rating, 0) / rows.length : null;
+  return <section className="admin-card min-w-0 overflow-hidden">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
+      <h2 className="font-bold text-slate-900">Phản hồi người dân</h2>
+      <p className="text-sm text-slate-500">
+        <span className="font-semibold text-slate-900">{numberVi(total)}</span> phản hồi
+        {average != null && <> · Trung bình trang này <span className="font-semibold text-slate-900">{average.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span> <Star size={13} weight="fill" className="inline -translate-y-px text-amber-500" aria-hidden="true" /></>}
+      </p>
+    </div>
+    {rows.length > 0 && <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm">
+      <caption className="sr-only">Danh sách phản hồi người dân</caption>
+      <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <th scope="col" className="w-36 px-5 py-3">Thời gian</th>
+        <th scope="col" className="w-44 px-5 py-3">Người dân</th>
+        <th scope="col" className="w-72 px-5 py-3">Hồ sơ</th>
+        <th scope="col" className="w-44 px-5 py-3">Đánh giá</th>
+        <th scope="col" className="px-5 py-3">Góp ý</th>
+      </tr></thead>
+      <tbody>{rows.map(row => <tr key={row.id} className="border-b border-slate-100 align-top last:border-0 hover:bg-slate-50/70">
+        <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{feedbackTime(row.createdAtUtc)}</td>
+        <td className="px-5 py-3.5"><FeedbackCitizen id={row.applicationId} /></td>
+        <td className="max-w-72 px-5 py-3.5"><FeedbackApplication id={row.applicationId} /></td>
+        <td className="px-5 py-3.5"><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
+        <td className="px-5 py-3.5">{row.comment
+          ? <p className="line-clamp-3 whitespace-pre-wrap break-words text-slate-800" title={row.comment}>{row.comment}</p>
+          : <span className="italic text-slate-400">Không có góp ý thêm.</span>}</td>
+      </tr>)}</tbody>
+    </table></div>}
+  </section>;
+}
+
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return <section className="admin-card min-w-0 space-y-4 p-5"><h2 className="font-bold text-slate-900">{title}</h2>{children}</section>;
 }
@@ -96,12 +167,11 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
   const refreshing = current.isFetching || (section === 'stats-dossiers' && trends.isFetching);
 
   return <div className="space-y-5">
-    <AnalyticsFilters value={filters} onChange={setFilters} />
-    <div className="flex justify-end">
-      <Button variant="outline" size="small" className="gap-1.5" loading={refreshing} onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }}>
-        {!refreshing && <ArrowsClockwise size={15} aria-hidden="true" />} Làm mới dữ liệu
+    <AnalyticsFilters value={filters} onChange={setFilters} actions={
+      <Button variant="outline" size="small" className="h-9 min-h-0 gap-1.5 px-3" loading={refreshing} aria-label="Làm mới dữ liệu" title="Làm mới dữ liệu" onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }}>
+        {!refreshing && <ArrowsClockwise size={15} aria-hidden="true" />}<span className="hidden sm:inline">Làm mới</span>
       </Button>
-    </div>
+    } />
     <AnalyticsStatus pending={current.isPending} error={current.error} retry={() => void current.refetch()} />
 
     {!current.isError && current.data && <>
@@ -159,16 +229,7 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
         <CoverageNotice data={officerRows.data.coverage} />
       </Card>}
 
-      {feedback && feedbackRows.data && <Card title="Phản hồi người dân">
-        <div className="grid gap-3 lg:grid-cols-2">{feedbackRows.data.items.map(row => <article key={row.id} className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Stars rating={row.rating} />
-            <time className="text-xs text-slate-500">{new Date(row.createdAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</time>
-          </div>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">{row.comment || <span className="italic text-slate-400">Không có góp ý thêm.</span>}</p>
-          <p className="mt-3 break-all font-mono text-[11px] text-slate-400">Hồ sơ: {row.applicationId}</p>
-        </article>)}</div>
-      </Card>}
+      {feedback && feedbackRows.data && <FeedbackTable rows={feedbackRows.data.items} total={feedbackRows.data.totalCount} />}
 
       {summary && feedbackSummary.data && <Card title="Mức độ hài lòng">
         <dl className="grid gap-3 sm:grid-cols-3">
