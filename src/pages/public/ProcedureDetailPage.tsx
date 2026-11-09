@@ -367,7 +367,7 @@ export function ProcedureDetailPage() {
                 {forms.map((form, index) => <div key={`${form.formTemplateId ?? form.formCode}-${index}`} className="space-y-2 border-t border-slate-100 pt-3">
                   <p className="font-semibold">{form.formCode} · {form.formName}</p>
                   <p className="text-sm text-slate-600">{form.quantity} bản · {form.isMandatory ? 'Bắt buộc' : 'Theo nhu cầu'}</p>
-                  <FormTemplateActions templateId={form.formTemplateId} name={form.formName} />
+                  <FormTemplateActions publicAccess templateId={form.formTemplateId} name={form.formName} />
                 </div>)}
               </section>}
               <div className="space-y-2">

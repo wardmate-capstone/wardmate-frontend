@@ -1,50 +1,47 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocation } from 'react-router-dom';
 import { Button, Modal, Skeleton } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/stores/authStore';
-import { safeReturnTo } from '@/lib/authRedirect';
 import { Eye, DownloadSimple } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { DocxPreview } from './DocxPreview';
 import { downloadFormTemplateDocx, formTemplateErrorMessage, getFormTemplateById, triggerFileDownload } from '@/lib/api/formTemplates';
 
-/** Tải phôi qua API có xác thực, không mở trực tiếp Blob URL. */
-export function FormTemplateActions({ templateId, name, hasFile, managementAction }: {
+/** Trang công khai chỉ xem/tải phôi mẫu đang hoạt động qua API. */
+export function FormTemplateActions({ templateId, name, hasFile, managementAction, publicAccess = false }: {
+  publicAccess?: boolean;
   templateId?: string | null;
   name: string;
   hasFile?: boolean;
   managementAction?: ReactNode;
 }) {
   const user = useAuthStore(s => s.user);
-  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
   const detail = useQuery({
-    queryKey: ['form-templates', user?.id, 'detail', templateId],
-    queryFn: ({ signal }) => getFormTemplateById(templateId!, signal),
-    enabled: Boolean(user && templateId && open),
+    queryKey: ['form-templates', user?.id, publicAccess, 'detail', templateId],
+    queryFn: ({ signal }) => getFormTemplateById(templateId!, signal, publicAccess),
+    enabled: Boolean((publicAccess || user) && templateId && open),
   });
   const preview = useQuery({
-    queryKey: ['form-templates', user?.id, 'preview', templateId, detail.data?.updatedAtUtc, detail.data?.fileDocxUrl],
-    queryFn: ({ signal }) => downloadFormTemplateDocx(templateId!, signal),
-    enabled: Boolean(user && templateId && open && detail.data?.isActive && detail.data.fileDocxUrl),
+    queryKey: ['form-templates', user?.id, publicAccess, 'preview', templateId, detail.data?.updatedAtUtc, detail.data?.fileDocxUrl],
+    queryFn: ({ signal }) => downloadFormTemplateDocx(templateId!, signal, publicAccess),
+    enabled: Boolean((publicAccess || user) && templateId && open && detail.data?.isActive && detail.data.fileDocxUrl),
     gcTime: 0,
     staleTime: 0,
   });
   if (!templateId) return <span className="text-sm text-slate-500">Chưa liên kết mẫu Word.</span>;
-  if (!user) return <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-red-800 underline" to={'/dang-nhap?' + new URLSearchParams({ returnTo: safeReturnTo(location.pathname + location.search) })}>Đăng nhập để tải mẫu</Link>;
   const download = async () => {
     if (downloading) return;
     setDownloading(true); setDownloadError('');
     try {
-      const template = await getFormTemplateById(templateId);
+      const template = await getFormTemplateById(templateId, undefined, publicAccess);
       if (!template.isActive || !template.fileDocxUrl) {
         setDownloadError(template.isActive ? 'Biểu mẫu chưa có tệp Word. Vui lòng thử lại sau.' : 'Biểu mẫu đã tạm ngừng cung cấp.'); return;
       }
-      const file = await downloadFormTemplateDocx(templateId);
+      const file = await downloadFormTemplateDocx(templateId, undefined, publicAccess);
       triggerFileDownload(file.blob, file.fileName);
     } catch (error) {
       const message = formTemplateErrorMessage(error);
