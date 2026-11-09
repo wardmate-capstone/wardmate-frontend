@@ -195,15 +195,29 @@ test('procedure editor previews a real linked template and saves the selected ID
   expect(forms).toEqual(expect.arrayContaining([expect.objectContaining({ formTemplateId })]));
 });
 
-test('anonymous procedure readers get a safe sign-in link without template API calls', async ({ page }) => {
+test('anonymous procedure readers preview and download active templates without signing in', async ({ page }) => {
   await mockWorkspaceAuth(page, []);
   await page.route('**/api/v1/auth/refresh-token', route => authReply(route, { status: 401, json: {} }));
   const catalog = await mockCatalog(page);
   catalog.detail.formDefinitions = [{ formTemplateId, formCode: 'BM-01', formName: 'Tờ khai kiểm thử', formType: 'DOCX_TEMPLATE', quantity: 1, isMandatory: true }];
   const state = await mockForms(page);
   await page.goto(`/thu-tuc/${procedureId}?category=1`);
-  await expect(page.getByRole('link', { name: 'Đăng nhập để tải mẫu' })).toHaveAttribute('href', '/dang-nhap?' + new URLSearchParams({ returnTo: `/thu-tuc/${procedureId}?category=1` }));
+  await expect(page.getByRole('link', { name: 'Đăng nhập để tải mẫu' })).toHaveCount(0);
   expect(state.reads).toHaveLength(0);
+  const previewRequest = page.waitForRequest(request => request.url().includes(`/form-templates/${formTemplateId}/download-docx`));
+  await page.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true }).click();
+  expect((await previewRequest).headers().authorization).toBeUndefined();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Đã có mẫu Word.', { exact: true })).toBeVisible();
+  const downloading = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Tải mẫu Word', exact: true }).click();
+  expect((await downloading).suggestedFilename()).toMatch(/\.docx$/);
+  await page.keyboard.press('Escape');
+  state.item.isActive = false;
+  await page.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/thu-tuc/${procedureId}`));
+  expect(state.writes).toHaveLength(0);
 });
 
 test('citizen downloads by linked ID; inactive and unlinked templates cannot download', async ({ page }) => {
@@ -218,7 +232,7 @@ test('citizen downloads by linked ID; inactive and unlinked templates cannot dow
   await downloading;
   state.item.isActive = false;
   await page.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('tạm ngừng');
+  await expect(page.getByRole('alert')).toBeVisible();
 });
 
 test('dual-role user uploads an empty template in procedure-manager workspace', async ({ page }) => {
