@@ -10,7 +10,7 @@ export async function mockSystemOperations(page: Page) {
   const state = { requests: [] as { path: string; method: string; query: Record<string, string>; body: unknown }[],
     error: '', verifyError: '', wrongId: false, wrongService: false, empty: false, backup: { ...backup },
     autoProgress: false, backupReads: 0, createError: '', checkStatus: 202, pageMismatch: false };
-  await page.route('http://localhost:5000/api/v1/system/**', async route => {
+  await page.route('http://localhost:5000/api/analytics-system/api/v1/system/**', async route => {
     const request = route.request(); if (request.method() === 'OPTIONS') return authReply(route, { status: 204 });
     const url = new URL(request.url()), path = url.pathname, method = request.method();
     const body = request.postData() ? request.postDataJSON() : null;

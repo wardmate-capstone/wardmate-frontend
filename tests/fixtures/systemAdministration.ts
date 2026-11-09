@@ -21,7 +21,7 @@ export async function mockSystemAdministration(page: Page, permissions?: string[
     listError: '', detailError: false, wrongDetail: false, wrongPage: false, invalidResponse: false,
     conflict: false, failAfterSave: false, validationError: false, empty: false,
   };
-  await page.route('http://localhost:5000/api/v1/system/**', async route => {
+  await page.route('http://localhost:5000/api/analytics-system/api/v1/system/**', async route => {
     const request = route.request();
     if (request.method() === 'OPTIONS') return authReply(route, { status: 204 });
     const url = new URL(request.url());
