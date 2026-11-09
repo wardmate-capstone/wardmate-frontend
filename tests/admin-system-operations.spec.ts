@@ -2,6 +2,19 @@ import { expect, test } from '@playwright/test';
 import { mockSystemOperations, operationId, backup } from './fixtures/systemOperations';
 import { authReply } from './fixtures/auth';
 
+test('backup accepts a configured service code beyond the common suggestions', async ({ page }) => {
+  const state = await mockSystemOperations(page);
+  await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Tạo bản sao lưu', exact: true });
+  await dialog.getByLabel('Dịch vụ cần sao lưu').fill('custom-archive');
+  await dialog.getByLabel('Lý do sao lưu').fill('Sao lưu trước cập nhật hệ thống');
+  await page.screenshot({ path: 'test-results/analytics-backup-service-picker.png', fullPage: true });
+  await dialog.getByRole('button', { name: 'Xếp hàng sao lưu', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Chi tiết bản sao lưu', exact: true })).toBeVisible();
+  expect(state.requests.find(request => request.method === 'POST')?.body).toEqual({ serviceName: 'custom-archive', reason: 'Sao lưu trước cập nhật hệ thống' });
+});
+
 test('health renders configured services, unknown/stale states, detail and UTC history filters', async ({ page }) => {
   const state = await mockSystemOperations(page); await page.goto('/admin');
   expect(state.requests).toHaveLength(0);
@@ -45,7 +58,7 @@ test('backup creates a queued request, follows status and verifies file integrit
   await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
   await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Dịch vụ cần sao lưu').selectOption('iam');
+  await dialog.getByLabel('Dịch vụ cần sao lưu').fill('iam');
   await dialog.getByLabel('Lý do sao lưu').fill('   ');
   await dialog.getByRole('button', { name: 'Xếp hàng sao lưu' }).click();
   await expect(dialog.getByText('Lý do cần ít nhất 3 ký tự.')).toBeVisible();
@@ -91,7 +104,7 @@ for (const code of ['system.backup_in_progress', 'system.backup_runner_unavailab
     await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Sao lưu dữ liệu', exact: true }).click();
     await page.getByRole('button', { name: 'Tạo bản sao lưu', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Dịch vụ cần sao lưu').selectOption('iam'); await dialog.getByLabel('Lý do sao lưu').fill('Lý do kiểm thử');
+    await dialog.getByLabel('Dịch vụ cần sao lưu').fill('iam'); await dialog.getByLabel('Lý do sao lưu').fill('Lý do kiểm thử');
     await dialog.getByRole('button', { name: 'Xếp hàng sao lưu' }).click();
     await expect(dialog.getByRole('alert')).toBeVisible();
     await expect(dialog.getByLabel('Lý do sao lưu')).toHaveValue('Lý do kiểm thử');
