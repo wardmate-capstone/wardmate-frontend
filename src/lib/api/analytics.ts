@@ -37,7 +37,10 @@ const procedureSchema = z.object({ procedureId: guidSchema, totals: totalsSchema
 const officerSchema = z.object({ officerId: guidSchema, readyCount: count, revisionRequestedCount: count, durationSampleCount: count, averageElapsedMinutes: z.number().nonnegative().nullable(), deadlines: deadlinesSchema.nullish() });
 export const feedbackInputSchema = z.object({ rating: z.number().int().min(1, 'Chọn từ 1 đến 5 sao.').max(5), comment: z.string().max(2000, 'Góp ý tối đa 2.000 ký tự.').transform(value => value.trim()) });
 export type FeedbackInput = z.infer<typeof feedbackInputSchema>;
-export const feedbackSchema = z.object({ id: guidSchema, applicationId: guidSchema, rating: z.number().int().min(1).max(5), comment: z.string().nullable(), createdAtUtc: timestamp });
+export const feedbackSchema = z.object({
+  id: guidSchema, applicationId: guidSchema, rating: z.number().int().min(1).max(5), comment: z.string().nullable(), createdAtUtc: timestamp,
+  applicationCode: z.string().nullish(), procedureTitle: z.string().nullish(), applicantName: z.string().nullish(),
+});
 export const feedbackSummarySchema = z.object({ totalCount: count, averageRating: z.number().min(1).max(5).nullable(), satisfactionRate: rate, ratingCounts: z.object({ '1': count, '2': count, '3': count, '4': count, '5': count }) });
 function pageSchema<T extends z.ZodType>(item: T) {
   return z.object({ items: z.array(item), page: z.number().int().min(1).max(100000), pageSize: z.number().int().min(1).max(100), totalCount: count, coverage: coverageSchema.nullish(), unassignedDeadlines: deadlinesSchema.nullish() });
