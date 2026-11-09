@@ -26,7 +26,7 @@ export async function mockWorkSchedules(page: Page, manager = false) {
     wordRequired: true, templateConfigured: true, uploadFail: false, createTimeout: false, submitTimeout: false,
     conflict: false, draftCreated: false, deleted: false, submitted: false, version: 0, metadataVersion: 1, documentRevisionId: ids.revision,
     startsAtUtc: '2026-11-07T01:00:00Z', endsAtUtc: '2026-11-07T05:00:00Z', reason: 'Nghỉ giải quyết việc gia đình', status: 'PENDING', leaveVersion: 0,
-    fingerprint: 'A'.repeat(64), draft: null as null | Record<string, unknown>, weekVersion: 0, week: [] as unknown[],
+    fingerprint: 'A'.repeat(64), receipts: {} as Record<string, string>, draft: null as null | Record<string, unknown>, weekVersion: 0, week: [] as unknown[],
     changes: [] as Record<string, unknown>[], submittedBytes: undefined as Buffer | undefined,
     slots: [{ shiftId: ids.shift, officerId: ids.officer, startsAt: '2026-11-07T01:00:00+00:00', endsAt: '2026-11-07T05:00:00+00:00', shiftVersion: 3 }],
   };
@@ -90,8 +90,13 @@ export async function mockWorkSchedules(page: Page, manager = false) {
     if (path.endsWith('/draft')) { if (state.conflict) return fail('schedule.changed'); state.draft = { id: ids.monthly, month: '2026-11-01', status: 'DRAFT', version: Number(state.draft?.version ?? 0) + 1, baseFingerprint: body.baseFingerprint, actorId: ids.manager, reason: body.reason, publishedAtUtc: null, slots: body.slots }; return ok(state.draft); }
     if (path.endsWith('/publish')) { if (state.conflict) return fail('schedule.changed'); const result = { ...state.draft, status: 'PUBLISHED', version: Number(state.draft!.version) + 1, publishedAtUtc: '2026-11-06T02:00:00Z' }; state.slots = state.draft!.slots as typeof state.slots; state.draft = null; return ok(result); }
     if (path.includes('/schedules/') && path.endsWith('/history')) return ok([{ id: ids.monthly, month: '2026-11-01', status: 'BASELINE', version: 1, baseFingerprint: '', actorId: '00000000-0000-0000-0000-000000000000', reason: 'Dữ liệu ban đầu', publishedAtUtc: null, slots: state.slots }]);
-    if (path.endsWith('/confirm')) return ok({ id: ids.monthly, officerId: ids.officer, month: '2026-11-01', fingerprint: body.fingerprint, confirmedAtUtc: '2026-11-06T02:00:00Z' });
-    if (/\/schedules\/\d{4}-\d{2}-01$/.test(path)) return ok({ month: path.split('/').at(-1), slots: state.slots, baseFingerprint: state.fingerprint, draft: manager ? state.draft : null, leaves: [], closures: [], confirmations: [{ officerId: ids.officer, confirmedAtUtc: null }] });
+    if (path.endsWith('/confirm')) {
+      if (state.conflict || body.fingerprint !== state.fingerprint) return fail('schedule.changed');
+      const month = path.split('/').at(-2)!;
+      state.receipts[month] = body.fingerprint;
+      return ok({ id: ids.monthly, officerId: ids.officer, month, fingerprint: body.fingerprint, confirmedAtUtc: '2026-11-06T02:00:00Z' });
+    }
+    if (/\/schedules\/\d{4}-\d{2}-01$/.test(path)) { const month = path.split('/').at(-1)!; return ok({ month, slots: state.slots, baseFingerprint: state.fingerprint, draft: manager ? state.draft : null, leaves: [], closures: [], confirmations: [{ officerId: ids.officer, confirmedAtUtc: state.receipts[month] === state.fingerprint ? '2026-11-06T02:00:00Z' : null }] }); }
     if (path.endsWith('/shift-change-requests') && method === 'POST') { const value = { id: ids.change, shiftId: ids.shift, officerId: ids.officer, wardCode: 'P01', originalStart: state.slots[0].startsAt, originalEnd: state.slots[0].endsAt, originalVersion: 3, proposedStart: body.startsAt, proposedEnd: body.endsAt, reason: body.reason, status: 'PENDING', decidedBy: null, decidedAtUtc: null, decisionReason: null }; state.changes.push(value); return ok(value); }
     if (path.endsWith('/shift-change-requests')) return ok({ items: state.changes, page: 1, pageSize: 20, total: state.changes.length });
     if (path.includes('/shift-change-requests/') && path.endsWith('/decision')) { const value = state.changes[0]; Object.assign(value, { status: body.decision, decisionReason: body.reason }); return ok(value); }
