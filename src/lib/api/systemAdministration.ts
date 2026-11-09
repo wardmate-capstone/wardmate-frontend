@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { z } from 'zod';
 import { api } from './index';
-import { servicePath, serviceUrls } from './serviceUrls';
+import { systemAdministrationPath as path } from './serviceUrls';
 
 export const settingKey = 'analytics.lookbackDays';
 export const auditSources = {
@@ -64,7 +64,6 @@ export const businessAuditSchema = z.object({
 });
 export type SystemAudit = z.infer<typeof systemAuditSchema>;
 export type BusinessAudit = z.infer<typeof businessAuditSchema>;
-const path = (route: string) => servicePath(serviceUrls.analytics, '/api/v1/system/' + route);
 
 async function list<T extends z.ZodType>(route: string, item: T, query: AuditQuery, business: boolean, signal?: AbortSignal) {
   const params = auditParams(query, business);
