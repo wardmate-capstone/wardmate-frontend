@@ -9,7 +9,7 @@ test('health renders configured services, unknown/stale states, detail and UTC h
   await expect(page.getByText('Chưa có kết quả kiểm tra.', { exact: true })).toBeVisible();
   await expect(page.getByText('Kết quả đã cũ, cần kiểm tra lại.')).toBeVisible();
   await expect(page.getByText(/01\/01\/1\b/)).toHaveCount(0);
-  await page.getByRole('button', { name: 'Chi tiết dịch vụ iam', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết dịch vụ Tài khoản & phân quyền', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('45 ms', { exact: true })).toBeVisible();
   expect(state.requests.some(item => item.path.endsWith('/health/services/iam'))).toBe(true);
   await page.keyboard.press('Escape');
@@ -22,7 +22,7 @@ test('health renders configured services, unknown/stale states, detail and UTC h
 test('health check accepts 202, refreshes later and does not claim completion', async ({ page }) => {
   const state = await mockSystemOperations(page); await page.goto('/admin');
   await page.locator('aside').getByRole('button', { name: 'Giám sát dịch vụ' }).click();
-  await expect(page.getByRole('button', { name: 'Chi tiết dịch vụ iam', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chi tiết dịch vụ Tài khoản & phân quyền', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Kiểm tra ngay', exact: true }).click();
   await expect(page.getByText(/Chưa có xác nhận hoàn tất riêng/)).toBeVisible();
   await expect.poll(() => state.requests.filter(item => item.path.endsWith('/health/services')).length, { timeout: 10000 }).toBe(2);
@@ -32,7 +32,7 @@ test('health check accepts 202, refreshes later and does not claim completion', 
 test('health rejects a wrong service response and non-202 queue result', async ({ page }) => {
   const state = await mockSystemOperations(page); state.wrongService = true; state.checkStatus = 200;
   await page.goto('/admin'); await page.locator('aside').getByRole('button', { name: 'Giám sát dịch vụ' }).click();
-  await page.getByRole('button', { name: 'Chi tiết dịch vụ iam', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết dịch vụ Tài khoản & phân quyền', exact: true }).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('không đúng dịch vụ');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Kiểm tra ngay', exact: true }).click();
@@ -145,7 +145,7 @@ test('operations schemas enforce boundaries and mobile detail stays inside viewp
 test('verify rejects contradictory metadata even when the server returns HTTP 200', async ({ page }) => {
   await mockSystemOperations(page);
   let patch: Record<string, unknown> = {};
-  await page.route('**/api/v1/system/backups/*/verify', route => authReply(route, { json: { ...backup, status: 'Verified', verifiedAtUtc: '2026-11-04T08:00:00Z', ...patch } }));
+  await page.route('**/api/analytics-system/api/v1/system/backups/*/verify', route => authReply(route, { json: { ...backup, status: 'Verified', verifiedAtUtc: '2026-11-04T08:00:00Z', ...patch } }));
   await page.goto('/admin');
   for (const value of [{ sha256: null }, { sizeBytes: null }, { sizeBytes: 0 }, { errorCode: 'checksum_mismatch' }, { verifiedAtUtc: null }, { verifiedAtUtc: '0001-01-01T00:00:00Z' }]) {
     patch = value;
