@@ -114,7 +114,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
     title: "Vận hành hệ thống",
     items: [
-      { id: "analytics-jobs", label: "Tác vụ thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
+      { id: "analytics-jobs", label: "Cập nhật thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "notification-deliveries", label: "Phát thông báo", icon: Broadcast, permissions: ['notifications.deliveries.read'], fallbackRoles: ['IT_ADMIN'] },
       { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
       { id: "integrations", label: "Giám sát dịch vụ", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
@@ -133,7 +133,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 const sectionMeta: Record<SectionId, { title: string }> = {
   'system-settings': { title: 'Cấu hình hệ thống' },
   closures: { title: 'Lịch ngày lễ toàn quốc' },
-  'analytics-jobs': { title: 'Quản lý tác vụ thống kê' },
+  'analytics-jobs': { title: 'Cập nhật số liệu thống kê' },
   'notification-deliveries': { title: 'Quản trị phát thông báo' },
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
