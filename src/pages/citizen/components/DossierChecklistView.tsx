@@ -13,6 +13,7 @@ import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
 import { DocumentAiVerificationCard } from '@/components/documents/DocumentAiVerificationCard';
 import { downloadFormTemplateDocx } from '@/lib/api/formTemplates';
+import { checklistQuantityLabel } from '@/lib/procedureDisplay';
 
 const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEditor'));
 
@@ -22,7 +23,6 @@ interface Props {
   onUpdateChecklistItem?: (checklistId: string, status: 'PENDING' | 'COMPLETED') => Promise<void>;
   onBusyChange?: (busy: boolean) => void;
 }
-const copyLabels: Record<string, string> = { ORIGINAL: 'bản chính', CERTIFIED_COPY: 'bản sao chứng thực', REGULAR_COPY: 'bản sao thường' };
 const quantitySchema = z.object({ quantity: documentQuantitySchema });
 
 function isSupportedAiDocument(fileName: string): boolean {
@@ -42,6 +42,8 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   const [upload, setUpload] = useState<{ item: ChecklistItem; file: File }>();
   const [removing, setRemoving] = useState<{ id: string; name: string; item: ChecklistItem }>();
   const [preview, setPreview] = useState<{ id: string; name: string; form: boolean }>();
+  // Giấy tờ có nhiều mẫu thay thế (cột "Mẫu đơn, tờ khai" của Cổng DVC): người dân chọn một mẫu để điền
+  const [chosenForm, setChosenForm] = useState<Record<string, string>>({});
   const quantityForm = useForm<z.input<typeof quantitySchema>, unknown, z.output<typeof quantitySchema>>({ resolver: zodResolver(quantitySchema), defaultValues: { quantity: 1 } });
   const editable = dossierStatus === 'Bản nháp' || dossierStatus === 'Cần chỉnh sửa';
   const current = [...checklist].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -91,7 +93,12 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   if (contents.isError) return <div role="alert"><p>{documentFormError(contents.error)}</p><Button variant="outline" onClick={() => void contents.refetch()}>Thử lại</Button></div>;
   return <div className="space-y-4 [&_button]:min-h-11" aria-busy={busy}>
     {!current.length && <p>Hồ sơ không có mục giấy tờ cần đính kèm.</p>}
-    {current.map((item, index) => {
+    {current.map((raw, index) => {
+      const altForms = (raw.forms ?? []).filter(f => f.formTemplateId);
+      // Mẫu đang dùng: người dân vừa chọn → mẫu đã có tờ khai (giữ khi tải lại trang) → mẫu chính
+      const submittedTemplate = altForms.length > 1 ? contents.data?.submissions.find(s => s.checklistId === raw.checklistId && altForms.some(f => f.formTemplateId === s.templateId))?.templateId : undefined;
+      const activeTemplate = chosenForm[raw.checklistId] ?? submittedTemplate;
+      const item = activeTemplate ? { ...raw, formTemplateId: activeTemplate } : raw;
       const submissions = contents.data?.submissions.filter(x => x.checklistId === item.checklistId) ?? [];
       const documents = contents.data?.supportingDocuments.filter(x => x.checklistId === item.checklistId) ?? [];
       const complete = ready(item);
@@ -148,7 +155,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                   </div>
                   <h4 className="mt-0.5 break-words text-sm sm:text-base font-bold text-slate-900 leading-snug">{item.itemName}</h4>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    {item.quantity} {copyLabels[item.documentCopyType] ?? 'bản'} · {item.submissionType === 'XUAT_TRINH' ? 'Xuất trình khi đến quầy' : 'Nộp theo yêu cầu'}
+                    {checklistQuantityLabel(item)} · {item.submissionType === 'XUAT_TRINH' ? 'Xuất trình khi đến quầy' : 'Nộp theo yêu cầu'}
                   </p>
                 </div>
               </div>
@@ -161,6 +168,31 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
               <p className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-600 leading-relaxed">
                 {item.conditionNote}
               </p>
+            )}
+            {item.itemNote && item.itemNote !== item.conditionNote && (
+              <p className="whitespace-pre-line rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-600 leading-relaxed">
+                Ghi chú: {item.itemNote}
+              </p>
+            )}
+
+            {altForms.length > 1 && (
+              <fieldset className="rounded-xl border border-slate-200 px-3 py-2.5" disabled={busy || Boolean(contents.data?.submissions.some(s => s.checklistId === item.checklistId))}>
+                <legend className="px-1 text-xs font-semibold text-slate-700">Giấy tờ này có {altForms.length} mẫu, chỉ cần điền một mẫu</legend>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {altForms.map(form => (
+                    <label key={form.formCode} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs ${item.formTemplateId === form.formTemplateId ? 'border-red-300 bg-red-50 font-semibold text-red-900' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+                      <input
+                        type="radio"
+                        className="accent-red-700"
+                        name={`form-${item.checklistId}`}
+                        checked={item.formTemplateId === form.formTemplateId}
+                        onChange={() => setChosenForm(prev => ({ ...prev, [item.checklistId]: form.formTemplateId! }))}
+                      />
+                      {form.formName || form.formCode}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             )}
 
             {/* Action Bar for Form Template (When no submission yet) */}

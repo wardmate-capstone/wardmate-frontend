@@ -192,17 +192,18 @@ const ASSIGNMENT_TITLES: Record<string, string> = {
 };
 
 export function mapAssignmentHistoryToTimelineItem(h: AssignmentHistoryDto, lookup?: OfficerLookup): TimelineItem {
-  const name = (id?: string | null) => resolveOfficerDisplayName(id, undefined, lookup);
+  // Ưu tiên họ tên backend lưu sẵn, sau đó mới tra danh bạ hoặc hiện mã rút gọn
+  const name = (id?: string | null, snapshot?: string | null) => resolveOfficerDisplayName(id, snapshot, lookup);
   const parts = [
-    h.fromOfficerId ? `Từ: ${name(h.fromOfficerId)}` : '',
-    h.toOfficerId ? `Đến: ${name(h.toOfficerId)}` : '',
+    h.fromOfficerId ? `Từ: ${name(h.fromOfficerId, h.fromOfficerName)}` : '',
+    h.toOfficerId ? `Đến: ${name(h.toOfficerId, h.toOfficerName)}` : '',
     h.reason?.trim() ? `Lý do: ${h.reason.trim()}` : '',
   ].filter(Boolean);
   return {
     id: `assignment-${h.id}`,
     time: formatDateTime(h.createdAt),
     title: ASSIGNMENT_TITLES[h.action] || `Thay đổi phân công: ${h.action}`,
-    actor: name(h.actorId),
+    actor: name(h.actorId, h.actorName),
     description: parts.join(' · ') || undefined,
     type: 'officer',
     status: 'done',
@@ -458,13 +459,18 @@ export function mapApplicationDtoToCitizenDossier(
     caseCode: c.caseCode || undefined,
     submissionType: c.submissionType || 'NOP',
     itemName: c.title || c.code || 'Giấy tờ',
-    documentCopyType: c.documentCopyType || 'ORIGINAL',
+    // null = nhiều loại bản / không quy định; quantityText là nguyên văn số lượng khi có
+    documentCopyType: c.documentCopyType ?? undefined,
     quantity: c.quantity,
+    quantityText: c.quantityText ?? undefined,
     conditionNote: c.conditionNote || c.note || undefined,
+    itemNote: c.itemNote || undefined,
     isMandatory: c.isRequired,
-    formTemplateId: c.formTemplateId || undefined,
-    templateUrl: c.formTemplateId ? 'linked' : undefined,
-    templateFormat: c.formTemplateId ? 'DOCX' : undefined,
+    // Mẫu chính: mẫu đã gắn sẵn, nếu không thì mẫu đầu tiên trong danh sách gắn với giấy tờ (BE-H formCodes)
+    formTemplateId: c.formTemplateId || c.forms?.find(f => f.formTemplateId)?.formTemplateId || undefined,
+    forms: (c.forms ?? []).filter(f => f.formTemplateId).map(f => ({ formCode: f.formCode, formName: f.formName, formTemplateId: f.formTemplateId })),
+    templateUrl: c.formTemplateId || c.forms?.some(f => f.formTemplateId) ? 'linked' : undefined,
+    templateFormat: c.formTemplateId || c.forms?.some(f => f.formTemplateId) ? 'DOCX' : undefined,
     status: c.status === 'COMPLETED' || c.status === 'REJECTED' ? c.status : 'PENDING',
     sortOrder: c.sortOrder,
   }));
