@@ -2,6 +2,7 @@ import axios from 'axios';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { servicePath, serviceUrls } from './serviceUrls';
+import { fileNameFromDisposition } from '@/lib/fileName';
 
 const guid = z.string().uuid();
 const nullableText = z.string().nullish();
@@ -82,7 +83,8 @@ export const generatedDocumentSchema = z.object({
 });
 
 export const approvedQrSchema = z.object({
-  id: guid, applicationId: guid, submissionId: guid,
+  // Thủ tục chỉ có giấy tờ đính kèm (không có tờ khai DOCX) thì submissionId = null
+  id: guid, applicationId: guid, submissionId: guid.nullish(),
   qrCodeValue: z.string(), generatedAt: z.string(),
 });
 
@@ -120,15 +122,7 @@ async function binaryRequest(url: string, signal?: AbortSignal) {
     }
     throw error;
   });
-  const disposition = response.headers['content-disposition'];
-  let fileName = 'tai-lieu';
-  if (typeof disposition === 'string') {
-    const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(disposition);
-    if (match?.[1]) {
-      try { fileName = decodeURIComponent(match[1]); } catch { fileName = match[1]; }
-    }
-  }
-  return { blob: response.data, fileName };
+  return { blob: response.data, fileName: fileNameFromDisposition(response.headers['content-disposition'], 'tai-lieu') };
 }
 
 export const documentFormApi = {

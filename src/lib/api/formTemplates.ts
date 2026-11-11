@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import axios from 'axios';
 import { z } from 'zod';
 import { servicePath, serviceUrls } from './serviceUrls';
+import { fileNameFromDisposition } from '@/lib/fileName';
 
 const documentPath = (path: string) => servicePath(serviceUrls.documentForm, path);
 
@@ -122,8 +123,20 @@ export async function uploadFormTemplateDocx(templateId: string, file: File): Pr
  * Tải trực tiếp file nhị phân DOCX của biểu mẫu
  */
 export async function downloadFormTemplateDocx(templateId: string, signal?: AbortSignal, publicAccess = false): Promise<{ blob: Blob; fileName: string }> {
-  const response = await api.get<Blob>(documentPath(`/api/v1/form-templates/${templateId}/download-docx`), {
-    skipAuth: publicAccess,
+  return downloadDocx(`/api/v1/form-templates/${templateId}/download-docx`, templateId, signal, publicAccess);
+}
+
+/**
+ * Tải phôi mẫu KHÔNG cần đăng nhập (trang thủ tục công khai).
+ * API công khai đề nghị BE thêm (BE-J): chỉ phục vụ mẫu đang hoạt động gắn với thủ tục công khai.
+ */
+export async function downloadPublicFormTemplateDocx(templateId: string, signal?: AbortSignal): Promise<{ blob: Blob; fileName: string }> {
+  return downloadDocx(`/api/v1/public/form-templates/${templateId}/download-docx`, templateId, signal, true);
+}
+
+async function downloadDocx(path: string, templateId: string, signal: AbortSignal | undefined, skipAuth: boolean): Promise<{ blob: Blob; fileName: string }> {
+  const response = await api.get<Blob>(documentPath(path), {
+    skipAuth,
     responseType: 'blob',
     signal,
   }).catch(async error => {
@@ -134,15 +147,7 @@ export async function downloadFormTemplateDocx(templateId: string, signal?: Abor
     throw error;
   });
 
-  let fileName = `template-${templateId}.docx`;
-  const disposition = response.headers['content-disposition'];
-  if (typeof disposition === 'string') {
-    const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(disposition);
-    if (match?.[1]) {
-      try { fileName = decodeURIComponent(match[1]); }
-      catch { fileName = match[1]; }
-    }
-  }
+  const fileName = fileNameFromDisposition(response.headers['content-disposition'], `template-${templateId}.docx`);
 
   return { blob: response.data, fileName };
 }

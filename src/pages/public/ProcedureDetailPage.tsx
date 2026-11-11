@@ -11,7 +11,8 @@ import { procedureError, type ProcedureSummary } from '@/lib/api/procedures';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
-import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
+import { ProcedureFormLink } from '@/components/forms/ProcedureFormLink';
+import { checklistQuantityLabel, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
@@ -70,9 +71,16 @@ export function ProcedureDetailPage() {
 
   const payload = procedure.contentPayload;
   const cases = payload.cases || [];
+  // BE-H: danh sách cơ quan/địa chỉ có thể nhiều mục; ghép thành một dòng để hiển thị trong bảng thông tin chung
+  const joinList = (...lists: (string[] | string | null | undefined)[]) => lists.flat().map(x => x?.trim()).filter(Boolean).join('; ');
   const activeCase = cases[selectedCaseIdx] || cases[0];
   const checklist = procedure.checklistSchema || [];
   const forms = (procedure.formDefinitions || []).filter(form => !form.caseCode || !activeCase || form.caseCode === activeCase.caseCode);
+  // Cột "Mẫu đơn, tờ khai" của Cổng DVC: mẫu gắn với giấy tờ qua formCodes;
+  // thủ tục cũ chưa có formCodes thì khớp theo mã biểu mẫu trùng mã giấy tờ (quy tắc Workflow cũ)
+  const formsOf = (item: { checklistId: string; formCodes?: string[] | null }) => item.formCodes?.length
+    ? item.formCodes.map(code => forms.find(form => form.formCode === code)).filter((form): form is (typeof forms)[number] => Boolean(form))
+    : forms.filter(form => form.formCode === item.checklistId);
 
   // Lọc checklist theo trường hợp
   const currentChecklist = checklist.filter((item) => {
@@ -83,19 +91,10 @@ export function ProcedureDetailPage() {
 
   const nopItems = currentChecklist.filter((item) => item.submissionType === 'NOP');
   const xuatTrinhItems = currentChecklist.filter((item) => item.submissionType === 'XUAT_TRINH');
+  // Mẫu không thuộc giấy tờ nào vẫn hiện thành dòng riêng trong bảng "Giấy tờ phải nộp"
+  const linkedFormCodes = new Set(currentChecklist.flatMap(item => formsOf(item).map(form => form.formCode)));
+  const looseForms = forms.filter(form => !linkedFormCodes.has(form.formCode));
 
-  const getCopyTypeLabel = (type: string) => {
-    switch (type) {
-      case 'ORIGINAL':
-        return 'bản chính';
-      case 'CERTIFIED_COPY':
-        return 'bản sao chứng thực';
-      case 'REGULAR_COPY':
-        return 'bản sao thường';
-      default:
-        return 'bản';
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 antialiased pb-16">
@@ -185,13 +184,13 @@ export function ProcedureDetailPage() {
                       Cấp thực hiện
                     </td>
                     <td className="p-2.5 text-slate-900 border-r border-slate-200">
-                      {procedure.levelOfImplementation}
+                      {procedure.levelOfImplementation || joinList(payload.levels) || 'Chưa cập nhật'}
                     </td>
                     <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
                       Loại thủ tục
                     </td>
                     <td className="p-2.5 text-slate-900">
-                      TTHC không được luật giao cho địa phương quy định
+                      {payload.procedureType || 'Chưa cập nhật'}
                     </td>
                   </tr>
 
@@ -207,7 +206,7 @@ export function ProcedureDetailPage() {
                       Đối tượng thực hiện
                     </td>
                     <td className="p-2.5 text-slate-900">
-                      {procedure.targetAudience}
+                      {procedure.targetAudience || 'Chưa cập nhật'}
                     </td>
                   </tr>
 
@@ -217,13 +216,13 @@ export function ProcedureDetailPage() {
                       Cơ quan có thẩm quyền
                     </td>
                     <td className="p-2.5 text-slate-900 border-r border-slate-200">
-                      {procedure.issuingAuthority || procedure.executingAgency || 'Ủy ban nhân dân cấp xã/phường'}
+                      {joinList(payload.competentAuthorities) || procedure.issuingAuthority || procedure.executingAgency || 'Ủy ban nhân dân cấp xã/phường'}
                     </td>
                     <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
                       Địa chỉ tiếp nhận HS
                     </td>
                     <td className="p-2.5 text-slate-900">
-                      {payload.receivingAddress || 'Bộ phận một cửa UBND cấp xã/phường'}
+                      {joinList(payload.receivingAddress, payload.receivingAddresses) || 'Bộ phận một cửa UBND cấp xã/phường'}
                     </td>
                   </tr>
 
@@ -233,13 +232,13 @@ export function ProcedureDetailPage() {
                       Cơ quan được ủy quyền
                     </td>
                     <td className="p-2.5 text-slate-900 border-r border-slate-200">
-                      {procedure.executingAgency || 'Không có thông tin'}
+                      {joinList(payload.authorizedAgencies) || 'Không có thông tin'}
                     </td>
                     <td className="bg-[#f8fafc] p-2.5 font-semibold text-slate-700 border-r border-slate-200">
                       Cơ quan phối hợp
                     </td>
                     <td className="p-2.5 text-slate-900">
-                      Không có thông tin
+                      {joinList(payload.coordinatingAgencies) || 'Không có thông tin'}
                     </td>
                   </tr>
                 </tbody>
@@ -280,9 +279,9 @@ export function ProcedureDetailPage() {
               )}
 
               <div className="rounded-md border border-slate-200 bg-white p-4 sm:p-5 text-xs sm:text-sm leading-relaxed text-slate-800 space-y-4">
-                {activeCase?.steps && activeCase.steps.length > 0 ? (
-                  activeCase.steps.map((step) => (
-                    <div key={step.stepOrder} className="space-y-1">
+                {[...(payload.commonSteps ?? []), ...(activeCase?.steps ?? [])].length > 0 ? (
+                  [...(payload.commonSteps ?? []), ...(activeCase?.steps ?? [])].map((step, stepIdx) => (
+                    <div key={stepIdx} className="space-y-1">
                       <p className="font-semibold text-slate-900">
                         {step.stepOrder}. {step.stepName}
                         {step.executor && (
@@ -294,6 +293,8 @@ export function ProcedureDetailPage() {
                       </p>
                     </div>
                   ))
+                ) : payload.stepsText ? (
+                  <p className="whitespace-pre-line">{payload.stepsText}</p>
                 ) : (
                   <p className="whitespace-pre-line">
                     - Người yêu cầu nộp hồ sơ trực tiếp tại Bộ phận Một cửa UBND cấp xã/phường hoặc nộp trực tuyến qua Cổng Dịch vụ công.
@@ -328,14 +329,10 @@ export function ProcedureDetailPage() {
                             {method.methodName}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 text-slate-700">
-                            {method.estimatedDays && method.estimatedDays > 0
-                              ? `${method.estimatedDays} ngày làm việc`
-                              : procedure.processingTimeSummary || 'Trong ngày'}
+                            {methodTimeLabel(method) || procedure.processingTimeSummary || 'Chưa cập nhật'}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 text-slate-700">
-                            {method.feeAmount === 0
-                              ? 'Miễn phí'
-                              : `${method.feeAmount.toLocaleString('vi-VN')} ${/^(VND|VNĐ|Đ)$/i.test(method.feeUnit.trim()) ? 'đồng' : method.feeUnit}`}
+                            {methodFeeLabel(method) || procedure.feeSummary || 'Chưa cập nhật'}
                           </td>
                           <td className="p-2.5 text-slate-600">
                             {method.note || ''}
@@ -345,7 +342,7 @@ export function ProcedureDetailPage() {
                     ) : (
                       <tr>
                         <td colSpan={4} className="p-4 text-center text-slate-500">
-                          {procedure.processingTimeSummary} · {procedure.feeSummary}
+                          {[procedure.processingTimeSummary, procedure.feeSummary].filter(Boolean).join(' · ') || 'Chưa cập nhật thời hạn và lệ phí'}
                         </td>
                       </tr>
                     )}
@@ -361,15 +358,11 @@ export function ProcedureDetailPage() {
               </h2>
 
               {/* Bảng Giấy tờ phải nộp */}
-              {forms.length > 0 && <section aria-label="Biểu mẫu của thủ tục" className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-                <h3 className="font-bold">Biểu mẫu, tờ khai</h3>
-                <p className="text-sm text-slate-600">Tải phôi trống để chuẩn bị hồ sơ. Tải hoặc điền mẫu chưa phải gửi hồ sơ tiền kiểm.</p>
-                {forms.map((form, index) => <div key={`${form.formTemplateId ?? form.formCode}-${index}`} className="space-y-2 border-t border-slate-100 pt-3">
-                  <p className="font-semibold">{form.formCode} · {form.formName}</p>
-                  <p className="text-sm text-slate-600">{form.quantity} bản · {form.isMandatory ? 'Bắt buộc' : 'Theo nhu cầu'}</p>
-                  <FormTemplateActions publicAccess templateId={form.formTemplateId} name={form.formName} />
-                </div>)}
-              </section>}
+              {forms.length > 0 && (
+                <p className="text-xs text-slate-500">
+                  Bấm <strong>Tải mẫu</strong> để tải phôi trống về máy hoặc <strong>Xem</strong> để xem trước nội dung. Tải hoặc điền mẫu chưa phải là gửi hồ sơ tiền kiểm.
+                </p>
+              )}
               <div className="space-y-2">
                 <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
                   * Giấy tờ phải nộp:
@@ -379,14 +372,14 @@ export function ProcedureDetailPage() {
                   <table className="w-full border-collapse text-left text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/2">Tên giấy tờ</th>
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4 text-center">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-1/4 text-center">Số lượng</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
+                        <th scope="col" className="p-2.5 w-1/5 text-center">Số lượng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {nopItems.length > 0 ? (
-                        nopItems.map((item, idx) => {
+                      {nopItems.length > 0 || looseForms.length > 0 ? (
+                        [...nopItems.map((item, idx) => {
                           return (
                             <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
                               <td className="p-2.5 border-r border-slate-200">
@@ -397,15 +390,27 @@ export function ProcedureDetailPage() {
                                   </p>
                                 )}
                               </td>
-                              <td className="p-2.5 border-r border-slate-200 text-center text-slate-600">
-                                <span className="text-slate-400">—</span>
+                              <td className="p-2.5 border-r border-slate-200 text-slate-600">
+                                <FormCell formsOfItem={formsOf(item)} />
                               </td>
                               <td className="p-2.5 text-center text-slate-800 font-medium">
-                                {item.quantity} {getCopyTypeLabel(item.documentCopyType)}
+                                {checklistQuantityLabel(item)}
                               </td>
                             </tr>
                           );
-                        })
+                        }),
+                        ...looseForms.map((form, idx) => (
+                          <tr key={`form-${form.formCode}-${idx}`} className="hover:bg-slate-50/70">
+                            <td className="p-2.5 border-r border-slate-200">
+                              <p className="font-medium text-slate-900">{form.formName}</p>
+                              {!form.isMandatory && <p className="mt-1 text-xs text-slate-500 italic">Nộp theo nhu cầu</p>}
+                            </td>
+                            <td className="p-2.5 border-r border-slate-200 text-slate-600">
+                              <FormCell formsOfItem={[form]} />
+                            </td>
+                            <td className="p-2.5 text-center text-slate-800 font-medium">{form.quantity} bản</td>
+                          </tr>
+                        ))]
                       ) : (
                         <tr>
                           <td colSpan={3} className="p-3 text-center text-slate-500">
@@ -428,9 +433,9 @@ export function ProcedureDetailPage() {
                   <table className="w-full border-collapse text-left text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/2">Tên giấy tờ</th>
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-1/4 text-center">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-1/4 text-center">Số lượng</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
+                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
+                        <th scope="col" className="p-2.5 w-1/5 text-center">Số lượng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -445,11 +450,11 @@ export function ProcedureDetailPage() {
                                 </p>
                               )}
                             </td>
-                            <td className="p-2.5 border-r border-slate-200 text-center text-slate-400">
-                              —
+                            <td className="p-2.5 border-r border-slate-200 text-slate-600">
+                              <FormCell formsOfItem={formsOf(item)} />
                             </td>
                             <td className="p-2.5 text-center text-slate-800 font-medium">
-                              {item.quantity} {getCopyTypeLabel(item.documentCopyType)}
+                              {checklistQuantityLabel(item)}
                             </td>
                           </tr>
                         ))
@@ -504,8 +509,47 @@ export function ProcedureDetailPage() {
               </section>
             )}
 
-            {/* 7. KẾT QUẢ THỰC HIỆN */}
-            {payload.results && payload.results.length > 0 && (
+            {/* CƠ QUAN THỰC HIỆN */}
+            {joinList(payload.executingAgencies, procedure.executingAgency) && (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">Cơ quan thực hiện</h2>
+                <p className="rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm text-slate-800">
+                  {joinList(payload.executingAgencies, procedure.executingAgency)}
+                </p>
+              </section>
+            )}
+
+            {/* YÊU CẦU, ĐIỀU KIỆN THỰC HIỆN */}
+            {payload.requirements && (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">Yêu cầu, điều kiện thực hiện</h2>
+                <p className="whitespace-pre-line rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm leading-relaxed text-slate-800">
+                  {payload.requirements}
+                </p>
+              </section>
+            )}
+
+            {/* 7. KẾT QUẢ THỰC HIỆN (kèm mã kết quả nếu có) */}
+            {payload.resultDetails && payload.resultDetails.length > 0 ? (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">Kết quả thực hiện</h2>
+                <div className="rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm text-slate-800 space-y-2">
+                  {payload.resultDetails.map((res, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="text-red-700 font-bold">•</span>
+                      <div className="min-w-0">
+                        <p>{res.name}</p>
+                        {(res.code || res.validity || res.note) && (
+                          <p className="mt-0.5 text-slate-500">
+                            {[res.code && `Mã: ${res.code}`, res.validity && `Hiệu lực: ${res.validity}`, res.note].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : payload.results && payload.results.length > 0 && (
               <section className="space-y-2">
                 <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
                   Kết quả thực hiện
@@ -521,7 +565,21 @@ export function ProcedureDetailPage() {
               </section>
             )}
 
+            {/* MÔ TẢ */}
+            {payload.description && (
+              <section className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">Mô tả</h2>
+                <p className="whitespace-pre-line rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm leading-relaxed text-slate-800">{payload.description}</p>
+              </section>
+            )}
 
+            {/* THÔNG TIN KHÁC (mục mở rộng, giữ đúng thứ tự) */}
+            {payload.additionalSections?.map((section, idx) => (
+              <section key={idx} className="space-y-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">{section.title}</h2>
+                <p className="whitespace-pre-line rounded-md border border-slate-200 bg-white p-4 text-xs sm:text-sm leading-relaxed text-slate-800">{section.content}</p>
+              </section>
+            ))}
           </div>
 
           {/* CỘT PHẢI: SIDEBAR TIỆN ÍCH (4/12 cột = ~33%) */}
@@ -565,6 +623,19 @@ export function ProcedureDetailPage() {
           </aside>
         </div>
       </main>
+    </div>
+  );
+}
+
+/** Ô "Mẫu đơn, tờ khai": mỗi mẫu một dòng có nút Tải mẫu / Xem; không có mẫu thì hiện gạch ngang */
+function FormCell({ formsOfItem }: { formsOfItem: { formCode: string; formName: string; formTemplateId?: string | null }[] }) {
+  if (!formsOfItem.length) return <span className="text-slate-400">—</span>;
+  return (
+    <div className="space-y-3">
+      {formsOfItem.map((form, idx) => (
+        <ProcedureFormLink key={`${form.formCode}-${idx}`} templateId={form.formTemplateId} name={form.formName || form.formCode} />
+      ))}
+      {formsOfItem.length > 1 && <p className="text-[11px] text-slate-500">Chỉ cần dùng một trong các mẫu trên.</p>}
     </div>
   );
 }
