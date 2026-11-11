@@ -4,31 +4,68 @@ import { api } from './index';
 import { servicePath, serviceUrls } from './serviceUrls';
 
 export const categorySchema = z.object({ id: z.number().int().positive(), categoryName: z.string(), description: z.string().nullish() });
+/** Trần độ dài BE đã chốt (BE-H, 10/11/2026) — dùng chung cho validate và bộ đếm ký tự. */
+export const PROCEDURE_LIMITS = { title: 1000, procedureCode: 100, levelOfImplementation: 255, decisionNumber: 255, singleLine: 10000, sectionTitle: 255, sections: 50, fees: 100, formCodes: 20, listItems: 100, totalContent: 500000 } as const;
 const stepSchema = z.object({ stepOrder: z.number(), stepName: z.string(), executor: z.string(), actionDetails: z.string() });
-export const contentSchema = z.object({
-  decisionNumber: z.string(), receivingAddress: z.string(),
-  submissionMethods: z.array(z.object({ methodName: z.string(), feeAmount: z.number(), feeUnit: z.string(), estimatedDays: z.number(), note: z.string().nullish() })),
-  legalReferences: z.array(z.object({ documentNumber: z.string(), documentName: z.string(), issueDate: z.string().nullish(), authority: z.string() })),
-  results: z.array(z.string()), cases: z.array(z.object({ caseCode: z.string(), caseName: z.string(), steps: z.array(stepSchema) })),
+// Loại bản giấy tờ; OTHER dùng kèm quantityText ("bản chụp", "bản dịch có công chứng"...)
+export const documentCopyTypes = ['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY', 'OTHER'] as const;
+const copyTypeSchema = z.enum(documentCopyTypes);
+const textList = z.array(z.string()).nullish();
+// Phí nhiều mức (BE-H B.1): amount null khi chỉ có tỷ lệ % hoặc "theo quy định"
+export const feeItemSchema = z.object({ kind: z.string().nullish(), amount: z.number().nullish(), percent: z.number().nullish(), unit: z.string().nullish(), description: z.string().nullish(), caseCode: z.string().nullish() });
+export const processingTimeUnits = ['WORKING_DAY', 'DAY', 'HOUR', 'MINUTE'] as const;
+export const processingTimeSchema = z.object({ value: z.number().nullish(), unit: z.string().nullish(), text: z.string().nullish() });
+export const submissionMethodSchema = z.object({
+  methodName: z.string(), feeUnit: z.string().nullish(), note: z.string().nullish(),
+  // null = không rõ / chỉ ghi bằng chữ / không quy định thời hạn
+  feeAmount: z.number().nullish(), estimatedDays: z.number().nullish(),
+  caseCode: z.string().nullish(), fees: z.array(feeItemSchema).nullish(), feeText: z.string().nullish(), processingTime: processingTimeSchema.nullish(),
 });
-export const checklistSchema = z.array(z.object({ checklistId: z.string(), caseCode: z.string().nullish(), submissionType: z.enum(['NOP', 'XUAT_TRINH']), itemName: z.string(), documentCopyType: z.enum(['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY']), quantity: z.number().int().positive().max(2147483647), conditionNote: z.string().nullish(), isMandatory: z.boolean() }));
+export const resultDetailSchema = z.object({ name: z.string(), code: z.string().nullish(), validity: z.string().nullish(), note: z.string().nullish() });
+export const additionalSectionSchema = z.object({ title: z.string(), content: z.string() });
+// BE chỉ bắt buộc mã, tên, lĩnh vực: các chuỗi khác có thể null, các mảng có thể rỗng; trường BE-H không có thì BE bỏ khỏi JSON
+export const contentSchema = z.object({
+  decisionNumber: z.string().nullish(), receivingAddress: z.string().nullish(),
+  submissionMethods: z.array(submissionMethodSchema),
+  // Căn cứ pháp lý theo Cổng DVC chỉ cần tên văn bản + mã văn bản
+  legalReferences: z.array(z.object({ documentNumber: z.string().nullish(), documentName: z.string().nullish(), issueDate: z.string().nullish(), authority: z.string().nullish() })),
+  results: z.array(z.string()), cases: z.array(z.object({ caseCode: z.string(), caseName: z.string(), steps: z.array(stepSchema) })),
+  procedureType: z.string().nullish(), levels: textList,
+  competentAuthorities: textList, executingAgencies: textList, authorizedAgencies: textList, coordinatingAgencies: textList,
+  requirements: z.string().nullish(), receivingAddresses: textList, resultDetails: z.array(resultDetailSchema).nullish(),
+  keywords: textList, description: z.string().nullish(),
+  stepsText: z.string().nullish(), commonSteps: z.array(stepSchema).nullish(),
+  additionalSections: z.array(additionalSectionSchema).nullish(),
+});
+export const copyRequirementSchema = z.object({ documentCopyType: copyTypeSchema, quantity: z.number().int().positive().max(2147483647) });
+export const checklistSchema = z.array(z.object({
+  checklistId: z.string(), caseCode: z.string().nullish(), submissionType: z.enum(['NOP', 'XUAT_TRINH']), itemName: z.string(),
+  // null khi giấy tờ cần nhiều loại bản (copyRequirements) hoặc không quy định
+  documentCopyType: copyTypeSchema.nullish(), quantity: z.number().int().positive().max(2147483647),
+  copyRequirements: z.array(copyRequirementSchema).nullish(),
+  conditionNote: z.string().nullish(), isMandatory: z.boolean(),
+  quantityText: z.string().nullish(), note: z.string().nullish(),
+  // Cột "Mẫu đơn, tờ khai" của Cổng DVC: mã các formDefinitions gắn với giấy tờ này
+  formCodes: z.array(z.string()).nullish(),
+}));
 export const formsSchema = z.array(z.object({ formTemplateId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).refine(val => val !== '00000000-0000-0000-0000-000000000000', { message: 'Mã template không được là GUID rỗng' }).nullish(), caseCode: z.string().nullish(), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']), quantity: z.number().int().positive().max(2147483647), isMandatory: z.boolean() }));
 export const checklistUpdateInputSchema = z.object({
   expectedUpdatedAt: z.string(),
-  decisionNumber: z.string().trim().min(1).max(100),
+  decisionNumber: z.string().trim().min(1).max(PROCEDURE_LIMITS.decisionNumber),
   effectiveDate: z.string(),
   items: checklistSchema,
 });
 export const procedureInputSchema = z.object({
-  procedureCode: z.string().trim().min(1).max(50), categoryId: z.number().int().positive(), title: z.string().trim().min(10).max(500),
+  procedureCode: z.string().trim().min(1).max(PROCEDURE_LIMITS.procedureCode), categoryId: z.number().int().positive(), title: z.string().trim().min(1).max(PROCEDURE_LIMITS.title),
   issuingAuthority: z.string().nullish(), executingAgency: z.string().nullish(),
-  levelOfImplementation: z.string().min(1).max(50), targetAudience: z.string().min(1).max(255),
-  feeSummary: z.string().min(1).max(255), processingTimeSummary: z.string().min(1).max(255),
+  levelOfImplementation: z.string().max(PROCEDURE_LIMITS.levelOfImplementation).nullish(), targetAudience: z.string().max(PROCEDURE_LIMITS.singleLine).nullish(),
+  // Để trống: BE tự tóm tắt từ các cách nộp (contentPayload.submissionMethods)
+  feeSummary: z.string().max(PROCEDURE_LIMITS.singleLine).nullish(), processingTimeSummary: z.string().max(PROCEDURE_LIMITS.singleLine).nullish(),
   originalPdfUrl: z.string().nullish(), pdfFileName: z.string().nullish(),
   contentPayload: contentSchema, checklistSchema: checklistSchema.nullish(), formDefinitions: formsSchema.nullish(),
 });
 export const detailSchema = procedureInputSchema.extend({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), categoryName: z.string(), isActive: z.boolean(), createdAt: z.string(), updatedAt: z.string() });
-const summarySchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), procedureCode: z.string(), title: z.string(), categoryName: z.string(), levelOfImplementation: z.string(), feeSummary: z.string(), processingTimeSummary: z.string(), originalPdfUrl: z.string().nullish(), updatedAt: z.string(), isActive: z.boolean().optional(), versionCount: z.number().optional(), createdAt: z.string().optional() });
+const summarySchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), procedureCode: z.string(), title: z.string(), categoryName: z.string(), levelOfImplementation: z.string().nullish(), feeSummary: z.string().nullish(), processingTimeSummary: z.string().nullish(), originalPdfUrl: z.string().nullish(), updatedAt: z.string(), isActive: z.boolean().optional(), versionCount: z.number().optional(), createdAt: z.string().optional() });
 const pagedSchema = z.object({ items: z.array(summarySchema), currentPage: z.number(), totalPages: z.number(), totalCount: z.number(), pageSize: z.number(), hasPrevious: z.boolean(), hasNext: z.boolean() });
 const draftSummarySchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), status: z.enum(['Queued', 'Processing', 'NeedsReview', 'Failed', 'Published']), pdfFileName: z.string(), failureCode: z.string().nullish(), revision: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), publishedProcedureId: z.string().nullish(), createdAt: z.string(), updatedAt: z.string() });
 const draftSchema = draftSummarySchema.extend({ payload: z.record(z.string(), z.unknown()), warnings: z.array(z.string()), extractedText: z.string() });
@@ -50,6 +87,26 @@ export type ProcedureQuery = { keyword?: string; categoryId?: number; pageNumber
 const catalogPath = (path: string) => servicePath(serviceUrls.catalog, path);
 const manager = catalogPath('/api/v1/procedure-manager/procedures');
 const drafts = catalogPath('/api/v1/procedure-manager/drafts');
+type CopyRow = { documentCopyType?: string | null; quantity?: number | null; copyRequirements?: { documentCopyType: string; quantity: number }[] | null };
+/**
+ * PROC-02b: BE trả 400 nếu dòng có copyRequirements mà documentCopyType/quantity gửi kèm mâu thuẫn.
+ * - Không có copyRequirements: gửi như cũ.
+ * - Một dòng copyRequirements mà ô loại bản/số lượng đơn đã bị sửa: cập nhật copyRequirements theo ô mới.
+ * - Còn lại: chỉ gửi copyRequirements, bỏ hai ô cũ để BE tự suy ra.
+ */
+export function normalizeChecklistForSave<T extends CopyRow>(items: T[] | null | undefined): Record<string, unknown>[] | null | undefined {
+  if (!items) return items;
+  return items.map(item => {
+    const { copyRequirements, documentCopyType, quantity, ...rest } = item;
+    if (!copyRequirements?.length) return { ...rest, documentCopyType, quantity };
+    const single = copyRequirements.length === 1 ? copyRequirements[0] : undefined;
+    if (single && documentCopyType && quantity && (documentCopyType !== single.documentCopyType || quantity !== single.quantity))
+      return { ...rest, copyRequirements: [{ documentCopyType, quantity }] };
+    return { ...rest, copyRequirements };
+  });
+}
+const withNormalizedChecklist = <T extends { checklistSchema?: CopyRow[] | null }>(input: T) => ({ ...input, checklistSchema: normalizeChecklistForSave(input.checklistSchema) });
+
 function toDateOnlyString(value: string): string {
   const trimmed = value.trim();
   const match = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
@@ -67,12 +124,15 @@ export const procedureApi = {
   list: async (query: ProcedureQuery, managed = false, signal?: AbortSignal) => pagedSchema.parse((await api.get(managed ? manager : catalogPath('/api/v1/procedures'), { params: query, skipAuth: !managed, signal })).data),
   detail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(catalogPath(`/api/v1/procedures/${encodeURIComponent(id)}`), { skipAuth: true, signal })).data),
   managerDetail: async (id: string, signal?: AbortSignal) => detailSchema.parse((await api.get(`${manager}/${encodeURIComponent(id)}`, { signal })).data),
-  create: async (input: ProcedureInput) => detailSchema.parse((await api.post(manager, input)).data),
+  // isActive mặc định false: thủ tục tạo ở trạng thái ẩn, bật công khai sau bằng API status
+  create: async (input: ProcedureInput, isActive = false) => detailSchema.parse((await api.post(manager, { ...withNormalizedChecklist(input), isActive })).data),
+  // API 32a: gắn/thay PDF gốc cho thủ tục nhập tay (mỗi lần gắn tạo thêm một phiên bản)
+  uploadSource: async (id: string, file: File) => detailSchema.parse((await api.post(`${manager}/${encodeURIComponent(id)}/source`, pdfForm(file), { timeout: 120000, headers: { 'Content-Type': undefined } })).data),
   update: async (id: string, input: ProcedureInput, decisionNumber: string, effectiveDate: string) =>
-    detailSchema.parse((await api.put(`${manager}/${id}`, { ...input, decisionNumber, effectiveDate: toDateOnlyString(effectiveDate) })).data),
+    detailSchema.parse((await api.put(`${manager}/${id}`, { ...withNormalizedChecklist(input), decisionNumber, effectiveDate: toDateOnlyString(effectiveDate) })).data),
   updateChecklist: async (id: string, input: ChecklistUpdateInput) =>
-    detailSchema.parse((await api.put(`${manager}/${encodeURIComponent(id)}/checklist`, { ...input, effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
-  publish: async (input: ProcedureInput) => detailSchema.parse((await api.post(`${manager}/publish`, input)).data),
+    detailSchema.parse((await api.put(`${manager}/${encodeURIComponent(id)}/checklist`, { ...input, items: normalizeChecklistForSave(input.items), effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
+  publish: async (input: ProcedureInput) => detailSchema.parse((await api.post(`${manager}/publish`, withNormalizedChecklist(input))).data),
   status: async (id: string, isActive: boolean, reason: string) => { await api.patch(`${manager}/${id}/status`, { isActive, reason }); },
   versions: async (id: string, signal?: AbortSignal) => z.array(versionSchema).parse((await api.get(`${manager}/${id}/versions`, { signal })).data),
   rollback: async (id: string, versionNumber: number, input: { reason: string; decisionNumber: string; effectiveDate: string }) =>
@@ -101,6 +161,8 @@ export const procedureApi = {
   source: async (id: string, draft = false) => {
     return sourceLink((await api.get(draft ? `${drafts}/${id}/source` : catalogPath(`/api/v1/procedures/${id}/source`), { skipAuth: !draft })).data);
   },
+  // API 32b: màn quản trị xem PDF hiện tại kể cả khi thủ tục đang ẩn (API công khai chỉ phục vụ thủ tục công khai)
+  managerSource: async (id: string) => sourceLink((await api.get(`${manager}/${encodeURIComponent(id)}/source`)).data),
 };
 function sourceLink(value: unknown) {
   const data = z.object({ url: z.string().url(), expiresInSeconds: z.number().positive() }).parse(value);

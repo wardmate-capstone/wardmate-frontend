@@ -12,10 +12,20 @@ type Field = {
   key: string;
   path?: string;
   label: string;
-  kind?: "number" | "boolean" | "date";
+  kind?: "number" | "boolean" | "date" | "multi";
   options?: string[];
+  /** Nhãn hiển thị cho từng giá trị trong options */
+  optionLabels?: Record<string, string>;
   required?: boolean;
+  hint?: string;
+  /** Số dòng của ô văn bản (mặc định 2) */
+  rows?: number;
 };
+// Nhãn tiếng Việt cho các giá trị mã của BE
+const COPY_TYPE_LABELS: Record<string, string> = { ORIGINAL: "Bản chính", CERTIFIED_COPY: "Bản sao chứng thực", REGULAR_COPY: "Bản sao / bản chụp", OTHER: "Loại khác (ghi rõ ở ô số lượng bằng chữ)" };
+const SUBMISSION_TYPE_LABELS: Record<string, string> = { NOP: "Nộp", XUAT_TRINH: "Xuất trình" };
+const TIME_UNIT_LABELS: Record<string, string> = { WORKING_DAY: "Ngày làm việc", DAY: "Ngày", HOUR: "Giờ", MINUTE: "Phút" };
+const FEE_KIND_LABELS: Record<string, string> = { PHI: "Phí", LE_PHI: "Lệ phí" };
 const getInputBoxClass = (hasError: boolean) =>
   `min-h-11 w-full rounded-xl border p-3 text-sm transition focus:bg-white focus:outline-none focus:ring-2 ${
     hasError
@@ -50,12 +60,46 @@ function FieldInput({
       )}
     </span>
   );
+  const hintText = field.hint && !error && (
+    <span className="text-xs font-normal text-slate-500">{field.hint}</span>
+  );
   const errorText = error && (
     <span id={path + '-error'} className="flex items-center gap-1 text-xs font-medium text-red-700">
       <span>•</span>
       <span>{error}</span>
     </span>
   );
+  if (field.kind === "multi") {
+    const selected = Array.isArray(value) ? value.map(String) : [];
+    const options = field.options ?? [];
+    return (
+      <fieldset data-field={path} className="grid gap-2 text-sm font-semibold">
+        <legend className="mb-2">{labelContent}</legend>
+        {options.length ? (
+          <div className="flex flex-wrap gap-2">
+            {options.map((option) => (
+              <label key={option} className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${selected.includes(option) ? "border-red-300 bg-red-50 text-red-900" : "border-slate-200 bg-white text-slate-700"}`}>
+                <input
+                  type="checkbox"
+                  className="accent-red-700"
+                  checked={selected.includes(option)}
+                  onChange={(e) => {
+                    const next = e.target.checked ? [...selected, option] : selected.filter((x) => x !== option);
+                    change(next.length ? next : null);
+                  }}
+                />
+                {field.optionLabels?.[option] ?? option}
+              </label>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs font-normal text-slate-500">{field.hint ?? "Chưa có lựa chọn."}</span>
+        )}
+        {options.length > 0 && hintText}
+        {errorText}
+      </fieldset>
+    );
+  }
   if (field.kind === "boolean" || field.options)
     return (
       <label data-field={path} className="grid gap-2 text-sm font-semibold">
@@ -79,7 +123,7 @@ function FieldInput({
           <option value="">Chưa xác định</option>
           {(field.options ?? ["true", "false"]).map((option) => (
             <option key={option} value={option}>
-              {option === "true" ? "Có" : option === "false" ? "Không" : option}
+              {option === "true" ? "Có" : option === "false" ? "Không" : field.optionLabels?.[option] ?? option}
             </option>
           ))}
         </select>
@@ -113,13 +157,14 @@ function FieldInput({
         <textarea
           aria-label={field.label}
           className={getInputBoxClass(hasError)}
-          rows={2}
+          rows={field.rows ?? 2}
           aria-invalid={hasError}
           aria-describedby={hasError ? path + '-error' : undefined}
           value={value == null ? "" : String(value)}
           onChange={(e) => change(e.target.value)}
         />
       )}
+      {hintText}
       {errorText}
     </label>
   );
@@ -177,12 +222,106 @@ function RowEditor({
           change([
             ...list,
             Object.fromEntries(
-              rowFields.map((field) => [field.key, field.kind ? null : ""]),
+              rowFields.map((field) => [field.key, field.kind || field.options ? null : ""]),
             ),
           ])
         }
       >
         Thêm {title.toLowerCase()}
+      </Button>
+    </section>
+  );
+}
+
+/** Danh sách văn bản (cơ quan, cấp, từ khóa...): mỗi dòng một mục; rỗng → null */
+function ListInput({ path, label, value, change, hint, rows: lineCount = 2 }: { path: string; label: string; value: unknown; change: (value: string[] | null) => void; hint?: string; rows?: number }) {
+  const joined = Array.isArray(value) ? value.map(String).join("\n") : "";
+  const [text, setText] = useState(joined);
+  // Đồng bộ khi dữ liệu thay đổi từ bên ngoài (mở thủ tục khác, khôi phục phiên bản)
+  useEffect(() => {
+    setText((current) => (current.split("\n").map((s) => s.trim()).filter(Boolean).join("\n") === joined ? current : joined));
+  }, [joined]);
+  return (
+    <label data-field={path} className="grid gap-2 text-sm font-semibold">
+      <span className="text-slate-900">{label}</span>
+      <textarea
+        aria-label={label}
+        className={getInputBoxClass(false)}
+        rows={lineCount}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          const items = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
+          change(items.length ? items : null);
+        }}
+      />
+      <span className="text-xs font-normal text-slate-500">{hint ?? "Mỗi dòng một mục."}</span>
+    </label>
+  );
+}
+
+/** Cách thức nộp: thời hạn (số + đơn vị + ghi bằng chữ) và nhiều mức phí (BE-H B.1) */
+function MethodsEditor({ value, cases, change }: { value: unknown; cases: string[]; change: (value: Row[]) => void }) {
+  const list = rows(value);
+  const update = (index: number, patch: Row) => change(list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  return (
+    <section className="space-y-4">
+      <p className="text-sm text-slate-600">
+        Mỗi cách nộp có thời hạn và phí riêng. Văn bản gốc không tách được thành số (ví dụ "Theo quy định của Bộ Tài chính", "Không quá 15 phút") thì nhập nguyên văn vào ô <strong>ghi bằng chữ</strong>.
+      </p>
+      {list.map((method, index) => {
+        const base = `contentPayload.submissionMethods.${index}`;
+        // Dữ liệu cũ chỉ có estimatedDays/feeAmount: hiển thị như một thời hạn/mức phí có cấu trúc
+        const time = method.processingTime ? record(method.processingTime) : method.estimatedDays != null ? { value: method.estimatedDays, unit: "WORKING_DAY" } : {};
+        const fees = Array.isArray(method.fees) ? method.fees : method.feeAmount != null ? [{ amount: method.feeAmount, unit: method.feeUnit || "VND" }] : [];
+        const setTime = (patch: Row) => {
+          const next = { ...time, ...patch };
+          const empty = next.value == null && !String(next.text ?? "").trim();
+          // BE tự suy ra estimatedDays từ processingTime khi đơn vị là ngày
+          update(index, { processingTime: empty ? null : next, estimatedDays: null });
+        };
+        return (
+          <ProcedureFieldPrefix.Provider key={index} value={`${base}.`}>
+            <div className="space-y-4 rounded-xl border border-slate-200 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "methodName", label: "Hình thức nộp", required: true, hint: "VD: Trực tiếp, Trực tuyến, Qua bưu chính" }} value={method.methodName} change={(next) => update(index, { methodName: next })} />
+                <FieldInput field={{ key: "caseCode", label: "Chỉ áp dụng cho trường hợp", options: cases, hint: "Để trống nếu áp dụng chung" }} value={method.caseCode} change={(next) => update(index, { caseCode: next })} />
+              </div>
+              <fieldset className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-600">Thời hạn giải quyết</legend>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <FieldInput field={{ key: "value", path: `${base}.processingTime.value`, label: "Số", kind: "number" }} value={time.value} change={(next) => setTime({ value: next })} />
+                  <FieldInput field={{ key: "unit", path: `${base}.processingTime.unit`, label: "Đơn vị", options: Object.keys(TIME_UNIT_LABELS), optionLabels: TIME_UNIT_LABELS }} value={time.unit} change={(next) => setTime({ unit: next })} />
+                  <FieldInput field={{ key: "text", path: `${base}.processingTime.text`, label: "Ghi bằng chữ (nếu có)", hint: "Ưu tiên hiển thị cho người dân" }} value={time.text} change={(next) => setTime({ text: String(next ?? "").trim() ? next : null })} />
+                </div>
+              </fieldset>
+              <fieldset className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-600">Phí, lệ phí</legend>
+                <RowEditor
+                  prefix={`${base}.fees`}
+                  title="Mức phí"
+                  value={fees}
+                  fields={[
+                    { key: "description", label: "Áp dụng cho / mô tả" },
+                    { key: "kind", label: "Loại", options: Object.keys(FEE_KIND_LABELS), optionLabels: FEE_KIND_LABELS },
+                    { key: "amount", label: "Số tiền (0 = miễn phí)", kind: "number" },
+                    { key: "percent", label: "Hoặc tỷ lệ %", kind: "number" },
+                    { key: "unit", label: "Đơn vị" },
+                  ]}
+                  change={(next) => update(index, { fees: next.length ? next.map((fee) => ({ ...fee, unit: String(fee.unit ?? "").trim() || "VND" })) : null, feeAmount: null })}
+                />
+                <FieldInput field={{ key: "feeText", label: "Phí ghi bằng chữ (nếu không tách được thành các mức)", rows: 2 }} value={method.feeText} change={(next) => update(index, { feeText: String(next ?? "").trim() ? next : null })} />
+              </fieldset>
+              <FieldInput field={{ key: "note", label: "Mô tả / ghi chú", rows: 4 }} value={method.note} change={(next) => update(index, { note: next })} />
+              <Button size="small" variant="ghost" onClick={() => change(list.filter((_, i) => i !== index))}>
+                Xóa cách nộp {index + 1}
+              </Button>
+            </div>
+          </ProcedureFieldPrefix.Provider>
+        );
+      })}
+      <Button variant="outline" size="small" onClick={() => change([...list, { methodName: "", feeUnit: "VND", note: "" }])}>
+        Thêm cách nộp
       </Button>
     </section>
   );
@@ -265,6 +404,12 @@ export function ProcedureApiEditor({
     onChange({ ...value, [key]: next });
   const setContent = (key: string, next: unknown) =>
     set("contentPayload", { ...content, [key]: next });
+  const setContentMany = (patch: Row) => set("contentPayload", { ...content, ...patch });
+  const caseCodes = rows(content.cases).map((item) => String(item.caseCode ?? "")).filter(Boolean);
+  const formCodes = rows(value.formDefinitions).map((item) => String(item.formCode ?? "")).filter(Boolean);
+  const formLabels = Object.fromEntries(rows(value.formDefinitions).map((item) => [String(item.formCode ?? ""), `${String(item.formName ?? "") || String(item.formCode ?? "")}`]));
+  // Kết quả: dùng resultDetails (kèm mã); dữ liệu cũ chỉ có results[] thì hiển thị thành các dòng tên
+  const resultRows = Array.isArray(content.resultDetails) ? content.resultDetails : (Array.isArray(content.results) ? content.results : []).map((name) => ({ name, code: null }));
   const tabItems = [
     "Thông tin chung",
     "Thành phần hồ sơ",
@@ -272,6 +417,7 @@ export function ProcedureApiEditor({
     "Thời hạn & lệ phí",
     "Biểu mẫu",
     "Căn cứ pháp lý",
+    "Thông tin khác",
   ];
   return (
     <ProcedureErrorsContext.Provider value={errors}><div ref={root} className="min-w-0 space-y-5">
@@ -364,8 +510,8 @@ export function ProcedureApiEditor({
               </div>
               <FieldInput field={{ key: "title", label: "Tên thủ tục", required: true }} value={value.title} change={(next) => set("title", next)} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "levelOfImplementation", label: "Cấp thực hiện", required: true }} value={value.levelOfImplementation} change={(next) => set("levelOfImplementation", next)} />
-                <FieldInput field={{ key: "targetAudience", label: "Đối tượng thực hiện", required: true }} value={value.targetAudience} change={(next) => set("targetAudience", next)} />
+                <FieldInput field={{ key: "levelOfImplementation", label: "Cấp thực hiện" }} value={value.levelOfImplementation} change={(next) => set("levelOfImplementation", next)} />
+                <FieldInput field={{ key: "targetAudience", label: "Đối tượng thực hiện" }} value={value.targetAudience} change={(next) => set("targetAudience", next)} />
               </div>
             </div>
 
@@ -382,30 +528,53 @@ export function ProcedureApiEditor({
               </div>
             </div>
 
+            {/* Nhóm 2b: Phân loại & các cơ quan theo khung Cổng DVC (đều tuỳ chọn) */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Phân loại & cơ quan liên quan</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldInput field={{ key: "procedureType", path: "contentPayload.procedureType", label: "Loại thủ tục", hint: "VD: Loại khác, TTHC được luật giao cho địa phương quy định" }} value={content.procedureType} change={(next) => setContent("procedureType", String(next ?? "").trim() ? next : null)} />
+                <ListInput path="contentPayload.levels" label="Các cấp thực hiện" value={content.levels} change={(next) => setContent("levels", next)} hint="Mỗi dòng một cấp. Để trống ô Cấp thực hiện thì hệ thống tự ghép." />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ListInput path="contentPayload.competentAuthorities" label="Cơ quan có thẩm quyền" value={content.competentAuthorities} change={(next) => setContent("competentAuthorities", next)} />
+                <ListInput path="contentPayload.executingAgencies" label="Cơ quan thực hiện (nhiều cơ quan)" value={content.executingAgencies} change={(next) => setContent("executingAgencies", next)} />
+                <ListInput path="contentPayload.authorizedAgencies" label="Cơ quan được ủy quyền" value={content.authorizedAgencies} change={(next) => setContent("authorizedAgencies", next)} />
+                <ListInput path="contentPayload.coordinatingAgencies" label="Cơ quan phối hợp" value={content.coordinatingAgencies} change={(next) => setContent("coordinatingAgencies", next)} />
+              </div>
+              <ListInput path="contentPayload.receivingAddresses" label="Các địa chỉ tiếp nhận khác" value={content.receivingAddresses} change={(next) => setContent("receivingAddresses", next)} />
+            </div>
+
+            {/* Nhóm 2c: Yêu cầu, điều kiện & mô tả */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Yêu cầu, điều kiện & mô tả</h4>
+              <FieldInput field={{ key: "requirements", path: "contentPayload.requirements", label: "Yêu cầu, điều kiện thực hiện", rows: 4 }} value={content.requirements} change={(next) => setContent("requirements", String(next ?? "").trim() ? next : null)} />
+              <FieldInput field={{ key: "description", path: "contentPayload.description", label: "Mô tả", rows: 3 }} value={content.description} change={(next) => setContent("description", String(next ?? "").trim() ? next : null)} />
+              <ListInput path="contentPayload.keywords" label="Từ khóa" value={content.keywords} change={(next) => setContent("keywords", next)} hint="Mỗi dòng một từ khóa; dùng cho tìm kiếm thủ tục." />
+            </div>
+
             {/* Nhóm 3: Thời hạn, Lệ phí & Kết quả */}
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Thời hạn, Lệ phí & Kết quả</h4>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FieldInput field={{ key: "feeSummary", label: "Tóm tắt lệ phí", required: true }} value={value.feeSummary} change={(next) => set("feeSummary", next)} />
-                <FieldInput field={{ key: "processingTimeSummary", label: "Tóm tắt thời hạn", required: true }} value={value.processingTimeSummary} change={(next) => set("processingTimeSummary", next)} />
+                <FieldInput field={{ key: "feeSummary", label: "Tóm tắt lệ phí", hint: "Để trống để hệ thống tự tóm tắt từ phần Thời hạn & lệ phí." }} value={value.feeSummary} change={(next) => set("feeSummary", next)} />
+                <FieldInput field={{ key: "processingTimeSummary", label: "Tóm tắt thời hạn", hint: "Để trống để hệ thống tự tóm tắt từ phần Thời hạn & lệ phí." }} value={value.processingTimeSummary} change={(next) => set("processingTimeSummary", next)} />
               </div>
-              <label className="grid gap-2 text-sm font-semibold">
-                <span className="flex items-center gap-1 text-slate-900">
-                  <span>Kết quả giải quyết (mỗi kết quả một dòng)</span>
-                  <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
-                </span>
-                <textarea
-                  rows={2}
-                  className={getInputBoxClass(Boolean(errors['contentPayload.results.0']))}
-                  value={Array.isArray(content.results) ? content.results.join("\n") : ""}
-                  onChange={(e) => setContent("results", e.target.value.split("\n").filter((line) => line.trim()))}
-                />
-                {errors['contentPayload.results.0'] && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-red-700">
-                    <span>•</span><span>{errors['contentPayload.results.0']}</span>
-                  </span>
-                )}
-              </label>
+              <RowEditor
+                prefix="contentPayload.resultDetails"
+                title="Kết quả giải quyết"
+                value={resultRows}
+                fields={[
+                  { key: "name", label: "Tên kết quả" },
+                  { key: "code", label: "Mã kết quả (nếu có)" },
+                  { key: "validity", label: "Thời hạn hiệu lực (nếu có)" },
+                  { key: "note", label: "Ghi chú" },
+                ]}
+                change={(next) => {
+                  // BE tự điền results = danh sách tên; gửi kèm để tương thích dữ liệu cũ
+                  const cleaned = next.map((row) => ({ ...row, code: String(row.code ?? "").trim() || null, validity: String(row.validity ?? "").trim() || null, note: String(row.note ?? "").trim() || null }));
+                  setContentMany({ resultDetails: cleaned.length ? cleaned : null, results: next.map((row) => String(row.name ?? "").trim()).filter(Boolean) });
+                }}
+              />
             </div>
           </div>
         )}
@@ -436,20 +605,33 @@ export function ProcedureApiEditor({
                 {
                   key: "caseCode",
                   label: "Mã trường hợp (trống = áp dụng chung)",
-                  options: rows(content.cases).map(item => String(item.caseCode ?? '')).filter(Boolean),
+                  options: caseCodes,
                 },
-                { key: "itemName", label: "Tên giấy tờ" },
+                { key: "itemName", label: "Tên giấy tờ", rows: 3 },
                 {
                   key: "submissionType",
                   label: "Hình thức",
                   options: ["NOP", "XUAT_TRINH"],
+                  optionLabels: SUBMISSION_TYPE_LABELS,
                 },
                 {
                   key: "documentCopyType",
                   label: "Loại bản",
-                  options: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY"],
+                  options: ["ORIGINAL", "CERTIFIED_COPY", "REGULAR_COPY", "OTHER"],
+                  optionLabels: COPY_TYPE_LABELS,
+                  hint: "Để trống nếu giấy tờ cần nhiều loại bản",
                 },
                 { key: "quantity", label: "Số lượng", kind: "number" },
+                { key: "quantityText", label: "Số lượng ghi bằng chữ (nếu có)", hint: "VD: 01 bản chính và 01 bản sao; 02 bộ" },
+                {
+                  key: "formCodes",
+                  label: "Mẫu đơn, tờ khai kèm theo",
+                  kind: "multi",
+                  options: formCodes,
+                  optionLabels: formLabels,
+                  hint: formCodes.length ? "Chọn một hoặc nhiều mẫu ở tab Biểu mẫu" : "Chưa có biểu mẫu. Thêm ở tab Biểu mẫu rồi quay lại chọn.",
+                },
+                { key: "note", label: "Ghi chú" },
                 {
                   key: "isMandatory",
                   label: "Bắt buộc khi áp dụng",
@@ -462,7 +644,25 @@ export function ProcedureApiEditor({
         )}
         {step === 2 && (
           <section className="space-y-5">
-            <p className="text-sm text-slate-600">Chỉ thêm trường hợp đã kiểm tra với tài liệu gốc.</p>
+            <FieldInput
+              field={{ key: "stepsText", path: "contentPayload.stepsText", label: "Trình tự thực hiện (dán nguyên văn)", rows: 8, hint: "Có thể dán nguyên văn \"Bước 1… Bước 2…\" từ Cổng DVC. Tách thành từng bước bên dưới là tuỳ chọn." }}
+              value={content.stepsText}
+              change={(next) => setContent("stepsText", String(next ?? "").trim() ? next : null)}
+            />
+            <RowEditor
+              prefix="contentPayload.commonSteps"
+              title="Bước chung"
+              value={content.commonSteps}
+              fields={[
+                { key: "stepOrder", label: "Thứ tự", kind: "number" },
+                { key: "stepName", label: "Tên bước" },
+                { key: "executor", label: "Người/cơ quan thực hiện" },
+                { key: "actionDetails", label: "Nội dung thực hiện", rows: 4 },
+              ]}
+              // Thứ tự để trống thì tự đánh số theo vị trí (BE yêu cầu số nguyên)
+              change={(next) => setContent("commonSteps", next.length ? next.map((row, i) => ({ ...row, stepOrder: row.stepOrder ?? i + 1, executor: row.executor ?? "", actionDetails: row.actionDetails ?? "" })) : null)}
+            />
+            <p className="text-sm text-slate-600">Chỉ thêm trường hợp khi thủ tục chia trường hợp và đã kiểm tra với tài liệu gốc.</p>
             {rows(content.cases).map((item, index, cases) => (
               <div key={index} className="space-y-4 rounded-xl border p-4">
                 {[
@@ -529,22 +729,10 @@ export function ProcedureApiEditor({
           </section>
         )}
         {step === 3 && (
-          <RowEditor
-            prefix="contentPayload.submissionMethods"
-            title="Phương thức nộp"
+          <MethodsEditor
             value={content.submissionMethods}
+            cases={caseCodes}
             change={(next) => setContent("submissionMethods", next)}
-            fields={[
-              { key: "methodName", label: "Hình thức nộp" },
-              { key: "feeAmount", label: "Lệ phí", kind: "number" },
-              { key: "feeUnit", label: "Đơn vị lệ phí" },
-              {
-                key: "estimatedDays",
-                label: "Thời hạn (ngày)",
-                kind: "number",
-              },
-              { key: "note", label: "Điều kiện / ghi chú" },
-            ]}
           />
         )}
         {step === 4 && (
@@ -582,13 +770,29 @@ export function ProcedureApiEditor({
                 })),
               )
             }
+            // Theo Cổng DVC: chỉ cần Tên văn bản + Mã văn bản (ngày, cơ quan ban hành cũ vẫn được giữ nguyên)
             fields={[
-              { key: "documentNumber", label: "Số hiệu" },
-              { key: "documentName", label: "Tên văn bản" },
-              { key: "issueDate", label: "Ngày ban hành", kind: "date" },
-              { key: "authority", label: "Cơ quan ban hành" },
+              { key: "documentName", label: "Tên văn bản pháp lý", rows: 3 },
+              { key: "documentNumber", label: "Mã văn bản" },
             ]}
           />
+        )}
+        {step === 6 && (
+          <section className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Dùng cho nội dung không thuộc mục nào ở trên (lưu ý, thông tin liên hệ, hướng dẫn riêng của địa phương...). Hiển thị cho người dân theo đúng thứ tự.
+            </p>
+            <RowEditor
+              prefix="contentPayload.additionalSections"
+              title="Mục thông tin"
+              value={content.additionalSections}
+              fields={[
+                { key: "title", label: "Tiêu đề mục" },
+                { key: "content", label: "Nội dung", rows: 5 },
+              ]}
+              change={(next) => setContent("additionalSections", next.length ? next : null)}
+            />
+          </section>
         )}
       </fieldset>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">

@@ -103,7 +103,7 @@ export function ProcedureApiDetail({
             <span className="min-w-0 break-words">Lĩnh vực: <span className="font-medium text-slate-800">{row.categoryName}</span></span>
             <Badge variant={row.isActive ? "success" : "neutral"} className="max-w-full">
               {row.isActive ? <Eye size={16} className="shrink-0" aria-hidden="true" /> : <EyeSlash size={16} className="shrink-0" aria-hidden="true" />}
-              {row.isActive ? "Đang công khai" : "Ngừng công khai"}
+              {row.isActive ? "Đang công khai" : "Đang ẩn"}
             </Badge>
           </div>
         </div>
@@ -163,7 +163,12 @@ export function ProcedureApiDetail({
               setChecklistOpen(true);
             } : undefined}
           />
-          <PdfSource id={row.id} />
+          <PdfSource
+            id={row.id}
+            manager
+            uploadable={can('procedure.update')}
+            onUploaded={() => { detail.refresh(); versions.refresh(); }}
+          />
         </div>
       )}
       {can("procedure.versions.read") && <section className="admin-card space-y-4 p-5">
@@ -297,11 +302,13 @@ export function ProcedureApiDetail({
               }
               void run(async () => {
                 const input = validateProcedure(editing!);
-                if (!input.contentPayload.decisionNumber.trim()) throw new ProcedureValidationError([procedureIssue('contentPayload.decisionNumber', 'Vui lòng nhập số quyết định trước khi lưu.')]);
+                const decisionNumber = input.contentPayload.decisionNumber?.trim() ?? '';
+                if (!decisionNumber) throw new ProcedureValidationError([procedureIssue('contentPayload.decisionNumber', 'Vui lòng nhập số quyết định trước khi lưu.')]);
+                // input giữ nguyên originalPdfUrl/pdfFileName của thủ tục để không mất liên kết PDF gốc
                 await procedureApi.update(
                   row.id,
                   input,
-                  input.contentPayload.decisionNumber,
+                  decisionNumber,
                   checkedDate.data,
                 );
                 setEditing(null);

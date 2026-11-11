@@ -6,16 +6,25 @@ import { validateChecklistItems, ProcedureValidationError } from '@/lib/procedur
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import axios from 'axios';
 
+type CopyType = 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY' | 'OTHER';
 type ChecklistRow = {
   checklistId: string;
   caseCode?: string | null;
   itemName: string;
   submissionType: 'NOP' | 'XUAT_TRINH';
-  documentCopyType: 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY';
+  // null khi giấy tờ cần nhiều loại bản (copyRequirements)
+  documentCopyType: CopyType | null;
   quantity: number;
   conditionNote?: string | null;
   isMandatory: boolean;
+  // Giữ nguyên các trường modal không sửa (BE-H, PROC-02a) để lưu không làm mất dữ liệu
+  copyRequirements?: { documentCopyType: CopyType; quantity: number }[] | null;
+  quantityText?: string | null;
+  note?: string | null;
+  formCodes?: string[] | null;
 };
+const COPY_TYPES: CopyType[] = ['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY', 'OTHER'];
+const copyLabel = (t: CopyType) => ({ ORIGINAL: 'bản chính', CERTIFIED_COPY: 'bản sao chứng thực', REGULAR_COPY: 'bản chụp', OTHER: 'bản khác' })[t];
 
 const boxClass =
   'min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-900 transition focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100';
@@ -53,14 +62,18 @@ export function ProcedureChecklistModal({
     if (open) {
       const cloned = (Array.isArray(initialItems) ? initialItems : []).map((raw) => {
         const item = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+        const copies = Array.isArray(item.copyRequirements) ? (item.copyRequirements as ChecklistRow['copyRequirements']) : null;
         return {
+          // Giữ mọi trường khác của dòng (copyRequirements, quantityText, note, formCodes...)
+          ...(item as Partial<ChecklistRow>),
+          copyRequirements: copies,
           checklistId: String(item.checklistId ?? ''),
           caseCode: item.caseCode ? String(item.caseCode) : null,
           itemName: String(item.itemName ?? ''),
           submissionType: (item.submissionType === 'XUAT_TRINH' ? 'XUAT_TRINH' : 'NOP') as 'NOP' | 'XUAT_TRINH',
-          documentCopyType: (['CERTIFIED_COPY', 'REGULAR_COPY'].includes(String(item.documentCopyType))
-            ? item.documentCopyType
-            : 'ORIGINAL') as 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY',
+          documentCopyType: COPY_TYPES.includes(item.documentCopyType as CopyType)
+            ? (item.documentCopyType as CopyType)
+            : copies && copies.length > 1 ? null : 'ORIGINAL',
           quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
           conditionNote: item.conditionNote ? String(item.conditionNote) : null,
           isMandatory: item.isMandatory !== false,
@@ -115,8 +128,8 @@ export function ProcedureChecklistModal({
       if (!decisionNumber.trim()) {
         throw new Error('Vui lòng nhập số quyết định ban hành.');
       }
-      if (decisionNumber.trim().length > 100) {
-        throw new Error('Số quyết định không được vượt quá 100 ký tự.');
+      if (decisionNumber.trim().length > 255) {
+        throw new Error('Số quyết định không được vượt quá 255 ký tự.');
       }
       if (!effectiveDate.trim()) {
         throw new Error('Vui lòng chọn ngày có hiệu lực.');
@@ -238,7 +251,7 @@ export function ProcedureChecklistModal({
                 <Input
                   placeholder="Ví dụ: 123/QĐ-UBND"
                   value={decisionNumber}
-                  maxLength={100}
+                  maxLength={255}
                   onChange={(e) => setDecisionNumber(e.target.value)}
                   disabled={busy}
                 />
@@ -353,17 +366,25 @@ export function ProcedureChecklistModal({
                         Loại bản giấy tờ
                         <select
                           className={boxClass}
-                          value={row.documentCopyType}
+                          value={row.documentCopyType ?? ''}
                           onChange={(e) =>
                             updateItem(index, {
-                              documentCopyType: e.target.value as 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY',
+                              documentCopyType: (e.target.value || null) as CopyType | null,
+                              // Chọn một loại bản cụ thể thay cho nhiều loại bản
+                              ...(e.target.value ? { copyRequirements: null } : {}),
                             })
                           }
                           disabled={busy}
                         >
+                          {row.documentCopyType == null && (
+                            <option value="">
+                              {row.copyRequirements?.length ? `Nhiều loại bản: ${row.copyRequirements.map(c => `${c.quantity} ${copyLabel(c.documentCopyType)}`).join(' + ')}` : 'Không quy định'}
+                            </option>
+                          )}
                           <option value="ORIGINAL">Bản chính (Gốc)</option>
                           <option value="CERTIFIED_COPY">Bản sao chứng thực</option>
                           <option value="REGULAR_COPY">Bản chụp / photocopy</option>
+                          <option value="OTHER">Loại khác (ghi rõ bằng chữ)</option>
                         </select>
                       </label>
 

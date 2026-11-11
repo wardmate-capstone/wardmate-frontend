@@ -290,11 +290,11 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
                         <span className="procedure-result-meta">
                           <span>
                             <Clock size={18} aria-hidden="true" />
-                            <span>Thời gian: <b>{procedure.processingTimeSummary || 'Xem chi tiết'}</b></span>
+                            <span>Thời gian: <b>{procedure.processingTimeSummary || 'Chưa cập nhật'}</b></span>
                           </span>
                           <span>
                             <Wallet size={18} aria-hidden="true" />
-                            <span>Lệ phí: <b>{procedure.feeSummary || 'Xem chi tiết'}</b></span>
+                            <span>Lệ phí: <b>{procedure.feeSummary || 'Chưa cập nhật'}</b></span>
                           </span>
                         </span>
                       </span>

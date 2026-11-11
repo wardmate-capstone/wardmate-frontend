@@ -147,7 +147,7 @@ export function ProcedureApiList({
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="true">Đang công khai</option>
-                <option value="false">Ngừng công khai</option>
+                <option value="false">Đang ẩn</option>
               </select>
             </div>
 
@@ -264,7 +264,7 @@ export function ProcedureApiList({
                             row.isActive ? 'bg-emerald-500' : 'bg-slate-400'
                           }`}
                         />
-                        {row.isActive ? 'Đang công khai' : 'Ngừng công khai'}
+                        {row.isActive ? 'Đang công khai' : 'Đang ẩn'}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap">

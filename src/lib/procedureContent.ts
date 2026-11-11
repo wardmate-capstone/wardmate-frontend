@@ -1,14 +1,15 @@
 import type { ProcedureDetail } from '@/lib/api/procedures';
+import { methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 
 export function contentFromApi(procedure: ProcedureDetail): ProcedureContent {
   const payload = procedure.contentPayload;
   return {
-    overview: procedure.targetAudience,
-    methods: payload.submissionMethods.map(item => ({ method: item.methodName, processingTime: `${item.estimatedDays} ngày`, fee: item.feeAmount === 0 ? 'Miễn phí' : `${item.feeAmount.toLocaleString('vi-VN')} ${item.feeUnit}`, notes: item.note ?? '' })),
-    legalBases: payload.legalReferences.map(item => ({ number: item.documentNumber, title: item.documentName, url: '' })),
-    receivingAgencies: procedure.executingAgency ? [{ name: procedure.executingAgency, address: payload.receivingAddress, url: '' }] : [],
+    overview: procedure.targetAudience ?? "",
+    methods: payload.submissionMethods.map(item => ({ method: item.methodName, processingTime: methodTimeLabel(item) ?? 'Chưa cập nhật', fee: methodFeeLabel(item) ?? 'Chưa cập nhật', notes: item.note ?? '' })),
+    legalBases: payload.legalReferences.map(item => ({ number: item.documentNumber ?? '', title: item.documentName ?? '', url: '' })),
+    receivingAgencies: procedure.executingAgency ? [{ name: procedure.executingAgency, address: payload.receivingAddress ?? "", url: '' }] : [],
     cases: payload.cases,
-    checklist: (procedure.checklistSchema ?? []).map(item => ({ ...item, caseCode: item.caseCode ?? undefined, conditionNote: item.conditionNote ?? undefined })),
+    checklist: (procedure.checklistSchema ?? []).map(item => ({ ...item, caseCode: item.caseCode ?? undefined, conditionNote: item.conditionNote ?? undefined, documentCopyType: item.documentCopyType ?? undefined })),
   };
 }
 
@@ -31,8 +32,17 @@ export type ChecklistItem = {
   caseCode?: string;
   submissionType: 'NOP' | 'XUAT_TRINH' | string;
   itemName: string;
-  documentCopyType: 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY' | string;
+  // undefined khi giấy tờ cần nhiều loại bản (copyRequirements) hoặc không quy định
+  documentCopyType?: 'ORIGINAL' | 'CERTIFIED_COPY' | 'REGULAR_COPY' | 'OTHER' | string;
   quantity: number;
+  // BE-H / PROC-02a: nhiều loại bản, số lượng ghi bằng chữ, ghi chú, mẫu đơn gắn với giấy tờ
+  copyRequirements?: { documentCopyType: string; quantity: number }[] | null;
+  quantityText?: string | null;
+  note?: string | null;
+  formCodes?: string[] | null;
+  // Hồ sơ Workflow: các mẫu đơn gắn với giấy tờ (điền một trong các mẫu là đủ) và ghi chú riêng của giấy tờ
+  forms?: { formCode: string; formName?: string | null; formTemplateId?: string | null }[];
+  itemNote?: string;
   conditionNote?: string;
   isMandatory: boolean;
   templateUrl?: string;

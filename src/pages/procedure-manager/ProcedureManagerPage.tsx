@@ -264,12 +264,11 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               if (!open) guard.requestClose(() => setCreating(false));
             }}
             title="Thêm thủ tục"
-            description="Thủ tục sẽ được công khai khi lưu thành công. Muốn lưu nháp, dùng luồng PDF và bản nháp."
+            description="Chỉ bắt buộc mã, tên và lĩnh vực. Bỏ chọn công khai để lưu ở trạng thái ẩn; bật công khai sau trong danh sách thủ tục."
             className="sm:max-w-5xl"
             footer={
               <Button
                 loading={busy}
-                disabled={!confirmed}
                 onClick={async () => {
                   if (!can('procedure.create') || lock.current) return;
                   lock.current = true;
@@ -277,11 +276,12 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                   setError("");
                   try {
                     const data = validateProcedure(input);
-                    const created = await procedureApi.create(data);
+                    // Ô xác nhận quyết định trạng thái: không tick = lưu ẩn (isActive: false)
+                    const created = await procedureApi.create(data, confirmed);
                     setCreating(false);
                     setRevision((v) => v + 1);
                     setSelected(created);
-                    toast.success("Đã tạo thủ tục.");
+                    toast.success(confirmed ? "Đã tạo và công khai thủ tục." : "Đã lưu thủ tục ở trạng thái ẩn.");
                   } catch (e) {
                     if (e instanceof ProcedureValidationError) {
                       setValidationError(e);
@@ -295,7 +295,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                   }
                 }}
               >
-                Tạo thủ tục
+                {confirmed ? "Tạo và công khai" : "Lưu ở trạng thái ẩn"}
               </Button>
             }
           >
@@ -305,19 +305,24 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               validationError={validationError}
               onChange={(next) => {
                 setInput(next);
-                setConfirmed(false);
               }}
               categories={categories.data ?? []}
               disabled={busy}
             />
-            <label className="flex gap-3 text-sm">
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-sm">
               <input
                 type="checkbox"
+                className="mt-0.5 size-4 shrink-0 accent-red-700"
                 disabled={busy}
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
               />
-              Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.
+              <span>
+                <span className="font-semibold text-slate-900">Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.</span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  {confirmed ? "Người dân sẽ thấy thủ tục ngay sau khi lưu." : "Bỏ chọn để lưu ở trạng thái ẩn; bật công khai sau trong danh sách thủ tục."}
+                </span>
+              </span>
             </label>
           </Modal>
           {guard.confirmation}

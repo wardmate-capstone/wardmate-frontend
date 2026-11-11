@@ -1,4 +1,5 @@
 import { ProcedureValidationError } from '@/lib/procedureValidation';
+import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -89,34 +90,69 @@ export function PdfSource({
   draft = false,
   versionId,
   allowFullscreen = true,
+  uploadable = false,
+  manager = false,
+  onUploaded,
 }: {
   id: string;
   draft?: boolean;
   versionId?: string;
   allowFullscreen?: boolean;
+  /** Cho Procedure Manager gắn/thay PDF gốc (API 32a) cho thủ tục nhập tay */
+  uploadable?: boolean;
+  /** Màn quản trị: đọc PDF qua API 32b (cả thủ tục đang ẩn) */
+  manager?: boolean;
+  onUploaded?: () => void;
 }) {
   const [source, setSource] = useState<{ url: string; expires: number }>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Thủ tục nhập tay chưa từng gắn PDF: BE trả 404 draft.source_not_found
+  const [missing, setMissing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const canUpload = uploadable && !draft && !versionId;
 
   const fetchPdf = useCallback(async () => {
     setBusy(true);
     setError("");
+    setMissing(false);
     try {
       const result = versionId
         ? await procedureApi.versionSource(id, versionId)
-        : await procedureApi.source(id, draft);
+        : manager && !draft
+          ? await procedureApi.managerSource(id)
+          : await procedureApi.source(id, draft);
       setSource({
         url: result.url,
         expires: Date.now() + result.expiresInSeconds * 1000,
       });
     } catch (e) {
-      setError(procedureError(e));
+      if (!draft && !versionId && axios.isAxiosError(e) && e.response?.status === 404 && (e.response.data as { code?: string } | undefined)?.code === "draft.source_not_found") setMissing(true);
+      else setError(procedureError(e));
     } finally {
       setBusy(false);
     }
-  }, [id, draft, versionId]);
+  }, [id, draft, versionId, manager]);
+
+  const uploadPdf = async (file: File) => {
+    if (uploading) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      await procedureApi.uploadSource(id, file);
+      toast.success("Đã gắn PDF gốc cho thủ tục và lưu thêm một phiên bản.");
+      onUploaded?.();
+      await fetchPdf();
+    } catch (e) {
+      setUploadError(procedureError(e));
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  };
 
   useEffect(() => {
     setSource(undefined);
@@ -146,6 +182,30 @@ export function PdfSource({
           
         </span>
         <div className="flex items-center gap-1.5">
+          {canUpload && (
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadPdf(file); }}
+            />
+          )}
+          {canUpload && source && (
+            <Button
+              size="small"
+              variant="ghost"
+              className="h-7 px-2 text-xs text-slate-700 hover:bg-slate-200"
+              loading={uploading}
+              onClick={() => fileInput.current?.click()}
+              title="Tải PDF khác để thay PDF gốc (lưu thêm một phiên bản)"
+            >
+              <UploadSimple size={14} aria-hidden="true" />
+              Thay PDF
+            </Button>
+          )}
           {source && (
             <a
               href={source.url}
@@ -172,7 +232,33 @@ export function PdfSource({
       </div>
       <div className="flex-1 min-h-0 bg-slate-100">
         <ProcedureFeedback error={error} retry={() => void fetchPdf()} />
-        {source ? (
+        {uploadError && source && (
+          <p role="alert" className="m-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{uploadError}</p>
+        )}
+        {missing ? (
+          <div className="flex h-full min-h-56 flex-col items-center justify-center gap-3 p-6 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-500">
+              <FilePdf size={26} weight="duotone" aria-hidden="true" />
+            </span>
+            <div className="max-w-md space-y-1">
+              <p className="font-semibold text-slate-900">Thủ tục chưa có PDF gốc</p>
+              <p className="text-sm leading-6 text-slate-600">
+                {canUpload
+                  ? "Thủ tục này được nhập tay nên chưa có văn bản nguồn. Tải PDF gốc (tối đa 20 MB) để cán bộ đối chiếu khi xử lý hồ sơ."
+                  : "Thủ tục này được nhập tay nên chưa có văn bản nguồn để xem."}
+              </p>
+            </div>
+            {uploadError && (
+              <p role="alert" className="max-w-md rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{uploadError}</p>
+            )}
+            {canUpload && (
+              <Button loading={uploading} onClick={() => fileInput.current?.click()}>
+                <UploadSimple size={18} aria-hidden="true" />
+                Tải PDF gốc
+              </Button>
+            )}
+          </div>
+        ) : source ? (
           <iframe
             title="PDF nguồn thủ tục"
             src={source.url}
