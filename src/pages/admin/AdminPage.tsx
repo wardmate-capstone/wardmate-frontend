@@ -182,7 +182,8 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
       const data = await getAdminUsers({
         page,
         pageSize: 20,
-        search: query.trim() || undefined,
+        // Cho phép gõ @username: bỏ ký tự @ ở đầu trước khi tìm
+        search: query.trim().replace(/^@+/, '') || undefined,
         role: roleFilter === 'ALL' ? undefined : roleFilter,
       });
 

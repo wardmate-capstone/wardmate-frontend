@@ -1,8 +1,17 @@
 # Yêu cầu Backend: Hiển thị tên thay cho mã ID & các mục Portal còn tồn đọng
 
-*Ngày tạo: 06/11/2026 · Cập nhật: 07/11/2026 (thêm BE-D, BE-E) · Frontend gửi Backend*
+*Ngày tạo: 06/11/2026 · Cập nhật: 07/11/2026 (thêm BE-D, BE-E) · 09/11/2026 (BE và FE đã hoàn thành A–E; thêm BE-F mã QR, BE-G phân công/tham vấn) · Frontend gửi Backend*
 *Đã đối chiếu mã nguồn `D:/wardmate-backend` tại thời điểm tạo file*
 *Liên quan: `docs/PORTAL_REFINEMENT_TASKS_CHECKLIST.md` (mục 7, 10) và `docs/BE_REQUESTS_FIXES_IAM_PROCEDURE.md` (03/11)*
+
+---
+
+## Trạng thái 09/11/2026: ✅ Đã hoàn thành BE-A → BE-E · 🔴 BE-F mới (mã QR) · 🔴 BE-G mới (không phân công/tham vấn được)
+
+- **Backend:** làm xong BE-A → BE-E trên nhánh `origin/kha` (`PROGRESS.md` mục `FE-REQ-1108`), đã chạy SQL và deploy lên Azure ngày 09/11 (`AZURE-ROLLOUT-1108`): `iam-20261108-01`, `workflow-20261108-01`, `analytics-20261108-01`.
+- **FE đã kiểm tra trên Azure (09/11):** health của IAM, Workflow, Analytics, AIOCR đều trả 200; swagger đã có `fromOfficerName`/`toOfficerName`/`actorName` (Workflow), `applicationCode`/`procedureTitle`/`applicantName` (Analytics) và `PUT /api/v1/rbac/users/{userId}/role` (IAM). Trường tên của Tham vấn và Lịch ngày nghỉ không có trong swagger (API không khai báo kiểu trả về) nên cần kiểm tra khi test giao diện.
+- **Frontend:** đã tích hợp toàn bộ, xem bảng "Việc FE" ở cuối file.
+- **Còn lại phía vận hành:** chạy `docs/sql/workflow-applicant-name-backfill.sql` (backend) nếu chủ dự án đồng ý, để hồ sơ cũ có tên người dân. Nhánh `kha` chưa merge vào `main`/`deploy`.
 
 ---
 
@@ -14,6 +23,8 @@
 | **BE-B** | Tìm kiếm user theo `Username` (Checklist mục 10) | IAM | 🟡 Trung bình | ❌ Không | Một phần: FE bỏ tiền tố `@` |
 | **BE-C** | Ràng buộc mỗi người dùng một vai trò & bảo vệ `IT_ADMIN` (Checklist mục 7) | IAM | 🔴 Cao | ❌ Không | Một phần: FE chuyển sang chọn 1 vai trò, nhưng chưa an toàn nếu BE không chặn |
 | **BE-D** | Báo cáo phản hồi: trả mã hồ sơ, tên thủ tục, tên người dân; bổ sung tên người dân cho hồ sơ cũ | AnalyticsSystem + ApplicationWorkflow | 🟡 Trung bình | ✅ Có (snapshot) | Một phần: FE tự tra mã hồ sơ (N+1 request); **không** lấy được tên hồ sơ cũ |
+| **BE-G** | `/manager/officers` không trả `permissions` → mọi Front Desk bị "Thiếu quyền nhận hồ sơ", **không phân công/chuyển cán bộ và không tạo tham vấn được** | IAM (hoặc Workflow) | 🔴 Cao (chặn luồng chính) | ❌ Không | Không: BE chặn cả lúc lưu |
+| **BE-F** | Sinh mã QR cho **mọi** hồ sơ "Giấy tờ sẵn sàng", không phụ thuộc tờ khai DOCX/PDF | DocumentForm (+ Workflow) | 🔴 Cao | Tùy cách làm | Một phần: FE có nút "Tạo PDF và mã QR" khi có tờ khai sẵn sàng; hồ sơ không có tờ khai thì **không** có QR |
 | **BE-E** | Tham vấn & Lịch ngày nghỉ: trả tên thay vì chỉ ID (hồ sơ, người được hỏi, người khai báo/hủy, phường) | ApplicationWorkflow | 🟢 Thấp | Tùy cách làm | Không: FE đang tạm hiện mã ID thô, chờ BE |
 
 ---
@@ -211,11 +222,88 @@ Front Desk không có quyền danh bạ (`iam.accounts.read`), nên FE không t�
 
 ---
 
-## Việc FE làm song song (không chờ BE)
+## BE-G. Không phân công / chuyển cán bộ / tham vấn được: thiếu `permissions` trong danh bạ cán bộ (mới 09/11)
+
+### Hiện tượng (test trên Azure 09/11)
+
+Manager mở **Phân công** hoặc **Chuyển cán bộ phụ trách** (ví dụ hồ sơ `HS-20261109-00000046`): **mọi** Front Desk trong phường đều bị khóa với lý do `ASSIGN_PERMISSION_MISSING` ("Thiếu quyền nhận hồ sơ"), kể cả cán bộ đang có ca. Tạo tham vấn cũng sẽ luôn trả 422 `consultation.specialist_ineligible` vì cùng nguyên nhân.
+
+### Nguyên nhân (đã đối chiếu code `origin/kha`, `main`, `deploy`)
+
+- Workflow lấy danh sách cán bộ qua `DispatchDirectory.Officers` → gọi IAM `GET /api/v1/manager/officers`, đọc vào `DispatchOfficer(..., string[]? Permissions = null)` (`DispatchContracts.cs:6`).
+- Workflow kiểm tra quyền trên trường này:
+  - `DispatchService.cs:32`: `officer.Permissions?.Contains("workflow.assign") != true` → `ASSIGN_PERMISSION_MISSING` (dùng cho cả `assignment-candidates` lẫn lúc lưu phân công, dòng 73).
+  - `ConsultationService.cs:55`: `officer.Permissions?.Contains("workflow.consultation.respond") != true` → `specialist_ineligible`.
+- Nhưng IAM **không bao giờ trả `permissions`** ở API này: `DirectoryUser(Id, Username, Email, FullName, IdentityNumber, IsActive, WardCode, Roles, AssignedCategories)` (`IAM.Application/Accounts/UserDirectory.cs:7`, projection ở `Infrastructure/Persistence/UserDirectory.cs:33`). → `Permissions` luôn `null` → kiểm tra luôn thất bại.
+- Lịch sử: kiểm tra quyền được thêm ngày 29/10 (`e43cf14b` DispatchService, `060d9a83` ConsultationService — NguyenTrungNghia04); `DirectoryUser` (khanguyen, `d1b06011`, `b37c2587`) chưa từng có `Permissions`.
+
+### Thay đổi đề xuất (chọn 1)
+
+1. **(Khuyến nghị) IAM trả `permissions`** trong `GET /api/v1/manager/officers` (và `/admin/users` nếu dùng chung DTO): thêm `string[] Permissions` vào `DirectoryUser`, projection `x.UserRoles.SelectMany(ur => ur.Role.RolePermissions).Select(p => p.Permission.PermissionCode).Distinct()`. Chỉ trả mã quyền, không thêm thông tin cá nhân.
+2. Hoặc Workflow coi `Permissions == null` là "không xác minh được quyền" và chỉ dựa vào vai trò `FRONT_DESK_OFFICER` (kém an toàn hơn nếu Admin gỡ quyền khỏi vai trò).
+
+### Tiêu chí nghiệm thu
+
+- [ ] `GET /manager/applications/{id}/assignment-candidates`: Front Desk cùng phường, đúng lĩnh vực, có ca đang diễn ra → `eligible: true`, không còn `ASSIGN_PERMISSION_MISSING`.
+- [ ] Manager phân công / chuyển cán bộ thành công.
+- [ ] Manager tạo tham vấn cho Front Desk đủ điều kiện → 201.
+- [ ] Gỡ quyền `workflow.assign` khỏi một vai trò thì cán bộ đó vẫn bị chặn đúng.
+
+### Triển khai Azure
+
+- Phương án 1: deploy lại `wardmate-iam` (không migration). Phương án 2: deploy lại `wardmate-application-workflow`.
+
+### Phía FE
+
+- Không cần sửa. Modal Phân công đã hiện rõ lý do từng cán bộ (`src/components/staffing/DispatchView.tsx`).
+
+---
+
+## BE-F. Mã QR cho mọi hồ sơ "Giấy tờ sẵn sàng" (mới 09/11)
+
+### Hiện trạng (đã kiểm tra code `origin/kha` và test trên Azure 09/11)
+
+- Sau khi Front Desk xác nhận **Giấy tờ sẵn sàng** (Workflow `DOCUMENTS_READY`), công dân mở **Mã QR hồ sơ** → `GET /api/v1/applications/{id}/approved-qr` trả **404 `document.qr_not_found`**.
+- Nguyên nhân: bản ghi `approved_qrs` **chỉ được tạo trong `GeneratePdfDocumentCommand`** (`POST /applications/{id}/generate-pdf`). API này cần một `UserSubmission` (tờ khai DOCX) ở trạng thái `ReadyForDownload` và có file trên Blob.
+- Vì vậy các hồ sơ sau **không bao giờ có QR**:
+  1. Thủ tục **không có tờ khai điện tử** (chỉ có giấy tờ tải lên) → `contents.submissions = []`. Ví dụ `HS-20261109-00000044` (Cấp bản sao Trích lục hộ tịch): `contents` trả 200, không có submission.
+  2. Tờ khai còn `Draft` (công dân lưu nhưng chưa bấm xác nhận) → `ApplicationAccess` chỉ đồng bộ `Submitted → ReadyForDownload`, bỏ qua `Draft`.
+  3. Công dân chưa bấm "Tạo PDF" trong chi tiết hồ sơ (QR không tự sinh khi Front Desk duyệt).
+- Theo quy định nghiệp vụ: *"Mã QR chỉ được sinh sau khi cán bộ duyệt tiền kiểm, phục vụ tra cứu nhanh phiên bản hồ sơ đã tiền kiểm"* — tức QR gắn với **hồ sơ đã sẵn sàng**, không gắn với việc có tờ khai DOCX hay không.
+
+### Thay đổi đề xuất
+
+1. **Sinh QR theo hồ sơ, không theo PDF:** khi hồ sơ ở `DOCUMENTS_READY`/`OFFICIALLY_RECEIVED` và chưa có `approved_qrs`, `GET .../approved-qr` (sau bước `ApplicationAccess.Read(requireReady: true)` đã xác minh) **tự tạo** bản ghi QR rồi trả 200. Hoặc tạo ngay khi nhận sự kiện hồ sơ chuyển `DOCUMENTS_READY`.
+   - `ApprovedQr.SubmissionId` hiện bắt buộc → cho phép null (migration) với hồ sơ không có tờ khai.
+2. **Nội dung QR khi chưa có PDF:** `pdf-redirect` hiện cần GeneratedDocument; nếu chưa có PDF thì chuyển sang trang tra cứu công khai `/public/qr-lookup?applicationId=` (đã có) thay vì 404. Khi sau này tạo PDF, giữ nguyên QR (không đổi mã đã in).
+3. (Tùy chọn) Đồng bộ thêm `Draft → ReadyForDownload` không được làm (Draft là chưa xác nhận) — chỉ cần mục 1 là đủ để có QR.
+
+### Tiêu chí nghiệm thu
+
+- [ ] Mọi hồ sơ `DOCUMENTS_READY` của công dân: `GET .../approved-qr` và `.../approved-qr/image` trả 200, kể cả hồ sơ không có tờ khai DOCX.
+- [ ] Quét QR của hồ sơ chưa có PDF mở được trang tra cứu công khai; hồ sơ có PDF vẫn mở PDF như hiện tại.
+- [ ] Hồ sơ chưa sẵn sàng vẫn trả 409 `document.application_not_ready`; người khác vẫn không xem được QR của hồ sơ không thuộc mình.
+
+### Triển khai Azure
+
+- Migration DocumentForm (nếu cho `submission_id` null) chạy trước, rồi deploy lại `wardmate-documentform`.
+
+### Phía FE sau khi BE xong
+
+- Bỏ khung "Hồ sơ chưa có mã QR" (`src/pages/citizen/views/CitizenQrCodeView.tsx`); QR hiện ngay khi mở.
+
+---
+
+## Việc FE (đã làm xong 09/11)
 
 | Việc | File | Liên quan |
 |---|---|---|
-| Chỉ gọi `/manager/officers` khi có quyền `iam.accounts.read` (hết 403 với Front Desk) | `src/pages/officer/OfficerPage.tsx` | BE-A |
-| Bỏ tiền tố `@` trước khi gửi `search` | `src/pages/admin/AdminPage.tsx` | BE-B |
-| Modal phân quyền chọn 1 vai trò, ẩn `IT_ADMIN` | `src/pages/admin/AdminRbacViews.tsx` | BE-C |
-| ✅ Đã làm: tra mã hồ sơ, tên thủ tục, tên người dân qua chi tiết hồ sơ; hiện "Không có tên trong hồ sơ" khi trống | `src/components/analytics/ManagerAnalyticsView.tsx` | BE-D |
+| ✅ Chỉ gọi `/manager/officers` khi có quyền `iam.accounts.read` (hết 403 với Front Desk) | `src/pages/officer/OfficerPage.tsx` | BE-A |
+| ✅ Lịch sử phân công ưu tiên `fromOfficerName`/`toOfficerName`/`actorName`, sau đó mới tra danh bạ hoặc hiện mã rút gọn | `src/lib/api/workflow.ts`, `src/lib/api/workflowAdapters.ts`, `src/lib/api/staffing.ts`, `src/components/staffing/DispatchView.tsx` | BE-A |
+| ✅ Bỏ tiền tố `@` trước khi gửi `search` | `src/pages/admin/AdminPage.tsx`, `src/pages/manager/ManagerPage.tsx` | BE-B |
+| ✅ Modal phân quyền chọn 1 vai trò, ẩn `IT_ADMIN`, lưu bằng `PUT /rbac/users/{userId}/role`; tài khoản IT_ADMIN không đổi được tại đây | `src/lib/api/rbac.ts`, `src/pages/admin/AdminRbacViews.tsx` | BE-C |
+| ✅ Báo cáo phản hồi dùng `applicationCode`/`procedureTitle`/`applicantName` của BE; chỉ tra chi tiết hồ sơ khi phản hồi cũ thiếu | `src/lib/api/analytics.ts`, `src/components/analytics/ManagerAnalyticsView.tsx` | BE-D |
+| ✅ Tham vấn hiện mã hồ sơ, người hỏi, người được hỏi, người đóng; Lịch ngày nghỉ hiện tên phường, người khai báo/hủy | `src/lib/api/staffing.ts`, `src/lib/api/calendarClosures.ts`, `src/components/staffing/ConsultationsView.tsx`, `src/components/staffing/CalendarClosuresView.tsx`, `src/lib/personName.ts` | BE-E |
+| ✅ Trang Mã QR: báo rõ hồ sơ chưa có QR, nút "Tạo PDF và mã QR" khi có tờ khai sẵn sàng, giải thích khi hồ sơ không có tờ khai | `src/pages/citizen/views/CitizenQrCodeView.tsx` | BE-F |
+
+Dữ liệu cũ (trước 08/11) chưa có tên: FE hiện "Tài khoản xxxxxxxx" (8 ký tự đầu của mã) thay vì cả GUID.

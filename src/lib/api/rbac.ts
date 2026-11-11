@@ -26,6 +26,8 @@ export const rbacApi = {
   userRoles: async (userId: string, signal?: AbortSignal) => z.array(roleSchema).parse((await api.get(`${base}/users/${userId}/roles`, { signal })).data),
   grantUserRole: async (userId: string, roleId: number) => { await api.put(`${base}/users/${userId}/roles/${roleId}`); },
   revokeUserRole: async (userId: string, roleId: number) => { await api.delete(`${base}/users/${userId}/roles/${roleId}`); },
+  // Đổi vai trò duy nhất của tài khoản: thu hồi vai trò cũ và gán vai trò mới trong một giao dịch (API 27b)
+  replaceUserRole: async (userId: string, roleId: number) => roleSchema.parse((await api.put(`${base}/users/${userId}/role`, { roleId })).data),
   audit: async (pageNumber = 1, pageSize = 20, signal?: AbortSignal): Promise<RbacPage<AuditLog>> => page(auditSchema).parse((await api.get(`${base}/audit-logs`, { params: { page: pageNumber, pageSize }, signal })).data),
 };
 

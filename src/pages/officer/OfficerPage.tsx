@@ -147,8 +147,11 @@ export const OfficerPage: React.FC = () => {
     isRead: n.isRead,
   })), [notificationHub.items]);
 
-  // Tải danh bạ cán bộ trong phường nếu có quyền (vd: Manager hoặc tài khoản có quyền)
+  // Tải danh bạ cán bộ chỉ khi có quyền iam.accounts.read (Front Desk không có → không gọi, tránh 403).
+  // Tên trong lịch sử phân công đã do backend lưu sẵn nên Front Desk không cần danh bạ.
+  const canReadDirectory = Boolean(user?.permissions.includes('iam.accounts.read'));
   useEffect(() => {
+    if (!canReadDirectory) return;
     let active = true;
     getManagerOfficers({ pageSize: 100 })
       .then((res) => {
@@ -162,12 +165,12 @@ export const OfficerPage: React.FC = () => {
         setOfficerDirectory((prev) => ({ ...prev, ...dir }));
       })
       .catch(() => {
-        // Cán bộ thường không có quyền iam.accounts.read, bỏ qua lỗi 403
+        // Danh bạ chỉ để hiện tên; lỗi thì vẫn dùng tên backend lưu sẵn hoặc mã rút gọn
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [canReadDirectory]);
 
   const officerLookup = useMemo<OfficerLookup>(() => {
     const dir: Record<string, string> = { ...officerDirectory };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { personName } from '@/lib/personName';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Modal } from '@/components/ui';
 import { staffingApi, type Consultation, type DispatchApplication } from '@/lib/api/staffing';
@@ -36,7 +37,7 @@ function ConsultationCards({ items, onViewApplication }: { items: Consultation[]
     <div className="staff-note"><span className="staff-meta">Câu hỏi tham vấn</span><h3 className="!font-semibold">{item.question}</h3></div>
     {item.answer && <div className="staff-note rounded-lg border border-emerald-100 bg-emerald-50 p-4"><span className="staff-meta">Ý kiến chuyên môn</span><p>{item.answer}</p></div>}
     {item.closeReason && <div className="staff-note"><span className="staff-meta">Lý do đóng</span><p>{item.closeReason}</p></div>}
-    <dl className="staff-consult-meta"><div><dt>Hồ sơ (mã định danh)</dt><dd>{item.applicationId}</dd></div><div><dt>Người được hỏi (mã tài khoản)</dt><dd>{item.specialistId}</dd></div></dl>
+    <dl className="staff-consult-meta"><div><dt>Hồ sơ</dt><dd>{item.applicationCode || <span title={item.applicationId}>Chưa có mã hồ sơ</span>}</dd></div><div><dt>Người hỏi</dt><dd>{personName(item.requestedBy, item.requestedByName)}</dd></div><div><dt>Người được hỏi</dt><dd>{personName(item.specialistId, item.specialistName)}</dd></div>{item.status === 'CLOSED' && item.closedByName && <div><dt>Người đóng</dt><dd>{item.closedByName}</dd></div>}</dl>
     <div className="staff-card-footer">
     {onViewApplication && <Button variant="outline" onClick={() => onViewApplication(item.applicationId)}>Xem tham vấn cùng hồ sơ</Button>}
     {officer && item.specialistId === user?.id && item.status === 'OPEN' && can('workflow.consultation.respond') && <Button onClick={() => setAction({ item, close: false })}>Trả lời</Button>}
@@ -58,6 +59,11 @@ export function ConsultationPanel({ application }: { application: DispatchApplic
   const directory = useStaffDirectory(create && manager);
   return <section className="space-y-3"><Button variant="outline" onClick={() => void query.refetch()}>Làm mới tham vấn</Button>
     {manager && can('workflow.dispatch.write') && application.status === 'UNDER_REVIEW' && application.assignedOfficerId && <Button onClick={() => setCreate(true)}>Gửi yêu cầu tham vấn</Button>}
+    {/* Backend chỉ cho tham vấn hồ sơ đang kiểm tra và đã có cán bộ phụ trách: giải thích khi chưa đủ điều kiện */}
+    {manager && can('workflow.dispatch.write') && (application.status !== 'UNDER_REVIEW' || !application.assignedOfficerId) && <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm leading-6 text-amber-900">
+      Chỉ gửi được yêu cầu tham vấn khi hồ sơ <strong>đang kiểm tra</strong> và <strong>đã có cán bộ phụ trách</strong>.
+      {!application.assignedOfficerId ? ' Hồ sơ này chưa được phân công: đóng hộp thoại và bấm "Phân công" cho một cán bộ trước.' : ' Hồ sơ này không còn ở bước kiểm tra nên không tạo tham vấn mới được.'}
+    </p>}
     <QueryState query={query} empty={!query.data?.length} />{!query.isError && <ConsultationCards items={query.data ?? []} />}
     {create && <ActionForm title="Gửi yêu cầu tham vấn" description="Hệ thống sẽ chuyển yêu cầu đến chuyên viên cùng lĩnh vực đang trong ca trực để hỗ trợ giải đáp." fields={[
       { name: 'specialistId', label: 'Chuyên viên', type: 'select', options: directory.isError || directory.isFetching ? [] : directory.data?.filter(o => o.isActive && o.roles.includes('FRONT_DESK_OFFICER') && !o.roles.includes('MANAGER') && o.id !== application.assignedOfficerId && (!application.procedureCategoryId || o.assignedCategories.includes(application.procedureCategoryId))).map(o => ({ value: o.id, label: o.fullName || o.username })) },

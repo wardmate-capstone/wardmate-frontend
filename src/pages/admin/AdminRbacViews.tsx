@@ -1,4 +1,4 @@
-import { copyToClipboard } from '@/lib/clipboard';
+import { copyToClipboard } from "@/lib/clipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsClockwise,
@@ -11,7 +11,13 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { Button, Input, ListSkeleton, Modal, TableSkeletonRows } from "@/components/ui";
+import {
+  Button,
+  Input,
+  ListSkeleton,
+  Modal,
+  TableSkeletonRows,
+} from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
 import {
   rbacApi,
@@ -21,11 +27,7 @@ import {
   type RbacPage,
   type Role,
 } from "@/lib/api/rbac";
-import {
-  getAccount,
-  getWards,
-  type ManagedUserDto,
-} from "@/lib/api";
+import { getAccount, getWards, type ManagedUserDto } from "@/lib/api";
 
 export const roleLabels: Record<string, string> = {
   IT_ADMIN: "Quản trị hệ thống",
@@ -59,7 +61,11 @@ export const actionLabels: Record<string, string> = {
 };
 
 // Các thao tác tạo tài khoản cán bộ ghi details `{ wardId }` (wardId có thể null với Quản lý thủ tục).
-const staffCreatedActions = ["account.front_desk_created", "account.manager_created", "account.procedure_manager_created"];
+const staffCreatedActions = [
+  "account.front_desk_created",
+  "account.manager_created",
+  "account.procedure_manager_created",
+];
 
 function ErrorBox({ error, retry }: { error: string; retry?: () => void }) {
   if (!error) return null;
@@ -225,7 +231,13 @@ export function AdminRolesView() {
                 <TableSkeletonRows
                   columns={5}
                   rows={5}
-                  columnWidths={['w-36', 'w-24', 'w-56', 'w-32', 'ml-auto w-12']}
+                  columnWidths={[
+                    "w-36",
+                    "w-24",
+                    "w-56",
+                    "w-32",
+                    "ml-auto w-12",
+                  ]}
                 />
               ) : (
                 visibleRoles.map((role) => {
@@ -259,7 +271,8 @@ export function AdminRolesView() {
                       </td>
                       <td className="max-w-sm text-sm text-slate-600">
                         {role.description &&
-                        role.description.toLowerCase() !== role.roleName.toLowerCase() &&
+                        role.description.toLowerCase() !==
+                          role.roleName.toLowerCase() &&
                         role.description.toLowerCase() !== "registered citizen"
                           ? role.description
                           : "—"}
@@ -282,16 +295,17 @@ export function AdminRolesView() {
                       </td>
                     </tr>
                   );
-                }))}
-              </tbody>
-            </table>
-          </div>
-          {!loading && !visibleRoles.length && (
-            <p className="p-8 text-center text-sm text-slate-500">
-              Không tìm thấy vai trò.
-            </p>
-          )}
-        </section>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && !visibleRoles.length && (
+          <p className="p-8 text-center text-sm text-slate-500">
+            Không tìm thấy vai trò.
+          </p>
+        )}
+      </section>
       {selectedRole && (
         <div
           className="fixed inset-0 z-50"
@@ -319,8 +333,10 @@ export function AdminRolesView() {
                   </span>
                 </div>
                 {selectedRole.description &&
-                  selectedRole.description.toLowerCase() !== selectedRole.roleName.toLowerCase() &&
-                  selectedRole.description.toLowerCase() !== "registered citizen" && (
+                  selectedRole.description.toLowerCase() !==
+                    selectedRole.roleName.toLowerCase() &&
+                  selectedRole.description.toLowerCase() !==
+                    "registered citizen" && (
                     <p className="mt-2 text-sm text-slate-600">
                       {selectedRole.description}
                     </p>
@@ -628,19 +644,25 @@ export function UserRolesModal({
       });
     return () => controller.abort();
   }, [user]);
-  const toggle = async (role: Role) => {
-    if (!user || busy) return;
-    const has = assigned.some((item) => item.id === role.id);
-    setBusy(role.id);
+  // Mỗi tài khoản chỉ có một vai trò; IT_ADMIN không gán qua màn này (chỉ tạo bằng thao tác vận hành)
+  const [selected, setSelected] = useState<number>(0);
+  useEffect(() => {
+    setSelected(assigned.length === 1 ? assigned[0].id : 0);
+  }, [assigned]);
+  const isAdminAccount = assigned.some((role) => role.roleName === "IT_ADMIN");
+  const choices = available.filter((role) => role.roleName !== "IT_ADMIN");
+  const unchanged = assigned.length === 1 && assigned[0].id === selected;
+  const save = async () => {
+    if (!user || busy || !selected || unchanged) return;
+    setBusy(selected);
     setError("");
     try {
-      if (has) await rbacApi.revokeUserRole(user.id, role.id);
-      else await rbacApi.grantUserRole(user.id, role.id);
-      setAssigned((value) =>
-        has ? value.filter((item) => item.id !== role.id) : [...value, role],
-      );
+      const role = await rbacApi.replaceUserRole(user.id, selected);
+      setAssigned([role]);
       onChanged();
-      toast.success(has ? "Đã thu hồi vai trò." : "Đã gán vai trò.");
+      toast.success(`Đã đổi vai trò thành công.`);
+      // Lưu xong thì đóng modal, danh sách người dùng đã được tải lại qua onChanged
+      onClose();
     } catch (e) {
       setError(rbacError(e));
     } finally {
@@ -653,42 +675,80 @@ export function UserRolesModal({
       onOpenChange={(open) => {
         if (!open && !busy) onClose();
       }}
-      title={`Quản lý vai trò: ${user?.username ?? ""}`}
-      description="Cập nhật quyền hạn và vai trò hoạt động của người dùng trên hệ thống."
+      title={`Vai trò của ${user?.username ?? ""}`}
       footer={
-        <Button variant="outline" onClick={onClose} disabled={!!busy}>
-          Đóng
-        </Button>
+        <>
+          <Button variant="outline" onClick={onClose} disabled={!!busy}>
+            Đóng
+          </Button>
+          {!isAdminAccount && (
+            <Button
+              onClick={() => void save()}
+              loading={!!busy}
+              disabled={loading || !selected || unchanged}
+            >
+              Lưu vai trò
+            </Button>
+          )}
+        </>
       }
     >
       <div className="space-y-3">
         <ErrorBox error={error} />
         {loading ? (
           <ListSkeleton rows={4} />
+        ) : isAdminAccount ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            Đây là tài khoản <strong>Quản trị hệ thống</strong>. Vai trò này
+            không đổi được tại đây để tránh mất quyền quản trị.
+          </p>
         ) : (
-          available.map((role) => (
-            <label
-              key={role.id}
-              className="flex items-start gap-3 rounded-xl border border-slate-200 p-4"
-            >
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={assigned.some((item) => item.id === role.id)}
-                disabled={!!busy}
-                onChange={() => void toggle(role)}
-              />
-              <span>
-                <strong className="block">
-                  {roleLabels[role.roleName] ?? role.roleName}
-                </strong>
-                <code className="text-xs text-slate-500">{role.roleName}</code>
-              </span>
-              {busy === role.id && (
-                <ArrowsClockwise className="ml-auto animate-spin" />
-              )}
-            </label>
-          ))
+          <>
+            {assigned.length > 1 && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                Tài khoản đang có {assigned.length} vai trò (
+                {assigned
+                  .map((role) => roleLabels[role.roleName] ?? role.roleName)
+                  .join(", ")}
+                ). Chọn một vai trò để thay thế tất cả.
+              </p>
+            )}
+            <fieldset className="space-y-2" disabled={!!busy}>
+              <legend className="sr-only">Chọn vai trò</legend>
+              {choices.map((role) => {
+                const current = assigned.some((item) => item.id === role.id);
+                return (
+                  <label
+                    key={role.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected === role.id ? "border-red-600 bg-red-50/50" : "border-slate-200 hover:border-slate-300"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="user-role"
+                      className="mt-1"
+                      checked={selected === role.id}
+                      onChange={() => setSelected(role.id)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block">
+                        {roleLabels[role.roleName] ?? role.roleName}
+                      </strong>
+                      {role.description && (
+                        <span className="block text-xs text-slate-500">
+                          {role.description}
+                        </span>
+                      )}
+                    </span>
+                    {current && (
+                      <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                        Hiện tại
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </fieldset>
+          </>
         )}
       </div>
     </Modal>
@@ -700,7 +760,7 @@ function UserBadge({ id, username }: { id: string; username?: string }) {
 
   const copyId = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!await copyToClipboard(id, 'Đã sao chép ID tài khoản.')) return;
+    if (!(await copyToClipboard(id, "Đã sao chép ID tài khoản."))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -747,8 +807,6 @@ function UserBadge({ id, username }: { id: string; username?: string }) {
   );
 }
 
-
-
 function AuditDetailModal({
   log,
   actorName,
@@ -777,7 +835,9 @@ function AuditDetailModal({
   })();
 
   const targetRole = log.roleId ? rolesMap[log.roleId] : undefined;
-  const targetPerm = log.permissionId ? permissionsMap[log.permissionId] : undefined;
+  const targetPerm = log.permissionId
+    ? permissionsMap[log.permissionId]
+    : undefined;
 
   return (
     <Modal
@@ -797,28 +857,50 @@ function AuditDetailModal({
         {/* Thông tin chung */}
         <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
           <div>
-            <span className="text-xs text-slate-500 block">Thời gian ghi nhận</span>
-            <strong className="text-slate-900">{new Date(log.createdAt).toLocaleString("vi-VN")}</strong>
+            <span className="text-xs text-slate-500 block">
+              Thời gian ghi nhận
+            </span>
+            <strong className="text-slate-900">
+              {new Date(log.createdAt).toLocaleString("vi-VN")}
+            </strong>
           </div>
           <div>
             <span className="text-xs text-slate-500 block">Hành động</span>
-            <strong className="text-slate-900">{actionLabels[log.action] ?? log.action}</strong>
-            <code className="text-[11px] text-slate-500 block">({log.action})</code>
+            <strong className="text-slate-900">
+              {actionLabels[log.action] ?? log.action}
+            </strong>
+            <code className="text-[11px] text-slate-500 block">
+              ({log.action})
+            </code>
           </div>
           <div>
-            <span className="text-xs text-slate-500 block">Người thực hiện</span>
-            <strong className="text-slate-900">@{actorName || log.actorUserId}</strong>
-            <span className="text-[11px] font-mono text-slate-400 block break-all">{log.actorUserId}</span>
+            <span className="text-xs text-slate-500 block">
+              Người thực hiện
+            </span>
+            <strong className="text-slate-900">
+              @{actorName || log.actorUserId}
+            </strong>
+            <span className="text-[11px] font-mono text-slate-400 block break-all">
+              {log.actorUserId}
+            </span>
           </div>
           <div>
-            <span className="text-xs text-slate-500 block">Đối tượng tác động</span>
+            <span className="text-xs text-slate-500 block">
+              Đối tượng tác động
+            </span>
             {log.targetUserId ? (
               <>
-                <strong className="text-slate-900">@{targetName || log.targetUserId}</strong>
-                <span className="text-[11px] font-mono text-slate-400 block break-all">{log.targetUserId}</span>
+                <strong className="text-slate-900">
+                  @{targetName || log.targetUserId}
+                </strong>
+                <span className="text-[11px] font-mono text-slate-400 block break-all">
+                  {log.targetUserId}
+                </span>
               </>
             ) : (
-              <span className="text-slate-400">Không có tài khoản trực tiếp</span>
+              <span className="text-slate-400">
+                Không có tài khoản trực tiếp
+              </span>
             )}
           </div>
         </div>
@@ -826,12 +908,16 @@ function AuditDetailModal({
         {/* Thông tin Phân quyền & Vai trò liên quan */}
         {(log.roleId || log.permissionId) && (
           <div className="rounded-xl border border-slate-200 p-3.5 space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Thông tin Phân quyền</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Thông tin Phân quyền
+            </h4>
             {log.roleId && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500">Vai trò:</span>
                 <strong className="text-slate-900">
-                  {targetRole ? `${roleLabels[targetRole.roleName] ?? targetRole.roleName} (${targetRole.roleName})` : `#${log.roleId}`}
+                  {targetRole
+                    ? `${roleLabels[targetRole.roleName] ?? targetRole.roleName} (${targetRole.roleName})`
+                    : `#${log.roleId}`}
                 </strong>
               </div>
             )}
@@ -839,7 +925,9 @@ function AuditDetailModal({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500">Quyền hạn:</span>
                 <strong className="text-slate-900">
-                  {targetPerm ? `${targetPerm.permissionName} (${targetPerm.permissionCode})` : `#${log.permissionId}`}
+                  {targetPerm
+                    ? `${targetPerm.permissionName} (${targetPerm.permissionCode})`
+                    : `#${log.permissionId}`}
                 </strong>
               </div>
             )}
@@ -849,7 +937,9 @@ function AuditDetailModal({
         {/* Nội dung nghiệp vụ chi tiết */}
         {parsed && Object.keys(parsed).length > 0 && (
           <div className="rounded-xl border border-slate-200 p-3.5 space-y-2.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Dữ liệu nghiệp vụ tác động</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Dữ liệu nghiệp vụ tác động
+            </h4>
 
             {/* Trực quan hoá theo từng loại action */}
             {log.action === "role.updated" && parsed.before && parsed.after && (
@@ -858,14 +948,24 @@ function AuditDetailModal({
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Đổi tên vai trò:</span>
                     <span>
-                      <del className="text-rose-600">{parsed.before.RoleName}</del> → <strong className="text-emerald-700">{parsed.after.RoleName}</strong>
+                      <del className="text-rose-600">
+                        {parsed.before.RoleName}
+                      </del>{" "}
+                      →{" "}
+                      <strong className="text-emerald-700">
+                        {parsed.after.RoleName}
+                      </strong>
                     </span>
                   </div>
                 )}
                 {parsed.before.Description !== parsed.after.Description && (
                   <div>
-                    <span className="text-slate-500 block mb-1">Mô tả mới:</span>
-                    <p className="rounded bg-slate-50 p-2 text-slate-700 border">{parsed.after.Description || "(Để trống)"}</p>
+                    <span className="text-slate-500 block mb-1">
+                      Mô tả mới:
+                    </span>
+                    <p className="rounded bg-slate-50 p-2 text-slate-700 border">
+                      {parsed.after.Description || "(Để trống)"}
+                    </p>
                   </div>
                 )}
               </div>
@@ -875,8 +975,15 @@ function AuditDetailModal({
               <div className="text-xs space-y-1">
                 <span className="text-slate-500">Điều động đơn vị:</span>
                 <div className="font-semibold text-slate-800">
-                  {parsed.previousWardId ? (wardsMap[parsed.previousWardId] ?? "Phường cũ") : "Chưa có"} →{" "}
-                  <span className="text-emerald-700">{parsed.wardId ? (wardsMap[parsed.wardId] ?? "Phường mới") : "Rời đơn vị"}</span>
+                  {parsed.previousWardId
+                    ? (wardsMap[parsed.previousWardId] ?? "Phường cũ")
+                    : "Chưa có"}{" "}
+                  →{" "}
+                  <span className="text-emerald-700">
+                    {parsed.wardId
+                      ? (wardsMap[parsed.wardId] ?? "Phường mới")
+                      : "Rời đơn vị"}
+                  </span>
                 </div>
               </div>
             )}
@@ -884,21 +991,33 @@ function AuditDetailModal({
             {staffCreatedActions.includes(log.action) && (
               <div className="text-xs">
                 <span className="text-slate-500">Đơn vị công tác:</span>{" "}
-                <strong>{parsed.wardId ? (wardsMap[parsed.wardId] ?? "Ủy ban Nhân dân") : "Không gắn phường / xã"}</strong>
+                <strong>
+                  {parsed.wardId
+                    ? (wardsMap[parsed.wardId] ?? "Ủy ban Nhân dân")
+                    : "Không gắn phường / xã"}
+                </strong>
               </div>
             )}
 
             {/* Hiển thị bảng cặp Key/Value nếu không rơi vào mẫu trên */}
-            {log.action !== "role.updated" && log.action !== "account.ward_changed" && (
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {Object.entries(parsed).map(([k, v]) => (
-                  <div key={k} className="rounded bg-slate-50 p-2 border border-slate-100">
-                    <span className="text-slate-500 block text-[11px] font-medium">{k}</span>
-                    <strong className="text-slate-800 break-words">{typeof v === "object" ? JSON.stringify(v) : String(v)}</strong>
-                  </div>
-                ))}
-              </div>
-            )}
+            {log.action !== "role.updated" &&
+              log.action !== "account.ward_changed" && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {Object.entries(parsed).map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="rounded bg-slate-50 p-2 border border-slate-100"
+                    >
+                      <span className="text-slate-500 block text-[11px] font-medium">
+                        {k}
+                      </span>
+                      <strong className="text-slate-800 break-words">
+                        {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         )}
 
@@ -1043,7 +1162,8 @@ export function AdminRbacAuditView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-600">
             Theo dõi chi tiết các thao tác phân quyền, bổ nhiệm và quản lý tài
-            khoản trên hệ thống. Bộ lọc chỉ áp dụng cho các bản ghi trên trang đang xem.
+            khoản trên hệ thống. Bộ lọc chỉ áp dụng cho các bản ghi trên trang
+            đang xem.
           </p>
           <Button
             size="small"
@@ -1120,91 +1240,101 @@ export function AdminRbacAuditView() {
                 <TableSkeletonRows
                   columns={6}
                   rows={6}
-                  columnWidths={['w-32', 'w-28', 'w-36', 'w-40', 'w-48', 'ml-auto w-16']}
+                  columnWidths={[
+                    "w-32",
+                    "w-28",
+                    "w-36",
+                    "w-40",
+                    "w-48",
+                    "ml-auto w-16",
+                  ]}
                   lastCellClassName="text-right pr-4"
                 />
               ) : (
                 visible.map((log) => {
-                const targetRole = log.roleId
-                  ? rolesMap[log.roleId]
-                  : undefined;
-                const targetPerm = log.permissionId
-                  ? permissionsMap[log.permissionId]
-                  : undefined;
-                return (
-                  <tr key={log.id}>
-                    <td className="whitespace-nowrap text-xs text-slate-600">
-                      {new Date(log.createdAt).toLocaleString("vi-VN")}
-                    </td>
-                    <td>
-                      <strong className="block text-sm font-semibold text-slate-900">
-                        {actionLabels[log.action] ?? log.action}
-                      </strong>
-                    </td>
-                    <td>
-                      <UserBadge
-                        id={log.actorUserId}
-                        username={users[log.actorUserId]}
-                      />
-                    </td>
-                    <td className="text-xs space-y-1">
-                      {log.targetUserId && (
-                        <div>
-                          <span className="text-slate-500 block mb-0.5">
-                            Người dùng:
-                          </span>
-                          <UserBadge
-                            id={log.targetUserId}
-                            username={users[log.targetUserId]}
-                          />
-                        </div>
-                      )}
-                      {log.roleId && (
-                        <div>
-                          <span className="text-slate-500">Vai trò:</span>{" "}
-                          <strong className="text-slate-800">
-                            {targetRole
-                              ? (roleLabels[targetRole.roleName] ??
-                                targetRole.roleName)
-                              : `#${log.roleId}`}
-                          </strong>
-                        </div>
-                      )}
-                      {log.permissionId && (
-                        <div>
-                          <span className="text-slate-500">Quyền hạn:</span>{" "}
-                          <strong className="text-slate-800">
-                            {targetPerm?.permissionName ??
-                              `#${log.permissionId}`}
-                          </strong>
-                        </div>
-                      )}
-                      {!log.targetUserId &&
-                        !log.roleId &&
-                        !log.permissionId && (
-                          <span className="text-slate-400">—</span>
+                  const targetRole = log.roleId
+                    ? rolesMap[log.roleId]
+                    : undefined;
+                  const targetPerm = log.permissionId
+                    ? permissionsMap[log.permissionId]
+                    : undefined;
+                  return (
+                    <tr key={log.id}>
+                      <td className="whitespace-nowrap text-xs text-slate-600">
+                        {new Date(log.createdAt).toLocaleString("vi-VN")}
+                      </td>
+                      <td>
+                        <strong className="block text-sm font-semibold text-slate-900">
+                          {actionLabels[log.action] ?? log.action}
+                        </strong>
+                      </td>
+                      <td>
+                        <UserBadge
+                          id={log.actorUserId}
+                          username={users[log.actorUserId]}
+                        />
+                      </td>
+                      <td className="text-xs space-y-1">
+                        {log.targetUserId && (
+                          <div>
+                            <span className="text-slate-500 block mb-0.5">
+                              Người dùng:
+                            </span>
+                            <UserBadge
+                              id={log.targetUserId}
+                              username={users[log.targetUserId]}
+                            />
+                          </div>
                         )}
-                    </td>
-                    <td className="text-xs text-slate-600">
-                      <span className="line-clamp-2" title={log.details}>
-                        {log.details && log.details !== "{}" ? log.details : "—"}
-                      </span>
-                    </td>
-                    <td className="text-right pr-4">
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        onClick={() => setSelectedLog(log)}
-                        className="h-8 px-2.5 text-xs text-red-800 hover:bg-red-50 hover:text-red-900"
-                        title="Xem chi tiết nhật ký"
-                      >
-                        <Eye size={15} />
-                        <span>Chi tiết</span>
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              }))}
+                        {log.roleId && (
+                          <div>
+                            <span className="text-slate-500">Vai trò:</span>{" "}
+                            <strong className="text-slate-800">
+                              {targetRole
+                                ? (roleLabels[targetRole.roleName] ??
+                                  targetRole.roleName)
+                                : `#${log.roleId}`}
+                            </strong>
+                          </div>
+                        )}
+                        {log.permissionId && (
+                          <div>
+                            <span className="text-slate-500">Quyền hạn:</span>{" "}
+                            <strong className="text-slate-800">
+                              {targetPerm?.permissionName ??
+                                `#${log.permissionId}`}
+                            </strong>
+                          </div>
+                        )}
+                        {!log.targetUserId &&
+                          !log.roleId &&
+                          !log.permissionId && (
+                            <span className="text-slate-400">—</span>
+                          )}
+                      </td>
+                      <td className="text-xs text-slate-600">
+                        <span className="line-clamp-2" title={log.details}>
+                          {log.details && log.details !== "{}"
+                            ? log.details
+                            : "—"}
+                        </span>
+                      </td>
+                      <td className="text-right pr-4">
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          onClick={() => setSelectedLog(log)}
+                          className="h-8 px-2.5 text-xs text-red-800 hover:bg-red-50 hover:text-red-900"
+                          title="Xem chi tiết nhật ký"
+                        >
+                          <Eye size={15} />
+                          <span>Chi tiết</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
           {!loading && visible.length === 0 && (
@@ -1244,7 +1374,11 @@ export function AdminRbacAuditView() {
       <AuditDetailModal
         log={selectedLog}
         actorName={selectedLog ? users[selectedLog.actorUserId] : undefined}
-        targetName={selectedLog?.targetUserId ? users[selectedLog.targetUserId] : undefined}
+        targetName={
+          selectedLog?.targetUserId
+            ? users[selectedLog.targetUserId]
+            : undefined
+        }
         wardsMap={wardsMap}
         rolesMap={rolesMap}
         permissionsMap={permissionsMap}

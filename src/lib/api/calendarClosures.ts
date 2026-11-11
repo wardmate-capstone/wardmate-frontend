@@ -10,6 +10,8 @@ export const closureSchema = z.object({
   effectiveFromUtc: timestamp, reason: z.string(), createdBy: z.string().uuid(), createdAtUtc: timestamp,
   cancelled: z.boolean(), cancelledBy: z.string().uuid().nullable(),
   cancelledAtUtc: timestamp.nullable(), cancellationReason: z.string().nullable(),
+  // Họ tên và tên phường lưu lúc khai báo/hủy (BE-E); dữ liệu cũ trả null
+  wardName: z.string().nullish(), createdByName: z.string().nullish(), cancelledByName: z.string().nullish(),
 });
 const changeSchema = z.object({ closure: closureSchema, rescheduledApplications: z.number().int().nonnegative() });
 export const closureReasonSchema = z.string().trim().min(1, 'Vui lòng nhập lý do.').max(500, 'Lý do tối đa 500 ký tự.');
