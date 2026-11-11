@@ -122,6 +122,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   // Modal tạo hồ sơ mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Hồ sơ được chọn khi bấm "Mã QR" từ danh sách
+  const [qrDossierId, setQrDossierId] = useState<string>();
   const [selectedProcedureId, setSelectedProcedureId] = useState<string>('');
   const [selectedCaseCode, setSelectedCaseCode] = useState('');
   const [newWardCode, setNewWardCode] = useState('');
@@ -510,6 +512,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               dossiers={listedDossiers}
               onOpenFeedback={handleOpenFeedback}
               onSelectSection={selectSection}
+              onOpenQr={id => { setQrDossierId(id); selectSection('qr_code'); }}
               onOpenDossierDetail={handleOpenDossierDetail}
               onRefresh={() => void dossierListQuery.refetch()}
               isRefreshing={dossierListQuery.isFetching && !dossierListQuery.isFetchingNextPage}
@@ -561,6 +564,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               dossiers={dossiers}
               onOpenDossierDetail={handleOpenDossierDetail}
               onSelectSection={selectSection}
+              initialSelectedId={qrDossierId}
             />
           )}
 

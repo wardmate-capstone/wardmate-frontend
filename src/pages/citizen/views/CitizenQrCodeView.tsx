@@ -10,9 +10,10 @@ import {
   MagnifyingGlass,
   FileText,
 } from '@phosphor-icons/react';
-import { Button } from '@/components/ui';
+import { Button, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
-import { useApprovedQr } from '@/hooks/useDocumentForms';
+import axios from 'axios';
+import { useApplicationContents, useApprovedQr, useDocumentMutations } from '@/hooks/useDocumentForms';
 import {
   documentFormApi,
   documentFormError,
@@ -26,6 +27,8 @@ interface CitizenQrCodeViewProps {
   dossiers: CitizenDossier[];
   onOpenDossierDetail?: (dossier: CitizenDossier) => void;
   onSelectSection?: (id: CitizenSectionId) => void;
+  /** Hồ sơ được chọn sẵn khi mở từ nút "Mã QR" ở danh sách */
+  initialSelectedId?: string;
 }
 
 /**
@@ -53,9 +56,11 @@ export function CitizenQrCodeView({
   dossiers,
   onOpenDossierDetail,
   onSelectSection,
+  initialSelectedId,
 }: CitizenQrCodeViewProps) {
   const eligible = dossiers.filter((d) => d.id && d.status === 'Giấy tờ sẵn sàng');
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedId, setSelectedId] = useState(initialSelectedId ?? '');
+  useEffect(() => { if (initialSelectedId) setSelectedId(initialSelectedId); }, [initialSelectedId]);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selected = eligible.find((d) => d.id === selectedId) ?? eligible[0];
@@ -230,16 +235,15 @@ function ApprovedQr({
     gcTime: 0,
   });
 
-  const blobUrl = useMemo(() => {
-    if (!binaryQuery.data?.blob) return '';
-    return URL.createObjectURL(binaryQuery.data.blob);
-  }, [binaryQuery.data?.blob]);
-
+  // Tạo và thu hồi URL ảnh trong cùng một effect; nếu tạo bằng useMemo thì StrictMode thu hồi mất URL đang dùng → ảnh trắng
+  const [blobUrl, setBlobUrl] = useState('');
   useEffect(() => {
-    return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
-  }, [blobUrl]);
+    const blob = binaryQuery.data?.blob;
+    if (!blob) { setBlobUrl(''); return; }
+    const url = URL.createObjectURL(blob);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [binaryQuery.data?.blob]);
 
   const lookupValue = qr.data?.qrCodeValue ? safeDocumentLink(qr.data.qrCodeValue) : null;
 
@@ -260,10 +264,17 @@ function ApprovedQr({
     return <div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Đang tải mã QR từ hệ thống...</div>;
   }
 
+  // Backend chỉ sinh mã QR khi tạo PDF bộ giấy tờ sẵn sàng; chưa tạo PDF thì API trả 404 document.qr_not_found
+  if (qr.isError && isQrNotCreated(qr.error)) {
+    return <QrNotCreated applicationId={applicationId} dossier={dossier} onOpenDossierDetail={onOpenDossierDetail} />;
+  }
+
   if (qr.isError || binaryQuery.isError || !blobUrl) {
     const error = qr.isError ? qr.error : binaryQuery.error;
     return <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
       <p role="alert" className="text-sm text-slate-700">{error ? documentFormError(error) : 'Chưa tải được ảnh mã QR từ hệ thống.'}</p>
+      {/* Hiện mã lỗi backend để đối chiếu khi báo lỗi (ví dụ 404 document.application_not_found) */}
+      {errorCode(error) && <p className="font-mono text-xs text-slate-500">Mã lỗi: {errorCode(error)}</p>}
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" onClick={() => { if (qr.isError) void qr.refetch(); else void binaryQuery.refetch(); }}>Tải lại mã QR</Button>
         {onOpenDossierDetail && <Button onClick={() => onOpenDossierDetail(dossier)}>Xem chi tiết hồ sơ</Button>}
@@ -386,4 +397,67 @@ function ApprovedQr({
       </div>
     </div>
   );
+}
+
+function isQrNotCreated(error: unknown) {
+  if (!axios.isAxiosError(error) || error.response?.status !== 404) return false;
+  const body = error.response.data;
+  return Boolean(body && typeof body === 'object' && (body as { code?: string }).code === 'document.qr_not_found');
+}
+
+/** Hồ sơ đã sẵn sàng nhưng chưa có mã QR: cho tạo PDF (kèm mã QR) ngay tại đây */
+function QrNotCreated({ applicationId, dossier, onOpenDossierDetail }: {
+  applicationId: string;
+  dossier: CitizenDossier;
+  onOpenDossierDetail?: (dossier: CitizenDossier) => void;
+}) {
+  const contents = useApplicationContents(applicationId);
+  const { generatePdf } = useDocumentMutations();
+  const [error, setError] = useState('');
+  // Tờ khai đã được cán bộ xác nhận sẵn sàng và còn tệp để kết xuất
+  const ready = contents.data?.submissions.find(x => ['ReadyForDownload', 'Approved'].includes(x.status) && x.fileExists);
+  async function create() {
+    if (!ready || generatePdf.isPending) return;
+    setError('');
+    try {
+      await generatePdf.mutateAsync({ applicationId, submissionId: ready.id });
+      toast.success('Đã tạo PDF và mã QR cho hồ sơ.');
+    } catch (err) {
+      setError(documentFormError(err));
+    }
+  }
+  return <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+    <div className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-amber-100 bg-amber-50 text-amber-600"><QrCode size={22} weight="duotone" aria-hidden="true" /></span>
+      <div>
+        <h3 className="font-bold text-slate-900">Hồ sơ chưa có mã QR</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">Mã QR được tạo cùng bản PDF của tờ khai đã sẵn sàng. Bấm nút bên dưới để tạo PDF và mã QR cho hồ sơ <strong className="text-slate-800">{dossier.code}</strong>.</p>
+      </div>
+    </div>
+    {contents.isPending && <p role="status" className="text-sm text-slate-500">Đang kiểm tra tờ khai…</p>}
+    {contents.isError && <p role="alert" className="text-sm text-red-800">{documentFormError(contents.error)}</p>}
+    {/* Backend chỉ sinh QR khi kết xuất PDF từ tờ khai DOCX đã sẵn sàng; báo rõ từng trường hợp không tạo được */}
+    {contents.isSuccess && !ready && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm leading-6 text-amber-900">
+      {!contents.data.submissions.length
+        ? 'Hồ sơ này không có tờ khai điện tử (Word) nên hệ thống chưa tạo được mã QR. Bạn vẫn mang giấy tờ đến Bộ phận Một cửa như bình thường.'
+        : contents.data.submissions.some(x => x.status === 'Draft')
+          ? 'Tờ khai của hồ sơ chưa được xác nhận nên chưa tạo được PDF và mã QR. Vui lòng mở chi tiết hồ sơ để kiểm tra tờ khai.'
+          : !contents.data.submissions.some(x => x.fileExists)
+            ? 'Không tìm thấy tệp tờ khai trong kho lưu trữ nên chưa tạo được PDF và mã QR.'
+            : 'Tờ khai chưa được cán bộ xác nhận sẵn sàng nên chưa tạo được PDF và mã QR.'}
+    </p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800">{error}</p>}
+    <div className="flex flex-wrap gap-3">
+      {ready && <Button onClick={() => void create()} loading={generatePdf.isPending}>Tạo PDF và mã QR</Button>}
+      {onOpenDossierDetail && <Button variant="outline" onClick={() => onOpenDossierDetail(dossier)}>Xem chi tiết hồ sơ</Button>}
+    </div>
+    <p className="text-xs text-slate-500">Tiền kiểm không thay thế việc tiếp nhận hồ sơ chính thức tại UBND cấp xã/phường. Cán bộ sẽ đối chiếu giấy tờ khi bạn đến.</p>
+  </div>;
+}
+
+function errorCode(error: unknown) {
+  if (!axios.isAxiosError(error)) return '';
+  const body = error.response?.data;
+  const code = body && typeof body === 'object' ? (body as { code?: string }).code : undefined;
+  return [error.response?.status, code].filter(Boolean).join(' · ');
 }

@@ -24,6 +24,8 @@ interface CitizenDossiersViewProps {
   dossiers: CitizenDossier[];
   onOpenFeedback: (procedure: string, code?: string) => void;
   onSelectSection: (id: CitizenSectionId) => void;
+  /** Mở trang Mã QR và chọn sẵn hồ sơ này */
+  onOpenQr?: (dossierId: string) => void;
   onOpenDossierDetail: (dossier: CitizenDossier) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -36,6 +38,7 @@ export function CitizenDossiersView({
   dossiers,
   onOpenFeedback,
   onSelectSection,
+  onOpenQr,
   onOpenDossierDetail,
   onRefresh,
   isRefreshing = false,
@@ -228,16 +231,16 @@ export function CitizenDossiersView({
                         </button>
                       )}
 
-                      {/* Nút Xem mã QR */}
-                      <button
+                      {/* Nút Xem mã QR: QR chỉ có sau khi giấy tờ sẵn sàng */}
+                      {item.status === 'Giấy tờ sẵn sàng' && <button
                         type="button"
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-800 active:scale-95"
-                        onClick={() => onSelectSection('qr_code')}
+                        onClick={() => (onOpenQr && item.id ? onOpenQr(item.id) : onSelectSection('qr_code'))}
                         title="Xem mã QR hồ sơ"
                       >
                         <QrCode size={14} weight="bold" />
                         <span>Mã QR</span>
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>
@@ -269,7 +272,11 @@ export function CitizenDossiersView({
             <Button variant="ghost" size="small" onClick={infinite.onLoadMore}>Tải thêm hồ sơ</Button>
           ) : null}
           <p role="status">
-            Đã hiển thị <strong className="font-semibold text-slate-800">{dossiers.length}</strong> / <strong className="font-semibold text-slate-800">{infinite.totalItems}</strong> hồ sơ
+            {filteredDossiers.length !== dossiers.length ? (
+              <>Có <strong className="font-semibold text-slate-800">{filteredDossiers.length}</strong> hồ sơ phù hợp trong <strong className="font-semibold text-slate-800">{dossiers.length}</strong> hồ sơ đã tải{infinite.hasMore && ' · Tải thêm để xem các hồ sơ cũ hơn'}</>
+            ) : (
+              <>Đã hiển thị <strong className="font-semibold text-slate-800">{dossiers.length}</strong> / <strong className="font-semibold text-slate-800">{infinite.totalItems}</strong> hồ sơ</>
+            )}
           </p>
         </div>
       )}
