@@ -65,7 +65,7 @@ export const ManagerPage: React.FC = () => {
       const data = await getManagerOfficers({
         page,
         pageSize: 20,
-        search: officerSearch.trim() || undefined,
+        search: officerSearch.trim().replace(/^@+/, '') || undefined,
         assignedCategory,
       });
       setProfilesTotal(data.total);
@@ -320,7 +320,7 @@ export const ManagerPage: React.FC = () => {
             setCurrentSection(section);
             setSelectedProfile(null);
           }} />}
-          {currentSection === 'dispatch' && <DispatchView />}
+          {currentSection === 'dispatch' && <DispatchView focusApplicationId={searchParams.get('applicationId')} />}
           {currentSection === 'shifts' && <StaffingView mode="shifts" />}
           {currentSection === 'closures' && <CalendarClosuresView />}
           {currentSection === 'leaves' && <StaffingView mode="leaves" />}

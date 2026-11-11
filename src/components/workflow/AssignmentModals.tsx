@@ -11,17 +11,47 @@ const textareaClass =
 // Lý do phân công là dữ liệu nội bộ: BE chỉ trả cho cán bộ/Manager, không hiển thị cho công dân.
 const releaseSchema = z.object({ reason: reasonSchema });
 
+// queue: cán bộ trả hồ sơ đang kiểm tra về hàng đợi; revision: cán bộ trả hồ sơ đang chờ bổ sung;
+// manager: Manager gỡ cán bộ khỏi hồ sơ đang chờ bổ sung (WF-ASSIGN-REL-01)
+type ReleaseVariant = 'queue' | 'revision' | 'manager';
+const releaseCopy: Record<ReleaseVariant, { title: string; description: (n: string) => string; action: string; busy: string; placeholder: string }> = {
+  queue: {
+    title: 'Trả hồ sơ về hàng đợi',
+    description: n => `Hồ sơ ${n} sẽ quay về trạng thái Chờ tiền kiểm, không còn người phụ trách để cán bộ khác nhận. Nhận xét đã ghi và hạn xử lý được giữ nguyên.`,
+    action: 'Trả về hàng đợi',
+    busy: 'Đang trả hồ sơ…',
+    placeholder: 'Ví dụ: Hồ sơ thuộc lĩnh vực Đất đai, cần cán bộ phụ trách lĩnh vực này xử lý.',
+  },
+  revision: {
+    title: 'Trả lại hồ sơ đang chờ bổ sung',
+    description: n => `Hồ sơ ${n} vẫn ở trạng thái Cần bổ sung nhưng bạn không còn phụ trách. Khi người dân nộp lại, hồ sơ vào hàng chờ chung để cán bộ khác nhận.`,
+    action: 'Trả lại hồ sơ',
+    busy: 'Đang trả lại…',
+    placeholder: 'Ví dụ: Nghỉ phép 2 tuần, không kịp xử lý khi người dân nộp lại.',
+  },
+  manager: {
+    title: 'Gỡ cán bộ khỏi hồ sơ',
+    description: n => `Hồ sơ ${n} vẫn ở trạng thái Cần bổ sung nhưng không còn cán bộ phụ trách. Khi người dân nộp lại, hồ sơ vào hàng chờ chung và bạn sẽ nhận thông báo để giao người.`,
+    action: 'Gỡ cán bộ',
+    busy: 'Đang gỡ…',
+    placeholder: 'Ví dụ: Cán bộ nghỉ dài ngày.',
+  },
+};
+
 export function ReleaseApplicationModal({
   open,
   onOpenChange,
   applicationNumber,
   onConfirm,
+  variant = 'queue',
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   applicationNumber: string;
   onConfirm: (reason: string) => Promise<void>;
+  variant?: ReleaseVariant;
 }) {
+  const copy = releaseCopy[variant];
   const reasonId = useId();
   const [error, setError] = useState('');
   const form = useForm<z.infer<typeof releaseSchema>>({ resolver: zodResolver(releaseSchema), defaultValues: { reason: '' } });
@@ -47,27 +77,27 @@ export function ReleaseApplicationModal({
     <Modal
       open={open}
       onOpenChange={(next) => !busy && onOpenChange(next)}
-      title="Trả hồ sơ về hàng đợi"
-      description={`Hồ sơ ${applicationNumber} sẽ quay về trạng thái Chờ tiền kiểm, không còn người phụ trách để cán bộ khác nhận. Nhận xét đã ghi và hạn xử lý được giữ nguyên.`}
+      title={copy.title}
+      description={copy.description(applicationNumber)}
       footer={
         <>
           <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Hủy</Button>
           <Button type="submit" form={`${reasonId}-form`} disabled={busy}>
-            {busy ? 'Đang trả hồ sơ…' : 'Trả về hàng đợi'}
+            {busy ? copy.busy : copy.action}
           </Button>
         </>
       }
     >
       <form id={`${reasonId}-form`} noValidate onSubmit={(e) => void submit(e)} className="grid gap-2">
         <label htmlFor={reasonId} className="text-sm font-semibold text-slate-800">
-          Lý do trả hồ sơ <span className="text-red-600">*</span>
+          {variant === 'manager' ? 'Lý do gỡ cán bộ' : 'Lý do trả hồ sơ'} <span className="text-red-600">*</span>
         </label>
         <textarea
           id={reasonId}
           rows={4}
           maxLength={500}
           disabled={busy}
-          placeholder="Ví dụ: Hồ sơ thuộc lĩnh vực Đất đai, cần cán bộ phụ trách lĩnh vực này xử lý."
+          placeholder={copy.placeholder}
           aria-invalid={Boolean(form.formState.errors.reason)}
           aria-describedby={form.formState.errors.reason ? `${reasonId}-error` : `${reasonId}-hint`}
           {...form.register('reason')}

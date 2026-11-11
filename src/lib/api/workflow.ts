@@ -30,9 +30,14 @@ export const checklistDtoSchema = z.object({
   sortOrder: z.number().int(),
   caseCode: z.string().nullish(),
   submissionType: z.enum(['NOP', 'XUAT_TRINH']).nullish(),
-  documentCopyType: z.enum(['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY']).nullish(),
+  documentCopyType: z.enum(['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY', 'OTHER']).nullish(),
   quantity: z.number().int().positive(),
   conditionNote: z.string().nullish(),
+  // BE-H (WF-01a): số lượng ghi bằng chữ, ghi chú riêng của giấy tờ (note là ghi chú trạng thái)
+  quantityText: z.string().nullish(),
+  itemNote: z.string().nullish(),
+  // Mẫu đơn gắn với giấy tờ (cột "Mẫu đơn, tờ khai" của Cổng DVC); điền một trong các mẫu là đủ
+  forms: z.array(z.object({ formCode: z.string(), formName: z.string().nullish(), formTemplateId: z.string().nullish(), isMandatory: z.boolean().nullish() })).nullish(),
 });
 
 export const historyDtoSchema = z.object({
@@ -52,6 +57,10 @@ export const assignmentHistoryDtoSchema = z.object({
   actorId: z.string(),
   reason: z.string().nullish(),
   createdAt: z.string(),
+  // Họ tên lưu lúc thao tác (BE-A); bản ghi trước 08/11 trả null
+  fromOfficerName: z.string().nullish(),
+  toOfficerName: z.string().nullish(),
+  actorName: z.string().nullish(),
 });
 
 export const applicationDtoSchema = z.object({
@@ -372,6 +381,16 @@ export const workflowApi = {
     const body: Record<string, unknown> = { reason };
     if (typeof input.expectedAssignmentVersion === 'number') body.expectedAssignmentVersion = input.expectedAssignmentVersion;
     const res = await api.post(workflowPath(`/api/v1/officer/applications/${id}/release`), body);
+    return reviewResultDtoSchema.parse(res.data);
+  },
+
+  // Manager gỡ cán bộ vắng khỏi hồ sơ đang chờ bổ sung (NEED_REVISION): hồ sơ giữ trạng thái, không còn người phụ trách.
+  // Người dân nộp lại → hồ sơ vào hàng chờ chung, cán bộ phường và Manager được báo.
+  managerReleaseApplication: async (id: string, input: ReleaseApplicationInput) => {
+    const reason = reasonSchema.parse(input.reason);
+    const body: Record<string, unknown> = { reason };
+    if (typeof input.expectedAssignmentVersion === 'number') body.expectedAssignmentVersion = input.expectedAssignmentVersion;
+    const res = await api.post(workflowPath(`/api/v1/manager/applications/${id}/release`), body);
     return reviewResultDtoSchema.parse(res.data);
   },
 

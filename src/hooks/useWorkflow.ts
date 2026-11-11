@@ -171,6 +171,15 @@ export function useReleaseApplicationMutation() {
   });
 }
 
+export function useManagerReleaseMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ReleaseApplicationInput }) => workflowApi.managerReleaseApplication(id, input),
+    // Màn Điều phối dùng khóa 'staffing' nên làm mới cả hai nhóm
+    onSettled: (_, _error, { id }) => Promise.all([invalidateAssignment(queryClient, id), queryClient.invalidateQueries({ queryKey: ['staffing'] })]).then(() => undefined),
+  });
+}
+
 export function useManagerAssigneeMutation() {
   const queryClient = useQueryClient();
   return useMutation({

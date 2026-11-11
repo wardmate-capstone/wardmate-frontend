@@ -55,7 +55,15 @@ export function resolveNotificationUrl(
 ): string {
   const isOfficer = Boolean(roles?.some((r) => r.includes('OFFICER') || r.includes('FRONT_DESK')));
   const isManager = Boolean(roles?.some((r) => r.includes('MANAGER')));
-  const appId = notification.applicationId;
+  // BE gửi actionUrl dạng REST "/officer/applications/{id}/review" (NOTIFY-RESUBMIT-01 gửi cả cho Manager):
+  // SPA không có route này nên lấy mã hồ sơ ra và điều hướng theo vai trò bên dưới.
+  const restMatch = notification.actionUrl?.match(/^\/(?:officer|can-bo|manager|quan-ly)?\/?applications\/([0-9a-f-]{36})(?:\/|$|\?)/i);
+  const appId = notification.applicationId ?? restMatch?.[1];
+  if (restMatch && appId) {
+    if (isManager) return `/manager?section=dispatch&applicationId=${encodeURIComponent(appId)}`;
+    if (isOfficer) return `/officer?tab=workspace&applicationId=${encodeURIComponent(appId)}`;
+    return `/citizen?section=dossiers_all&dossierId=${encodeURIComponent(appId)}`;
+  }
   // Staffing v3 notifications currently carry no resource ID or actionUrl.
   // Route to the matching list; never interpret a staffing event as a citizen application.
   if (notification.type === 'SYSTEM_ALERT' && notification.title === 'Cập nhật lịch và nghỉ phép') {
@@ -85,9 +93,9 @@ export function resolveNotificationUrl(
     return `/officer?tab=workspace&applicationId=${encodeURIComponent(appId)}`;
   }
 
-  // Quản lý: vào mục điều phối/giám sát
+  // Quản lý: vào Điều phối và mở sẵn hồ sơ được nhắc tới
   if (isManager && appId) {
-    return `/manager?section=applications`;
+    return `/manager?section=dispatch&applicationId=${encodeURIComponent(appId)}`;
   }
 
   // Công dân hoặc người dùng chung: mở danh sách hồ sơ với dossierId

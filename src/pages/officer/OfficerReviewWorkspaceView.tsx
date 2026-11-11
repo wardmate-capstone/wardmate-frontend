@@ -1,3 +1,4 @@
+import { checklistQuantityLabel } from '@/lib/procedureDisplay';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
@@ -130,6 +131,15 @@ export function OfficerReviewWorkspaceView({
     !writing &&
     detail.isSuccess &&
     detail.data.status === 'UNDER_REVIEW' &&
+    detail.data.assignedOfficerId === user?.id &&
+    detail.data.userId !== user?.id;
+
+  // WF-ASSIGN-REL-01: cán bộ đang thụ lý được trả hồ sơ đang kiểm tra hoặc đang chờ người dân bổ sung
+  const releaseVariant = detail.data?.status === 'NEED_REVISION' ? 'revision' : 'queue';
+  const canRelease =
+    !writing &&
+    detail.isSuccess &&
+    ['UNDER_REVIEW', 'NEED_REVISION'].includes(detail.data.status) &&
     detail.data.assignedOfficerId === user?.id &&
     detail.data.userId !== user?.id;
 
@@ -298,7 +308,8 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             x.id === submissionId &&
             x.applicationId === application.id &&
             x.applicantId === currentApplication.userId &&
-            currentApplication.checklists?.some(item => item.id === x.checklistId && item.formTemplateId === x.templateId),
+            // Giấy tờ gắn nhiều mẫu (BE-H forms[]): tờ khai theo mẫu nào trong số đó cũng hợp lệ
+            currentApplication.checklists?.some(item => item.id === x.checklistId && (item.formTemplateId === x.templateId || item.forms?.some(f => f.formTemplateId === x.templateId))),
         )
       ) {
         setSelectionError('Chọn tờ khai liên kết đúng mục giấy tờ của hồ sơ hiện tại.');
@@ -353,7 +364,9 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
       input: { reason, expectedAssignmentVersion: detail.data?.assignmentVersion },
     });
     setReleaseOpen(false);
-    toast.success(`Đã trả hồ sơ ${application.applicationNumber} về hàng đợi.`);
+    toast.success(releaseVariant === 'revision'
+      ? `Đã trả lại hồ sơ ${application.applicationNumber}. Khi người dân nộp lại, hồ sơ vào hàng chờ chung.`
+      : `Đã trả hồ sơ ${application.applicationNumber} về hàng đợi.`);
     guard.requestClose(onBack);
   }
 
@@ -441,7 +454,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 <CheckCircle className="h-4 w-4" />
                 Xác nhận giấy tờ sẵn sàng
               </Button>
-              {editable && (
+              {canRelease && (
                 <Button
                   variant="ghost"
                   className="gap-2 text-slate-600 hover:text-slate-900"
@@ -449,7 +462,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   onClick={() => setReleaseOpen(true)}
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Trả về hàng đợi
+                  {releaseVariant === 'revision' ? 'Trả lại hồ sơ' : 'Trả về hàng đợi'}
                 </Button>
               )}
             </div>
@@ -591,8 +604,21 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                             </Badge>
                           </div>
                           <p className="mt-0.5 text-xs text-slate-500">
-                            {x.quantity} bản · {completed ? 'Công dân đã chuẩn bị' : 'Chưa hoàn tất'}
+                            {checklistQuantityLabel(x)} · {completed ? 'Công dân đã chuẩn bị' : 'Chưa hoàn tất'}
                           </p>
+                          {(x.conditionNote || x.itemNote) && (
+                            <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-600">
+                              {[x.conditionNote, x.itemNote !== x.conditionNote ? x.itemNote : null].filter(Boolean).join('\n')}
+                            </p>
+                          )}
+                          {(x.forms?.length ?? 0) > 0 && (
+                            <p className="mt-1 text-xs text-slate-600">
+                              <span className="font-semibold text-slate-700">
+                                {x.forms!.length > 1 ? 'Mẫu đơn (điền một trong các mẫu): ' : 'Mẫu đơn: '}
+                              </span>
+                              {x.forms!.map(f => f.formName || f.formCode).join('; ')}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -1220,6 +1246,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         onOpenChange={setReleaseOpen}
         applicationNumber={application.applicationNumber}
         onConfirm={handleRelease}
+        variant={releaseVariant}
       />
 
       {withdrawingComment && (
