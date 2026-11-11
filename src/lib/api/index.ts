@@ -503,6 +503,8 @@ const iamErrorMessages: Record<string, string> = {
   'iam.concurrent_update': 'Tài khoản vừa được cập nhật ở nơi khác. Vui lòng thử lại.',
   'iam.profile_not_found': 'Không tìm thấy hồ sơ người dùng.',
   'iam.profile_exists': 'Hồ sơ người dùng đã tồn tại.',
+  'iam.login_locked': 'Tài khoản tạm khóa do nhập sai mật khẩu nhiều lần. Vui lòng thử lại sau hoặc đặt lại mật khẩu.',
+  'iam.login_rate_limited': 'Quá nhiều lần đăng nhập, vui lòng đợi 1 phút rồi thử lại.',
   'iam.profile_conflict': 'Hồ sơ vừa được thay đổi ở nơi khác. Vui lòng tải lại rồi thử lại.',
   'iam.profile_changed': 'Hồ sơ vừa được thay đổi ở nơi khác. Vui lòng tải lại rồi thử lại.',
 };

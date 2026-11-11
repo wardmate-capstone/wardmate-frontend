@@ -17,7 +17,7 @@ import {
 import { Button, Input } from '@/components/ui';
 import { loginDestination, safeReturnTo } from '@/lib/authRedirect';
 import { useAuthStore } from '@/stores/authStore';
-import { authErrorMessage, login, register } from '@/lib/api';
+import { authErrorMessage, iamErrorCode, login, register } from '@/lib/api';
 
 import { Modal } from '@/components/ui/Modal';
 import { PasswordMatchHint, PasswordStrength } from '@/components/auth/PasswordStrength';
@@ -59,8 +59,12 @@ export function AuthPage({ mode }: AuthPageProps) {
   const confirmValue = watch('confirmPassword') || '';
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, [mode]);
 
+  // IAM-01a: bị khóa tạm do nhập sai nhiều lần / quá nhiều lượt đăng nhập — hiện tại chỗ, không tự gửi lại
+  const [throttle, setThrottle] = useState<{ message: string; locked: boolean } | null>(null);
+
   async function submit(values: AuthFormValues) {
     if (pending.current) return;
+    setThrottle(null);
     const { identity, fullName, email, password } = values;
     pending.current = true;
     setSubmitting(true);
@@ -93,7 +97,13 @@ export function AuthPage({ mode }: AuthPageProps) {
             }
           }
         }
-        if (!mapped) toast.error(authErrorMessage(error));
+        const code = iamErrorCode(error);
+        if (!isRegister && axios.isAxiosError(error) && error.response?.status === 429 && (code === 'iam.login_locked' || code === 'iam.login_rate_limited')) {
+          const title: unknown = error.response.data?.title;
+          setThrottle(code === 'iam.login_locked'
+            ? { locked: true, message: typeof title === 'string' && title.trim() && title !== code ? title : 'Tài khoản tạm khóa do nhập sai mật khẩu nhiều lần. Vui lòng thử lại sau 15 phút.' }
+            : { locked: false, message: 'Quá nhiều lần đăng nhập, vui lòng đợi 1 phút rồi thử lại.' });
+        } else if (!mapped) toast.error(authErrorMessage(error));
       }
     } finally {
       pending.current = false;
@@ -257,6 +267,19 @@ export function AuthPage({ mode }: AuthPageProps) {
               <p id="terms-error" role="alert" className="text-xs text-red-800">
                 {errors.terms.message}
               </p>
+            )}
+
+            {throttle && (
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm leading-6 text-amber-900">
+                <p>{throttle.message}</p>
+                {throttle.locked && (
+                  <p className="mt-1">
+                    Muốn đăng nhập ngay, hãy{' '}
+                    <Link to="/quen-mat-khau" className="font-semibold text-red-800 underline">đặt lại mật khẩu bằng mã OTP</Link>
+                    ; tài khoản sẽ được mở khóa sau khi đổi mật khẩu.
+                  </p>
+                )}
+              </div>
             )}
 
             <Button type="submit" size="large" className="mt-1 min-h-11 w-full" loading={submitting}>
