@@ -6,7 +6,7 @@ type FormField = { name: string; type?: string; max?: number; options?: readonly
 export function staffingFormSchema(fields: readonly FormField[]) {
   return z.object(Object.fromEntries(fields.map(field => [field.name,
     z.string().trim().min(1, 'Vui lòng nhập thông tin.').max(field.max ?? 2000, `Tối đa ${field.max ?? 2000} ký tự.`)
-      .refine(value => field.type !== 'select' || Boolean(field.options?.some(option => option.value === value && !option.disabled)),
+      .refine(value => (field.type !== 'select' && field.type !== 'listbox') || Boolean(field.options?.some(option => option.value === value && !option.disabled)),
         'Lựa chọn không còn hợp lệ. Vui lòng chọn lại từ danh sách hiện tại.'),
   ])));
 }

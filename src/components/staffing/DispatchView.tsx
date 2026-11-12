@@ -33,11 +33,24 @@ export function AssignDialog({ application, onClose, leave = false }: { applicat
   const ready = !candidates.isFetching && !candidates.isError && !!candidates.data;
   const list = candidates.data ?? [];
   const noneEligible = ready && list.length > 0 && !list.some(c => c.eligible);
-  // Lý do chưa đủ điều kiện chỉ hiện ngay trong từng dòng của ô chọn (không lặp ở khung riêng)
-  const note = (c: (typeof list)[number]) => !c.eligible ? ' · ' + (c.blockingReasons.map(r => blockers[r] || r).join(', ') || 'Chưa đủ điều kiện') : c.officerId === application.assignedOfficerId ? ' · Đang phụ trách' : '';
+  // Chia cán bộ thành 3 nhóm: chọn được → đang phụ trách → chưa đủ điều kiện.
+  // Tên ở dòng chính, số hồ sơ / lý do ở dòng phụ để dễ đọc thay vì nối một dòng dài.
+  const groupOf = (c: (typeof list)[number]) => !c.eligible ? 2 : c.officerId === application.assignedOfficerId ? 1 : 0;
+  const groupLabels = ['Có thể nhận hồ sơ', 'Đang phụ trách', 'Chưa đủ điều kiện'];
+  const officerOptions = [...list].sort((a, b) => groupOf(a) - groupOf(b) || a.activeApplicationCount - b.activeApplicationCount).map(c => {
+    const g = groupOf(c);
+    const load = c.activeApplicationCount ? `Đang xử lý ${c.activeApplicationCount} hồ sơ` : 'Chưa xử lý hồ sơ nào';
+    return {
+      value: c.officerId,
+      label: c.fullName || 'Cán bộ chưa cập nhật tên',
+      description: g === 2 ? (c.blockingReasons.map(r => blockers[r] || r).join(' · ') || 'Chưa đủ điều kiện') : g === 1 ? `Cán bộ hiện tại của hồ sơ · ${load}` : load,
+      group: groupLabels[g],
+      disabled: g !== 0,
+    };
+  });
   return <ActionForm title={application.assignedOfficerId ? 'Chuyển cán bộ phụ trách' : 'Phân công cán bộ'} description={`Hồ sơ ${application.applicationCode || application.id}. Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu.`} onClose={onClose}
     fields={[
-      { name: 'officerId', label: 'Cán bộ nhận hồ sơ', type: 'select', options: ready ? list.map(c => ({ value: c.officerId, label: `${c.fullName || 'Cán bộ chưa có tên'} · ${c.activeApplicationCount} hồ sơ${note(c)}`, disabled: !c.eligible || c.officerId === application.assignedOfficerId })) : [] },
+      { name: 'officerId', label: 'Cán bộ nhận hồ sơ', type: 'listbox', placeholder: 'Chọn cán bộ', options: ready ? officerOptions : [] },
       // BE đã bỏ reasonCode (loại phân công): chỉ cần cán bộ nhận và lý do (BE lưu tối đa 500 ký tự)
       { name: 'reason', label: leave ? 'Lý do chuyển do cán bộ nghỉ phép (tối đa 500 ký tự)' : 'Lý do phân công (tối đa 500 ký tự)', type: 'textarea', max: 500 },
     ]}
@@ -60,7 +73,7 @@ function AssignmentHistory({ application, onClose }: { application: DispatchAppl
   const query = useStaffQuery(['assignments', application.id], signal => staffingApi.assignments(application.id, signal));
   return <Modal open onOpenChange={v => !v && onClose()} title="Lịch sử phân công" description={application.applicationCode || application.id}><QueryState query={query} empty={!query.data?.length} />{!query.isError && query.data?.map(row => <article key={row.id} className="mb-3 space-y-1 rounded-lg border p-3 text-sm">
     <strong className="block">{historyActions[row.action] || row.action}</strong>
-    {row.reason && <p>{row.reason}</p>}
+    {row.reason && <p><span className="text-slate-500">Lý do:</span> {row.reason}</p>}
     {/* Ghi rõ bằng chữ thay cho mũi tên "Từ … → …" */}
     <p><span className="text-slate-500">Cán bộ trước:</span> {row.fromOfficerId ? personName(row.fromOfficerId, row.fromOfficerName) : 'Chưa có (hồ sơ chưa được phân công)'}</p>
     <p><span className="text-slate-500">Cán bộ nhận:</span> {personName(row.toOfficerId, row.toOfficerName)}</p>

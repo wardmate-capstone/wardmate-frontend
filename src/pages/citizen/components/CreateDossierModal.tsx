@@ -256,6 +256,9 @@ export function CreateDossierModal({
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     placeholder="Chọn phường/xã"
+                    // Chỉ hiện ô tìm kiếm khi danh sách phường dài
+                    searchable={wards.length > 7}
+                    searchPlaceholder="Tìm phường/xã…"
                     options={wards.map((x) => ({
                       value: x.code,
                       label: x.name,

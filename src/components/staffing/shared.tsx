@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
-import { Badge, Button, Modal, toast } from '@/components/ui';
+import { Badge, Button, ListSelect, Modal, toast, type ListSelectOption } from '@/components/ui';
 import { CalendarBlank, Clock, Tray, ArrowsClockwise } from '@phosphor-icons/react';
 import './staffing.css';
 import { useAuthStore } from '@/stores/authStore';
@@ -85,7 +85,10 @@ export function QueryState({ query, empty }: { query: { isPending: boolean; isEr
 export function Pager({ page, total, setPage, pageSize = 20 }: { page: number; total: number; setPage: (page: number) => void; pageSize?: number }) {
   return <div className="staff-pager"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trước</Button><span>Trang {page} · {total} mục</span><Button variant="outline" disabled={page * pageSize >= total} onClick={() => setPage(page + 1)}>Sau</Button></div>;
 }
-type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select'; options?: { value: string; label: string; disabled?: boolean }[]; max?: number };
+// Danh sách trên 7 lựa chọn mới hiện ô tìm kiếm; ngắn hơn thì cuộn/nhìn là thấy
+const SEARCH_THRESHOLD = 7;
+// 'listbox': ô chọn tùy biến (ListSelect) cho lựa chọn cần nhiều dòng thông tin, danh sách nằm trong hộp thoại
+type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select' | 'listbox'; options?: ListSelectOption[]; max?: number; placeholder?: string };
 export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues, inline = false, onDirtyChange }: {
   title: string; description?: string; fields: Field[]; validate?: (values: Record<string, string>) => string | undefined;
   submit: (values: Record<string, string>) => Promise<unknown>; onClose: () => void; children?: ReactNode; defaultValues?: Record<string, string>;
@@ -139,7 +142,12 @@ export function ActionForm({ title, description, fields, validate, submit, onClo
       setError(`${staffingError(e)}${review ? ' Đóng hộp thoại và kiểm tra dữ liệu mới nhất trước khi thao tác lại.' : ''}`);
     } finally { lock.current = false; }
   });
-  const content = <>{children}<form id={formId} onSubmit={e => void handle(e)} noValidate className={`grid gap-4 ${inline ? 'sm:grid-cols-2' : ''}`}>{fields.map(f => <label key={f.name} className={`grid gap-1 text-sm font-medium ${inline && f.type === 'textarea' ? 'sm:col-span-2' : ''}`}>{f.label}<span className="sr-only"> (bắt buộc)</span>
+  const content = <>{children}<form id={formId} onSubmit={e => void handle(e)} noValidate className={`grid gap-4 ${inline ? 'sm:grid-cols-2' : ''}`}>{fields.map(f => f.type === 'listbox' ? <div key={f.name} className={`grid gap-1 text-sm font-medium ${inline ? 'sm:col-span-2' : ''}`}>
+      {/* Không bọc trong <label>: label chuyển cú bấm về nút làm danh sách mở lại khi chọn */}
+      <label htmlFor={`${formId}-${f.name}`}>{f.label}<span className="sr-only"> (bắt buộc)</span></label>
+      <Controller control={form.control} name={f.name} render={({ field }) => <ListSelect id={`${formId}-${f.name}`} value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} options={f.options ?? []} searchable={(f.options?.length ?? 0) > SEARCH_THRESHOLD} searchPlaceholder="Tìm theo tên…" placeholder={f.placeholder ?? 'Chọn…'} disabled={busy || conflict} invalid={Boolean(form.formState.errors[f.name])} describedBy={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} />} />
+      {form.formState.errors[f.name] && <span id={`${formId}-${f.name}-error`} role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}
+    </div> : <label key={f.name} className={`grid gap-1 text-sm font-medium ${inline && f.type === 'textarea' ? 'sm:col-span-2' : ''}`}>{f.label}<span className="sr-only"> (bắt buộc)</span>
       {f.type === 'textarea' ? <textarea rows={4} maxLength={f.max ?? 2000} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} /> : f.type === 'select' ? <select className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined}><option value="">Chọn…</option>{f.options?.map(o => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select> : <input type={f.type ?? 'text'} className={fieldClass} disabled={busy || conflict} {...form.register(f.name)} aria-invalid={Boolean(form.formState.errors[f.name])} aria-describedby={form.formState.errors[f.name] ? `${formId}-${f.name}-error` : undefined} />}
       {form.formState.errors[f.name] && <span id={`${formId}-${f.name}-error`} role="alert" className="text-red-700">{form.formState.errors[f.name]?.message}</span>}</label>)}{error && <p role="alert" className={`rounded-lg bg-red-50 p-3 text-red-800 ${inline ? 'sm:col-span-2' : ''}`}>{error}</p>}</form></>;
   if (inline) return <div className="space-y-3">{content}<div className="flex flex-wrap items-center gap-3"><Button type="submit" form={formId} disabled={busy || conflict || !dirty}>{busy ? 'Đang lưu…' : 'Lưu thông tin nghỉ'}</Button><p className="text-sm text-slate-600" role="status">{dirty ? 'Có thay đổi chưa lưu. Lưu trước khi soạn Word.' : 'Thông tin đã lưu. Bạn có thể tiếp tục soạn Word.'}</p></div></div>;

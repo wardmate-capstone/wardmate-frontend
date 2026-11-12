@@ -2,7 +2,16 @@ import { useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEve
 import { CaretDown, Check, MagnifyingGlass } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-export type ListSelectOption = { value: string; label: string };
+export type ListSelectOption = {
+  value: string;
+  label: string;
+  /** Dòng phụ nhỏ bên dưới tên (ví dụ: số hồ sơ, lý do chưa chọn được) */
+  description?: string;
+  /** Lựa chọn hiển thị nhưng không chọn được */
+  disabled?: boolean;
+  /** Tiêu đề nhóm; các lựa chọn liền nhau cùng nhóm được gom dưới một tiêu đề */
+  group?: string;
+};
 
 export type ListSelectProps = {
   id: string;
@@ -17,6 +26,12 @@ export type ListSelectProps = {
   /** Hiện ô tìm kiếm phía trên danh sách (dùng cho danh mục dài như thủ tục hành chính) */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** Tìm phía server: khi có, danh sách không tự lọc mà gọi hàm này với từ khóa, options là kết quả trả về */
+  onSearch?: (query: string) => void;
+  /** Đang tải lựa chọn (hiện dòng "Đang tải…" trong danh sách) */
+  loading?: boolean;
+  /** Nhãn hiển thị khi giá trị đang chọn không có trong options (vd: kết quả tìm kiếm khác) */
+  selectedLabel?: string;
 };
 
 // Bỏ dấu tiếng Việt để tìm "dat dai" vẫn ra "đất đai"
@@ -29,7 +44,7 @@ const normalize = (text: string) =>
  * nên danh sách ở đây được hiển thị ngay trong luồng form (đẩy nội dung bên dưới xuống), tự xuống dòng
  * và cuộn bên trong khi quá dài.
  */
-export function ListSelect({ id, value, onChange, onBlur, options, placeholder, disabled, invalid, describedBy, searchable, searchPlaceholder = 'Tìm kiếm…' }: ListSelectProps) {
+export function ListSelect({ id, value, onChange, onBlur, options, placeholder, disabled, invalid, describedBy, searchable, searchPlaceholder = 'Tìm kiếm…', onSearch, loading, selectedLabel }: ListSelectProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [query, setQuery] = useState('');
@@ -39,32 +54,44 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
   const list = useRef<HTMLUListElement>(null);
   const listId = `${id}-listbox`;
   const selected = options.find((o) => o.value === value);
+  const shownLabel = selected?.label ?? (value ? selectedLabel : undefined);
   const optionId = (index: number) => `${id}-option-${index}`;
 
   const visible = useMemo(() => {
     const q = normalize(query);
-    if (!searchable || !q) return options;
+    if (!searchable || !q || onSearch) return options;
     const words = q.split(/\s+/);
     return options.filter((o) => {
       const label = normalize(o.label);
       return words.every((w) => label.includes(w));
     });
-  }, [options, query, searchable]);
+  }, [options, query, searchable, onSearch]);
+  const updateQuery = (next: string) => {
+    setQuery(next);
+    onSearch?.(next);
+  };
+
+  // Tìm lựa chọn chọn được kế tiếp theo hướng step (bỏ qua lựa chọn bị khóa)
+  const step = (from: number, dir: 1 | -1) => {
+    for (let i = from + dir; i >= 0 && i < visible.length; i += dir) if (!visible[i].disabled) return i;
+    return from;
+  };
+  const firstEnabled = (list: ListSelectOption[]) => list.findIndex((o) => !o.disabled);
 
   const openList = () => {
-    setQuery('');
-    const index = options.findIndex((o) => o.value === value);
-    setActive(index >= 0 ? index : 0);
+    if (query) updateQuery('');
+    const index = options.findIndex((o) => o.value === value && !o.disabled);
+    setActive(index >= 0 ? index : firstEnabled(options));
     setOpen(true);
   };
   const close = (refocus = false) => {
     setOpen(false);
-    setQuery('');
+    if (query) updateQuery('');
     if (refocus) trigger.current?.focus();
   };
   const choose = (index: number) => {
     const option = visible[index];
-    if (!option) return;
+    if (!option || option.disabled) return;
     onChange(option.value);
     close(true);
   };
@@ -102,23 +129,22 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
 
   // Phím điều hướng dùng chung cho nút chọn và ô tìm kiếm
   const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>, fromSearch = false) => {
-    const last = visible.length - 1;
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
         if (!open) openList();
-        else setActive((i) => Math.min(i + 1, last));
+        else setActive((i) => step(i, 1));
         break;
       case 'ArrowUp':
         event.preventDefault();
         if (!open) openList();
-        else setActive((i) => Math.max(i - 1, 0));
+        else setActive((i) => step(i, -1));
         break;
       case 'Home':
-        if (open && !fromSearch) { event.preventDefault(); setActive(0); }
+        if (open && !fromSearch) { event.preventDefault(); setActive(step(-1, 1)); }
         break;
       case 'End':
-        if (open && !fromSearch) { event.preventDefault(); setActive(last); }
+        if (open && !fromSearch) { event.preventDefault(); setActive(step(visible.length, -1)); }
         break;
       case 'Enter':
         event.preventDefault();
@@ -169,8 +195,8 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
           open && !invalid && 'border-red-600 ring-4 ring-red-100',
         )}
       >
-        <span className={cn('min-w-0 flex-1 break-words leading-5', selected ? 'text-slate-900' : 'text-slate-500')}>
-          {selected?.label ?? placeholder}
+        <span className={cn('min-w-0 flex-1 break-words leading-5', shownLabel ? 'text-slate-900' : 'text-slate-500')}>
+          {shownLabel ?? placeholder}
         </span>
         <CaretDown size={16} aria-hidden="true" className={cn('shrink-0 text-slate-500 transition-transform', open && 'rotate-180')} />
       </button>
@@ -191,8 +217,8 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
                   value={query}
                   placeholder={searchPlaceholder}
                   onChange={(event) => {
-                    setQuery(event.target.value);
-                    setActive(0);
+                    updateQuery(event.target.value);
+                    setActive(-1);
                   }}
                   onKeyDown={(event) => onKeyDown(event, true)}
                   className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100"
@@ -208,31 +234,44 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
             tabIndex={-1}
             className="max-h-64 overflow-y-auto overscroll-contain p-1"
           >
-            {visible.length === 0 && (
+            {loading && <li role="status" className="px-3 py-2.5 text-sm text-slate-500">Đang tải…</li>}
+            {!loading && visible.length === 0 && (
               <li className="px-3 py-2.5 text-sm text-slate-500">{query ? 'Không tìm thấy kết quả phù hợp.' : 'Không có lựa chọn.'}</li>
             )}
             {visible.map((option, index) => {
               const isSelected = option.value === value;
-              return (
+              const header = option.group && option.group !== visible[index - 1]?.group ? option.group : undefined;
+              return [
+                header && (
+                  <li key={`group-${header}-${index}`} role="presentation" className="px-3 pb-1 pt-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 first:pt-1.5">
+                    {header}
+                  </li>
+                ),
                 <li
                   key={option.value}
                   id={optionId(index)}
                   role="option"
                   aria-selected={isSelected}
+                  aria-disabled={option.disabled || undefined}
                   // Giữ focus hiện tại để không kích hoạt blur trước khi chọn
                   onMouseDown={(event) => event.preventDefault()}
-                  onMouseEnter={() => setActive(index)}
+                  onMouseEnter={() => !option.disabled && setActive(index)}
                   onClick={() => choose(index)}
                   className={cn(
-                    'flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2.5 text-sm leading-5 break-words',
-                    index === active ? 'bg-red-50 text-red-900' : 'text-slate-800',
-                    isSelected && 'font-semibold',
+                    'flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm leading-5 break-words',
+                    option.disabled ? 'cursor-not-allowed text-slate-400' : 'cursor-pointer text-slate-800',
+                    !option.disabled && index === active && 'bg-red-50 text-red-900',
                   )}
                 >
-                  <span className="min-w-0 flex-1">{option.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className={cn('block', isSelected ? 'font-semibold' : 'font-medium')}>{option.label}</span>
+                    {option.description && (
+                      <span className={cn('mt-0.5 block text-xs leading-5', option.disabled ? 'text-slate-400' : 'text-slate-500')}>{option.description}</span>
+                    )}
+                  </span>
                   {isSelected && <Check size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-red-700" />}
-                </li>
-              );
+                </li>,
+              ];
             })}
           </ul>
         </div>
