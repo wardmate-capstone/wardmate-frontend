@@ -6,7 +6,7 @@ const id = z.guid();
 const version = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const dispatchSchema = z.object({ id, applicationCode: z.string().nullish(), procedureId: id, procedureTitle: z.string(), status: z.string(), assignedOfficerId: id.nullish(), assignmentVersion: version, procedureCategoryId: z.number().int().nullish() });
 const candidateSchema = z.object({ officerId: id, fullName: z.string().nullish(), eligible: z.boolean(), activeApplicationCount: z.number().int(), blockingReasons: z.array(z.string()) });
-const assignmentSchema = z.object({ id, applicationId: id, fromOfficerId: id.nullish(), toOfficerId: id, actorId: id, version, reasonCode: z.string(), reason: z.string(), createdAt: z.string(), action: z.string(), fromOfficerName: z.string().nullish(), toOfficerName: z.string().nullish(), actorName: z.string().nullish() });
+const assignmentSchema = z.object({ id, applicationId: id, fromOfficerId: id.nullish(), toOfficerId: id, actorId: id, version, reason: z.string().nullish(), createdAt: z.string(), action: z.string(), fromOfficerName: z.string().nullish(), toOfficerName: z.string().nullish(), actorName: z.string().nullish() });
 const shiftSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), version: version.optional(), cancelledAtUtc: z.string().nullish(), cancellationReason: z.string().nullish() });
 export const leaveSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), reason: z.string(), status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']), version, decisionReason: z.string().nullish() });
 const historySchema = z.object({ id, actorId: id, version, fromStatus: z.string(), toStatus: z.string(), reason: z.string(), createdAtUtc: z.string() });
@@ -25,7 +25,7 @@ export type DispatchApplication = z.infer<typeof dispatchSchema>;
 export type Consultation = z.infer<typeof consultationSchema>;
 export type Leave = z.infer<typeof leaveSchema>;
 export type Shift = z.infer<typeof shiftSchema>;
-export type AssignmentInput = { officerId: string; expectedAssignmentVersion: number; reasonCode: string; reason: string };
+export type AssignmentInput = { officerId: string; expectedAssignmentVersion: number; reason: string };
 export const staffingApi = {
   applications: (p: number, signal?: AbortSignal, pageSize = 20) => get(manager, page(dispatchSchema), { page: p, pageSize }, signal),
   candidates: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignment-candidates`, z.array(candidateSchema), undefined, signal),

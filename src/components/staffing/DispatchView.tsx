@@ -24,7 +24,6 @@ import {
   X,
 } from '@phosphor-icons/react';
 
-const reasons = { INITIAL_ASSIGNMENT: 'Giao hồ sơ lần đầu', OFFICER_LEAVE: 'Cán bộ nghỉ phép', WORKLOAD_BALANCE: 'Cân bằng công việc', SPECIALIST_REQUIRED: 'Yêu cầu chuyên môn' };
 // Tên tiếng Việt cho mã hành động trong lịch sử phân công
 const historyActions: Record<string, string> = { CLAIM: 'Cán bộ tự nhận xử lý', RELEASE: 'Trả hồ sơ về hàng đợi', ASSIGN: 'Phân công cán bộ', TRANSFER: 'Chuyển cán bộ phụ trách' };
 const blockers: Record<string, string> = { NO_ACTIVE_SHIFT: 'Không có ca làm hiện tại', APPROVED_LEAVE: 'Đang nghỉ phép', CATEGORY_MISMATCH: 'Không phụ trách lĩnh vực', WARD_MISMATCH: 'Khác phường', ROLE_MISMATCH: 'Sai vai trò', ACCOUNT_INACTIVE: 'Tài khoản bị khóa', ASSIGN_PERMISSION_MISSING: 'Thiếu quyền nhận hồ sơ', APPLICATION_OWNER: 'Là chủ hồ sơ' };
@@ -39,11 +38,11 @@ export function AssignDialog({ application, onClose, leave = false }: { applicat
   return <ActionForm title={application.assignedOfficerId ? 'Chuyển cán bộ phụ trách' : 'Phân công cán bộ'} description={`Hồ sơ ${application.applicationCode || application.id}. Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu.`} onClose={onClose}
     fields={[
       { name: 'officerId', label: 'Cán bộ nhận hồ sơ', type: 'select', options: ready ? list.map(c => ({ value: c.officerId, label: `${c.fullName || 'Cán bộ chưa có tên'} · ${c.activeApplicationCount} hồ sơ${note(c)}`, disabled: !c.eligible || c.officerId === application.assignedOfficerId })) : [] },
-      { name: 'reasonCode', label: 'Loại phân công', type: 'select', options: Object.entries(reasons).filter(([code]) => !leave || code === 'OFFICER_LEAVE').map(([value, label]) => ({ value, label })) },
-      { name: 'reason', label: 'Lý do phân công (tối đa 470 ký tự)', type: 'textarea', max: 470 },
+      // BE đã bỏ reasonCode (loại phân công): chỉ cần cán bộ nhận và lý do (BE lưu tối đa 500 ký tự)
+      { name: 'reason', label: leave ? 'Lý do chuyển do cán bộ nghỉ phép (tối đa 500 ký tự)' : 'Lý do phân công (tối đa 500 ký tự)', type: 'textarea', max: 500 },
     ]}
     validate={v => candidates.isFetching || candidates.isError || !candidates.data?.some(c => c.officerId === v.officerId && c.eligible && c.officerId !== application.assignedOfficerId) ? 'Vui lòng tải lại và chọn cán bộ đủ điều kiện.' : undefined}
-    submit={v => staffingApi.assign(application.id, { officerId: v.officerId, expectedAssignmentVersion: application.assignmentVersion, reasonCode: v.reasonCode, reason: v.reason })}>
+    submit={v => staffingApi.assign(application.id, { officerId: v.officerId, expectedAssignmentVersion: application.assignmentVersion, reason: v.reason })}>
     {/* Đang tải: chỉ hiện một dòng gọn thay cho khung lớn */}
     {candidates.isFetching && !candidates.isError && <p role="status" className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
       <ArrowsClockwise size={16} className="shrink-0 motion-safe:animate-spin" aria-hidden="true" />Đang tải danh sách cán bộ…
@@ -60,7 +59,7 @@ export function AssignDialog({ application, onClose, leave = false }: { applicat
 function AssignmentHistory({ application, onClose }: { application: DispatchApplication; onClose: () => void }) {
   const query = useStaffQuery(['assignments', application.id], signal => staffingApi.assignments(application.id, signal));
   return <Modal open onOpenChange={v => !v && onClose()} title="Lịch sử phân công" description={application.applicationCode || application.id}><QueryState query={query} empty={!query.data?.length} />{!query.isError && query.data?.map(row => <article key={row.id} className="mb-3 space-y-1 rounded-lg border p-3 text-sm">
-    <strong className="block">{reasons[row.reasonCode as keyof typeof reasons] || historyActions[row.action] || row.action}</strong>
+    <strong className="block">{historyActions[row.action] || row.action}</strong>
     {row.reason && <p>{row.reason}</p>}
     {/* Ghi rõ bằng chữ thay cho mũi tên "Từ … → …" */}
     <p><span className="text-slate-500">Cán bộ trước:</span> {row.fromOfficerId ? personName(row.fromOfficerId, row.fromOfficerName) : 'Chưa có (hồ sơ chưa được phân công)'}</p>
