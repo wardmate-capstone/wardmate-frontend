@@ -25,34 +25,49 @@ import {
 } from '@phosphor-icons/react';
 
 const reasons = { INITIAL_ASSIGNMENT: 'Giao hồ sơ lần đầu', OFFICER_LEAVE: 'Cán bộ nghỉ phép', WORKLOAD_BALANCE: 'Cân bằng công việc', SPECIALIST_REQUIRED: 'Yêu cầu chuyên môn' };
+// Tên tiếng Việt cho mã hành động trong lịch sử phân công
+const historyActions: Record<string, string> = { CLAIM: 'Cán bộ tự nhận xử lý', RELEASE: 'Trả hồ sơ về hàng đợi', ASSIGN: 'Phân công cán bộ', TRANSFER: 'Chuyển cán bộ phụ trách' };
 const blockers: Record<string, string> = { NO_ACTIVE_SHIFT: 'Không có ca làm hiện tại', APPROVED_LEAVE: 'Đang nghỉ phép', CATEGORY_MISMATCH: 'Không phụ trách lĩnh vực', WARD_MISMATCH: 'Khác phường', ROLE_MISMATCH: 'Sai vai trò', ACCOUNT_INACTIVE: 'Tài khoản bị khóa', ASSIGN_PERMISSION_MISSING: 'Thiếu quyền nhận hồ sơ', APPLICATION_OWNER: 'Là chủ hồ sơ' };
 
 export function AssignDialog({ application, onClose, leave = false }: { application: DispatchApplication; onClose: () => void; leave?: boolean }) {
   const candidates = useStaffQuery(['candidates', application.id], signal => staffingApi.candidates(application.id, signal));
+  const ready = !candidates.isFetching && !candidates.isError && !!candidates.data;
+  const list = candidates.data ?? [];
+  const noneEligible = ready && list.length > 0 && !list.some(c => c.eligible);
+  // Lý do chưa đủ điều kiện chỉ hiện ngay trong từng dòng của ô chọn (không lặp ở khung riêng)
+  const note = (c: (typeof list)[number]) => !c.eligible ? ' · ' + (c.blockingReasons.map(r => blockers[r] || r).join(', ') || 'Chưa đủ điều kiện') : c.officerId === application.assignedOfficerId ? ' · Đang phụ trách' : '';
   return <ActionForm title={application.assignedOfficerId ? 'Chuyển cán bộ phụ trách' : 'Phân công cán bộ'} description={`Hồ sơ ${application.applicationCode || application.id}. Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu.`} onClose={onClose}
     fields={[
-      { name: 'officerId', label: 'Cán bộ nhận hồ sơ', type: 'select', options: candidates.isError || candidates.isFetching ? [] : candidates.data?.map(c => ({ value: c.officerId, label: `${c.fullName || c.officerId} · ${c.activeApplicationCount} hồ sơ${c.blockingReasons.length ? ' · ' + c.blockingReasons.map(r => blockers[r] || r).join(', ') : ''}`, disabled: !c.eligible || c.officerId === application.assignedOfficerId })) },
+      { name: 'officerId', label: 'Cán bộ nhận hồ sơ', type: 'select', options: ready ? list.map(c => ({ value: c.officerId, label: `${c.fullName || 'Cán bộ chưa có tên'} · ${c.activeApplicationCount} hồ sơ${note(c)}`, disabled: !c.eligible || c.officerId === application.assignedOfficerId })) : [] },
       { name: 'reasonCode', label: 'Loại phân công', type: 'select', options: Object.entries(reasons).filter(([code]) => !leave || code === 'OFFICER_LEAVE').map(([value, label]) => ({ value, label })) },
       { name: 'reason', label: 'Lý do phân công (tối đa 470 ký tự)', type: 'textarea', max: 470 },
     ]}
     validate={v => candidates.isFetching || candidates.isError || !candidates.data?.some(c => c.officerId === v.officerId && c.eligible && c.officerId !== application.assignedOfficerId) ? 'Vui lòng tải lại và chọn cán bộ đủ điều kiện.' : undefined}
     submit={v => staffingApi.assign(application.id, { officerId: v.officerId, expectedAssignmentVersion: application.assignmentVersion, reasonCode: v.reasonCode, reason: v.reason })}>
-    <QueryState query={candidates} empty={candidates.data?.length === 0} />
-    {/* Liệt kê rõ lý do từng cán bộ chưa nhận được hồ sơ (option bị khóa trong ô chọn khó đọc) */}
-    {!candidates.isFetching && !candidates.isError && candidates.data && candidates.data.some(c => !c.eligible) && <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900">
-      <p className="font-semibold">{candidates.data.some(c => c.eligible) ? 'Một số cán bộ chưa nhận được hồ sơ này:' : 'Chưa có cán bộ nào đủ điều kiện nhận hồ sơ này:'}</p>
-      <ul className="space-y-1">
-        {candidates.data.filter(c => !c.eligible).map(c => <li key={c.officerId}><strong>{c.fullName || `Tài khoản ${c.officerId.slice(0, 8)}`}</strong>: {c.blockingReasons.map(r => blockers[r] || r).join(', ')}</li>)}
-      </ul>
-      {candidates.data.some(c => c.blockingReasons.includes('NO_ACTIVE_SHIFT')) && <p className="text-xs leading-5">“Không có ca làm hiện tại” nghĩa là cán bộ không có ca <strong>đang diễn ra ngay lúc này</strong> (giờ hiện tại phải nằm trong giờ bắt đầu – kết thúc của ca đã công bố). Có ca vào buổi khác trong ngày vẫn chưa nhận được.</p>}
-      {candidates.data.some(c => c.blockingReasons.includes('CATEGORY_MISMATCH')) && <p className="text-xs leading-5">“Không phụ trách lĩnh vực”: vào <strong>Cán bộ Một cửa</strong> để giao lĩnh vực của thủ tục này cho cán bộ.</p>}
-    </div>}
+    {/* Đang tải: chỉ hiện một dòng gọn thay cho khung lớn */}
+    {candidates.isFetching && !candidates.isError && <p role="status" className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+      <ArrowsClockwise size={16} className="shrink-0 motion-safe:animate-spin" aria-hidden="true" />Đang tải danh sách cán bộ…
+    </p>}
+    {!candidates.isFetching && <QueryState query={candidates} empty={candidates.data?.length === 0} />}
+    {/* Không còn cán bộ nào chọn được: một dòng gợi ý ngắn, lý do chi tiết xem trong ô chọn */}
+    {noneEligible && <p className="flex items-start gap-2 text-sm text-amber-800">
+      <WarningCircle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span>Chưa có cán bộ đủ điều kiện. Kiểm tra ca trực hoặc giao lĩnh vực cho cán bộ tại <strong>Cán bộ Một cửa</strong>.</span>
+    </p>}
   </ActionForm>;
 }
 
 function AssignmentHistory({ application, onClose }: { application: DispatchApplication; onClose: () => void }) {
   const query = useStaffQuery(['assignments', application.id], signal => staffingApi.assignments(application.id, signal));
-  return <Modal open onOpenChange={v => !v && onClose()} title="Lịch sử phân công" description={application.applicationCode || application.id}><QueryState query={query} empty={!query.data?.length} />{!query.isError && query.data?.map(row => <article key={row.id} className="mb-3 rounded-lg border p-3 text-sm"><strong>{reasons[row.reasonCode as keyof typeof reasons] || row.action}</strong><p>{row.reason}</p><p>Từ: {row.fromOfficerId ? personName(row.fromOfficerId, row.fromOfficerName) : 'Chưa phân công'} → {personName(row.toOfficerId, row.toOfficerName)}</p><p>Thực hiện: {personName(row.actorId, row.actorName)}</p><time>{dateText(row.createdAt)}</time></article>)}</Modal>;
+  return <Modal open onOpenChange={v => !v && onClose()} title="Lịch sử phân công" description={application.applicationCode || application.id}><QueryState query={query} empty={!query.data?.length} />{!query.isError && query.data?.map(row => <article key={row.id} className="mb-3 space-y-1 rounded-lg border p-3 text-sm">
+    <strong className="block">{reasons[row.reasonCode as keyof typeof reasons] || historyActions[row.action] || row.action}</strong>
+    {row.reason && <p>{row.reason}</p>}
+    {/* Ghi rõ bằng chữ thay cho mũi tên "Từ … → …" */}
+    <p><span className="text-slate-500">Cán bộ trước:</span> {row.fromOfficerId ? personName(row.fromOfficerId, row.fromOfficerName) : 'Chưa có (hồ sơ chưa được phân công)'}</p>
+    <p><span className="text-slate-500">Cán bộ nhận:</span> {personName(row.toOfficerId, row.toOfficerName)}</p>
+    <p><span className="text-slate-500">Người thực hiện:</span> {personName(row.actorId, row.actorName)}</p>
+    <p><span className="text-slate-500">Thời gian:</span> <time>{dateText(row.createdAt)}</time></p>
+  </article>)}</Modal>;
 }
 
 // Mỗi trang điều phối hiển thị 10 hồ sơ
