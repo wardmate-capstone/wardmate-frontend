@@ -148,7 +148,7 @@ test('manager deletes an unused draft through administration API', async ({ page
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager?section=drafts');
   await expect(page.getByRole('button', { name: 'Làm mới danh sách' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Xóa', exact: true }).click();
+  await page.getByRole('button', { name: /^Xóa bản nháp / }).first().click();
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(state.requests.some(r => r.path.endsWith(`/drafts/${draftId}`) && r.method === 'DELETE')).toBe(true);
@@ -290,7 +290,7 @@ test('preview publishes reviewed payload without uploading the source PDF', asyn
   await page.getByLabel('PDF mô tả thủ tục (tối đa 20 MB)').setInputFiles({ name: 'khai-sinh.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') });
   await page.getByRole('button', { name: 'Xem và nhận diện PDF' }).click();
   await page.getByRole('checkbox', { name: /Tôi đã kiểm tra nội dung/ }).check();
-  await page.getByRole('button', { name: 'Công khai thủ tục' }).click();
+  await page.getByRole('button', { name: 'Xuất bản thủ tục' }).click();
   await expect(page.getByText('Kết quả nhận diện')).toHaveCount(0);
   const calls = state.requests.filter(r => r.method === 'POST');
   expect(calls.map(r => r.path)).toEqual(['/api/v1/procedure-manager/drafts/extract-preview', '/api/v1/procedure-manager/procedures/publish']);

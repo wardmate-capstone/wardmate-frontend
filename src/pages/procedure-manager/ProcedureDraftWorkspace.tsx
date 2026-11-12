@@ -2,7 +2,9 @@ import { ProcedureValidationError } from '@/lib/procedureValidation';
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowArcLeft,
   ArrowClockwise,
   ArrowLeft,
   ArrowsIn,
@@ -22,6 +24,7 @@ import {
   procedureApi,
   procedureError,
   type Category,
+  type ProcedureDetail,
   type ProcedureDraft,
   type Extraction,
 } from "@/lib/api/procedures";
@@ -279,30 +282,78 @@ function normalizeDraftPayload(rawPayload: Record<string, unknown>): Record<stri
   if (!rawPayload || typeof rawPayload !== 'object') return rawPayload;
   const forms = (rawPayload as { formDefinitions?: unknown[] }).formDefinitions;
   if (!Array.isArray(forms)) return rawPayload;
-  return {
-    ...rawPayload,
-    formDefinitions: forms.map((f: unknown) => {
-      const item = (f && typeof f === 'object' ? f : {}) as Record<string, unknown>;
-      return {
-        ...item,
-        formType: item.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE',
-        formTemplateId: item.formTemplateId || null,
-      };
-    }),
-  };
+  const formDefinitions = forms.map((f: unknown) => {
+    const item = (f && typeof f === 'object' ? f : {}) as Record<string, unknown>;
+    return {
+      ...item,
+      formType: item.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE',
+      formTemplateId: item.formTemplateId || null,
+    };
+  });
+  const result: Record<string, unknown> = { ...rawPayload, formDefinitions };
+  if (Array.isArray(rawPayload.checklistSchema)) result.checklistSchema = relinkChecklistFormCodes(rawPayload.checklistSchema, formDefinitions);
+  return result;
+}
+
+/**
+ * Sửa liên kết giấy tờ ↔ biểu mẫu bị lệch hoa/thường.
+ * Bản nháp cũ khi tạo phôi DOCX bị đổi mã biểu mẫu sang chữ hoa ("Mẫu số 3" → "MẪU SỐ 3") trong khi
+ * giấy tờ vẫn giữ mã gốc, nên báo "không có ở tab Biểu mẫu". Chỉ đổi khi khớp đúng một mã (không phân biệt hoa thường).
+ */
+function relinkChecklistFormCodes(checklist: unknown, forms: Record<string, unknown>[]): unknown {
+  if (!Array.isArray(checklist)) return checklist;
+  const codes = [...new Set(forms.map(f => f.formCode).filter((c): c is string => typeof c === 'string' && c.length > 0))];
+  const fold = (code: string) => code.trim().toLocaleUpperCase('vi');
+  let changed = false;
+  const next = checklist.map((row: unknown) => {
+    const item = (row && typeof row === 'object' ? row : {}) as Record<string, unknown>;
+    if (!Array.isArray(item.formCodes)) return row;
+    const formCodes = item.formCodes.map((code: unknown) => {
+      if (typeof code !== 'string' || codes.includes(code)) return code;
+      const matches = codes.filter(c => fold(c) === fold(code));
+      if (matches.length !== 1) return code;
+      changed = true;
+      return matches[0];
+    });
+    return { ...item, formCodes: [...new Set(formCodes)] };
+  });
+  return changed ? next : checklist;
 }
 
 export function ProcedureDraftWorkspace({
   categories,
   onPublished,
   onPendingChange,
+  onOpenProcedure,
 }: {
   categories: Category[];
-  onPublished: () => void;
+  /** Thủ tục vừa xuất bản (undefined nếu chỉ xác nhận được qua trạng thái bản nháp) */
+  onPublished: (published?: ProcedureDetail) => void;
   onPendingChange: (pending: boolean) => void;
+  /** Mở màn chi tiết thủ tục để công khai / hủy xuất bản */
+  onOpenProcedure?: (procedure: ProcedureDetail) => void;
 }) {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const can = (permission: string) => permissions.includes(permission);
+  /**
+   * PROC-UNPUBLISH-01: xuất bản không còn tự công khai. Thủ tục mới ở trạng thái ẩn,
+   * người quản lý phải bấm "Mở công khai" ở màn chi tiết; trùng mã thì giữ nguyên trạng thái cũ.
+   */
+  const notifyPublished = (published: ProcedureDetail | undefined, forms: unknown) => {
+    const rows = Array.isArray(forms) ? (forms as Array<{ formTemplateId?: unknown; formName?: string }>) : [];
+    const unlinked = rows.filter((f) => !f.formTemplateId);
+    const sampleNames = unlinked.map(f => f.formName ? `"${f.formName}"` : '').filter(Boolean).slice(0, 2);
+    const formsNote = unlinked.length
+      ? ` Có ${unlinked.length} biểu mẫu chưa gắn tệp phôi DOCX${sampleNames.length ? `: ${sampleNames.join(', ')}${unlinked.length > 2 ? '...' : ''}` : ''}; bổ sung sau tại "Danh sách biểu mẫu".`
+      : '';
+    const message = published?.isActive
+      ? `Đã xuất bản và cập nhật thủ tục đang công khai.${formsNote}`
+      : `Đã xuất bản, chưa công khai. Người dân chưa thấy thủ tục này cho tới khi bạn bấm "Mở công khai" ở màn chi tiết thủ tục.${formsNote}`;
+    const action = published && onOpenProcedure ? { label: 'Mở thủ tục', onClick: () => onOpenProcedure(published) } : undefined;
+    const options = { duration: 10000, action };
+    if (unlinked.length) toast.warning(message, options);
+    else toast.success(message, options);
+  };
   const [params, setParams] = useSearchParams();
   const id = params.get("draft");
   const [page, setPage] = useState(1);
@@ -335,6 +386,50 @@ export function ProcedureDraftWorkspace({
   const [fullscreenPreviewPdf, setFullscreenPreviewPdf] = useState(false);
   const [showWarningsModal, setShowWarningsModal] = useState(false);
   const [deleting, setDeleting] = useState<{ id: string; name: string }>();
+  // PROC-UNPUBLISH-01: hủy xuất bản ngay từ danh sách bản nháp
+  const queryClient = useQueryClient();
+  const [unpublishing, setUnpublishing] = useState<{ procedureId: string; name: string }>();
+  const [unpublishBusy, setUnpublishBusy] = useState(false);
+  const [unpublishError, setUnpublishError] = useState("");
+  // Tải trạng thái thủ tục của các bản nháp đã xuất bản (tối đa 10 dòng/trang) để biết dòng nào hủy xuất bản được
+  const publishedIds = [...new Set((list.data ?? []).filter((row) => row.status === "Published" && row.publishedProcedureId).map((row) => row.publishedProcedureId!))];
+  const publishedDetails = useQueries({
+    queries: publishedIds.map((procedureId) => ({
+      queryKey: ["procedure-manager-detail", procedureId],
+      queryFn: ({ signal }: { signal: AbortSignal }) => procedureApi.managerDetail(procedureId, signal),
+      enabled: can("procedure.publish"),
+      retry: false,
+      staleTime: 0, // luôn lấy trạng thái mới khi quay lại danh sách (có thể vừa công khai ở màn chi tiết)
+    })),
+  });
+  const publishedState = (procedureId?: string | null) => {
+    if (!procedureId) return undefined;
+    const detail = publishedDetails[publishedIds.indexOf(procedureId)]?.data;
+    if (!detail) return undefined;
+    return {
+      detail,
+      canUnpublish: !detail.isActive && !detail.firstPublishedAt,
+      label: detail.isActive ? "Đang công khai" : detail.firstPublishedAt ? "Đã ẩn" : "Chưa công khai",
+    };
+  };
+  const handleUnpublish = async () => {
+    if (!unpublishing || unpublishBusy) return;
+    setUnpublishBusy(true);
+    setUnpublishError("");
+    try {
+      await procedureApi.unpublish(unpublishing.procedureId);
+      setUnpublishing(undefined);
+      toast.success("Đã hủy xuất bản. Bản nháp đã quay về trạng thái chờ đối soát.");
+      list.refresh();
+      onPublished?.();
+    } catch (e) {
+      // 409 procedure.already_public: thủ tục vừa được công khai → tải lại trạng thái để ẩn nút
+      setUnpublishError(procedureError(e));
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ["procedure-manager-detail", unpublishing.procedureId] });
+      setUnpublishBusy(false);
+    }
+  };
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const previewController = useRef<AbortController | null>(null);
@@ -693,8 +788,9 @@ export function ProcedureDraftWorkspace({
                                   setDraft(saved);
                                   setPayload(saved.payload);
                                   setDirty(false);
+                                  let published: ProcedureDetail | undefined;
                                   try {
-                                    await procedureApi.publishDraft(
+                                    published = await procedureApi.publishDraft(
                                       saved.id,
                                       saved.revision,
                                     );
@@ -704,21 +800,10 @@ export function ProcedureDraftWorkspace({
                                       .catch(() => undefined);
                                     if (latest?.status !== "Published") throw e;
                                   }
-                                  const forms = (payload as { formDefinitions?: Array<{ formTemplateId?: unknown; formName?: string }> }).formDefinitions;
-                                  const unlinked = Array.isArray(forms) ? forms.filter((f) => !f.formTemplateId) : [];
-                                  if (unlinked.length > 0) {
-                                    const sampleNames = unlinked.map(f => f.formName ? `"${f.formName}"` : '').filter(Boolean).slice(0, 2);
-                                    const namesHint = sampleNames.length ? `: ${sampleNames.join(', ')}${unlinked.length > 2 ? '...' : ''}` : '';
-                                    toast.warning(
-                                      `Đã xuất bản thủ tục thành công. Lưu ý: Có ${unlinked.length} biểu mẫu chưa gắn tệp phôi DOCX${namesHint}. Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu".`,
-                                      { duration: 8000 }
-                                    );
-                                  } else {
-                                    toast.success("Đã xuất bản thủ tục thành công.");
-                                  }
+                                  notifyPublished(published, (payload as { formDefinitions?: unknown }).formDefinitions);
                                   select();
                                   list.refresh();
-                                  onPublished?.();
+                                  onPublished?.(published);
                                 } finally {
                                   setPublishingDraft(false);
                                 }
@@ -1009,26 +1094,15 @@ export function ProcedureDraftWorkspace({
                 </details>
                 {can("procedure.publish") && (
                   <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
-                    <p className="text-sm leading-6 text-red-950"><strong>Kiểm tra kỹ trước khi công khai.</strong> Nếu trùng mã thủ tục, nội dung hiện tại sẽ được thay bằng nội dung này.</p>
-                    <label className="flex items-start gap-3 text-sm font-medium text-slate-800"><input type="checkbox" className="mt-1" checked={previewConfirmed} disabled={busy} onChange={(event) => setPreviewConfirmed(event.target.checked)} /><span>Tôi đã kiểm tra nội dung và đồng ý công khai.</span></label>
+                    <p className="text-sm leading-6 text-red-950"><strong>Kiểm tra kỹ trước khi xuất bản.</strong> Thủ tục mới được lưu ở trạng thái ẩn, chỉ công khai khi bạn bấm "Mở công khai". Nếu trùng mã thủ tục, nội dung hiện tại sẽ được thay bằng nội dung này.</p>
+                    <label className="flex items-start gap-3 text-sm font-medium text-slate-800"><input type="checkbox" className="mt-1" checked={previewConfirmed} disabled={busy} onChange={(event) => setPreviewConfirmed(event.target.checked)} /><span>Tôi đã kiểm tra nội dung và đồng ý xuất bản.</span></label>
                     <Button disabled={!previewConfirmed || busy} loading={busy} onClick={() => void run(async () => {
                       const data = validateProcedure(normalizeDraftPayload(preview.payload));
-                      await procedureApi.publish(data);
-                      const forms = (preview.payload as { formDefinitions?: Array<{ formTemplateId?: unknown; formName?: string }> }).formDefinitions;
-                      const unlinked = Array.isArray(forms) ? forms.filter((f) => !f.formTemplateId) : [];
-                      if (unlinked.length > 0) {
-                        const sampleNames = unlinked.map(f => f.formName ? `"${f.formName}"` : '').filter(Boolean).slice(0, 2);
-                        const namesHint = sampleNames.length ? `: ${sampleNames.join(', ')}${unlinked.length > 2 ? '...' : ''}` : '';
-                        toast.warning(
-                          `Đã công khai thủ tục thành công. Lưu ý: Có ${unlinked.length} biểu mẫu chưa gắn tệp phôi DOCX${namesHint}. Bạn có thể bổ sung tệp phôi Word sau tại mục "Danh sách biểu mẫu".`,
-                          { duration: 8000 }
-                        );
-                      } else {
-                        toast.success("Đã công khai thủ tục thành công.");
-                      }
+                      const published = await procedureApi.publish(data);
+                      notifyPublished(published, (preview.payload as { formDefinitions?: unknown }).formDefinitions);
                       resetUpload();
-                      onPublished();
-                    })}>Công khai thủ tục</Button>
+                      onPublished(published);
+                    })}>Xuất bản thủ tục</Button>
                   </div>
                 )}
                 </div>
@@ -1041,16 +1115,23 @@ export function ProcedureDraftWorkspace({
             retry={list.refresh}
           />
           <div className="admin-card overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
               <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
+              {!list.loading && !!list.data?.length && <span className="text-xs text-slate-500">Trang {page} · {list.data.length} bản nháp</span>}
             </div>
             <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            {/* Cột cố định: tên tệp chiếm phần còn lại; trạng thái và thao tác không xuống dòng */}
+            <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+              <colgroup>
+                <col />
+                <col className="w-44" />
+                <col className="w-[300px]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/60 text-slate-600">
-                  <th className="p-4">PDF</th>
-                  <th className="p-4">Trạng thái</th>
-                  <th className="p-4 text-right">Thao tác</th>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th scope="col" className="px-5 py-3">Tệp PDF</th>
+                  <th scope="col" className="px-4 py-3">Trạng thái</th>
+                  <th scope="col" className="px-5 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1058,25 +1139,55 @@ export function ProcedureDraftWorkspace({
                   <TableSkeletonRows
                     columns={3}
                     rows={4}
-                    cellClassName="p-4"
+                    cellClassName="px-5 py-4"
                     columnWidths={['w-64 font-medium', 'w-28', 'ml-auto w-32']}
                     lastCellClassName="text-right"
                   />
-                ) : list.data?.map((row) => (
-                  <tr key={row.id} className="border-t">
-                    <td className="p-4 font-medium text-slate-900">
-                      {row.pdfFileName}
+                ) : list.data?.map((row) => {
+                  const state = publishedState(row.publishedProcedureId);
+                  return (
+                  <tr key={row.id} className="align-middle transition-colors hover:bg-slate-50/70">
+                    <td className="px-5 py-3.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-red-50 text-red-700" aria-hidden="true">
+                          <FilePdf size={20} weight="duotone" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-900" title={row.pdfFileName}>{row.pdfFileName}</p>
+                          {/* Thời gian cập nhật giúp phân biệt các bản nháp cùng tên tệp */}
+                          <p className="mt-0.5 text-xs text-slate-500">Cập nhật {new Date(row.updatedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[row.status] ?? "bg-slate-100 text-slate-700 ring-slate-200"}`}>
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[row.status] ?? "bg-slate-100 text-slate-700 ring-slate-200"}`}>
                         {labels[row.status] ?? row.status}
                       </span>
+                      {/* Xuất bản không còn tự công khai: ghi thêm trạng thái hiển thị với người dân */}
+                      {state && <span className={`mt-1 flex items-center gap-1.5 whitespace-nowrap text-xs ${state.detail.isActive ? "text-emerald-700" : "text-slate-500"}`}>
+                        <span className={`size-1.5 rounded-full ${state.detail.isActive ? "bg-emerald-500" : "bg-slate-400"}`} aria-hidden="true" />
+                        {state.label}
+                      </span>}
                     </td>
-                    <td>
-                      <div className="flex items-center gap-2">
+                    <td className="px-5 py-3.5">
+                      {/* "Mở bản nháp" và "Xóa" luôn ở cùng vị trí; "Hủy xuất bản" chỉ thêm vào bên trái khi được phép */}
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        {can("procedure.publish") && state?.canUnpublish && <Button
+                          size="small"
+                          variant="ghost"
+                          className="whitespace-nowrap text-red-700 hover:bg-red-50 hover:text-red-800"
+                          onClick={() => {
+                            setUnpublishing({ procedureId: row.publishedProcedureId!, name: state.detail.title });
+                            setUnpublishError("");
+                          }}
+                        >
+                          <ArrowArcLeft size={15} aria-hidden="true" />
+                          Hủy xuất bản
+                        </Button>}
                         {can("procedure.drafts.read") && <Button
                           size="small"
                           variant="outline"
+                          className="whitespace-nowrap"
                           onClick={() => select(row.id)}
                         >
                           Mở bản nháp
@@ -1084,18 +1195,21 @@ export function ProcedureDraftWorkspace({
                         {can("procedure.drafts.delete") && <Button
                           size="small"
                           variant="ghost"
-                          className="text-slate-600 hover:bg-red-50 hover:text-red-700"
+                          className="px-2.5 text-slate-500 hover:bg-red-50 hover:text-red-700"
+                          aria-label={`Xóa bản nháp ${row.pdfFileName}`}
+                          title="Xóa bản nháp"
                           onClick={() => {
                             setDeleting({ id: row.id, name: row.pdfFileName });
                             setDeleteError("");
                           }}
                         >
-                          <Trash size={15} /> Xóa
+                          <Trash size={17} aria-hidden="true" />
                         </Button>}
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             {!list.loading && list.data?.length === 0 && (
@@ -1141,6 +1255,21 @@ export function ProcedureDraftWorkspace({
         onConfirm={() => void handleDeleteDraft()}
       >
         <ProcedureFeedback error={deleteError} />
+      </ConfirmDeleteModal>
+      <ConfirmDeleteModal
+        open={!!unpublishing}
+        onOpenChange={(open) => {
+          if (!open && !unpublishBusy) setUnpublishing(undefined);
+        }}
+        title="Hủy xuất bản thủ tục"
+        itemName={unpublishing?.name}
+        description="Thủ tục chưa từng công khai này và lịch sử phiên bản của nó sẽ bị xóa hẳn. Bản nháp quay về trạng thái chờ đối soát để bạn sửa, xuất bản lại hoặc xóa."
+        warningNote="Không thể hoàn tác thao tác này."
+        confirmLabel="Hủy xuất bản"
+        loading={unpublishBusy}
+        onConfirm={() => void handleUnpublish()}
+      >
+        <ProcedureFeedback error={unpublishError} />
       </ConfirmDeleteModal>
     </div>
   );

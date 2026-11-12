@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, Plus, X, Sliders, CaretDown, UploadSimple, Warning } from '@phosphor-icons/react';
 import { Button, Input, Badge, ListSkeleton } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
-import { procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
+import { PROCEDURE_LIMITS, procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
 import { useAuthStore } from '@/stores/authStore';
 import { ProcedureErrorsContext } from '@/lib/procedureValidation';
 import { DirectTemplateUploadModal } from './DirectTemplateUploadModal';
@@ -84,14 +84,21 @@ export function ProcedureFormPicker({
     change(list.filter((_, i) => i !== index));
   };
   const update = (index: number, patch: Row) => change(list.map((row, i) => i === index ? { ...row, ...patch } : row));
+  // AI-02b: mã trường hợp dạng TH-2, TH-3… không có nghĩa với người đọc, nên hiển thị tên trường hợp
+  const caseLabel = (code: unknown) => {
+    const found = cases.find(item => item.code === code);
+    return found?.name || `Trường hợp ${String(code)}`;
+  };
 
   const handleTemplateSuccess = async (created: { id: string; code: string; title: string }) => {
     let nextList: Row[];
     if (uploadModalData.rowIndex !== null) {
+      // Giữ nguyên formCode của dòng: giấy tờ ở "Thành phần hồ sơ" liên kết bằng mã này (so khớp phân biệt hoa thường).
+      // Mã phôi trong kho bị viết hoa (vd "Mẫu số 3" → "MẪU SỐ 3"); ghi đè sẽ làm giấy tờ mất liên kết với biểu mẫu.
       nextList = list.map((r, i) => i === uploadModalData.rowIndex ? {
         ...r,
         formTemplateId: created.id,
-        formCode: created.code,
+        formCode: typeof r.formCode === 'string' && r.formCode.trim() ? r.formCode : created.code,
         formName: created.title,
         formType: 'DOCX_TEMPLATE',
       } : r);
@@ -138,7 +145,7 @@ export function ProcedureFormPicker({
                 )}
               </div>
               <p data-field={`formDefinitions.${index}.formName`} tabIndex={-1} className="mt-1.5 font-bold text-sm text-slate-900 leading-snug">
-                {String(row.formName)}
+                {String(row.formName ?? '').trim() || <span className="font-medium italic text-red-700">Chưa có tên biểu mẫu</span>}
               </p>
             </div>
             {!disabled && (
@@ -159,7 +166,7 @@ export function ProcedureFormPicker({
             <span className="text-slate-300">•</span>
             <span>Loại: <strong>{row.formType === 'ONLINE_INTERACTIVE' ? 'Mẫu điện tử tương tác' : 'Mẫu Word (DOCX)'}</strong></span>
             <span className="text-slate-300">•</span>
-            <span>Áp dụng: <strong>{row.caseCode ? `Trường hợp ${String(row.caseCode)}` : 'Mọi trường hợp'}</strong></span>
+            <span className="min-w-0 break-words">Áp dụng: <strong>{row.caseCode ? caseLabel(row.caseCode) : 'Mọi trường hợp'}</strong></span>
           </div>
 
           <div className="pt-1 flex flex-wrap items-center gap-2">
@@ -192,6 +199,24 @@ export function ProcedureFormPicker({
                 <CaretDown size={14} className="transition-transform group-open:rotate-180 text-slate-400 shrink-0" />
               </summary>
               <div className="mt-3 pt-3 border-t border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* BE lưu nguyên formName khi lưu bản nháp/thủ tục (bắt buộc khác rỗng); AI có thể đặt tên chưa chuẩn nên cho sửa */}
+                <div className="sm:col-span-2">
+                  <label htmlFor={`form-name-${index}`} className="block text-xs font-semibold text-slate-700 mb-1">Tên biểu mẫu hiển thị</label>
+                  <input
+                    id={`form-name-${index}`}
+                    type="text"
+                    value={String(row.formName ?? '')}
+                    maxLength={PROCEDURE_LIMITS.singleLine}
+                    placeholder="Ví dụ: Tờ khai đăng ký khai sinh"
+                    aria-invalid={!String(row.formName ?? '').trim() || Boolean(errors[`formDefinitions.${index}.formName`])}
+                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium aria-[invalid=true]:border-red-500"
+                    onChange={event => update(index, { formName: event.target.value })}
+                  />
+                  {!String(row.formName ?? '').trim()
+                    ? <p className="mt-1 text-[11px] text-red-600 font-medium">Tên biểu mẫu không được để trống.</p>
+                    : <p className="mt-1 text-[11px] text-slate-500">Tên công dân thấy ở danh sách biểu mẫu của thủ tục. Không đổi tên tệp phôi Word trong kho.</p>}
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Số lượng bản nộp</label>
                   <input
@@ -247,8 +272,8 @@ export function ProcedureFormPicker({
                   >
                     <option value="">Mọi trường hợp</option>
                     {cases.filter(item => item.code).map((item, i) => (
-                      <option key={item.code + i} value={item.code}>
-                        {item.code}{item.name ? ` · ${item.name}` : ''}
+                      <option key={item.code + i} value={item.code} title={item.name || item.code}>
+                        {item.name || item.code}
                       </option>
                     ))}
                   </select>

@@ -261,5 +261,7 @@ export class ProcedureValidationError extends Error {
 export function validateProcedure(value: unknown): ProcedureInput {
   const result = saveSchema.safeParse(value);
   if (!result.success) throw new ProcedureValidationError(getProcedureIssues(value));
-  return result.data;
+  // Tên bóc tách từ PDF hay giữ dấu xuống dòng của bảng gốc; gộp thành một dòng để không lỗi ở nơi khác
+  // (vd: kho kiến thức AI từ chối tiêu đề có ký tự điều khiển khi đồng bộ thủ tục)
+  return { ...result.data, title: result.data.title.replace(/\s+/g, ' ').trim() };
 }

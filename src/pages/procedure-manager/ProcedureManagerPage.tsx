@@ -106,6 +106,20 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
     setError("");
     setCreating(true);
   };
+  // Sau khi xuất bản: rời màn bản nháp, mở chi tiết thủ tục để bấm "Mở công khai" hoặc "Hủy xuất bản"
+  const openProcedure = (procedure: ProcedureSummary) => {
+    setDraftPending(false);
+    setParams({});
+    setSection("procedures");
+    setSelected(procedure);
+  };
+  // Hủy xuất bản thành công: thủ tục đã bị xóa, quay về danh sách bản nháp (bản nháp nguồn về "Chờ đối soát")
+  const backToDrafts = () => {
+    setSelected(undefined);
+    setRevision((v) => v + 1);
+    setSection("drafts");
+    setParams({ section: "drafts" });
+  };
   const isEditingDraft = !readOnly && Boolean(params.get("draft"));
 
   if (isEditingDraft && !embedded) {
@@ -116,6 +130,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
             onPendingChange={setDraftPending}
             categories={categories.data ?? []}
             onPublished={() => setRevision((v) => v + 1)}
+            onOpenProcedure={openProcedure}
           />
         </main>
       </div>
@@ -181,6 +196,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               onPendingChange={setDraftPending}
               categories={categories.data ?? []}
               onPublished={() => setRevision((v) => v + 1)}
+              onOpenProcedure={openProcedure}
             />
           ) : selected ? (
             <ProcedureApiDetail
@@ -189,6 +205,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               row={selected}
               categories={categories.data ?? []}
               onBack={() => setSelected(undefined)}
+              onUnpublished={backToDrafts}
               onChange={(active) => {
                 setSelected((value) =>
                   value ? { ...value, isActive: active } : undefined,

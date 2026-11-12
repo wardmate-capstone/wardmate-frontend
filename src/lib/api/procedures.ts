@@ -64,7 +64,9 @@ export const procedureInputSchema = z.object({
   originalPdfUrl: z.string().nullish(), pdfFileName: z.string().nullish(),
   contentPayload: contentSchema, checklistSchema: checklistSchema.nullish(), formDefinitions: formsSchema.nullish(),
 });
-export const detailSchema = procedureInputSchema.extend({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), categoryName: z.string(), isActive: z.boolean(), createdAt: z.string(), updatedAt: z.string() });
+export const detailSchema = procedureInputSchema.extend({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), categoryName: z.string(), isActive: z.boolean(), createdAt: z.string(), updatedAt: z.string(),
+  // PROC-UNPUBLISH-01: thời điểm công khai lần đầu; null = người dân chưa từng thấy (được phép hủy xuất bản)
+  firstPublishedAt: z.string().nullish() });
 const summarySchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), procedureCode: z.string(), title: z.string(), categoryName: z.string(), levelOfImplementation: z.string().nullish(), feeSummary: z.string().nullish(), processingTimeSummary: z.string().nullish(), originalPdfUrl: z.string().nullish(), updatedAt: z.string(), isActive: z.boolean().optional(), versionCount: z.number().optional(), createdAt: z.string().optional() });
 const pagedSchema = z.object({ items: z.array(summarySchema), currentPage: z.number(), totalPages: z.number(), totalCount: z.number(), pageSize: z.number(), hasPrevious: z.boolean(), hasNext: z.boolean() });
 const draftSummarySchema = z.object({ id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), status: z.enum(['Queued', 'Processing', 'NeedsReview', 'Failed', 'Published']), pdfFileName: z.string(), failureCode: z.string().nullish(), revision: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), publishedProcedureId: z.string().nullish(), createdAt: z.string(), updatedAt: z.string() });
@@ -134,6 +136,8 @@ export const procedureApi = {
     detailSchema.parse((await api.put(`${manager}/${encodeURIComponent(id)}/checklist`, { ...input, items: normalizeChecklistForSave(input.items), effectiveDate: toDateOnlyString(input.effectiveDate) })).data),
   publish: async (input: ProcedureInput) => detailSchema.parse((await api.post(`${manager}/publish`, withNormalizedChecklist(input))).data),
   status: async (id: string, isActive: boolean, reason: string) => { await api.patch(`${manager}/${id}/status`, { isActive, reason }); },
+  // API 36b: hủy xuất bản thủ tục chưa từng công khai — xóa hẳn thủ tục, bản nháp nguồn quay về NeedsReview
+  unpublish: async (id: string) => { await api.post(`${manager}/${encodeURIComponent(id)}/unpublish`); },
   versions: async (id: string, signal?: AbortSignal) => z.array(versionSchema).parse((await api.get(`${manager}/${id}/versions`, { signal })).data),
   rollback: async (id: string, versionNumber: number, input: { reason: string; decisionNumber: string; effectiveDate: string }) =>
     detailSchema.parse((await api.post(`${manager}/${id}/versions/${versionNumber}/rollback`, { ...input, effectiveDate: toDateOnlyString(input.effectiveDate) })).data),

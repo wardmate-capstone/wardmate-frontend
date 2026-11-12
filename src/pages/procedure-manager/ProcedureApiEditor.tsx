@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { getProcedureIssues, ProcedureErrorsContext, ProcedureFieldPrefix, type ProcedureValidationError } from "@/lib/procedureValidation";
 export { validateProcedure } from "@/lib/procedureValidation";
 import { ProcedureFormPicker as FormDefinitionsEditor } from './ProcedureFormPicker';
+import { QuickCategoryCreate, useMergedCategories } from './QuickCategoryCreate';
 import { Button } from "@/components/ui";
 import {
   type Category,
@@ -352,7 +353,7 @@ export const emptyProcedure = (): Row => ({
 export function ProcedureApiEditor({
   value,
   onChange,
-  categories,
+  categories: baseCategories,
   disabled = false,
   initialStep = 0,
   onEditForms,
@@ -372,6 +373,8 @@ export function ProcedureApiEditor({
   warnings?: string[];
   onTemplateCreated?: (newTemplate: { id: string; code: string; title: string }, updatedList: Row[]) => void | Promise<void>;
 }) {
+  // Gộp thêm danh mục vừa tạo nhanh bằng nút "Tạo danh mục"
+  const categories = useMergedCategories(baseCategories);
   const [step, setStep] = useState(initialStep);
   const root = useRef<HTMLDivElement>(null);
   const removedForms = useRef<Record<string, Row>>({});
@@ -485,12 +488,17 @@ export function ProcedureApiEditor({
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Định danh thủ tục</h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FieldInput field={{ key: "procedureCode", label: "Mã thủ tục", required: true }} value={value.procedureCode} change={(next) => set("procedureCode", next)} />
-                <label data-field="categoryId" className="grid gap-2 text-sm font-semibold">
-                  <span className="flex items-center gap-1 text-slate-900">
-                    <span>Danh mục</span>
-                    <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
+                <div data-field="categoryId" className="grid gap-2 text-sm font-semibold">
+                  <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-slate-900">
+                    <label htmlFor="procedure-category" className="flex items-center gap-1">
+                      <span>Danh mục</span>
+                      <span className="text-red-600 font-bold" title="Thông tin bắt buộc">*</span>
+                    </label>
+                    {/* Chưa có danh mục phù hợp: tạo nhanh tại chỗ, không phải rời bản nháp */}
+                    {!disabled && <QuickCategoryCreate onCreated={(category) => set("categoryId", category.id)} />}
                   </span>
                   <select
+                    id="procedure-category"
                     aria-label="Danh mục"
                     aria-invalid={Boolean(errors.categoryId)}
                     aria-describedby={errors.categoryId ? 'category-error' : undefined}
@@ -506,7 +514,7 @@ export function ProcedureApiEditor({
                     ))}
                   </select>
                   {errors.categoryId && <span id="category-error" className="flex items-center gap-1 text-xs font-medium text-red-700"><span>•</span><span>{errors.categoryId}</span></span>}
-                </label>
+                </div>
               </div>
               <FieldInput field={{ key: "title", label: "Tên thủ tục", required: true }} value={value.title} change={(next) => set("title", next)} />
               <div className="grid gap-4 sm:grid-cols-2">

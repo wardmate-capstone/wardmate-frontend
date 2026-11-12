@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { z } from 'zod';
-import { ArrowLeft, Eye, EyeSlash, PencilSimple } from "@phosphor-icons/react";
-import { Badge, Button, Input, Modal } from "@/components/ui";
+import { ArrowArcLeft, ArrowLeft, Eye, EyeSlash, Info, PencilSimple } from "@phosphor-icons/react";
+import { Badge, Button, ConfirmDeleteModal, Input, Modal } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import {
@@ -27,12 +27,15 @@ export function ProcedureApiDetail({
   categories,
   onBack,
   onChange,
+  onUnpublished,
   readOnly = false,
 }: {
   row: ProcedureSummary;
   categories: Category[];
   onBack: () => void;
   onChange: (active: boolean) => void;
+  /** Hủy xuất bản thành công (thủ tục đã bị xóa): trang cha đưa về danh sách bản nháp */
+  onUnpublished?: () => void;
   readOnly?: boolean;
 }) {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
@@ -54,6 +57,7 @@ export function ProcedureApiDetail({
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [date, setDate] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [rollback, setRollback] = useState<ProcedureVersion>();
   const [rollbackReason, setRollbackReason] = useState("");
@@ -65,6 +69,10 @@ export function ProcedureApiDetail({
   const [validationError, setValidationError] = useState<ProcedureValidationError | null>(null);
   const [dateError, setDateError] = useState('');
   const dateInput = useRef<HTMLInputElement>(null);
+  const active = detail.data?.isActive ?? row.isActive;
+  // PROC-UNPUBLISH-01: chỉ thủ tục chưa từng công khai và đang ẩn mới hủy xuất bản được
+  const neverPublic = !!detail.data && !detail.data.firstPublishedAt;
+  const canUnpublish = neverPublic && !detail.data?.isActive;
   const guard = useUnsavedChanges(Boolean(editing && (date || JSON.stringify(editing) !== JSON.stringify(detail.data))), busy);
   async function run(action: () => Promise<void>) {
     if (readOnly || lock.current) return;
@@ -101,13 +109,13 @@ export function ProcedureApiDetail({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
             <span className="min-w-0 break-words">Mã thủ tục: <strong className="font-semibold text-slate-800">{row.procedureCode}</strong></span>
             <span className="min-w-0 break-words">Lĩnh vực: <span className="font-medium text-slate-800">{row.categoryName}</span></span>
-            <Badge variant={row.isActive ? "success" : "neutral"} className="max-w-full">
-              {row.isActive ? <Eye size={16} className="shrink-0" aria-hidden="true" /> : <EyeSlash size={16} className="shrink-0" aria-hidden="true" />}
-              {row.isActive ? "Đang công khai" : "Đang ẩn"}
+            <Badge variant={active ? "success" : "neutral"} className="max-w-full">
+              {active ? <Eye size={16} className="shrink-0" aria-hidden="true" /> : <EyeSlash size={16} className="shrink-0" aria-hidden="true" />}
+              {active ? "Đang công khai" : canUnpublish ? "Đã xuất bản, chưa công khai" : "Đang ẩn"}
             </Badge>
           </div>
         </div>
-        {(can("procedure.update") || can("procedure.status")) && <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row xl:shrink-0 xl:border-t-0 xl:pt-0">
+        {(can("procedure.update") || can("procedure.status") || (canUnpublish && can("procedure.publish"))) && <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row xl:shrink-0 xl:border-t-0 xl:pt-0">
           {can("procedure.update") && <Button
             disabled={!detail.data}
             onClick={() => {
@@ -135,11 +143,29 @@ export function ProcedureApiDetail({
               setError("");
             }}
           >
-            {row.isActive ? <EyeSlash size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-            {row.isActive ? "Ngừng công khai" : "Mở công khai"}
+            {active ? <EyeSlash size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            {active ? "Ngừng công khai" : "Mở công khai"}
+          </Button>}
+          {canUnpublish && can("procedure.publish") && <Button
+            variant="outline"
+            className="border-red-200 text-red-700 hover:bg-red-50"
+            onClick={() => {
+              setUnpublishOpen(true);
+              setError("");
+            }}
+          >
+            <ArrowArcLeft size={18} aria-hidden="true" />
+            Hủy xuất bản
           </Button>}
         </div>}
       </header>
+      {canUnpublish && !readOnly && <div role="note" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <Info size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <p>
+          Thủ tục đã xuất bản nhưng <strong>chưa công khai</strong>, người dân chưa thấy.
+          Bấm <strong>"Mở công khai"</strong> khi đã sẵn sàng. Nếu xuất bản nhầm, bấm <strong>"Hủy xuất bản"</strong> để xóa thủ tục và đưa bản nháp về chờ đối soát.
+        </p>
+      </div>}
       <ProcedureFeedback
         loading={detail.loading}
         error={detail.error}
@@ -354,17 +380,26 @@ export function ProcedureApiDetail({
           if (!busy) setStatusOpen(open);
         }}
         title={
-          row.isActive ? "Ngừng công khai thủ tục" : "Mở công khai thủ tục"
+          active ? "Ngừng công khai thủ tục" : "Mở công khai thủ tục"
+        }
+        description={
+          active
+            ? "Người dân sẽ không thấy thủ tục này nữa. Có thể mở công khai lại bất cứ lúc nào."
+            : neverPublic
+              ? "Đây là lần công khai đầu tiên. Sau khi công khai sẽ không hủy xuất bản được nữa, chỉ có thể ngừng công khai."
+              : "Người dân sẽ thấy lại thủ tục này trên cổng tra cứu."
         }
         footer={
           <Button
             loading={busy}
             onClick={() =>
               void run(async () => {
-                await procedureApi.status(row.id, !row.isActive, reason);
+                await procedureApi.status(row.id, !active, reason);
                 setStatusOpen(false);
-                onChange(!row.isActive);
-                toast.success("Đã cập nhật trạng thái.");
+                onChange(!active);
+                // Tải lại để cập nhật firstPublishedAt (ẩn nút "Hủy xuất bản" sau lần công khai đầu)
+                detail.refresh();
+                toast.success(active ? "Đã ngừng công khai thủ tục." : "Đã công khai thủ tục.");
               })
             }
           >
@@ -379,6 +414,32 @@ export function ProcedureApiDetail({
         />
         <ProcedureFeedback error={error} />
       </Modal>
+      <ConfirmDeleteModal
+        open={!readOnly && unpublishOpen}
+        onOpenChange={(open) => { if (!busy) setUnpublishOpen(open); }}
+        title="Hủy xuất bản thủ tục"
+        itemName={detail.data?.title ?? row.title}
+        description="Thủ tục và lịch sử phiên bản của nó sẽ bị xóa hẳn. Bản nháp PDF tạo ra thủ tục này quay về trạng thái chờ đối soát để bạn sửa, xuất bản lại hoặc xóa."
+        warningNote="Không thể hoàn tác thao tác này."
+        confirmLabel="Hủy xuất bản"
+        loading={busy}
+        onConfirm={() =>
+          void run(async () => {
+            try {
+              await procedureApi.unpublish(row.id);
+            } catch (e) {
+              // 409 procedure.already_public: thủ tục vừa được công khai ở nơi khác → tải lại để ẩn nút
+              detail.refresh();
+              throw e;
+            }
+            setUnpublishOpen(false);
+            toast.success("Đã hủy xuất bản. Bản nháp đã quay về trạng thái chờ đối soát.");
+            if (onUnpublished) onUnpublished(); else onBack();
+          })
+        }
+      >
+        <ProcedureFeedback error={error} />
+      </ConfirmDeleteModal>
       {!readOnly && detail.data && (
         <ProcedureChecklistModal
           open={checklistOpen}
