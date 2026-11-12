@@ -100,13 +100,17 @@ function SearchTestPanel() {
             aria-invalid={Boolean(validation)} className={`${selectClass} w-full`} />
         </div>
         <div className="grid gap-2">
-          <label htmlFor={`${id}-topk`} className="text-sm font-semibold text-slate-800">Số đoạn</label>
-          <select id={`${id}-topk`} value={topK} onChange={(e) => setTopK(Number(e.target.value))} className={selectClass}>
+          <label htmlFor={`${id}-topk`} className="text-sm font-semibold text-slate-800">Số kết quả</label>
+          <select id={`${id}-topk`} value={topK} onChange={(e) => setTopK(Number(e.target.value))} aria-describedby={`${id}-topk-hint`} className={selectClass}>
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
         <Button type="submit" loading={search.isPending}><MagnifyingGlass size={16} aria-hidden="true" /> Tìm thử</Button>
       </form>
+      {/* Giải thích topK: số đoạn văn khớp nhất trả về, không phải câu trả lời hay phép đếm */}
+      <p id={`${id}-topk-hint`} className="mt-2 text-xs leading-5 text-slate-500">
+        Hiển thị các đoạn văn trong kho có nội dung gần nhất với câu hỏi, xếp từ khớp nhất xuống, giống cách trợ lý AI tìm nguồn trước khi trả lời. Nên thử bằng câu hỏi người dân hay hỏi; công cụ không đếm hay tổng hợp dữ liệu.
+      </p>
       {validation && <p role="alert" className="mt-2 text-xs font-medium text-red-700">{validation}</p>}
       {search.isError && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{aiError(search.error)}</p>}
       {search.isSuccess && (

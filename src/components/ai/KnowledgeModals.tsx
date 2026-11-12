@@ -1,9 +1,10 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { FilePdf, UploadSimple, X } from '@phosphor-icons/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { Badge, Button, Input, Modal, toast } from '@/components/ui';
+import { Badge, Button, Input, ListSelect, Modal, toast } from '@/components/ui';
 import {
   aiError,
   aiErrorCode,
@@ -49,7 +50,11 @@ function FormError({ message, onReload }: { message: string; onReload?: () => vo
   );
 }
 
-/** Chỉ liệt kê thủ tục đang áp dụng (API công khai), khớp điều kiện BE cho procedureId. */
+/**
+ * Chỉ liệt kê thủ tục đang áp dụng (API công khai), khớp điều kiện BE cho procedureId.
+ * Dùng ListSelect: danh sách nằm trong hộp thoại, tên thủ tục dài tự xuống dòng; tìm kiếm gọi server
+ * (danh mục có thể nhiều hơn 20 thủ tục nên không lọc tại chỗ).
+ */
 export function ProcedurePicker({ value, onChange, disabled, label = 'Gắn với thủ tục (tùy chọn)', required = false }: {
   value: string;
   onChange: (id: string) => void;
@@ -60,30 +65,42 @@ export function ProcedurePicker({ value, onChange, disabled, label = 'Gắn vớ
   const id = useId();
   const [keyword, setKeyword] = useState('');
   const [debounced, setDebounced] = useState('');
+  // Giữ tên thủ tục đã chọn để vẫn hiển thị khi kết quả tìm kiếm không còn chứa nó
+  const [selectedTitle, setSelectedTitle] = useState('');
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(keyword.trim()), 400);
     return () => clearTimeout(timer);
   }, [keyword]);
+  useEffect(() => { if (!value) setSelectedTitle(''); }, [value]);
   const procedures = useQuery({
     queryKey: ['ai-knowledge-procedure-picker', debounced],
     queryFn: ({ signal }) => procedureApi.list({ keyword: debounced || undefined, pageNumber: 1, pageSize: 20 }, false, signal),
   });
+  const items = procedures.data?.items ?? [];
+  const options = [
+    ...(required ? [] : [{ value: '', label: 'Không gắn thủ tục' }]),
+    ...items.map((p) => ({ value: p.id, label: p.title, description: [p.categoryName, p.procedureCode].filter(Boolean).join(' · ') })),
+  ];
   return (
     <div className="grid gap-2">
-      <label htmlFor={id} className="text-sm font-semibold text-slate-800">{label}{required && <span aria-hidden="true"> *</span>}</label>
-      <input
-        type="search"
-        value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
+      <label htmlFor={id} className="text-sm font-semibold text-slate-800">{label}{required && <span className="text-red-600" aria-hidden="true"> *</span>}</label>
+      <ListSelect
+        id={id}
+        value={value}
+        onChange={(next) => {
+          setSelectedTitle(items.find((p) => p.id === next)?.title ?? '');
+          onChange(next);
+        }}
+        options={options}
+        placeholder={required ? 'Chọn thủ tục' : 'Không gắn thủ tục'}
+        selectedLabel={selectedTitle || undefined}
         disabled={disabled}
-        placeholder="Tìm theo tên thủ tục"
-        aria-label="Tìm thủ tục"
-        className={fieldClass}
+        searchable
+        searchPlaceholder="Tìm theo tên thủ tục…"
+        onSearch={setKeyword}
+        loading={procedures.isFetching && !procedures.data}
       />
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={fieldClass}>
-        <option value="">{required ? '— Chọn thủ tục —' : '— Không gắn thủ tục —'}</option>
-        {procedures.data?.items.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-      </select>
+      {!procedures.isError && items.length === 20 && <p className="text-xs text-slate-500">Hiển thị 20 thủ tục đầu tiên; gõ tên để tìm thủ tục khác.</p>}
       {procedures.isError && <p role="alert" className="text-xs text-red-700">Không tải được danh sách thủ tục.</p>}
     </div>
   );
@@ -277,6 +294,8 @@ export function KnowledgePdfModal({ open, onOpenChange }: { open: boolean; onOpe
   const [error, setError] = useState('');
   const upload = useKnowledgeMutation(knowledgeApi.uploadPdf);
   const busy = upload.isPending;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     if (open) { setFile(null); setTitle(''); setProcedureId(''); setFileError(''); setError(''); }
@@ -326,11 +345,42 @@ export function KnowledgePdfModal({ open, onOpenChange }: { open: boolean; onOpe
     >
       <form id={formId} noValidate onSubmit={(e) => void submit(e)} className="grid gap-4">
         <div className="grid gap-2">
-          <label htmlFor={`${formId}-file`} className="text-sm font-semibold text-slate-800">File PDF <span aria-hidden="true">*</span></label>
-          <input id={`${formId}-file`} type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(e) => pickFile(e.target.files?.[0] ?? null)} className="text-sm" aria-invalid={Boolean(fileError)} />
-          {fileError && <p role="alert" className="text-xs font-medium text-red-700">{fileError}</p>}
+          <span id={`${formId}-file-label`} className="text-sm font-semibold text-slate-800">File PDF <span className="text-red-600" aria-hidden="true">*</span></span>
+          {/* Ô chọn tệp gốc của trình duyệt khó đọc ("Chọn tệp / Không có tệp nào được chọn"): dùng vùng chọn + kéo thả */}
+          <input ref={fileInput} id={`${formId}-file`} type="file" accept="application/pdf,.pdf" disabled={busy} className="sr-only" aria-labelledby={`${formId}-file-label`} aria-invalid={Boolean(fileError)}
+            onChange={(e) => { pickFile(e.target.files?.[0] ?? null); e.target.value = ''; }} />
+          {file ? (
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-700" aria-hidden="true"><FilePdf size={22} weight="duotone" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-900" title={file.name}>{file.name}</p>
+                <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <Button size="small" variant="outline" disabled={busy} onClick={() => fileInput.current?.click()}>Đổi tệp</Button>
+              <button type="button" disabled={busy} onClick={() => setFile(null)} aria-label="Bỏ tệp đã chọn"
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50">
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => fileInput.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setDragging(false); pickFile(e.dataTransfer.files?.[0] ?? null); }}
+              aria-describedby={fileError ? `${formId}-file-error` : undefined}
+              className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-50 ${dragging ? 'border-red-400 bg-red-50' : fileError ? 'border-red-300 bg-red-50/40' : 'border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/40'}`}
+            >
+              <span className="grid size-10 place-items-center rounded-full bg-white text-red-700 shadow-2xs" aria-hidden="true"><UploadSimple size={20} /></span>
+              <span className="text-sm font-semibold text-slate-800">Chọn tệp PDF hoặc kéo thả vào đây</span>
+              <span className="text-xs text-slate-500">PDF có lớp chữ, 1–100 trang, tối đa 10 MB</span>
+            </button>
+          )}
+          {fileError && <p id={`${formId}-file-error`} role="alert" className="text-xs font-medium text-red-700">{fileError}</p>}
         </div>
-        <Input label="Tiêu đề (mặc định là tên file)" maxLength={500} disabled={busy} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Input label="Tiêu đề" hint="Để trống để dùng tên tệp làm tiêu đề." placeholder={file ? file.name.replace(/\.pdf$/i, '') : 'Ví dụ: Hướng dẫn đăng ký khai sinh'} maxLength={500} disabled={busy} value={title} onChange={(e) => setTitle(e.target.value)} />
         <ProcedurePicker value={procedureId} onChange={setProcedureId} disabled={busy} />
         <FormError message={error} />
       </form>
@@ -490,6 +540,7 @@ export function ProcedureSyncModal({ open, onOpenChange }: { open: boolean; onOp
       (result.outcome === 'DEACTIVATED' ? toast.warning : toast.success)(syncOutcomeMessages[result.outcome]);
       onOpenChange(false);
     } catch (err) {
+      // KB-TITLE-01: BE tự gộp tên thủ tục về một dòng khi đồng bộ, không cần hướng dẫn sửa tay nữa
       setError(aiError(err));
     }
   };
