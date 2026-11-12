@@ -5,3 +5,4 @@ export { Modal, type ModalProps } from './Modal';
 export { ConfirmDeleteModal, type ConfirmDeleteModalProps } from './ConfirmDeleteModal';
 export { Toaster, toast } from './Toast';
 export { Skeleton, TableSkeleton, TableSkeletonRows, ListSkeleton, CardGridSkeleton, StatGridSkeleton, ChecklistSkeleton } from './Skeleton';
+export { ListSelect, type ListSelectProps, type ListSelectOption } from './ListSelect';

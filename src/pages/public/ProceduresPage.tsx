@@ -4,12 +4,10 @@ import {
   CaretLeft,
   CaretRight,
   Check,
-  Clock,
   Info,
   MagnifyingGlass,
   ShieldCheck,
   SquaresFour,
-  Wallet,
   X,
 } from '@phosphor-icons/react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -286,17 +284,8 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
                           <small>{procedure.categoryName}</small>
                           {procedure.procedureCode && <span>Mã: {procedure.procedureCode}</span>}
                         </span>
+                        {/* Danh sách chỉ hiện tên thủ tục; thời gian, lệ phí xem ở trang chi tiết */}
                         <strong>{procedure.title}</strong>
-                        <span className="procedure-result-meta">
-                          <span>
-                            <Clock size={18} aria-hidden="true" />
-                            <span>Thời gian: <b>{procedure.processingTimeSummary || 'Chưa cập nhật'}</b></span>
-                          </span>
-                          <span>
-                            <Wallet size={18} aria-hidden="true" />
-                            <span>Lệ phí: <b>{procedure.feeSummary || 'Chưa cập nhật'}</b></span>
-                          </span>
-                        </span>
                       </span>
                       <span className="procedure-result-action">
                         Xem hướng dẫn<ArrowRight size={18} aria-hidden="true" />

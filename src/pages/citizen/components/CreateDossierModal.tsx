@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle } from "@phosphor-icons/react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button, Modal, Skeleton } from "@/components/ui";
+import { Button, ListSelect, Modal, Skeleton } from "@/components/ui";
 import { workflowError } from "@/lib/api/workflow";
 
 const schema = z.object({
@@ -19,11 +18,6 @@ const schema = z.object({
   caseCode: z.string().max(100, "Mã trường hợp tối đa 100 ký tự."),
 });
 export type CreateDossierValues = z.infer<typeof schema>;
-
-// Tên thủ tục có thể rất dài; danh sách chọn gốc của trình duyệt không xuống dòng nên rút gọn để không tràn màn hình
-const LABEL_MAX = 90;
-const shortLabel = (text: string) =>
-  text.length > LABEL_MAX ? text.slice(0, LABEL_MAX - 1).trimEnd() + "…" : text;
 
 export function CreateDossierModal({
   open,
@@ -56,9 +50,6 @@ export function CreateDossierModal({
     resolver: zodResolver(schema),
     defaultValues: initial,
   });
-  const selectedTitle = procedures.find(
-    (x) => x.id === form.watch("procedureId"),
-  )?.title;
   const [error, setError] = useState("");
   const lock = useRef(false);
   const wasOpen = useRef(false);
@@ -99,7 +90,6 @@ export function CreateDossierModal({
   const disabled = busy || loading;
   const canSubmit =
     !loading && !unavailable && procedures.length > 0 && wards.length > 0;
-  const onlyCase = cases.length === 1 ? cases[0] : undefined;
   return (
     <Modal
       open={open}
@@ -107,7 +97,6 @@ export function CreateDossierModal({
         if (!next && !busy && !lock.current) onClose();
       }}
       title="Chuẩn bị hồ sơ tiền kiểm mới"
-      description="Chọn thủ tục và nơi tiếp nhận để tạo bản nháp. Bạn sẽ chuẩn bị giấy tờ ở bước tiếp theo."
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
@@ -195,79 +184,61 @@ export function CreateDossierModal({
               label="Thủ tục hành chính"
               error={errors.procedureId?.message}
             >
-              <select
-                id="create-procedure"
-                disabled={disabled}
-                className={fieldClass(!!errors.procedureId)}
-                {...form.register("procedureId", {
-                  onChange: (e) => onProcedureChange(e.target.value),
-                })}
-                aria-invalid={Boolean(errors.procedureId)}
-                aria-describedby="create-procedure-error"
-              >
-                <option value="">Chọn thủ tục</option>
-                {procedures.map((x) => (
-                  <option key={x.id} value={x.id} title={x.title}>
-                    {shortLabel(x.title)}
-                  </option>
-                ))}
-              </select>
-              {/* Tên thủ tục dài bị cắt trong ô chọn: hiện đầy đủ bên dưới */}
-              {selectedTitle && selectedTitle.length > 60 && (
-                <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
-                  {selectedTitle}
-                </p>
-              )}
+              <Controller
+                control={form.control}
+                name="procedureId"
+                render={({ field }) => (
+                  <ListSelect
+                    id="create-procedure"
+                    value={field.value}
+                    onChange={(next) => {
+                      field.onChange(next);
+                      onProcedureChange(next);
+                    }}
+                    onBlur={field.onBlur}
+                    placeholder="Chọn thủ tục"
+                    searchable
+                    searchPlaceholder="Tìm theo tên thủ tục…"
+                    options={procedures.map((x) => ({
+                      value: x.id,
+                      label: x.title,
+                    }))}
+                    disabled={disabled}
+                    invalid={Boolean(errors.procedureId)}
+                    describedBy="create-procedure-error"
+                  />
+                )}
+              />
             </Field>
 
-            {onlyCase ? (
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold text-slate-900">
-                  Trường hợp thực hiện
-                </p>
-                <p className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm leading-5 text-slate-700">
-                  <CheckCircle
-                    size={16}
-                    weight="fill"
-                    className="mt-0.5 shrink-0 text-emerald-600"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    {onlyCase.caseName}{" "}
-                    <span className="text-slate-500">
-                      (thủ tục chỉ có một trường hợp)
-                    </span>
-                  </span>
-                </p>
-              </div>
-            ) : (
-              cases.length > 1 && (
+            {/* Thủ tục chỉ có một trường hợp: tự chọn ngầm, không hiển thị (nội dung thường rất dài) */}
+            {cases.length > 1 && (
                 <Field
                   id="create-case"
                   label="Trường hợp thực hiện"
                   error={errors.caseCode?.message}
                 >
-                  <select
-                    id="create-case"
-                    disabled={disabled}
-                    className={fieldClass(!!errors.caseCode)}
-                    {...form.register("caseCode")}
-                    aria-invalid={Boolean(errors.caseCode)}
-                    aria-describedby="create-case-error"
-                  >
-                    <option value="">Chọn trường hợp</option>
-                    {cases.map((x) => (
-                      <option
-                        key={x.caseCode}
-                        value={x.caseCode}
-                        title={x.caseName}
-                      >
-                        {shortLabel(x.caseName)}
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={form.control}
+                    name="caseCode"
+                    render={({ field }) => (
+                      <ListSelect
+                        id="create-case"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        placeholder="Chọn trường hợp"
+                        options={cases.map((x) => ({
+                          value: x.caseCode,
+                          label: x.caseName,
+                        }))}
+                        disabled={disabled}
+                        invalid={Boolean(errors.caseCode)}
+                        describedBy="create-case-error"
+                      />
+                    )}
+                  />
                 </Field>
-              )
             )}
 
             <Field
@@ -275,21 +246,26 @@ export function CreateDossierModal({
               label="Phường/xã tiếp nhận"
               error={errors.wardCode?.message}
             >
-              <select
-                id="create-ward"
-                disabled={disabled}
-                className={fieldClass(!!errors.wardCode)}
-                {...form.register("wardCode")}
-                aria-invalid={Boolean(errors.wardCode)}
-                aria-describedby="create-ward-error"
-              >
-                <option value="">Chọn phường/xã</option>
-                {wards.map((x) => (
-                  <option key={x.code} value={x.code}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                control={form.control}
+                name="wardCode"
+                render={({ field }) => (
+                  <ListSelect
+                    id="create-ward"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Chọn phường/xã"
+                    options={wards.map((x) => ({
+                      value: x.code,
+                      label: x.name,
+                    }))}
+                    disabled={disabled}
+                    invalid={Boolean(errors.wardCode)}
+                    describedBy="create-ward-error"
+                  />
+                )}
+              />
             </Field>
 
             {!unavailable && (!procedures.length || !wards.length) && (
@@ -312,9 +288,6 @@ export function CreateDossierModal({
     </Modal>
   );
 }
-
-const fieldClass = (invalid: boolean) =>
-  `h-12 w-full min-w-0 truncate rounded-xl border bg-white pl-3.5 pr-9 text-sm text-slate-900 transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 ${invalid ? "border-red-500 focus:border-red-600 focus:ring-red-100" : "border-slate-300 hover:border-slate-400 focus:border-red-600 focus:ring-red-100"}`;
 
 function Field({
   id,

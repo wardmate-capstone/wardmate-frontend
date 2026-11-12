@@ -12,16 +12,18 @@ test('đổi thủ tục giữ phường đã chọn và không mở lại modal
   const modal = page.getByRole('dialog', { name: 'Chuẩn bị hồ sơ tiền kiểm mới' });
   await expect(modal).toBeVisible();
   await expect(modal.getByLabel('Phường/xã tiếp nhận')).toBeEnabled();
-  await modal.getByLabel('Phường/xã tiếp nhận').selectOption('WARD_B');
-  await modal.getByLabel('Thủ tục hành chính').selectOption(secondId);
-  await expect(modal.getByLabel('Thủ tục hành chính')).toHaveValue(secondId);
+  await modal.getByLabel('Phường/xã tiếp nhận').click();
+  await modal.getByRole('option', { name: 'Phường B' }).click();
+  await modal.getByLabel('Thủ tục hành chính').click();
+  await modal.getByRole('option', { name: 'Thủ tục thứ hai' }).click();
+  await expect(modal.getByLabel('Thủ tục hành chính')).toHaveAttribute('data-value', secondId);
   await expect(modal.getByLabel('Trường hợp thực hiện')).toBeEnabled();
-  await expect(modal.getByLabel('Phường/xã tiếp nhận')).toHaveValue('WARD_B');
+  await expect(modal.getByLabel('Phường/xã tiếp nhận')).toHaveAttribute('data-value', 'WARD_B');
   await page.keyboard.press('Escape');
   await expect(modal).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: 'Bỏ thay đổi chưa lưu?', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Chuẩn bị hồ sơ mới', exact: true }).click();
-  await expect(modal.getByLabel('Thủ tục hành chính')).toHaveValue(secondId);
+  await expect(modal.getByLabel('Thủ tục hành chính')).toHaveAttribute('data-value', secondId);
 });
 
 test('danh sách hồ sơ có lỗi và thử lại, phân trang gọi đúng page', async ({ page }) => {

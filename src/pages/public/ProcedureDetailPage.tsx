@@ -125,13 +125,14 @@ export function ProcedureDetailPage() {
             <h1
               ref={heading}
               tabIndex={-1}
-              className="text-xl sm:text-2xl md:text-[26px] font-bold text-slate-900 leading-snug tracking-tight"
+              // Tên thủ tục có thể rất dài: cho xuống dòng tự nhiên, không cắt chữ.
+              className="min-w-0 flex-1 break-wordstext-xl sm:text-2xl md:text-[26px] font-bold text-slate-900 leading-snug tracking-tight"
             >
               {procedure.title}
             </h1>
             <Link
               to={`/cong-dan?section=dossiers_all&procedureId=${encodeURIComponent(procedure.id)}${activeCase?.caseCode ? `&caseCode=${encodeURIComponent(activeCase.caseCode)}` : ''}`}
-              className={buttonVariants({ variant: 'primary' })}
+              className={`${buttonVariants({ variant: 'primary' })} shrink-0 self-start whitespace-nowrap`}
             >
               Chuẩn bị hồ sơ
             </Link>

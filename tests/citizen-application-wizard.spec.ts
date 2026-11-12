@@ -75,14 +75,15 @@ test('yêu cầu bắt buộc chọn phường/xã khi tạo hồ sơ và truy�
 
   // Đợi danh sách thủ tục và phường tải xong vào dropdown
   const procedureSelect = page.locator('#create-procedure');
-  await expect(procedureSelect.locator(`option[value="${sampleProcedure.id}"]`)).toBeAttached();
-  await procedureSelect.selectOption(sampleProcedure.id);
+  await procedureSelect.click();
+  await page.locator('#create-procedure-listbox [role="option"]', { hasText: sampleProcedure.title }).click();
+  await expect(procedureSelect).toHaveAttribute('data-value', sampleProcedure.id);
 
   const wardSelect = page.locator('#create-ward');
-  await expect(wardSelect.locator('option[value="WARD_A"]')).toBeAttached();
+  await expect(wardSelect).toBeEnabled();
 
   // Kiểm tra dropdown Phường/xã tiếp nhận: mặc định là chưa chọn (rỗng)
-  await expect(wardSelect).toHaveValue('');
+  await expect(wardSelect).toHaveAttribute('data-value', '');
 
   // Bấm Tạo hồ sơ nháp khi chưa chọn phường
   await page.getByRole('button', { name: 'Tạo hồ sơ nháp' }).click();
@@ -92,7 +93,8 @@ test('yêu cầu bắt buộc chọn phường/xã khi tạo hồ sơ và truy�
   expect(createdPayload).toBeNull(); // Chưa có request gửi lên
 
   // Chọn phường WARD_A
-  await wardSelect.selectOption('WARD_A');
+  await wardSelect.click();
+  await page.locator('#create-ward-listbox [role="option"]', { hasText: 'Phường A' }).click();
 
   // Bấm Tạo hồ sơ nháp
   await page.getByRole('button', { name: 'Tạo hồ sơ nháp' }).click();
