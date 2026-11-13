@@ -45,7 +45,7 @@ export const ManagerPage: React.FC = () => {
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);
   const { profile } = useUserProfile();
   const user = useAuthStore((s) => s.user);
-  const managerName = profile?.fullName?.trim() || user?.username || 'Lãnh đạo';
+  const managerName = profile?.fullName?.trim() || user?.username || 'Quản lý cán bộ';
 
   // Quản lý danh sách hồ sơ công dân & xem chi tiết từ API 60
   const [profiles, setProfiles] = useState<ManagerProfileItem[]>([]);
@@ -308,7 +308,7 @@ export const ManagerPage: React.FC = () => {
                 <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
                 {currentSection === 'overview' && (
                   <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                    {getGreeting()}, Lãnh đạo {managerName}
+                    {getGreeting()}, {managerName}
                   </p>
                 )}
               </div>
