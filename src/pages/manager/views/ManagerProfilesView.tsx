@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getPublicWards } from '@/lib/api';
 import {
   Plus,
   MagnifyingGlass,
@@ -63,6 +65,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
   onSelectProfile,
   onFrontDeskCreated,
 }) => {
+  const wards = useQuery({ queryKey: ['public-wards'], queryFn: getPublicWards });
   const [query, setQuery] = useState(search);
   const [statusFilter, setStatusFilter] = useState<string>('ACTIVE'); // Mặc định lọc cán bộ Đang hoạt động
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -216,7 +219,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             </strong>
             <p>
               {error.includes('quyền') || error.includes('403') || error.includes('forbidden')
-                ? 'Tài khoản Lãnh đạo của bạn chưa được phân bổ Phường công tác trong hệ thống. Vui lòng liên hệ Quản trị viên hệ thống (Admin) để gán Phường trước khi quản lý cán bộ Một cửa.'
+                ? 'Tài khoản Quản lý cán bộ của bạn chưa được phân bổ Phường công tác trong hệ thống. Vui lòng liên hệ Quản trị viên hệ thống để gán Phường trước khi quản lý cán bộ Một cửa.'
                 : error}
             </p>
           </div>
@@ -233,6 +236,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
       )}
 
       {/* Table */}
+      {wards.isError && <p role="alert" className="flex flex-wrap items-center gap-2 text-sm text-amber-800">Chưa tải được danh mục tên phường. <button type="button" className="underline" onClick={() => void wards.refetch()}>Thử tải lại tên phường</button></p>}
       <div className="admin-table-wrap">
         <table className="min-w-[720px]">
           <thead>
@@ -270,7 +274,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                   </div>
                 </td>
                 <td>
-                  <strong className="block text-xs text-slate-800">{item.wardCode || 'Chưa gán phường'}</strong>
+                  <strong className="block text-xs text-slate-800">{!item.wardCode ? 'Chưa gán phường' : wards.data?.find(ward => ward.code.toLowerCase() === item.wardCode?.toLowerCase())?.name || (wards.isPending ? 'Đang tải tên phường…' : 'Chưa lấy được tên phường')}</strong>
                   <span className="mt-1 block text-[11px] text-slate-500">
                     {item.assignedCategories?.length
                       ? item.assignedCategories.map((id) => categories.find((category) => category.id === id)?.categoryName || `#${id}`).join(', ')
