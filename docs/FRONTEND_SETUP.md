@@ -1,5 +1,14 @@
 # Nền tảng FE Web
 
+## Sửa giao diện cán bộ/quản lý — 13/11/2026
+
+- Chỉ sửa FE; BE tại `E:/wardmate-backend` dùng để đọc hợp đồng. Không chạy Git, migration hoặc chỉnh quyền dịch vụ. Vai trò `MANAGER` giữ nguyên mã/quyền; nhãn là **Quản lý cán bộ** trong hồ sơ cá nhân, chi tiết cán bộ và quản trị tài khoản.
+- Bộ lọc thủ tục dùng ListSelect có tìm kiếm và xuống dòng cho tên dài; hai ô lọc ngày xếp dọc trên mobile để giữ trong khung. Bộ chọn mục nhận xét dùng Controller của React Hook Form + ListSelect, giữ targetId/validation/request cũ. Việt hóa nhãn procedureCode/identityNumber/procedureTitle, thuộc tính giấy tờ và trạng thái lịch sử qua workflowAdapters. Không sửa tên hoặc nội dung do người dùng kê khai. Ô ngày native hiển thị định dạng theo ngôn ngữ trình duyệt; nhãn ứng dụng vẫn dùng tiếng Việt.
+- So sánh hai snapshotData từ `GET /api/v1/applications/{id}/versions` (200, không body), hỗ trợ object hoặc chuỗi JSON. Tách thuộc tính với JSON Pointer, ghép giấy tờ theo id, dùng tên trong bản chụp; không lấy dữ liệu hiện tại thay giá trị lịch sử. Snapshot cũ thiếu cấu trúc thì dùng API diff hiện có. Phân biệt oldExists/newExists với giá trị null/rỗng; không hiển thị hai cột null gây hiểu nhầm. Không so sánh nội dung nhị phân Word/PDF/ảnh vì chưa có phiên bản tệp lịch sử từ BE.
+- Danh bạ Manager ghép wardCode với `GET /api/v1/wards` (anonymous, 200 `[{id,code,name}]`); khi lỗi có nút thử lại. Không tự đoán tên từ mã hoặc dùng phường của Manager cho mọi dòng. Không thay DTO BE.
+- Giới hạn đã xác minh: tài liệu tham vấn kiểm tra `GET /api/v1/applications/{id}/consultations/document-access` và phiên bản trước khi tải. `GET /api/v1/applications/{id}/contents` cùng `GET /api/v1/supporting-documents/{id}/download` có nhánh ApplicationAccess.Read cho tham vấn. Tuy nhiên `GET /api/v1/officer/submissions/{id}/download-docx` gọi OfficerSubmission → Check(officer:true), yêu cầu AssignedOfficerId trùng người đăng nhập. Chuyên viên có thể đọc danh sách nhưng tải Word bị 403. FE giải thích riêng lỗi này; chưa thể mở quyền tải Word khi không sửa BE. Không dùng route công dân, giả applicantId hoặc URL Blob để vượt quyền.
+- Lỗi tài liệu giữ ProblemDetails; access token vẫn ở RAM qua JWT client. Test dùng HTTP mock, không chứng minh phân quyền, Blob hoặc Azure thật. Nguồn BE: ReviewContracts.cs, OfficerSubmissionsController.cs, ApplicationAccess.cs, UserDirectoryController.cs/UserDirectory.cs.
+
 ## Xem/tải phôi không đăng nhập — 09/11/2026
 
 - Chỉ sửa FE theo quyết định mới nhất. Trang chi tiết thủ tục truyền publicAccess cho FormTemplateActions, hiển thị Xem mẫu/Tải mẫu cho cả khách vãng lai. Dùng hai GET hiện có `/api/v1/form-templates/{id}` và `.../download-docx` với skipAuth=true, không gửi token hoặc refresh/chuyển đăng nhập khi API lỗi. Cache tách chế độ public với quản trị; dùng Blob và DocxPreview hiện có. Không dùng route `/public/` mới.
