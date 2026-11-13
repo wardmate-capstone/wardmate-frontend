@@ -1,6 +1,6 @@
 ﻿import { useRef, useState } from 'react';
 import { ArrowRight, Bell, BellSlash, Checks, CircleNotch, WifiSlash } from '@phosphor-icons/react';
-import { Button } from '@/components/ui';
+import { Button, Pagination, ErrorAlert } from '@/components/ui';
 import { formatNotificationTime } from '@/lib/formatTime';
 import type { NotificationDto } from '@/lib/api/notifications';
 import type { NotificationConnectionStatus } from '@/hooks/useNotificationHub';
@@ -9,6 +9,8 @@ interface CitizenNotificationsViewProps {
   notifications: NotificationDto[];
   connectionStatus: NotificationConnectionStatus;
   onMarkAllRead: () => Promise<void>;
+  /** Số chưa đọc từ server (gồm cả thông báo chưa tải về); bỏ trống thì đếm trong danh sách */
+  unreadCount?: number;
   onMarkRead: (id: string) => Promise<void>;
   onOpenApplication: (id: string) => Promise<void>;
 }
@@ -24,7 +26,7 @@ function notificationTone(title: string): string {
 
 const PAGE_SIZE = 10;
 
-export function CitizenNotificationsView({ notifications, connectionStatus, onMarkAllRead, onMarkRead, onOpenApplication }: CitizenNotificationsViewProps) {
+export function CitizenNotificationsView({ notifications, connectionStatus, onMarkAllRead, unreadCount, onMarkRead, onOpenApplication }: CitizenNotificationsViewProps) {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -84,7 +86,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
           {connecting ? <CircleNotch size={14} className="animate-spin" aria-hidden="true" /> : <WifiSlash size={14} aria-hidden="true" />}
           {connecting ? 'Đang tải thông báo…' : 'Chưa cập nhật được thông báo mới'}
         </p>}
-        <button type="button" className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-red-800 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent" disabled={!connected || !unread || pending !== null} onClick={() => void perform('all', onMarkAllRead)}>
+        <button type="button" className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-red-800 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent" disabled={!connected || !(unread || unreadCount) || pending !== null} onClick={() => void perform('all', onMarkAllRead)}>
           {pending === 'all' ? <CircleNotch size={16} className="animate-spin" aria-hidden="true" /> : <Checks size={16} aria-hidden="true" />} Đánh dấu tất cả đã đọc
         </button>
       </div>
@@ -92,7 +94,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
         <WifiSlash size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
         <p>Hệ thống sẽ tự kết nối lại. {notifications.length ? 'Bạn vẫn có thể xem các thông báo đang hiển thị và mở hồ sơ; việc đánh dấu đã đọc sẽ dùng được khi kết nối trở lại.' : 'Thông báo sẽ xuất hiện khi kết nối thành công.'}</p>
       </div>}
-      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
       <div aria-busy={connecting}>
         {visible.length > 0 ? <div aria-label="Danh sách thông báo" className="space-y-5">
           {groups.map(group => <div key={group.label}>
@@ -136,14 +138,15 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
           <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">{connecting ? 'Vui lòng chờ trong giây lát.' : connectionStatus === 'offline' ? 'Kết nối đang gián đoạn. Dữ liệu chưa tải được sẽ không hiển thị tại đây.' : filter === 'unread' ? 'Chuyển sang Tất cả để xem lại các cập nhật trước đó.' : 'Khi hồ sơ có cập nhật hoặc cần bổ sung giấy tờ, thông báo sẽ xuất hiện tại đây.'}</p>
           {filter === 'unread' && connected && <Button variant="ghost" size="small" className="mt-4 min-h-11" onClick={() => changeFilter('all')}>Xem tất cả thông báo</Button>}
         </div>}
-        {totalPages > 1 && <nav aria-label="Phân trang thông báo" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xs sm:px-5">
-          <p className="text-sm text-slate-500">{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, visible.length)} / {visible.length} thông báo</p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="small" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Trước</Button>
-            <span className="text-sm font-semibold text-slate-700">Trang {currentPage}/{totalPages}</span>
-            <Button variant="outline" size="small" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>Sau</Button>
-          </div>
-        </nav>}
+        {totalPages > 1 && <Pagination
+          className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xs sm:px-5"
+          label="Phân trang thông báo"
+          page={currentPage}
+          total={visible.length}
+          pageSize={PAGE_SIZE}
+          unit="thông báo"
+          onPageChange={setPage}
+        />}
         {notifications.length > 0 && <p className="mt-3 text-xs leading-5 text-slate-500">Bạn đang xem các thông báo gần nhất.</p>}
       </div>
     </section>

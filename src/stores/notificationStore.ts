@@ -199,37 +199,33 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   markAllRead: async () => {
     const conn = activeConnection;
     if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối máy chủ thông báo.');
-    const unread = get().items.filter((n) => !n.isRead).map((n) => n.id);
-    if (!unread.length) return;
-    const unreadSet = new Set(unread);
-    // BE chỉ có MarkRead từng thông báo và đẩy UpdateUnreadCount sau mỗi lần → chuông bị đếm lùi 40, 39, 38…
-    // Cập nhật lạc quan một lần, bỏ qua các sự kiện đếm trong lúc chạy, xong mới đối chiếu với server.
+    const { items, unreadCount } = get();
+    // Còn thông báo chưa đọc ở trang chưa tải về thì chuông vẫn > 0 dù danh sách đang hiển thị đã đọc hết
+    if (unreadCount <= 0 && !items.some((n) => !n.isRead)) return;
+    // NOTIFY-READALL-01: một lệnh MarkAllRead(before) thay cho vòng lặp MarkRead từng thông báo.
+    // `before` = thời điểm của thông báo mới nhất đang hiển thị (danh sách xếp mới nhất trước), để
+    // thông báo đến sau lúc bấm vẫn chưa đọc và không phụ thuộc đồng hồ máy người dùng bị lệch.
+    const before = items[0]?.createdAt ?? new Date().toISOString();
+    const cutoff = Date.parse(before);
+    const previous = items;
     bulkMarkingDepth += 1;
+    // Cập nhật lạc quan: đánh dấu các mục đang hiển thị có createdAt <= before
     set((state) => ({
-      items: state.items.map((n) => (unreadSet.has(n.id) ? { ...n, isRead: true } : n)),
-      unreadCount: Math.max(0, state.unreadCount - unread.length),
+      items: state.items.map((n) => (!n.isRead && Date.parse(n.createdAt) <= cutoff ? { ...n, isRead: true } : n)),
     }));
-    let failed: string[] = [];
     try {
-      const results = await Promise.allSettled(unread.map((id) => conn.invoke('MarkRead', id)));
-      failed = unread.filter((_, i) => results[i].status === 'rejected');
-      if (failed.length) {
-        // Hoàn lại trạng thái chưa đọc cho các thông báo đánh dấu thất bại
-        const failedSet = new Set(failed);
-        set((state) => ({
-          items: state.items.map((n) => (failedSet.has(n.id) ? { ...n, isRead: false } : n)),
-          unreadCount: state.unreadCount + failed.length,
-        }));
-      }
+      await conn.invoke<number>('MarkAllRead', before);
+    } catch (error) {
+      // Hoàn lại trạng thái cũ nếu server chưa đánh dấu được
+      set({ items: previous });
+      throw error instanceof Error ? error : new Error('Chưa đánh dấu được thông báo. Vui lòng thử lại.');
     } finally {
       bulkMarkingDepth -= 1;
     }
+    // Server đã phát UpdateUnreadCount; đối chiếu lại một lần cho chắc (thông báo mới đến sau `before` vẫn được đếm)
     await conn.invoke<number>('GetUnreadCount').then((count) => {
       if (typeof count === 'number') set({ unreadCount: count });
     }).catch(() => undefined);
-    if (failed.length) {
-      throw new Error('Một số thông báo chưa đánh dấu được. Vui lòng thử lại.');
-    }
   },
 
   deleteNotification: (id: string) => {

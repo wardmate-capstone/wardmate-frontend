@@ -10,6 +10,7 @@ import {
   ArrowSquareOut,
 } from '@phosphor-icons/react';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { toast } from '@/components/ui';
 import type { CitizenNotification } from '@/types/notification';
 import { resolveNotificationUrl } from '@/lib/api/notifications';
 import { NotificationItem } from './NotificationItem';
@@ -154,7 +155,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={() => void markAllRead()}
+                onClick={() => void markAllRead().catch((error: unknown) => toast.error(error instanceof Error ? error.message : 'Chưa đánh dấu được thông báo. Vui lòng thử lại.'))}
                 className="flex items-center gap-1 text-xs font-semibold text-red-800 hover:text-red-950 hover:underline"
                 title="Đánh dấu tất cả là đã đọc"
               >
