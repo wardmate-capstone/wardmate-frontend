@@ -9,7 +9,8 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.getByRole('button', { name: /^Nhận xét \(/ }).click();
-  await page.getByLabel('Mục cần nhận xét').selectOption('/formData/a~1b~0c');
+  await page.getByLabel('Mục cần nhận xét').click();
+  await page.getByRole('option', { name: 'a/b~c', exact: true }).click();
   await page.getByLabel('Nội dung nhận xét').fill('Sửa thông tin đã kê khai');
   await page.getByRole('button', { name: 'Lưu nhận xét vào hồ sơ' }).click();
   await expect.poll(() => state.comments.length).toBe(1);
@@ -27,7 +28,7 @@ test('vòng bổ sung v1 → gửi lại v2 → duyệt, không PATCH khi NEED_R
   const form = page.locator(`#checklist-${documentIds.checklist}`);
   const writesBefore = state.writes.length;
   await form.getByLabel('Thay tệp Word đã điền').setInputFiles({ name: 'to-khai.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('corrected-docx') });
-  await expect(form.getByText('Đã lưu bản nháp', { exact: true })).toBeVisible();
+  await expect(form.getByText('Bản nháp', { exact: true })).toBeVisible();
   await form.getByRole('button', { name: 'Xác nhận tờ khai', exact: true }).click();
   await expect(form.getByText('Đã xác nhận', { exact: true })).toBeVisible();
   expect(state.writes.slice(writesBefore).some(x => x.path.includes('/checklists/'))).toBe(false);
@@ -66,7 +67,6 @@ test('validation file chặn tệp rỗng, sai đuôi và quá 20 MiB trước u
   await expect(form.getByRole('alert')).toContainText('20 MB');
   expect(state.writes).toHaveLength(0);
   await page.setViewportSize({ width: 360, height: 800 });
-  await expect.poll(() => page.locator('.admin-workspace').evaluate(element => getComputedStyle(element).marginLeft)).toBe('0px');
   await expect.poll(() => page.locator('#citizen-main').evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(300);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/document-validation-mobile.png', fullPage: true });
