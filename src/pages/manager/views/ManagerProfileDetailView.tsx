@@ -1,3 +1,4 @@
+import { accountRoleLabel } from '@/lib/personName';
 import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -581,7 +582,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                               key={rKey}
                               className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-900 border border-red-200"
                             >
-                              {rName}
+                              {accountRoleLabel(rName)}
                             </span>
                           );
                         })
