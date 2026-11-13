@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { ListSelect } from '@/components/ui';
 import {
   MagnifyingGlass,
   Funnel,
@@ -309,30 +310,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {/* Procedure Filter */}
-          <div className="xl:col-span-3">
+          <div className="min-w-0 xl:col-span-3">
             <label htmlFor="filter-proc-select" className="sr-only">
               Lọc theo thủ tục
             </label>
-            <div className="relative">
-              <select
-                id="filter-proc-select"
-                value={selectedProcedure}
-                onChange={(e) => setSelectedProcedure(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
-              >
-                <option value="ALL">Tất cả thủ tục ({procedureOptions.length})</option>
-                {procedureOptions.map((proc) => (
-                  <option key={proc} value={proc}>
-                    {proc}
-                  </option>
-                ))}
-              </select>
-              <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
+            <ListSelect id="filter-proc-select" value={selectedProcedure}
+              onChange={setSelectedProcedure} searchable placeholder="Chọn thủ tục"
+              options={[{ value: 'ALL', label: `Tất cả thủ tục (${procedureOptions.length})` }, ...procedureOptions.map(proc => ({ value: proc, label: proc }))]} />
           </div>
 
           {/* Officer in charge */}
-          <div className="xl:col-span-3">
+          <div className="min-w-0 xl:col-span-3">
             <label htmlFor="filter-officer-select" className="sr-only">
               Cán bộ phụ trách
             </label>
@@ -356,7 +344,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {/* Sort order */}
-          <div className="xl:col-span-2">
+          <div className="min-w-0 xl:col-span-2">
             <label htmlFor="filter-sort-select" className="sr-only">
               Sắp xếp
             </label>
@@ -377,7 +365,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
         {/* Lĩnh vực & ngày gửi */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3 items-start">
-          <div className="xl:col-span-4">
+          <div className="min-w-0 xl:col-span-4">
             <label htmlFor="filter-category-select" className="sr-only">
               Lọc theo lĩnh vực
             </label>
@@ -401,11 +389,10 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {onSubmittedRangeChange && (
-            <fieldset className="sm:col-span-2 xl:col-span-5 grid gap-1">
+            <fieldset className="min-w-0 sm:col-span-2 xl:col-span-5 grid gap-1">
               <legend className="sr-only">Lọc theo ngày gửi</legend>
-              {/* Nhãn và hai ô ngày luôn cùng hàng để "đến" không bị tách khỏi khoảng ngày */}
-              <div className="flex items-center gap-2">
-              <label htmlFor="filter-submitted-from" className="shrink-0 text-xs font-semibold text-slate-600">Gửi từ</label>
+              <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+              <label htmlFor="filter-submitted-from" className="grid min-w-0 gap-1 text-xs font-semibold text-slate-600">Gửi từ
               <input
                 id="filter-submitted-from"
                 type="date"
@@ -414,9 +401,10 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               />
-              <label htmlFor="filter-submitted-to" className="shrink-0 text-xs font-semibold text-slate-600">đến</label>
+              </label>
+              <label htmlFor="filter-submitted-to" className="grid min-w-0 gap-1 text-xs font-semibold text-slate-600">Đến ngày
               <input
                 id="filter-submitted-to"
                 type="date"
@@ -425,8 +413,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               />
+              </label>
               </div>
               {invalidRange && (
                 <p id="filter-submitted-error" role="alert" className="w-full text-xs font-medium text-red-700">
@@ -437,7 +426,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           )}
 
           {onOverdueChange && (
-            <label className="xl:col-span-3 inline-flex min-h-10 items-center gap-2 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700">
+            <label className="min-w-0 xl:col-span-3 inline-flex min-h-10 items-center gap-2 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700">
               <input
                 type="checkbox"
                 checked={overdueOnly}
