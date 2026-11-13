@@ -7,10 +7,9 @@ import {
   DownloadSimple,
   ArrowSquareOut,
   Folder,
-  MagnifyingGlass,
   FileText,
 } from '@phosphor-icons/react';
-import { Button, toast } from '@/components/ui';
+import { Button, toast, SearchInput, ErrorAlert } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
 import { useApplicationContents, useApprovedQr, useDocumentMutations } from '@/hooks/useDocumentForms';
@@ -126,28 +125,12 @@ export function CitizenQrCodeView({
 
             {/* Ô tìm kiếm nhanh khi có từ 3 hồ sơ trở lên */}
             {eligible.length >= 3 && (
-              <div className="relative">
-                <MagnifyingGlass
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm theo mã hoặc tên thủ tục..."
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-7 text-xs outline-none transition focus:border-red-600 focus:bg-white focus:ring-1 focus:ring-red-600"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
+              <SearchInput
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onClear={() => setSearchQuery('')}
+                placeholder="Tìm theo mã hoặc tên thủ tục..."
+              />
             )}
 
             {/* Danh sách thẻ hồ sơ: khung cố định khoảng 3 thẻ, phần còn lại cuộn xuống */}
@@ -446,7 +429,7 @@ function QrNotCreated({ applicationId, dossier, onOpenDossierDetail }: {
             ? 'Không tìm thấy tệp tờ khai trong kho lưu trữ nên chưa tạo được PDF và mã QR.'
             : 'Tờ khai chưa được cán bộ xác nhận sẵn sàng nên chưa tạo được PDF và mã QR.'}
     </p>}
-    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800">{error}</p>}
+    {error && <ErrorAlert>{error}</ErrorAlert>}
     <div className="flex flex-wrap gap-3">
       {ready && <Button onClick={() => void create()} loading={generatePdf.isPending}>Tạo PDF và mã QR</Button>}
       {onOpenDossierDetail && <Button variant="outline" onClick={() => onOpenDossierDetail(dossier)}>Xem chi tiết hồ sơ</Button>}

@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ArrowsClockwise,
   ClockCounterClockwise,
-  MagnifyingGlass,
 } from '@phosphor-icons/react';
-import { Button, TableSkeletonRows } from '@/components/ui';
+import { RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState, ErrorAlert } from '@/components/ui';
 import { useOfficerActivity } from '@/hooks/useWorkflow';
 import { workflowError, type OfficerActivityAction, type OfficerActivityDto } from '@/lib/api/workflow';
 
@@ -89,45 +87,30 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-              <input
-                type="search"
-                aria-label="Tìm trong trang lịch sử"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm mã hồ sơ, tên công dân..."
-                className="h-11 w-56 rounded-xl border border-slate-300 pl-9 pr-3 text-xs focus:border-red-600 focus:outline-none"
-              />
-            </div>
+            <SearchInput
+              containerClassName="w-full sm:w-64"
+              aria-label="Tìm trong trang lịch sử"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+              placeholder="Tìm mã hồ sơ, tên công dân..."
+            />
 
-            <select
+            <Select
               aria-label="Lọc theo hành động"
               value={action}
               onChange={(e) => { setAction(e.target.value as '' | OfficerActivityAction); setPage(1); }}
-              className="h-11 rounded-xl border border-slate-300 px-3 text-xs bg-white text-slate-800"
             >
               {FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            </Select>
 
-            <button
-              type="button"
-              onClick={() => void activity.refetch()}
-              disabled={activity.isFetching}
-              className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              <ArrowsClockwise size={16} className={activity.isFetching ? 'animate-spin text-red-800' : ''} aria-hidden="true" />
-              <span>{activity.isFetching ? 'Đang tải...' : 'Làm mới'}</span>
-            </button>
+            <RefreshButton loading={activity.isFetching} onClick={() => void activity.refetch()} />
           </div>
         </div>
       </header>
 
       {activity.isError && (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-900">
-          <p>{workflowError(activity.error)}</p>
-          <Button size="small" variant="outline" onClick={() => void activity.refetch()}>Thử lại</Button>
-        </div>
+        <ErrorAlert retrying={activity.isFetching} onRetry={() => void activity.refetch()}>{workflowError(activity.error)}</ErrorAlert>
       )}
 
       {/* Semantic Audit Table */}
@@ -155,10 +138,8 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
                 />
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
-                    <p className="font-semibold text-slate-700">
-                      {searchQuery.trim() ? 'Không có thao tác phù hợp trong trang này.' : 'Chưa có thao tác nào được ghi nhận.'}
-                    </p>
+                  <td colSpan={6}>
+                    <EmptyState title={searchQuery.trim() ? 'Không có thao tác phù hợp trong trang này.' : 'Chưa có thao tác nào được ghi nhận.'} />
                   </td>
                 </tr>
               ) : (
@@ -215,14 +196,18 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
           </table>
         </div>
 
-        <nav aria-label="Phân trang lịch sử xử lý" className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600">
-          <span>Trang <strong className="text-slate-900">{page}</strong> · <strong className="text-slate-900">{total}</strong> thao tác</span>
-          <div className="flex items-center gap-2">
-            <Button size="small" variant="outline" disabled={page <= 1 || activity.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>Trang trước</Button>
-            {/* BE giới hạn page × pageSize ≤ 5000 */}
-            <Button size="small" variant="outline" disabled={activity.isFetching || page * PAGE_SIZE >= Math.min(total, 5000)} onClick={() => setPage((p) => p + 1)}>Trang sau</Button>
-          </div>
-        </nav>
+        <Pagination
+          className="border-t border-slate-100 px-4 py-3"
+          label="Phân trang lịch sử xử lý"
+          page={page}
+          total={total}
+          pageSize={PAGE_SIZE}
+          unit="thao tác"
+          // BE giới hạn page × pageSize ≤ 5000
+          hasNext={page * PAGE_SIZE < Math.min(total, 5000)}
+          disabled={activity.isFetching}
+          onPageChange={(p) => setPage(Math.max(1, p))}
+        />
       </div>
     </section>
   );

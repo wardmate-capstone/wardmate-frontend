@@ -184,8 +184,8 @@ test.describe('Manager: giám sát, giao/chuyển và lịch sử phân công', 
     await page.goto('/manager');
     await page.getByRole('button', { name: 'Giám sát hồ sơ' }).click();
 
-    await expect(page.getByRole('button', { name: /Chờ tiền kiểm, chưa có người nhận\s*4/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Đang quá hạn tiền kiểm\s*2/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Chưa có người nhận\s*4/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Quá hạn tiền kiểm\s*2/ })).toBeVisible();
     const workload = page.getByRole('region', { name: 'Khối lượng đang xử lý theo cán bộ' });
     // Cán bộ không có trong officers[] được hiểu là 0.
     await expect(workload.getByRole('button', { name: /Nguyễn Văn An\s*3/ })).toBeVisible();
@@ -197,7 +197,7 @@ test.describe('Manager: giám sát, giao/chuyển và lịch sử phân công', 
     await workload.getByRole('button', { name: /Nguyễn Văn An/ }).click();
     await expect.poll(() => urls.at(-1)?.searchParams.get('Assignee')).toBe(OFFICER_A);
     expect(urls.at(-1)?.searchParams.get('Status')).toBe('SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY');
-    await expect(page.getByLabel('Lọc theo trạng thái')).toHaveValue('SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY');
+    await expect(page.getByLabel('Lọc theo trạng thái')).toHaveAttribute('data-value', 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY');
   });
 });
 

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowsClockwise } from '@phosphor-icons/react';
-import { Button } from '@/components/ui';
+import { RefreshButton, ErrorAlert } from '@/components/ui';
 import { aiError, type AiUsageDay } from '@/lib/api/aiOcr';
 import { useAiUsage } from '@/hooks/useAiKnowledge';
 import { addCalendarDays, vietnamToday } from '@/lib/calendarRules';
@@ -125,19 +124,14 @@ export function AiUsageCard() {
               </button>
             ))}
           </div>
-          <Button variant="outline" size="small" className="h-9 min-h-0 px-3" aria-label="Làm mới thống kê" title="Làm mới thống kê" loading={usage.isFetching} onClick={() => void usage.refetch()}>
-            {!usage.isFetching && <ArrowsClockwise size={15} aria-hidden="true" />}
-          </Button>
+          <RefreshButton label="Làm mới thống kê" loading={usage.isFetching} onClick={() => void usage.refetch()} />
         </div>
       </div>
 
       {usage.isPending ? (
         <p role="status" className="mt-3 text-sm text-slate-600">Đang tải thống kê…</p>
       ) : usage.isError || !data ? (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          <span>{aiError(usage.error)}</span>
-          <Button variant="outline" size="small" onClick={() => void usage.refetch()}>Thử lại</Button>
-        </div>
+        <ErrorAlert className="mt-3" retrying={usage.isFetching} onRetry={() => void usage.refetch()}>{aiError(usage.error)}</ErrorAlert>
       ) : (
         <>
           <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

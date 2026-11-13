@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
+import { Plus } from '@phosphor-icons/react';
 import { getProcedureIssues, ProcedureErrorsContext, ProcedureFieldPrefix, type ProcedureValidationError } from "@/lib/procedureValidation";
 export { validateProcedure } from "@/lib/procedureValidation";
 import { ProcedureFormPicker as FormDefinitionsEditor } from './ProcedureFormPicker';
@@ -228,6 +229,7 @@ function RowEditor({
           ])
         }
       >
+        <Plus size={16} weight="bold" aria-hidden="true" />
         Thêm {title.toLowerCase()}
       </Button>
     </section>
@@ -322,6 +324,7 @@ function MethodsEditor({ value, cases, change }: { value: unknown; cases: string
         );
       })}
       <Button variant="outline" size="small" onClick={() => change([...list, { methodName: "", feeUnit: "VND", note: "" }])}>
+        <Plus size={16} weight="bold" aria-hidden="true" />
         Thêm cách nộp
       </Button>
     </section>
@@ -732,6 +735,7 @@ export function ProcedureApiEditor({
                 ])
               }
             >
+              <Plus size={16} weight="bold" aria-hidden="true" />
               Thêm trường hợp
             </Button>
           </section>

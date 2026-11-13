@@ -16,7 +16,6 @@ import {
   House,
   Key,
   List,
-  MagnifyingGlass,
   Plus,
   ClockCounterClockwise,
   ShieldCheck,
@@ -26,7 +25,7 @@ import {
   Users,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
-import { Modal, Skeleton, TableSkeletonRows } from "@/components/ui";
+import { Modal, RefreshButton, SearchInput, Skeleton, TableSkeletonRows, Select, EmptyState, ErrorAlert } from "@/components/ui";
 import {
   getAdminUsers,
   getAccount,
@@ -920,7 +919,7 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
               </div>
             ))}
             {!auditLoading && !auditError && auditLogs.length === 0 && (
-              <p className="py-5 text-sm text-slate-500">Chưa có hoạt động quản trị nào.</p>
+              <EmptyState title="Chưa có hoạt động quản trị nào." />
             )}
           </div>
         </article>
@@ -939,15 +938,13 @@ function SearchBar({
   placeholder: string;
 }) {
   return (
-    <label className="admin-search">
-      <MagnifyingGlass size={18} />
-      <span className="sr-only">Tìm kiếm</span>
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-      />
-    </label>
+    <SearchInput
+      containerClassName="w-full max-w-lg flex-1"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onClear={() => onChange('')}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -1079,33 +1076,23 @@ function AccountsView({
           placeholder="Tìm tên đăng nhập hoặc email..."
         />
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo trạng thái"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang hoạt động</option>
             <option value="LOCKED">Đang tạm khóa</option>
-          </select>
+          </Select>
 
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
-            aria-label="Tải lại danh sách"
-          >
-            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
-            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
+          <RefreshButton onClick={onRetry} loading={loading} label="Tải lại danh sách" />
 
           {onCreateStaff && (
             <button
               type="button"
               onClick={onCreateStaff}
-              className="inline-flex items-center gap-1.5 h-10 px-4 text-xs font-bold rounded-lg bg-red-800 hover:bg-red-900 text-white shadow-xs transition-colors"
+              className="admin-primary-action"
             >
               <Plus size={16} weight="bold" />
               <span>Thêm cán bộ mới</span>
@@ -1115,17 +1102,7 @@ function AccountsView({
       </div>
 
       {error ? (
-        <div className="p-8 text-center space-y-3">
-          <p className="text-sm text-rose-600 font-medium">{error}</p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-          >
-            <ArrowsClockwise size={14} />
-            <span>Thử lại</span>
-          </button>
-        </div>
+        <ErrorAlert className="m-4" retrying={loading} onRetry={onRetry}>{error}</ErrorAlert>
       ) : (
         <div className="overflow-x-auto">
           <table className="admin-table w-full text-left border-collapse text-xs">
@@ -1149,8 +1126,8 @@ function AccountsView({
                 />
               ) : displayAccounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    Không tìm thấy tài khoản đăng nhập phù hợp.
+                  <td colSpan={6}>
+                    <EmptyState title="Không tìm thấy tài khoản đăng nhập phù hợp." description="Thử đổi từ khóa hoặc trạng thái tài khoản." />
                   </td>
                 </tr>
               ) : (
@@ -1307,10 +1284,9 @@ function UsersView({
           placeholder="Tìm tên đăng nhập, họ tên, email hoặc phường..."
         />
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <Select
             value={roleFilter}
             onChange={(e) => onRoleFilterChange(e.target.value)}
-            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo vai trò"
           >
             {ROLE_FILTER_OPTIONS.map((opt) => (
@@ -1318,31 +1294,21 @@ function UsersView({
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo trạng thái"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang hoạt động</option>
             <option value="LOCKED">Đang tạm khóa</option>
-          </select>
+          </Select>
 
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
-            aria-label="Tải lại danh sách"
-          >
-            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
-            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
+          <RefreshButton onClick={onRetry} loading={loading} label="Tải lại danh sách" />
           {onCreateStaff && (
-            <button type="button" onClick={onCreateStaff} className="admin-primary-action h-10 text-xs">
+            <button type="button" onClick={onCreateStaff} className="admin-primary-action">
               <Plus size={16} weight="bold" /> Tạo tài khoản cán bộ
             </button>
           )}
@@ -1621,20 +1587,11 @@ function WardsView({
           placeholder="Tìm theo tên hoặc mã phường / xã..."
         />
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 transition-colors"
-            aria-label="Tải lại danh sách phường"
-          >
-            <ArrowsClockwise size={16} className={loading ? 'animate-spin text-red-800' : ''} />
-            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
+          <RefreshButton onClick={onRetry} loading={loading} label="Tải lại danh sách phường" />
           <button
             type="button"
             onClick={() => setWardModalOpen(true)}
-            className="admin-primary-action h-10 text-xs"
+            className="admin-primary-action"
           >
             <Plus size={16} weight="bold" /> Thêm Phường / Xã mới
           </button>
@@ -1754,7 +1711,7 @@ function WardsView({
               <button
                 type="submit"
                 disabled={wardSubmitting}
-                className="admin-primary-action text-xs disabled:opacity-50"
+                className="admin-primary-action"
               >
                 {wardSubmitting ? 'Đang khởi tạo...' : 'Khởi tạo'}
               </button>

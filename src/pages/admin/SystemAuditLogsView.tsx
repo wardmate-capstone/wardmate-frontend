@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, RefreshButton } from '@/components/ui';
 import { useSystemAdministration } from '@/hooks/useSystemAdministration';
 import { emptyAuditFilters, systemAdministrationApi as api, type AuditFilters } from '@/lib/api/systemAdministration';
 import { AuditFilterForm, AuditMetadata, AuditPagination, auditTime, SystemRequestStatus } from './SystemAuditShared';
@@ -13,7 +13,7 @@ export function SystemAuditLogsView() {
   const list = useSystemAdministration('audits', query, signal => api.audits(query, signal));
   const detail = useSystemAdministration('audit', id, signal => api.audit(id, signal), !!id);
   const selected = !detail.isError ? detail.data : undefined;
-  return <section className="admin-card min-w-0 space-y-5 p-4 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><h2 className="text-lg font-bold">Nhật ký thay đổi cấu hình</h2><Button variant="outline" loading={list.isFetching} onClick={() => void list.refetch()}>Làm mới</Button></div>
+  return <section className="admin-card min-w-0 space-y-5 p-4 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><h2 className="text-lg font-bold">Nhật ký thay đổi cấu hình</h2><RefreshButton loading={list.isFetching} onClick={() => void list.refetch()} /></div>
     <AuditFilterForm onApply={value => { setFilters(value); setPage(1); }} />
     <SystemRequestStatus pending={list.isPending} error={list.error} fetching={list.isFetching} retry={() => void list.refetch()} />
     {!list.isError && list.data && <><div className="overflow-x-auto"><table className="w-full text-left text-sm [&_th]:whitespace-nowrap [&_th]:p-3 [&_td]:p-3 [&_tr]:border-b [&_tr]:border-slate-100"><thead><tr><th>Thời điểm</th><th>Tham số</th><th>Giá trị cũ → mới</th><th>Phiên bản</th><th>Người thực hiện</th><th>Lý do</th><th>Thao tác</th></tr></thead><tbody>{list.data.items.map(row => <tr key={row.id}><td className="whitespace-nowrap">{auditTime(row.occurredAtUtc)}</td><td>{row.entityKey}</td><td>{row.previousValue ?? 'Chưa có'} → {row.newValue}</td><td>{row.version}</td><td className="max-w-48 break-all">{row.actorId}</td><td className="min-w-48 whitespace-pre-wrap break-words">{row.reason}</td><td><Button variant="outline" size="small" aria-label={`Chi tiết nhật ký ${row.id}`} onClick={() => setId(row.id)}>Chi tiết</Button></td></tr>)}</tbody></table></div>{list.data.items.length === 0 && <p className="py-6 text-center text-sm text-slate-600">Không có nhật ký cấu hình phù hợp với bộ lọc.</p>}

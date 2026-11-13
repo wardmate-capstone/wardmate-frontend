@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/analytics';
 import type { z } from 'zod';
 import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { procedureApi } from '@/lib/api/procedures';
@@ -203,18 +204,15 @@ export function AnalyticsPagination({ page, total, size, onChange }: { page: num
   // Chỉ có một trang thì không cần thanh chuyển trang
   if (page <= 1 && total <= size) return null;
   return (
-    <nav aria-label="Phân trang thống kê" className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-      <span className="text-xs text-slate-500">
-        Trang {page} · {total} kết quả
-      </span>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="small" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          Trang trước
-        </Button>
-        <Button variant="outline" size="small" disabled={page >= 100000 || page * size >= total} onClick={() => onChange(page + 1)}>
-          Trang sau
-        </Button>
-      </div>
-    </nav>
+    <Pagination
+      className="border-t border-slate-100 pt-4"
+      label="Phân trang thống kê"
+      page={page}
+      total={total}
+      pageSize={size}
+      unit="kết quả"
+      hasNext={page < 100000 && page * size < total}
+      onPageChange={onChange}
+    />
   );
 }

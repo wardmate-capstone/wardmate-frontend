@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MagnifyingGlass, Funnel, ClockCounterClockwise, ArrowSquareOut } from '@phosphor-icons/react';
-import { Button, TableSkeletonRows } from '@/components/ui';
+import { Funnel, ClockCounterClockwise, ArrowSquareOut } from '@phosphor-icons/react';
+import { Button, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, type Category, type ProcedureSummary } from '@/lib/api/procedures';
@@ -70,8 +70,6 @@ export function ProcedureApiList({
 
   const hasActiveFilters = Boolean(search || category || status || level || sortOption !== 'Title_asc');
 
-  const selectClass =
-    'h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-800 transition focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100';
 
   return (
     <div className="space-y-4">
@@ -79,19 +77,13 @@ export function ProcedureApiList({
       <div className="admin-card p-4 space-y-3">
         <form onSubmit={handleSearch} className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
           {/* Main search input */}
-          <div className="relative flex-1">
-            <MagnifyingGlass
-              size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên hoặc mã thủ tục..."
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100"
-            />
-          </div>
+          <SearchInput
+            containerClassName="flex-1"
+            placeholder="Tìm kiếm theo tên hoặc mã thủ tục..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onClear={() => setKeyword('')}
+          />
 
           <div className="flex items-center gap-2">
             <Button type="submit" size="small" className="min-h-11 px-5">
@@ -118,8 +110,7 @@ export function ProcedureApiList({
           <div className="pt-3 border-t border-slate-100 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-150">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Lĩnh vực</label>
-              <select
-                className={selectClass}
+              <Select
                 value={category}
                 onChange={(e) => {
                   setCategory(e.target.value);
@@ -132,13 +123,12 @@ export function ProcedureApiList({
                     {c.categoryName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Trạng thái công khai</label>
-              <select
-                className={selectClass}
+              <Select
                 value={status}
                 onChange={(e) => {
                   setStatus(e.target.value);
@@ -148,7 +138,7 @@ export function ProcedureApiList({
                 <option value="">Tất cả trạng thái</option>
                 <option value="true">Đang công khai</option>
                 <option value="false">Đang ẩn</option>
-              </select>
+              </Select>
             </div>
 
             <div>
@@ -167,8 +157,7 @@ export function ProcedureApiList({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">Sắp xếp theo</label>
-              <select
-                className={selectClass}
+              <Select
                 value={sortOption}
                 onChange={(e) => {
                   setSortOption(e.target.value);
@@ -185,7 +174,7 @@ export function ProcedureApiList({
                 <option value="CreatedAt_asc">Ngày tạo (Cũ nhất)</option>
                 <option value="LevelOfImplementation_asc">Cấp thực hiện (A → Z)</option>
                 <option value="LevelOfImplementation_desc">Cấp thực hiện (Z → A)</option>
-              </select>
+              </Select>
             </div>
 
             {hasActiveFilters && (

@@ -149,7 +149,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
           {onSave && !isEditing && (
             <button
               type="button"
-              className="admin-primary-action text-xs"
+              className="admin-primary-action"
               onClick={handleStartEdit}
             >
               <PencilSimple size={16} /> Chỉnh sửa hồ sơ
@@ -167,7 +167,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
               </button>
               <button
                 type="button"
-                className="admin-primary-action text-xs disabled:opacity-50"
+                className="admin-primary-action"
                 onClick={handleSubmitEdit}
                 disabled={isSaving}
               >

@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Plus, X, Sliders, CaretDown, UploadSimple, Warning } from '@phosphor-icons/react';
-import { Button, Input, Badge, ListSkeleton } from '@/components/ui';
+import { Button, Input, Badge, ListSkeleton, Pagination, EmptyState } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { PROCEDURE_LIMITS, procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
 import { useAuthStore } from '@/stores/authStore';
@@ -325,7 +325,7 @@ export function ProcedureFormPicker({
                 initialName: '',
               })}
             >
-              <Plus size={14} className="text-red-800" />
+              <Plus size={14} weight="bold" aria-hidden="true" />
               Tạo phôi mới
             </Button>
           </div>
@@ -334,7 +334,7 @@ export function ProcedureFormPicker({
         </div>
         {query.isPending ? <div className="p-4"><ListSkeleton rows={3} /></div> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{procedureError(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
           <div className="divide-y divide-slate-100">
-            {query.data.length === 0 && <p className="p-4 text-sm text-slate-500">Không tìm thấy mẫu phù hợp. Hãy thử mã khác.</p>}
+            {query.data.length === 0 && <EmptyState title="Không tìm thấy mẫu phù hợp." description="Hãy thử mã khác." />}
             {query.data.map(form => {
               const selected = list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
               return <article key={form.id} className={`space-y-2 p-3 ${selected ? 'bg-red-50/50' : ''}`}>
@@ -352,13 +352,15 @@ export function ProcedureFormPicker({
               </article>;
             })}
           </div>
-          <nav aria-label="Phân trang kho biểu mẫu" className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 p-3">
-            <span className="text-xs text-slate-600">Trang {page} ({query.data.length} mẫu)</span>
-            <div className="flex gap-1">
-              <Button size="small" variant="ghost" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trước</Button>
-              <Button size="small" variant="ghost" disabled={query.data.length < 20} onClick={() => setPage(value => value + 1)}>Sau</Button>
-            </div>
-          </nav>
+          {/* Kho biểu mẫu không trả tổng số: còn trang sau khi trang hiện tại đủ 20 mẫu */}
+          <Pagination
+            className="border-t border-slate-200 p-3"
+            label="Phân trang kho biểu mẫu"
+            page={page}
+            pageSize={20}
+            hasNext={query.data.length >= 20}
+            onPageChange={setPage}
+          />
         </>}
       </section>}
       {selectedForms}

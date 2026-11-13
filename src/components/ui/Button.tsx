@@ -18,6 +18,8 @@ const buttonVariants = cva(
         small: 'min-h-10 px-4 text-xs',
         large: 'min-h-14 px-7 text-base',
         icon: 'size-12 p-0',
+        // Nút trên thanh công cụ/đầu trang: cao 44px, cùng hàng với ô tìm kiếm, ô lọc, nút Làm mới
+        toolbar: 'h-11 min-h-11 gap-1.5 rounded-lg px-4 text-xs hover:translate-y-0',
       },
     },
     defaultVariants: { variant: 'primary', size: 'default' },

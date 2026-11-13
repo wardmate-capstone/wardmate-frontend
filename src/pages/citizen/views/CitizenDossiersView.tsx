@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import {
-  MagnifyingGlass,
   Eye,
   NotePencil,
   Star,
   QrCode,
-  ArrowClockwise,
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass } from '../types';
-import { Button, TableSkeletonRows } from '@/components/ui';
+import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
 
 export interface CitizenInfiniteListProps {
   totalItems: number;
@@ -98,26 +96,24 @@ export function CitizenDossiersView({
   return (
     <section className="admin-card admin-table-card admin-content-card">
       <div className="admin-toolbar">
-        <label className="admin-search">
-          <MagnifyingGlass size={18} />
-          <span className="sr-only">Tìm hồ sơ</span>
-          <input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm theo mã hồ sơ, tên thủ tục..."
-          />
-        </label>
+        <SearchInput
+          containerClassName="w-full max-w-lg"
+          aria-label="Tìm hồ sơ"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={() => setSearchTerm('')}
+          placeholder="Tìm theo mã hồ sơ, tên thủ tục..."
+        />
 
         <div className="flex items-center gap-2">
-          <select
-            className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300"
+          <Select
             aria-label="Lọc hồ sơ theo lĩnh vực"
             value={selectedField}
             onChange={(e) => setSelectedField(e.target.value)}
           >
             <option value="all">Tất cả lĩnh vực</option>
             {fields.map(field => <option key={field} value={field}>{field}</option>)}
-          </select>
+          </Select>
           <button
             type="button"
             onClick={() => { setSearchTerm(''); setSelectedField('all'); }}
@@ -138,16 +134,7 @@ export function CitizenDossiersView({
             </span>
           </div>
           {onRefresh && (
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={isRefreshing || isLoading}
-              title="Làm mới danh sách hồ sơ"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
-            >
-              <ArrowClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
-              <span>{isRefreshing || isLoading ? 'Đang tải…' : 'Làm mới'}</span>
-            </button>
+            <RefreshButton onClick={onRefresh} loading={Boolean(isRefreshing || isLoading)} />
           )}
         </div>
         <table>

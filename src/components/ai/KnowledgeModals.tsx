@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { Badge, Button, Input, ListSelect, Modal, toast } from '@/components/ui';
+import { Badge, Button, Input, ListSelect, Modal, Pagination, toast, ErrorAlert } from '@/components/ui';
 import {
   aiError,
   aiErrorCode,
@@ -451,11 +451,13 @@ export function KnowledgeDetailModal({ documentId, onClose }: { documentId: stri
                 ))}
               </ol>
               {totalChunkPages > 1 && (
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="small" disabled={chunkPage <= 1} onClick={() => setChunkPage((p) => p - 1)}>Trang trước</Button>
-                  <span className="text-xs text-slate-600">Trang {chunkPage}/{totalChunkPages}</span>
-                  <Button variant="outline" size="small" disabled={chunkPage >= totalChunkPages} onClick={() => setChunkPage((p) => p + 1)}>Trang sau</Button>
-                </div>
+                <Pagination
+                  label="Phân trang đoạn văn bản"
+                  page={chunkPage}
+                  pageSize={1}
+                  totalPages={totalChunkPages}
+                  onPageChange={setChunkPage}
+                />
               )}
             </div>
           )}
@@ -610,9 +612,7 @@ export function SyncAllModal({ open, onOpenChange }: { open: boolean; onOpenChan
             </p>
           )}
           {result.failedProcedureIds.length > 0 && (
-            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">
-              {result.failedProcedureIds.length} thủ tục đồng bộ lỗi và đã được bỏ qua. Hãy chạy lại sau hoặc đồng bộ từng thủ tục.
-            </p>
+            <ErrorAlert>{result.failedProcedureIds.length} thủ tục đồng bộ lỗi và đã được bỏ qua. Hãy chạy lại sau hoặc đồng bộ từng thủ tục.</ErrorAlert>
           )}
         </div>
       ) : (

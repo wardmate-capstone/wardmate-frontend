@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowsClockwise, ClockCounterClockwise, MagnifyingGlass, UserSwitch, UserPlus } from '@phosphor-icons/react';
-import { Button, Modal, TableSkeletonRows, toast } from '@/components/ui';
+import { CaretDown, CaretUp, ClockCounterClockwise, Tray, UserSwitch, UserPlus, WarningCircle } from '@phosphor-icons/react';
+import { Button, LIST_SEARCH_THRESHOLD, ListSelect, Modal, Pagination, RefreshButton, SearchInput, TableSkeletonRows, toast, type ListSelectOption, EmptyState, ErrorAlert } from '@/components/ui';
 import { AssignDialog } from '@/components/staffing/DispatchView';
 import type { DispatchApplication } from '@/lib/api/staffing';
 import { useOfficerApplications, useAssignmentSummary } from '@/hooks/useWorkflow';
@@ -12,6 +12,14 @@ import { UNKNOWN_CATEGORY_LABEL, mapAssignmentHistoryToTimelineItem, type Office
 import { useAuthStore } from '@/stores/authStore';
 
 const PAGE_SIZE = 20;
+// Ô lọc trên thanh công cụ: gọn hơn ô chọn trong form
+const filterTrigger = 'min-h-11 rounded-lg border-slate-200 py-2 text-xs font-semibold text-slate-700';
+// Số cán bộ hiện sẵn trong bảng khối lượng trước khi bấm "Xem thêm"
+const WORKLOAD_PREVIEW = 8;
+// Bỏ dấu tiếng Việt để tìm "huong" vẫn ra "Hương"
+const foldVietnamese = (text: string) =>
+  text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
+const quickChip ='inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-800';
 const TRANSFERABLE = ['UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'];
 // Cùng nhóm trạng thái BE dùng để đếm activeCount trong assignment-summary.
 const ACTIVE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY';
@@ -66,7 +74,7 @@ function AssignmentHistoryModal({ item, lookup, onClose }: { item: ApplicationSu
       footer={<Button variant="outline" onClick={onClose}>Đóng</Button>}
     >
       {detail.isPending && <p className="text-sm text-slate-500">Đang tải lịch sử…</p>}
-      {detail.isError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{workflowError(detail.error)}</p>}
+      {detail.isError && <ErrorAlert>{workflowError(detail.error)}</ErrorAlert>}
       {detail.isSuccess && rows.length === 0 && <p className="text-sm text-slate-500">Hồ sơ chưa có thay đổi phân công nào.</p>}
       {rows.length > 0 && (
         <ol className="grid gap-3">
@@ -128,6 +136,25 @@ export function ManagerApplicationsView() {
     return new Map(officerItems.map((o) => [o.id.toLowerCase(), summary.data ? active.get(o.id.toLowerCase()) ?? 0 : undefined]));
   }, [summary.data, officerItems]);
 
+  // Bảng khối lượng: xếp người nhiều việc lên trước, mặc định chỉ hiện WORKLOAD_PREVIEW cán bộ,
+  // phường đông cán bộ thì có thêm ô tìm theo tên. Cán bộ đang được chọn luôn được hiện.
+  const [workloadQuery, setWorkloadQuery] = useState('');
+  const [workloadExpanded, setWorkloadExpanded] = useState(false);
+  const manyOfficers = officerItems.length > LIST_SEARCH_THRESHOLD;
+  const sortedWorkload = useMemo(() => [...officerItems].sort((a, b) =>
+    (workload.get(b.id.toLowerCase()) ?? -1) - (workload.get(a.id.toLowerCase()) ?? -1) ||
+    (a.fullName?.trim() || a.username).localeCompare(b.fullName?.trim() || b.username, 'vi'),
+  ), [officerItems, workload]);
+  const workloadSearch = foldVietnamese(workloadQuery);
+  const matchedWorkload = workloadSearch
+    ? sortedWorkload.filter((o) => foldVietnamese(`${o.fullName ?? ''} ${o.username}`).includes(workloadSearch))
+    : sortedWorkload;
+  const collapsed = !workloadExpanded && !workloadSearch;
+  const shownWorkload = collapsed
+    ? matchedWorkload.filter((o, i) => i < WORKLOAD_PREVIEW || o.id === assignee)
+    : matchedWorkload;
+  const hiddenWorkloadCount = collapsed ? matchedWorkload.length - shownWorkload.length : 0;
+
   const username = useAuthStore((st) => st.user?.username);
   const historyLookup = useMemo<OfficerLookup>(() => ({
     currentOfficer: { id: userId, name: username ? `${username} (bạn)` : 'Bạn' },
@@ -154,36 +181,49 @@ export function ManagerApplicationsView() {
   };
 
   const resetPage = () => setPage(1);
+  const unassignedActive = status === 'SUBMITTED' && assignee === 'unassigned';
+  const hasFilter = Boolean(status || categoryId || assignee || overdue || code);
+  const categoryOptions = useMemo<ListSelectOption[]>(() => [
+    { value: '', label: 'Tất cả lĩnh vực' },
+    ...(categories.data ?? []).map((c) => ({ value: String(c.id), label: c.categoryName })),
+  ], [categories.data]);
+  const officerOptions = useMemo<ListSelectOption[]>(() => [
+    { value: '', label: 'Mọi cán bộ' },
+    { value: 'unassigned', label: 'Chưa phân công' },
+    ...officerItems.map((o) => ({ value: o.id, label: o.fullName?.trim() || o.username })),
+  ], [officerItems]);
   const items = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => { setStatus('SUBMITTED'); setAssignee('unassigned'); setOverdue(false); resetPage(); }}
-          className="admin-card p-4 text-left transition hover:border-red-200 focus:outline-none focus:ring-2 focus:ring-red-800"
-        >
-          <span className="text-xs font-semibold text-slate-500">Chờ tiền kiểm, chưa có người nhận</span>
-          <strong className="mt-1 block text-2xl text-slate-900">{unassignedCount ?? '—'}</strong>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setOverdue(true); setStatus(''); setAssignee(''); resetPage(); }}
-          className="admin-card p-4 text-left transition hover:border-red-200 focus:outline-none focus:ring-2 focus:ring-red-800"
-        >
-          <span className="text-xs font-semibold text-slate-500">Đang quá hạn tiền kiểm</span>
-          <strong className={`mt-1 block text-2xl ${overdueCount ? 'text-red-800' : 'text-slate-900'}`}>{overdueCount ?? '—'}</strong>
-        </button>
-      </div>
-
       {officerItems.length > 0 && (
         <section aria-labelledby="workload-title" className="admin-card p-4">
-          <h2 id="workload-title" className="text-sm font-bold text-slate-900">Khối lượng đang xử lý theo cán bộ</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Hồ sơ Đang kiểm tra, Cần bổ sung, Giấy tờ sẵn sàng và hồ sơ công dân đã gửi lại. Bấm để lọc danh sách.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="workload-title" className="text-sm font-bold text-slate-900">
+                Khối lượng đang xử lý theo cán bộ
+                <span className="ml-1.5 font-normal text-slate-500">({officerItems.length} cán bộ)</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">Hồ sơ Đang kiểm tra, Cần bổ sung, Giấy tờ sẵn sàng và hồ sơ công dân đã gửi lại. Bấm để lọc danh sách.</p>
+            </div>
+            {/* Phường đông cán bộ: thêm ô tìm theo tên để không phải dò cả dãy */}
+            {manyOfficers && (
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                aria-label="Tìm cán bộ trong bảng khối lượng"
+                value={workloadQuery}
+                onChange={(e) => setWorkloadQuery(e.target.value)}
+                onClear={() => setWorkloadQuery('')}
+                placeholder="Tìm theo tên cán bộ…"
+              />
+            )}
+          </div>
+          {shownWorkload.length === 0 && (
+            <p className="mt-3 text-xs text-slate-500">Không tìm thấy cán bộ phù hợp với “{workloadQuery.trim()}”.</p>
+          )}
           <ul className="mt-3 flex flex-wrap gap-2">
-            {officerItems.map((o) => (
+            {shownWorkload.map((o) => (
               <li key={o.id}>
                 <button
                   type="button"
@@ -204,59 +244,109 @@ export function ManagerApplicationsView() {
               </li>
             ))}
           </ul>
+          {hiddenWorkloadCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setWorkloadExpanded(true)}
+              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+            >
+              Xem thêm {hiddenWorkloadCount} cán bộ
+              <CaretDown size={14} aria-hidden="true" />
+            </button>
+          )}
+          {workloadExpanded && !workloadQuery.trim() && sortedWorkload.length > WORKLOAD_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setWorkloadExpanded(false)}
+              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-slate-600 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+            >
+              Thu gọn
+              <CaretUp size={14} aria-hidden="true" />
+            </button>
+          )}
         </section>
       )}
 
-      <section className="admin-card admin-table-card admin-content-card">
-        <div className="admin-toolbar flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
+      {/* overflow-visible: để danh sách của ô lọc nổi ra ngoài thẻ khi bảng ít dòng */}
+      <section className="admin-card admin-table-card admin-content-card overflow-visible!">
+        <div className="grid gap-3 border-b border-slate-100 p-4">
+        <div className="flex flex-wrap items-center gap-2">
           <form
-            className="relative min-w-[220px] flex-1"
+            role="search"
+            className="min-w-[220px] flex-1"
             onSubmit={(event) => { event.preventDefault(); setCode(codeInput.trim()); resetPage(); }}
           >
             <label htmlFor="manager-app-code" className="sr-only">Tìm theo mã hồ sơ</label>
-            <input
+            <SearchInput
               id="manager-app-code"
-              type="search"
               value={codeInput}
               onChange={(e) => setCodeInput(e.target.value)}
+              onClear={() => { setCodeInput(''); setCode(''); resetPage(); }}
               placeholder="Tìm theo mã hồ sơ..."
-              className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-800"
             />
-            <MagnifyingGlass size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
             <button type="submit" className="sr-only">Tìm kiếm</button>
           </form>
-          <select aria-label="Lọc theo trạng thái" value={status} onChange={(e) => { setStatus(e.target.value); resetPage(); }} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800">
-            {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <select aria-label="Lọc theo lĩnh vực" value={categoryId ?? ''} onChange={(e) => { setCategoryId(e.target.value ? Number(e.target.value) : null); resetPage(); }} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800">
-            <option value="">Tất cả lĩnh vực</option>
-            {(categories.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.categoryName}</option>)}
-          </select>
-          <select aria-label="Lọc theo cán bộ phụ trách" value={assignee} onChange={(e) => { setAssignee(e.target.value); resetPage(); }} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800">
-            <option value="">Mọi cán bộ</option>
-            <option value="unassigned">Chưa phân công</option>
-            {officerItems.map((o) => <option key={o.id} value={o.id}>{o.fullName?.trim() || o.username}</option>)}
-          </select>
-          <label className="inline-flex min-h-11 items-center gap-2 px-1 text-xs font-semibold text-slate-700">
-            <input type="checkbox" checked={overdue} onChange={(e) => { setOverdue(e.target.checked); resetPage(); }} className="size-4 accent-red-700" />
-            Chỉ quá hạn
-          </label>
+          {/* Ô lọc dạng ListSelect: danh sách lĩnh vực/cán bộ dài hơn 7 mục sẽ tự có ô tìm kiếm */}
+          <div className="w-full sm:w-44">
+            <ListSelect id="manager-filter-status" ariaLabel="Lọc theo trạng thái" floating className={filterTrigger}
+              value={status} onChange={(v) => { setStatus(v); resetPage(); }}
+              options={STATUS_OPTIONS} placeholder="Tất cả trạng thái" />
+          </div>
+          <div className="w-full sm:w-52">
+            <ListSelect id="manager-filter-category" ariaLabel="Lọc theo lĩnh vực" floating className={filterTrigger}
+              value={categoryId ? String(categoryId) : ''} onChange={(v) => { setCategoryId(v ? Number(v) : null); resetPage(); }}
+              options={categoryOptions} searchable={categoryOptions.length > LIST_SEARCH_THRESHOLD}
+              searchPlaceholder="Tìm lĩnh vực…" placeholder="Tất cả lĩnh vực" loading={categories.isPending} />
+          </div>
+          <div className="w-full sm:w-52">
+            <ListSelect id="manager-filter-assignee" ariaLabel="Lọc theo cán bộ phụ trách" floating className={filterTrigger}
+              value={assignee} onChange={(v) => { setAssignee(v); resetPage(); }}
+              options={officerOptions} searchable={officerOptions.length > LIST_SEARCH_THRESHOLD}
+              searchPlaceholder="Tìm theo tên cán bộ…" placeholder="Mọi cán bộ" loading={officers.isPending} />
+          </div>
+          <RefreshButton loading={list.isFetching} onClick={() => void Promise.all([list.refetch(), officers.refetch(), summary.refetch()])} />
+        </div>
+        {/* Lọc nhanh thay cho 2 thẻ thống kê và ô tích "Chỉ quá hạn": bấm để bật/tắt, số đếm lấy từ assignment-summary */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500">Lọc nhanh:</span>
           <button
             type="button"
-            onClick={() => void Promise.all([list.refetch(), officers.refetch(), summary.refetch()])}
-            disabled={list.isFetching}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            aria-pressed={unassignedActive}
+            onClick={() => {
+              setStatus(unassignedActive ? '' : 'SUBMITTED');
+              setAssignee(unassignedActive ? '' : 'unassigned');
+              resetPage();
+            }}
+            className={`${quickChip} ${unassignedActive ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
           >
-            <ArrowsClockwise size={16} className={list.isFetching ? 'animate-spin text-red-800' : ''} aria-hidden="true" />
-            <span>{list.isFetching ? 'Đang tải...' : 'Làm mới'}</span>
+            <Tray size={16} aria-hidden="true" />
+            <span>Chưa có người nhận</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{unassignedCount ?? '—'}</span>
           </button>
+          <button
+            type="button"
+            aria-pressed={overdue}
+            onClick={() => { setOverdue(!overdue); resetPage(); }}
+            className={`${quickChip} ${overdue ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+          >
+            <WarningCircle size={16} aria-hidden="true" className={overdueCount ? 'text-red-700' : undefined} />
+            <span>Quá hạn tiền kiểm</span>
+            <span className={`rounded-full px-2 py-0.5 font-mono ${overdueCount ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'}`}>{overdueCount ?? '—'}</span>
+          </button>
+          {hasFilter && (
+            <button
+              type="button"
+              onClick={() => { setStatus(''); setCategoryId(null); setAssignee(''); setOverdue(false); setCodeInput(''); setCode(''); resetPage(); }}
+              className="inline-flex min-h-10 items-center px-2 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+            >
+              Xóa bộ lọc
+            </button>
+          )}
+        </div>
         </div>
 
         {list.isError && (
-          <div role="alert" className="mx-4 my-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-xs text-red-900">
-            <p>{workflowError(list.error)}</p>
-            <Button size="small" variant="outline" onClick={() => void list.refetch()}>Thử lại</Button>
-          </div>
+          <ErrorAlert className="mx-4 my-3" retrying={list.isFetching} onRetry={() => void list.refetch()}>{workflowError(list.error)}</ErrorAlert>
         )}
         {summary.isError && (
           <p role="alert" className="mx-4 my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
@@ -291,7 +381,7 @@ export function ManagerApplicationsView() {
                 />
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-xs text-slate-500">Không có hồ sơ nào phù hợp với bộ lọc hiện tại.</td>
+                  <td colSpan={6}><EmptyState title="Không có hồ sơ nào phù hợp với bộ lọc hiện tại." description={hasFilter ? 'Thử bỏ bớt điều kiện lọc hoặc bấm “Xóa bộ lọc”.' : undefined} /></td>
                 </tr>
               ) : items.map((item) => {
                 const canAssign = item.status === 'SUBMITTED' && !item.assignedOfficerId;
@@ -345,13 +435,16 @@ export function ManagerApplicationsView() {
           </table>
         </div>
 
-        <nav aria-label="Phân trang giám sát hồ sơ" className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600">
-          <span>Trang <strong className="text-slate-900">{page}</strong> · <strong className="text-slate-900">{total}</strong> hồ sơ</span>
-          <div className="flex items-center gap-2">
-            <Button size="small" variant="outline" disabled={page <= 1 || list.isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>Trang trước</Button>
-            <Button size="small" variant="outline" disabled={list.isFetching || page * PAGE_SIZE >= total} onClick={() => setPage((p) => p + 1)}>Trang sau</Button>
-          </div>
-        </nav>
+        <Pagination
+          className="border-t border-slate-100 px-4 py-3"
+          label="Phân trang giám sát hồ sơ"
+          page={page}
+          total={total}
+          pageSize={PAGE_SIZE}
+          unit="hồ sơ"
+          disabled={list.isFetching}
+          onPageChange={(p) => setPage(Math.max(1, p))}
+        />
       </section>
 
       <AssignmentHistoryModal item={historyItem} lookup={historyLookup} onClose={() => setHistoryItem(null)} />

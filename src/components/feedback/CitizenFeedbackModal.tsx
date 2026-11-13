@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ErrorAlert } from '@/components/ui';
 import axios from 'axios';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -122,7 +123,7 @@ function FeedbackForm({ id, onClose, onRefreshApplication, description }: { id: 
           <p id="feedback-comment-error" role={errors.comment ? 'alert' : undefined} className="mt-1 text-sm text-red-800">{errors.comment?.message}</p>
         </div>
       </fieldset>
-      {mutation.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{analyticsError(mutation.error)} Nội dung được giữ để bạn kiểm tra hoặc thử lại.</p>}
+      {mutation.error && <ErrorAlert>{analyticsError(mutation.error)} Nội dung được giữ để bạn kiểm tra hoặc thử lại.</ErrorAlert>}
       <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
         <button type="button" className="text-sm font-medium text-slate-500 hover:text-slate-800 disabled:opacity-50" disabled={mutation.isPending || !isDirty} onClick={() => reset({ rating: 0, comment: '' })}>Xóa nội dung đang nhập</button>
         <div className="ml-auto flex gap-3"><Button type="button" variant="outline" disabled={mutation.isPending} onClick={() => guard.requestClose(onClose)}>Để sau</Button><Button type="submit" loading={mutation.isPending} disabled={notReady || existing.isFetching || mutation.isPending || rating === 0}>Gửi đánh giá</Button></div>

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { FolderSimple, MagnifyingGlass, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
-import { Button, Input, Modal, ConfirmDeleteModal } from '@/components/ui';
+import { FolderSimple, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { Button, Input, Modal, ConfirmDeleteModal, SearchInput, EmptyState } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { toast } from '@/components/ui/Toast';
 import { procedureApi, procedureError, type Category } from '@/lib/api/procedures';
@@ -80,24 +80,21 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="relative block w-full sm:max-w-md">
-          <span className="sr-only">Tìm danh mục</span>
-          <MagnifyingGlass size={18} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo tên hoặc mô tả..."
-            className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-700 focus:ring-2 focus:ring-red-100"
-          />
-        </label>
+        <SearchInput
+          containerClassName="w-full sm:max-w-md"
+          aria-label="Tìm danh mục"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onClear={() => setSearch('')}
+          placeholder="Tìm theo tên hoặc mô tả..."
+        />
         <p className="text-sm text-slate-500" aria-live="polite">
           {search.trim()
             ? <><span className="font-semibold text-slate-900">{visibleCategories.length}</span> / {categories.length} danh mục</>
             : <><span className="font-semibold text-slate-900">{categories.length}</span> danh mục</>}
         </p>
-        {canManage && <Button className="h-11 min-h-0 shrink-0 gap-1.5 px-4 sm:ml-auto" onClick={() => open(null)}>
-          <Plus size={18} weight="bold" aria-hidden /> Thêm danh mục
+        {canManage && <Button size="toolbar" className="sm:ml-auto" onClick={() => open(null)}>
+          <Plus size={16} weight="bold" aria-hidden /> Thêm danh mục
         </Button>}
       </div>
 
@@ -165,10 +162,10 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
         </div>
 
         {!categories.length && (
-          <p className="py-12 text-center text-sm text-slate-500">Chưa có danh mục thủ tục.</p>
+          <EmptyState icon={FolderSimple} title="Chưa có danh mục thủ tục." />
         )}
         {!!categories.length && !visibleCategories.length && (
-          <p className="py-12 text-center text-sm text-slate-500">Không tìm thấy danh mục phù hợp.</p>
+          <EmptyState icon={FolderSimple} title="Không tìm thấy danh mục phù hợp." description="Thử từ khóa khác." />
         )}
       </section>
 

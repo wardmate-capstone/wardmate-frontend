@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
-import { Button } from '@/components/ui';
+import { ErrorAlert } from '@/components/ui';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
@@ -469,7 +469,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
         {/* NỘI DUNG CHÍNH (MAIN) */}
         <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
-          {citizenAppsQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(citizenAppsQuery.error)}</p><Button variant="outline" onClick={() => { void citizenAppsQuery.refetch(); void dossierListQuery.refetch(); }}>Thử tải lại hồ sơ</Button></div>}
+          {citizenAppsQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hồ sơ" onRetry={() => { void citizenAppsQuery.refetch(); void dossierListQuery.refetch(); }}>{workflowError(citizenAppsQuery.error)}</ErrorAlert>}
           {/* Header Trang */}
           <div className="admin-page-heading mb-6">
             <div>
@@ -486,7 +486,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                   type="button"
                   onClick={() => setIsCreateModalOpen(true)}
                 >
-                  <Plus size={18} weight="bold" /> Nộp hồ sơ mới
+                  <Plus size={16} weight="bold" /> Nộp hồ sơ mới
                 </button>
               )}
             </div>
@@ -549,6 +549,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               notifications={notificationHub.items}
               connectionStatus={notificationHub.status}
               onMarkAllRead={notificationHub.markAllRead}
+              unreadCount={notificationHub.unreadCount}
               onMarkRead={notificationHub.markRead}
               onOpenApplication={async id => {
                 const dto = await workflowApi.getApplication(id);

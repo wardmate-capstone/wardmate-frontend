@@ -1,4 +1,5 @@
 import { Star } from '@phosphor-icons/react';
+import { EmptyState } from '@/components/ui';
 import type { CitizenDossier } from '../types';
 import { AnalyticsPagination } from '@/components/analytics/AnalyticsFilters';
 import { Button } from '@/components/ui/Button';
@@ -20,10 +21,7 @@ export function CitizenFeedbackView({ dossiers, onOpenFeedback, loading, error, 
 
     {loading ? <div className="p-5"><ListSkeleton rows={3} /></div>
       : error ? <div role="alert" className="flex flex-col items-center gap-3 px-5 py-10 text-center text-sm text-slate-600"><p>Chưa tải được danh sách hồ sơ.</p><Button variant="outline" size="small" onClick={onRetry}>Thử lại</Button></div>
-      : eligible.length === 0 ? <div role="status" className="flex flex-col items-center gap-2 px-5 py-12 text-center">
-          <span className="grid size-12 place-items-center rounded-xl bg-slate-50 text-slate-400"><Star size={24} weight="duotone" aria-hidden /></span>
-          <p className="text-sm text-slate-500">Chưa có hồ sơ nào đủ điều kiện đánh giá.</p>
-        </div>
+      : eligible.length === 0 ? <EmptyState icon={Star} title="Chưa có hồ sơ nào đủ điều kiện đánh giá." />
       : <ul className="divide-y divide-slate-100">
           {eligible.map(item => <li key={item.id} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50/70">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold-50 text-gold-700"><Star size={20} weight="duotone" aria-hidden /></span>

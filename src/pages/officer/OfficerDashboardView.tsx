@@ -2,7 +2,7 @@ import React from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
-import { ListSkeleton, Skeleton } from '@/components/ui';
+import { ListSkeleton, Skeleton, EmptyState } from '@/components/ui';
 import {
   ArrowsClockwise,
   CalendarBlank,
@@ -13,7 +13,6 @@ import {
   HourglassMedium,
   MagnifyingGlass,
   SealCheck,
-  Tray,
   WarningCircle,
 } from '@phosphor-icons/react';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
@@ -153,13 +152,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
           {isLoading ? (
             <div className="p-5"><ListSkeleton rows={3} /></div>
           ) : tasks.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
-              <span className="grid size-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-                <CheckCircle size={26} weight="duotone" aria-hidden />
-              </span>
-              <p className="text-sm font-semibold text-slate-800">Không có việc gấp</p>
-              <p className="text-sm text-slate-500">Chưa có hồ sơ quá hạn, sắp đến hạn hoặc công dân vừa gửi lại.</p>
-            </div>
+            <EmptyState icon={CheckCircle} title="Không có việc gấp" description="Chưa có hồ sơ quá hạn, sắp đến hạn hoặc công dân vừa gửi lại." />
           ) : (
             <ul className="divide-y divide-slate-100">
               {tasks.slice(0, TASK_LIMIT).map(({ app, kind }) => {
@@ -220,10 +213,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             {isLoading ? (
               <div className="p-4"><ListSkeleton rows={2} /></div>
             ) : unassigned.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-5 py-8 text-center">
-                <Tray size={26} className="text-slate-300" aria-hidden />
-                <p className="text-sm text-slate-500">Không có hồ sơ chờ nhận.</p>
-              </div>
+              <EmptyState title="Không có hồ sơ chờ nhận." />
             ) : (
               <>
                 <ul className="divide-y divide-slate-100">

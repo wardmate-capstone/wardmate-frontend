@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowsClockwise, Star } from '@phosphor-icons/react';
+import { Star } from '@phosphor-icons/react';
+import { RefreshButton, EmptyState } from '@/components/ui';
 import { AnalyticsTrendChart } from './AnalyticsTrendChart';
 import { OverviewCountChart } from './OverviewCountChart';
 import { StatTile, chartColors, numberVi } from './chartKit';
@@ -19,7 +20,7 @@ const labels = { receivedCount: 'Lượt gửi tiền kiểm', readyCount: 'Gi�
 function metric(value: number | null | undefined, suffix = '') { return value == null ? 'Chưa đủ dữ liệu' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + suffix; }
 
 function Deadlines({ value, backlog = false }: { value?: z.infer<typeof deadlinesSchema> | null; backlog?: boolean }) {
-  if (!value) return <p className="text-sm text-slate-500">Chưa có dữ liệu hạn tiền kiểm.</p>;
+  if (!value) return <EmptyState title="Chưa có dữ liệu hạn tiền kiểm." />;
   // Ô số không chứa câu chữ: thiếu dữ liệu hiện "—" (lý do ở title).
   const rate = (v: number | null) => v == null ? '—' : metric(v, '%');
   const items: [string, ReactNode, string?][] = backlog ? [
@@ -146,7 +147,7 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
         {average != null && <> · Trung bình trang này <span className="font-semibold text-slate-900">{average.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span> <Star size={13} weight="fill" className="inline -translate-y-px text-amber-500" aria-hidden="true" /></>}
       </p>
     </div>
-    {rows.length === 0 && <p role="status" className="px-5 py-10 text-center text-sm text-slate-500">Chưa có phản hồi nào trong kỳ đã chọn. Thử chọn khoảng ngày rộng hơn.</p>}
+    {rows.length === 0 && <EmptyState title="Chưa có phản hồi nào trong kỳ đã chọn." description="Thử chọn khoảng ngày rộng hơn." />}
     {rows.length > 0 && <p className="px-5 py-2 text-xs text-slate-500 sm:hidden">Vuốt ngang bảng để xem hồ sơ, đánh giá và góp ý.</p>}
     {rows.length > 0 && <div className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="w-full min-w-[900px] text-left text-sm">
       <caption className="sr-only">Danh sách phản hồi người dân</caption>
@@ -196,9 +197,7 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
 
   return <div className="space-y-5">
     <AnalyticsFilters value={filters} onChange={setFilters} actions={
-      <Button variant="outline" size="small" className="h-9 min-h-0 gap-1.5 px-3" loading={refreshing} aria-label="Làm mới dữ liệu" title="Làm mới dữ liệu" onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }}>
-        {!refreshing && <ArrowsClockwise size={15} aria-hidden="true" />}<span className="hidden sm:inline">Làm mới</span>
-      </Button>
+      <RefreshButton label="Làm mới dữ liệu" loading={refreshing} onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }} />
     } />
     <AnalyticsStatus pending={current.isPending} error={current.error} retry={() => void current.refetch()} />
 

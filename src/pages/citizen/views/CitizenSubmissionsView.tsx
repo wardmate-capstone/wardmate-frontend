@@ -1,15 +1,13 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import {
   FileDoc,
-  MagnifyingGlass,
-  ArrowClockwise,
   Eye,
   Folder,
   Clock,
   ChatCircleDots,
   WarningCircle,
 } from '@phosphor-icons/react';
-import { Button, ListSkeleton } from '@/components/ui';
+import { Button, ListSkeleton, RefreshButton, SearchInput, Select, ErrorAlert } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useCitizenSubmissions } from '@/hooks/useDocumentForms';
 import {
@@ -99,39 +97,22 @@ export function CitizenSubmissionsView({
       <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2.5">
           {/* Ô tìm kiếm theo tên biểu mẫu */}
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <MagnifyingGlass
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm theo tên tờ khai..."
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-7 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-red-600 focus:bg-white focus:ring-1 focus:ring-red-600"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-xs text-slate-400 hover:text-slate-600"
-                title="Xóa từ khóa"
-              >
-                ×
-              </button>
-            )}
-          </div>
+          <SearchInput
+            containerClassName="min-w-[220px] flex-1 max-w-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm('')}
+            placeholder="Tìm kiếm theo tên tờ khai..."
+          />
 
           {/* Lọc theo trạng thái */}
           <div className="flex items-center gap-1.5">
             <label htmlFor="submission-status-filter" className="sr-only">
               Trạng thái tờ khai
             </label>
-            <select
+            <Select
               id="submission-status-filter"
               aria-label="Trạng thái tờ khai"
-              className="h-10 cursor-pointer rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-red-600 focus:ring-1 focus:ring-red-600"
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
@@ -146,7 +127,7 @@ export function CitizenSubmissionsView({
                   </option>
                 )
               )}
-            </select>
+            </Select>
           </div>
 
           {/* Nút xóa bộ lọc */}
@@ -170,26 +151,12 @@ export function CitizenSubmissionsView({
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
             {query.isPending ? 'Đang tải…' : `${query.data?.totalCount ?? 0} tờ khai`}
           </span>
-          <Button
-            variant="outline"
-            size="small"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-            className="gap-1.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
-          >
-            <ArrowClockwise
-              size={14}
-              className={query.isFetching ? 'animate-spin text-red-700' : 'text-slate-500'}
-            />
-            <span>{query.isFetching ? 'Đang tải…' : 'Làm mới'}</span>
-          </Button>
+          <RefreshButton loading={query.isFetching} onClick={() => void query.refetch()} />
         </div>
       </div>
 
       {error && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
-          {error}
-        </p>
+        <ErrorAlert>{error}</ErrorAlert>
       )}
 
       {query.isPending ? (

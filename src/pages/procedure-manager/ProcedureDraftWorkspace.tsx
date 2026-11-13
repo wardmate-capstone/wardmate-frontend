@@ -18,7 +18,7 @@ import {
   UploadSimple,
   Warning,
 } from "@phosphor-icons/react";
-import { Button, ConfirmDeleteModal, Modal, TableSkeletonRows } from "@/components/ui";
+import { Button, ConfirmDeleteModal, Modal, TableSkeletonRows, ErrorAlert } from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import {
   procedureApi,
@@ -236,7 +236,7 @@ export function PdfSource({
       <div className="flex-1 min-h-0 bg-slate-100">
         <ProcedureFeedback error={error} retry={() => void fetchPdf()} />
         {uploadError && source && (
-          <p role="alert" className="m-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{uploadError}</p>
+          <ErrorAlert className="m-3">{uploadError}</ErrorAlert>
         )}
         {missing ? (
           <div className="flex h-full min-h-56 flex-col items-center justify-center gap-3 p-6 text-center">
@@ -252,7 +252,7 @@ export function PdfSource({
               </p>
             </div>
             {uploadError && (
-              <p role="alert" className="max-w-md rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">{uploadError}</p>
+              <ErrorAlert className="max-w-md">{uploadError}</ErrorAlert>
             )}
             {canUpload && (
               <Button loading={uploading} onClick={() => fileInput.current?.click()}>

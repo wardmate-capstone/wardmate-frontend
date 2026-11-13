@@ -124,7 +124,7 @@ export function CreateStaffAccountModal({ open, wards, onOpenChange, onCreated }
           <button type="button" onClick={() => onOpenChange(false)} className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50">
             Hủy bỏ
           </button>
-          <button type="submit" disabled={isSubmitting} className="admin-primary-action text-xs disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting} className="admin-primary-action">
             {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui';
+import { RefreshButton } from '@/components/ui';
 import { workScheduleApi } from '@/lib/api/workSchedules';
 import { staffingApi } from '@/lib/api/staffing';
 import { calendarDate, calendarDays, scheduleDay, scheduleTime } from '@/lib/scheduleCalendar';
@@ -23,7 +23,7 @@ export function ScheduleListView() {
     {manager && <label className="staff-field">Cán bộ xem lịch<select className={fieldClass} value={officerId} disabled={directory.isPending || directory.isError} onChange={e => setOfficer(e.target.value)}><option value="">Chọn cán bộ</option>{officers.map(o => <option key={o.id} value={o.id}>{o.fullName || o.username}{o.isActive ? '' : ' (ngừng hoạt động)'}</option>)}</select></label>}
     <label className="staff-field">Tháng xem lịch<select className={fieldClass} disabled={!officerId} value={month.slice(5, 7)} onChange={e => setMonth(month.slice(0, 5) + e.target.value)}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>Tháng {i + 1}</option>)}</select></label>
     <label className="staff-field">Năm xem lịch<select className={fieldClass} disabled={!officerId} value={month.slice(0, 4)} onChange={e => setMonth(e.target.value + month.slice(4))}>{Array.from({ length: 100 }, (_, i) => <option key={i} value={2000 + i}>{2000 + i}</option>)}</select></label>
-    <Button variant="outline" disabled={!officerId || query.isFetching} onClick={() => void query.refetch()}>Làm mới danh sách</Button>
+    <RefreshButton label="Làm mới danh sách" loading={query.isFetching} disabled={!officerId} onClick={() => void query.refetch()} />
   </div><p className="staff-hint">Chỉ xem lịch của cán bộ đã chọn trong một tháng. Chỉnh sửa ca chưa bắt đầu tại Sắp xếp lịch tháng; công bố để áp dụng thay đổi.</p></div>
     {manager && <QueryState query={directory} />}
     {!officerId ? <div className="staff-state">Chọn cán bộ rồi chọn tháng để xem danh sách lịch.</div> : <><QueryState query={query} />{query.data && !query.isError && <section className="staff-card space-y-4"><h3>Lịch tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)} · {manager ? officers.find(o => o.id === officerId)?.fullName || 'Cán bộ đã chọn' : 'Của tôi'}</h3><p className="text-sm">Lịch chính thức · Chỉ xem · {rows.length} ca làm · Giờ Việt Nam (24 giờ)</p>

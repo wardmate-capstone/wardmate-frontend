@@ -6,7 +6,6 @@ import {
   Check,
   Copy,
   Eye,
-  MagnifyingGlass,
   Plus,
   Trash,
   X,
@@ -16,7 +15,10 @@ import {
   Input,
   ListSkeleton,
   Modal,
+  RefreshButton,
   TableSkeletonRows,
+  SearchInput,
+  Select,
 } from "@/components/ui";
 import { toast } from "@/components/ui/Toast";
 import {
@@ -196,21 +198,16 @@ export function AdminRolesView() {
       <ErrorBox error={error} retry={() => void load()} />
       <section className="admin-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-          <label className="relative min-w-64 flex-1">
-            <MagnifyingGlass
-              className="absolute left-3 top-3 text-slate-400"
-              size={17}
-            />
-            <input
-              aria-label="Tìm vai trò"
-              value={roleSearch}
-              onChange={(event) => setRoleSearch(event.target.value)}
-              placeholder="Tìm vai trò..."
-              className="min-h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm"
-            />
-          </label>
-          <Button onClick={() => open(null)}>
-            <Plus size={18} /> Thêm vai trò
+          <SearchInput
+            containerClassName="min-w-64 flex-1"
+            aria-label="Tìm vai trò"
+            value={roleSearch}
+            onChange={(event) => setRoleSearch(event.target.value)}
+            onClear={() => setRoleSearch("")}
+            placeholder="Tìm vai trò..."
+          />
+          <Button size="toolbar" onClick={() => open(null)}>
+            <Plus size={16} weight="bold" aria-hidden="true" /> Thêm vai trò
           </Button>
         </div>
         <div className="admin-table-wrap max-h-[34rem] overflow-auto">
@@ -373,25 +370,18 @@ export function AdminRolesView() {
               </div>
             </div>
             <div className="grid gap-3 border-b border-slate-100 p-4">
-              <label className="relative">
-                <MagnifyingGlass
-                  className="absolute left-3 top-3 text-slate-400"
-                  size={17}
-                />
-                <input
-                  aria-label="Tìm quyền"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Tìm tên hoặc mã quyền..."
-                  className="min-h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm"
-                />
-              </label>
+              <SearchInput
+                aria-label="Tìm quyền"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onClear={() => setSearch("")}
+                placeholder="Tìm tên hoặc mã quyền..."
+              />
               <div className="grid gap-3 sm:grid-cols-2">
-                <select
+                <Select
                   aria-label="Lọc theo phân hệ"
                   value={moduleFilter}
                   onChange={(event) => setModuleFilter(event.target.value)}
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                 >
                   <option value="ALL">Tất cả phân hệ</option>
                   {modules.map((module) => (
@@ -399,17 +389,16 @@ export function AdminRolesView() {
                       {moduleLabels[module] ?? module}
                     </option>
                   ))}
-                </select>
-                <select
+                </Select>
+                <Select
                   aria-label="Lọc theo trạng thái quyền"
                   value={assignmentFilter}
                   onChange={(event) => setAssignmentFilter(event.target.value)}
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                 >
                   <option value="ALL">Tất cả trạng thái</option>
                   <option value="ASSIGNED">Đã cấp</option>
                   <option value="UNASSIGNED">Chưa cấp</option>
-                </select>
+                </Select>
               </div>
             </div>
             <div className="admin-table-wrap flex-1 overflow-auto">
@@ -1165,35 +1154,20 @@ export function AdminRbacAuditView() {
             khoản trên hệ thống. Bộ lọc chỉ áp dụng cho các bản ghi trên trang
             đang xem.
           </p>
-          <Button
-            size="small"
-            variant="outline"
-            loading={loading}
-            onClick={() => void load()}
-          >
-            {!loading && <ArrowsClockwise />} Làm mới
-          </Button>
+          <RefreshButton loading={loading} onClick={() => void load()} />
         </div>
         <div className="grid gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(13rem,auto)_auto_auto]">
-          <label className="relative">
-            <span className="sr-only">Tìm nhật ký</span>
-            <MagnifyingGlass
-              className="absolute left-3 top-3 text-slate-400"
-              size={17}
-            />
-            <input
-              aria-label="Tìm nhật ký"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm hành động, tài khoản hoặc nội dung..."
-              className="min-h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm"
-            />
-          </label>
-          <select
+          <SearchInput
+            aria-label="Tìm nhật ký"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onClear={() => setQuery("")}
+            placeholder="Tìm hành động, tài khoản hoặc nội dung..."
+          />
+          <Select
             aria-label="Lọc theo hành động"
             value={action}
             onChange={(event) => setAction(event.target.value)}
-            className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
           >
             <option value="ALL">Tất cả hành động</option>
             {actions.map((value) => (
@@ -1201,7 +1175,7 @@ export function AdminRbacAuditView() {
                 {actionLabels[value] ?? value}
               </option>
             ))}
-          </select>
+          </Select>
           <Input
             aria-label="Lọc theo ngày"
             type="date"

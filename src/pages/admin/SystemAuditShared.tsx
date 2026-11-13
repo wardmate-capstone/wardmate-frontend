@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input, toast } from '@/components/ui';
+import { Button, Input, Pagination, Select, toast, ErrorAlert } from '@/components/ui';
 import { auditFilterSchema, auditSources, emptyAuditFilters, systemError, type AuditFilters } from '@/lib/api/systemAdministration';
 
 export function auditTime(value: string | null) {
@@ -9,7 +9,7 @@ export function auditTime(value: string | null) {
 }
 export function SystemRequestStatus({ pending, error, retry, fetching = false }: { pending: boolean; error: unknown; retry: () => void; fetching?: boolean }) {
   if (pending) return <p role="status" className="p-5 text-sm text-slate-600">Đang tải dữ liệu…</p>;
-  if (error) return <div role="alert" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p>{systemError(error)}</p><Button variant="outline" onClick={retry}>Thử lại</Button></div>;
+  if (error) return <ErrorAlert onRetry={retry}>{systemError(error)}</ErrorAlert>;
   return fetching ? <p role="status" className="text-sm text-slate-600">Đang làm mới dữ liệu…</p> : null;
 }
 export function AuditFilterForm({ business = false, onApply }: { business?: boolean; onApply: (filters: AuditFilters) => void }) {
@@ -31,11 +31,18 @@ export function AuditFilterForm({ business = false, onApply }: { business?: bool
 export function AuditPagination({ page, pageSize, total, busy, onPage, onSize }: { page: number; pageSize: number; total: number; busy: boolean; onPage: (page: number) => void; onSize: (size: number) => void }) {
   const id = useId();
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  return <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-4 text-sm">
-    <p role="status">Trang {page} / {pages} · Tổng {total.toLocaleString('vi-VN')} bản ghi</p>
-    <div className="flex flex-wrap items-center gap-3"><label htmlFor={id}>Số dòng</label><select id={id} value={pageSize} disabled={busy} onChange={event => onSize(Number(event.target.value))} className="min-h-10 rounded-lg border px-3">{[20, 50, 100].map(size => <option key={size}>{size}</option>)}</select>
-      <Button variant="outline" size="small" disabled={busy || page <= 1} onClick={() => onPage(page - 1)}>Trang trước</Button><Button variant="outline" size="small" disabled={busy || page >= pages || page >= 100000} onClick={() => onPage(page + 1)}>Trang sau</Button></div>
-  </div>;
+  return <Pagination
+    className="border-t border-slate-200 pt-4"
+    label="Phân trang nhật ký"
+    page={page}
+    total={total}
+    pageSize={pageSize}
+    unit="bản ghi"
+    hasNext={page < pages && page < 100000}
+    disabled={busy}
+    onPageChange={onPage}
+    extra={<><label htmlFor={id} className="text-xs font-semibold text-slate-600">Số dòng</label><Select id={id} containerClassName="w-24" value={pageSize} disabled={busy} onChange={event => onSize(Number(event.target.value))}>{[20, 50, 100].map(size => <option key={size}>{size}</option>)}</Select></>}
+  />;
 }
 export function AuditMetadata({ children }: { children: ReactNode }) {
   return <dl className="grid gap-3 break-words text-sm [&_dt]:font-semibold [&_dt]:text-slate-600 [&_dd]:mt-1 [&_dd]:break-all">{children}</dl>;

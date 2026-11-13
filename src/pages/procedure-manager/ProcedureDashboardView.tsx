@@ -4,18 +4,18 @@ import {
   Prohibit,
   CheckCircle,
   Folders,
-  PlusCircle,
   FileArrowUp,
   FileText,
   ArrowRight,
   CaretRight,
   CalendarBlank,
   Tag,
+  Plus,
 } from '@phosphor-icons/react';
 import { procedureApi, type ProcedureSummary } from '@/lib/api/procedures';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
-import { ListSkeleton } from '@/components/ui';
+import { ListSkeleton, EmptyState } from '@/components/ui';
 import type { ProcedureNavSection } from '@/components/layout/RoleWorkspaceSidebars';
 
 export interface ProcedureDashboardViewProps {
@@ -152,10 +152,7 @@ export function ProcedureDashboardView({
           )}
 
           {!recent.loading && recent.data?.items.length === 0 && (
-            <div className="py-12 text-center">
-              <Files size={36} weight="duotone" className="mx-auto text-slate-300" />
-              <p className="mt-2 text-sm font-medium text-slate-500">Chưa có dữ liệu thủ tục nào.</p>
-            </div>
+            <EmptyState icon={Files} title="Chưa có dữ liệu thủ tục nào." />
           )}
 
           {!recent.loading && recent.data && recent.data.items.length > 0 && (
@@ -234,7 +231,7 @@ export function ProcedureDashboardView({
                   className="flex w-full items-center justify-between gap-3 rounded-lg bg-red-800 px-3.5 py-2.5 text-left text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-700"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <PlusCircle size={16} weight="bold" />
+                    <Plus size={16} weight="bold" aria-hidden="true" />
                     Thêm thủ tục mới
                   </span>
                   <CaretRight size={14} weight="bold" />

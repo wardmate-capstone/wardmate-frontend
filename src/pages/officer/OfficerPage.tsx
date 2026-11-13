@@ -39,7 +39,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNotificationHub } from '@/hooks/useNotificationHub';
 import { workflowError, workflowApi } from '@/lib/api/workflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, ErrorAlert } from '@/components/ui';
 import type { QueueTab } from './OfficerApplicationListView';
 
 // Trạng thái Workflow gửi lên server theo mục sidebar; "Đã gửi lại" là SUBMITTED có resubmitCount > 0.
@@ -388,7 +388,7 @@ export const OfficerPage: React.FC = () => {
 
         {/* Semantic Main Content */}
         <main id="officer-main" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabIndex={-1}>
-          {activeQuery.isError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"><p>{workflowError(activeQuery.error)}</p><Button variant="outline" onClick={() => void refetchAll()}>Thử tải lại hàng đợi</Button></div>}
+          {activeQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView

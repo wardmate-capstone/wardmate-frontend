@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { ListSelect } from '@/components/ui';
 import {
-  MagnifyingGlass,
   Funnel,
-  X,
   Eye,
   CheckCircle,
   Hourglass,
@@ -12,9 +9,8 @@ import {
   ArrowCounterClockwise,
   FileText,
   FilePdf,
-  CaretDown,
 } from '@phosphor-icons/react';
-import { Button, TableSkeletonRows } from '@/components/ui';
+import { Button, ListSelect, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
 
 export interface PaginationConfig {
@@ -280,33 +276,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
           {/* Search Box */}
-          <div className="relative sm:col-span-2 xl:col-span-4">
+          <div className="sm:col-span-2 xl:col-span-4">
             <label htmlFor="search-app-input" className="sr-only">
               Tìm kiếm hồ sơ
             </label>
-            <MagnifyingGlass
-              size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-              aria-hidden="true"
-            />
-            <input
+            <SearchInput
               id="search-app-input"
-              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
               placeholder="Tìm mã hồ sơ, họ tên người dân..."
-              className="w-full rounded-xl border border-slate-300 bg-slate-50/50 py-2.5 pl-10 pr-9 text-xs sm:text-sm text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:bg-white focus:outline-none focus:ring-3 focus:ring-red-100"
             />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                aria-label="Xóa từ khóa tìm kiếm"
-              >
-                <X size={16} />
-              </button>
-            )}
           </div>
 
           {/* Procedure Filter */}
@@ -325,11 +305,10 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               Cán bộ phụ trách
             </label>
             <div className="relative">
-              <select
+              <Select
                 id="filter-officer-select"
                 value={selectedOfficer}
                 onChange={(e) => setSelectedOfficer(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               >
                 <option value="ALL">Mọi cán bộ</option>
                 {officerOptions.map((name) => (
@@ -338,8 +317,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                   </option>
                 ))}
                 <option value="Chưa phân công">Chưa phân công</option>
-              </select>
-              <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </Select>
             </div>
           </div>
 
@@ -349,16 +327,14 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               Sắp xếp
             </label>
             <div className="relative">
-              <select
+              <Select
                 id="filter-sort-select"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               >
                 <option value="newest">Mới nhất trước</option>
                 <option value="oldest">Cũ nhất trước</option>
-              </select>
-              <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </Select>
             </div>
           </div>
         </div>
@@ -370,12 +346,11 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               Lọc theo lĩnh vực
             </label>
             <div className="relative">
-              <select
+              <Select
                 id="filter-category-select"
                 value={categoryId ?? ''}
                 disabled={!onCategoryChange}
                 onChange={(e) => onCategoryChange?.(e.target.value ? Number(e.target.value) : null)}
-                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
               >
                 <option value="">Tất cả lĩnh vực</option>
                 {categories.map((category) => (
@@ -383,8 +358,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     {category.categoryName}
                   </option>
                 ))}
-              </select>
-              <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </Select>
             </div>
           </div>
 
@@ -456,16 +430,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
 
           {onRefresh && (
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={isRefreshing || isLoading}
-              title="Làm mới danh sách hồ sơ"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-1 disabled:opacity-60"
-            >
-              <ArrowCounterClockwise size={14} className={isRefreshing || isLoading ? 'animate-spin text-red-700' : 'text-slate-500'} />
-              <span>{isRefreshing || isLoading ? 'Đang tải…' : 'Làm mới'}</span>
-            </button>
+            <RefreshButton onClick={onRefresh} loading={Boolean(isRefreshing || isLoading)} />
           )}
         </div>
       </div>
@@ -496,37 +461,28 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 />
               ) : filteredApps.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
-                    <Funnel size={32} className="mx-auto text-slate-300 mb-2" aria-hidden="true" />
+                  <td colSpan={7}>
                     {hasFilters ? (
-                      <>
-                        <p className="font-semibold text-slate-700">Không có hồ sơ phù hợp với bộ lọc.</p>
-                        <p className="text-xs text-slate-400 mt-1">Thử bỏ bớt điều kiện lọc để xem thêm hồ sơ.</p>
-                        <button type="button" onClick={clearFilters} className="mt-3 min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                          Xóa bộ lọc
-                        </button>
-                      </>
+                      <EmptyState
+                        icon={Funnel}
+                        title="Không có hồ sơ phù hợp với bộ lọc."
+                        description="Thử bỏ bớt điều kiện lọc để xem thêm hồ sơ."
+                        action={<Button size="toolbar" variant="outline" onClick={clearFilters}>Xóa bộ lọc</Button>}
+                      />
                     ) : queueTab === 'my-categories' && onQueueTabChange ? (
-                      <>
-                        <p className="font-semibold text-slate-700">Không có hồ sơ mới trong lĩnh vực của bạn.</p>
-                        <p className="text-xs text-slate-400 mt-1">Bạn vẫn có thể hỗ trợ xử lý hồ sơ thuộc lĩnh vực khác trong phường.</p>
-                        <button type="button" onClick={() => onQueueTabChange('ward')} className="mt-3 min-h-10 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white hover:bg-red-900">
-                          Xem hồ sơ toàn phường
-                        </button>
-                      </>
+                      <EmptyState
+                        title="Không có hồ sơ mới trong lĩnh vực của bạn."
+                        description="Bạn vẫn có thể hỗ trợ xử lý hồ sơ thuộc lĩnh vực khác trong phường."
+                        action={<Button size="toolbar" onClick={() => onQueueTabChange('ward')}>Xem hồ sơ toàn phường</Button>}
+                      />
                     ) : queueTab === 'mine' && onQueueTabChange ? (
-                      <>
-                        <p className="font-semibold text-slate-700">Bạn chưa phụ trách hồ sơ nào ở mục này.</p>
-                        <p className="text-xs text-slate-400 mt-1">Nhận hồ sơ mới từ hàng đợi để bắt đầu kiểm tra.</p>
-                        <button type="button" onClick={() => onQueueTabChange('my-categories')} className="mt-3 min-h-10 rounded-lg bg-red-800 px-3 py-2 text-xs font-bold text-white hover:bg-red-900">
-                          Mở hàng đợi lĩnh vực của tôi
-                        </button>
-                      </>
+                      <EmptyState
+                        title="Bạn chưa phụ trách hồ sơ nào ở mục này."
+                        description="Nhận hồ sơ mới từ hàng đợi để bắt đầu kiểm tra."
+                        action={<Button size="toolbar" onClick={() => onQueueTabChange('my-categories')}>Mở hàng đợi lĩnh vực của tôi</Button>}
+                      />
                     ) : (
-                      <>
-                        <p className="font-semibold text-slate-700">Chưa có hồ sơ nào.</p>
-                        <p className="text-xs text-slate-400 mt-1">Hồ sơ công dân gửi tiền kiểm sẽ xuất hiện tại đây.</p>
-                      </>
+                      <EmptyState title="Chưa có hồ sơ nào." description="Hồ sơ công dân gửi tiền kiểm sẽ xuất hiện tại đây." />
                     )}
                   </td>
                 </tr>
@@ -673,35 +629,16 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
         {/* Bottom Pagination Footer */}
         {pagination && (
-          <nav
-            aria-label="Phân trang hàng đợi"
-            className="flex flex-wrap items-center justify-between border-t border-slate-200 bg-slate-50/70 px-5 py-3 gap-3"
-          >
-            <div className="text-xs text-slate-600">
-              Trang <strong className="font-semibold text-slate-900">{pagination.currentPage}</strong> · <strong className="font-semibold text-slate-900">{pagination.totalItems}</strong> hồ sơ trong hàng đợi
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="small"
-                disabled={pagination.currentPage <= 1 || pagination.isFetching}
-                onClick={pagination.onPrevPage}
-              >
-                Trang trước
-              </Button>
-              <span className="text-xs font-semibold px-2 text-slate-700">
-                Trang {pagination.currentPage}
-              </span>
-              <Button
-                variant="outline"
-                size="small"
-                disabled={pagination.isFetching || pagination.currentPage * pagination.pageSize >= pagination.totalItems}
-                onClick={pagination.onNextPage}
-              >
-                Trang sau
-              </Button>
-            </div>
-          </nav>
+          <Pagination
+            className="border-t border-slate-100 px-4 py-3"
+            label="Phân trang hàng đợi"
+            page={pagination.currentPage}
+            total={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            unit="hồ sơ trong hàng đợi"
+            disabled={pagination.isFetching}
+            onPageChange={(next) => (next < pagination.currentPage ? pagination.onPrevPage() : pagination.onNextPage())}
+          />
         )}
       </div>
     </section>

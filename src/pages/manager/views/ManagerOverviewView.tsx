@@ -1,6 +1,6 @@
 ﻿import { useState, type ReactNode } from 'react';
-import { ArrowRight, ArrowsClockwise, CheckCircle, ClockCountdown, PaperPlaneTilt, Smiley } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/Button';
+import { ArrowRight, CheckCircle, ClockCountdown, PaperPlaneTilt, Smiley } from '@phosphor-icons/react';
+import { RefreshButton, EmptyState } from '@/components/ui';
 import { AnalyticsFilters, AnalyticsStatus, CoverageNotice } from '@/components/analytics/AnalyticsFilters';
 import { AnalyticsTrendChart } from '@/components/analytics/AnalyticsTrendChart';
 import { OverviewCountChart } from '@/components/analytics/OverviewCountChart';
@@ -67,9 +67,9 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
   return <div className="space-y-5">
     <AnalyticsFilters value={filters} onChange={setFilters} />
     <div className="flex justify-end">
-      <Button variant="outline" size="small" className="gap-1.5" loading={refreshing} onClick={() => {
+      <RefreshButton label="Làm mới dữ liệu" loading={refreshing} onClick={() => {
         void overview.refetch(); void trends.refetch(); void summary.refetch();
-      }}>{!refreshing && <ArrowsClockwise size={15} aria-hidden="true" />} Làm mới dữ liệu</Button>
+      }} />
     </div>
 
     {data && <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -102,7 +102,7 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
             center={data.onTimeRate == null ? { value: '—', caption: 'Chưa đủ dữ liệu' } : { value: formatMetric(data.onTimeRate, '%'), caption: `đúng hạn · ${numberVi(deadlines.completedSampleCount)} mẫu` }}
             emptyMessage="Chưa có hồ sơ sẵn sàng trong kỳ để phân tích hạn." />
           {(deadlines.openMissingDeadline > 0 || deadlines.openPaused > 0) && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-950">Cần theo dõi: {deadlines.openMissingDeadline} hồ sơ đang tồn chưa có hạn xác định; {deadlines.openPaused} hồ sơ đang tạm dừng tính hạn.</p>}
-        </> : <p role="status" className="py-12 text-center text-sm text-slate-500">Chưa có dữ liệu hạn tiền kiểm.</p>)}
+        </> : <EmptyState title="Chưa có dữ liệu hạn tiền kiểm." />)}
       </ChartCard>
 
       <ChartCard id="overview-satisfaction" className="xl:col-span-2" title="Mức độ hài lòng" subtitle="Đánh giá của người dân"

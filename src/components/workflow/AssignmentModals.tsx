@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, ErrorAlert } from '@/components/ui';
 import { reasonSchema, workflowError } from '@/lib/api/workflow';
 
 const textareaClass =
@@ -108,7 +108,7 @@ export function ReleaseApplicationModal({
         ) : (
           <p id={`${reasonId}-hint`} className="text-xs text-slate-500">5–500 ký tự. Chỉ cán bộ và lãnh đạo phường xem được lý do này.</p>
         )}
-        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        {error && <ErrorAlert>{error}</ErrorAlert>}
       </form>
     </Modal>
   );
@@ -261,7 +261,7 @@ export function AssignOfficerModal({
             <p id={`${baseId}-reason-hint`} className="text-xs text-slate-500">5–500 ký tự, được ghi vào lịch sử phân công.</p>
           )}
         </div>
-        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        {error && <ErrorAlert>{error}</ErrorAlert>}
       </form>
     </Modal>
   );

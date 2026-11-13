@@ -3,11 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getPublicWards } from '@/lib/api';
 import {
   Plus,
-  MagnifyingGlass,
-  ArrowsClockwise,
   Trash,
 } from '@phosphor-icons/react';
-import { TableSkeletonRows, ConfirmDeleteModal } from '@/components/ui';
+import { TableSkeletonRows, ConfirmDeleteModal, RefreshButton, SearchInput, Select } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/Toast';
 import { createFrontDeskAccount, authErrorMessage } from '@/lib/api';
@@ -146,55 +144,39 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             onSearchChange(query.trim());
           }}
         >
-          <input
-            type="search"
+          <SearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onClear={() => { setQuery(''); onSearchChange(''); }}
             placeholder="Tìm họ tên, email hoặc số CCCD..."
-            className="w-full h-11 pl-10 pr-4 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-800"
-          />
-          <MagnifyingGlass
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
           <button type="submit" className="sr-only">Tìm kiếm</button>
         </form>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <Select
             value={assignedCategory ?? ''}
             onChange={(e) => onAssignedCategoryChange(e.target.value ? Number(e.target.value) : undefined)}
-            className="h-11 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo lĩnh vực phụ trách"
           >
             <option value="">Tất cả lĩnh vực</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>{category.categoryName}</option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-800"
             aria-label="Lọc theo trạng thái tài khoản"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang hoạt động</option>
             <option value="LOCKED">Đang tạm khóa</option>
-          </select>
+          </Select>
 
           {onRefresh && (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 h-10 px-3.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-              onClick={onRefresh}
-              disabled={isLoading}
-              title="Tải lại dữ liệu từ máy chủ"
-            >
-              <ArrowsClockwise size={16} className={isLoading ? 'animate-spin text-red-800' : ''} />
-              <span>{isLoading ? 'Đang tải...' : 'Làm mới'}</span>
-            </button>
+            <RefreshButton onClick={onRefresh} loading={isLoading} />
           )}
 
           <button
@@ -202,7 +184,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             className="admin-primary-action"
             onClick={() => setFdModalOpen(true)}
           >
-            <Plus size={18} weight="bold" />
+            <Plus size={16} weight="bold" />
             <span>Thêm Cán bộ Một cửa</span>
           </button>
         </div>
@@ -373,7 +355,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           <button
             type="button"
             disabled={categorySubmitting}
-            className="admin-primary-action disabled:opacity-50"
+            className="admin-primary-action"
             onClick={async () => {
               if (!categoryProfile) return;
               setCategorySubmitting(true);
@@ -511,7 +493,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
               <button
                 type="submit"
                 disabled={fdSubmitting}
-                className="admin-primary-action text-xs disabled:opacity-50"
+                className="admin-primary-action"
               >
                 {fdSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}
               </button>

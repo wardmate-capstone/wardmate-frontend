@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Plus } from '@phosphor-icons/react';
 import { personName } from '@/lib/personName';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, Input, Modal, toast } from '@/components/ui';
+import { Badge, Button, Input, Modal, toast, RefreshButton, ErrorAlert } from '@/components/ui';
 import { calendarClosuresApi, closureInputSchema, closureReasonSchema, type CalendarClosure } from '@/lib/api/calendarClosures';
 import { staffingError } from '@/lib/api/staffingError';
 import { addCalendarDays, calendarDateText, canCancelClosure, validClosureRange, vietnamToday } from '@/lib/calendarRules';
@@ -98,7 +99,7 @@ function ClosureForm({ item, national, canSubmit, onClose, onSaved }: { item?: C
         </div>
       </fieldset>
       <p className="text-sm text-slate-600">Hệ thống tính lại hạn tiền kiểm theo lịch làm việc. {item ? 'Hủy lịch không bảo đảm khôi phục đúng hạn ban đầu nếu thời gian hoặc trạng thái hồ sơ đã thay đổi.' : 'Nếu chọn hôm nay, lịch chỉ có hiệu lực từ thời điểm khai báo.'}</p>
-      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
       {!canSubmit && !busy && <p role="status" className="text-sm text-amber-900">Đang chờ lịch hợp lệ và quyền thao tác mới nhất. Nếu ngày nghỉ đã hủy hoặc đã bắt đầu, hãy đóng hộp thoại và xem lại lịch.</p>}
     </form>
   </Modal>;
@@ -133,14 +134,14 @@ export function CalendarClosuresView() {
     (status === 'all' || (status === 'cancelled' ? item.cancelled : !item.cancelled))) ?? [];
   return <section className="staff-workspace" aria-label="Lịch ngày nghỉ">
     <StaffHeading title={national ? 'Lịch ngày lễ toàn quốc' : 'Lịch đóng cửa phường và ngày lễ'} description={`${national ? 'Phạm vi toàn quốc theo quyền quản lý lịch của tài khoản.' : 'Lịch toàn quốc và phường bạn đang công tác.'} Ngày và giờ hiển thị theo giờ Việt Nam.`}>
-      {(national || manageWard) && <Button onClick={() => setAction({ context })}>{national ? 'Thêm ngày lễ toàn quốc' : 'Thêm ngày nghỉ phường'}</Button>}
+      {(national || manageWard) && <Button size="toolbar" onClick={() => setAction({ context })}><Plus size={16} weight="bold" aria-hidden="true" />{national ? 'Thêm ngày lễ toàn quốc' : 'Thêm ngày nghỉ phường'}</Button>}
     </StaffHeading>
     <div className="staff-filter staff-filter-fields">
       <Input type="date" label="Từ ngày" value={from} onChange={e => setFrom(e.target.value)} containerClassName="min-w-0 flex-1 sm:flex-none" />
       <Input type="date" label="Đến ngày" value={to} onChange={e => setTo(e.target.value)} containerClassName="min-w-0 flex-1 sm:flex-none" />
       {!national && <label className="grid gap-2 text-sm font-semibold">Phạm vi<select className={fieldClass} value={scope} onChange={e => setScope(e.target.value)}><option value="all">Tất cả phạm vi</option><option value="ward">Phường của tôi</option><option value="national">Toàn quốc</option></select></label>}
       <label className="grid gap-2 text-sm font-semibold">Trạng thái<select className={fieldClass} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Tất cả trạng thái</option><option value="active">Chưa hủy</option><option value="cancelled">Đã hủy</option></select></label>
-      <Button variant="outline" disabled={!valid || query.isFetching} onClick={() => void query.refetch()}>{query.isFetching ? 'Đang tải…' : 'Làm mới'}</Button>
+      <RefreshButton loading={query.isFetching} disabled={!valid} onClick={() => void query.refetch()} />
     </div>
     <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Ngày nghỉ, ngày lễ được trừ khi tính hạn tiền kiểm. Ngày trùng cả lễ toàn quốc và nghỉ của phường chỉ tính một lần. Ca làm và phân công cán bộ được quản lý riêng.</p>
     {!valid ? <p role="alert" className="text-red-800">Chọn khoảng ngày hợp lệ, tối đa 400 ngày gồm cả hai đầu.</p> : <>

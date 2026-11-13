@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Plus } from '@phosphor-icons/react';
 import { useSearchParams } from "react-router-dom";
 import { UnifiedProcedureSidebar as ProcedureManagerSidebar, type ProcedureNavSection } from "@/components/layout/RoleWorkspaceSidebars";
 import {
@@ -177,7 +178,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                 )}
               </div>
               {section === "procedures" && can("procedure.create") && <div className="flex flex-wrap gap-3">
-                <Button onClick={openCreate}>Thêm thủ tục</Button>
+                <Button size="toolbar" onClick={openCreate}><Plus size={16} weight="bold" aria-hidden="true" />Thêm thủ tục</Button>
               </div>}
             </div>
           )}

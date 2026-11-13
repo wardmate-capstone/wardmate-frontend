@@ -1,4 +1,5 @@
 import React from 'react';
+import { EmptyState } from '@/components/ui';
 import {
   Bell,
   ArrowCounterClockwise,
@@ -53,10 +54,7 @@ export const OfficerNotificationView: React.FC<OfficerNotificationViewProps> = (
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
         {notifications.length === 0 ? (
-          <div className="p-10 text-center text-slate-500">
-            <p className="font-semibold text-slate-700">Chưa có thông báo.</p>
-            <p className="text-xs text-slate-400 mt-1">Khi có hồ sơ mới cần tiếp nhận hoặc được giao cho bạn, thông báo sẽ hiện tại đây.</p>
-          </div>
+          <EmptyState icon={Bell} title="Chưa có thông báo." description="Khi có hồ sơ mới cần tiếp nhận hoặc được giao cho bạn, thông báo sẽ hiện tại đây." />
         ) : (
           <ul className="divide-y divide-slate-100">
             {notifications.map((n) => (

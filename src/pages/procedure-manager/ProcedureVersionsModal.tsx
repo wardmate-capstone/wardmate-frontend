@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Modal, Button, Input, ListSkeleton } from '@/components/ui';
+import { Modal, Button, Input, ListSkeleton, EmptyState } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, procedureError, type Category, type ProcedureSummary, type ProcedureVersion } from '@/lib/api/procedures';
@@ -46,7 +46,7 @@ export function ProcedureVersionsModal({ procedure, categories, onClose, onChang
         {versions.loading && <ListSkeleton rows={4} />}
 
         {versions.data?.length === 0 && !versions.loading && (
-          <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">Chưa có phiên bản.</p>
+          <EmptyState title="Chưa có phiên bản." />
         )}
 
         {procedure && versions.data?.map((version) => (

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input, Modal, toast } from '@/components/ui';
+import { Button, Input, Modal, toast, RefreshButton } from '@/components/ui';
 import { useSystemAdministration } from '@/hooks/useSystemAdministration';
 import { useAuthStore } from '@/stores/authStore';
 import { settingFormSchema, settingKey, systemAdministrationApi as api, systemError, systemErrorCode, type SettingForm, type SystemSetting } from '@/lib/api/systemAdministration';
@@ -90,7 +90,7 @@ function SettingDialog({ onClose }: { onClose: () => void }) {
 export function SystemSettingsView({ onHistory }: { onHistory: () => void }) {
   const settings = useSystemAdministration('settings', null, signal => api.settings(signal));
   const [editing, setEditing] = useState(false);
-  return <section className="admin-card min-w-0 space-y-5 p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div className="max-w-2xl space-y-2"><h2 className="text-lg font-bold">Tham số vận hành</h2><p className="text-sm text-slate-600">Số ngày tổng hợp lại thống kê là khoảng dữ liệu mà tác vụ định kỳ đọc lại, tính cả ngày hiện tại. Tham số này không thay đổi thời gian lưu nhật ký hoặc hồ sơ.</p></div><Button variant="outline" loading={settings.isFetching} onClick={() => void settings.refetch()}>Làm mới</Button></div>
+  return <section className="admin-card min-w-0 space-y-5 p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div className="max-w-2xl space-y-2"><h2 className="text-lg font-bold">Tham số vận hành</h2><p className="text-sm text-slate-600">Số ngày tổng hợp lại thống kê là khoảng dữ liệu mà tác vụ định kỳ đọc lại, tính cả ngày hiện tại. Tham số này không thay đổi thời gian lưu nhật ký hoặc hồ sơ.</p></div><RefreshButton loading={settings.isFetching} onClick={() => void settings.refetch()} /></div>
     <SystemRequestStatus pending={settings.isPending} fetching={settings.isFetching} error={settings.error} retry={() => void settings.refetch()} />
     {!settings.isError && settings.data && <div className="overflow-x-auto"><table className="w-full text-left text-sm [&_th]:whitespace-nowrap [&_th]:p-3 [&_td]:p-3 [&_tr]:border-b [&_tr]:border-slate-100"><thead><tr><th>Tham số</th><th>Giá trị hiện tại</th><th>Phiên bản</th><th>Cập nhật gần nhất</th><th>Thao tác</th></tr></thead><tbody>{settings.data.map(row => <tr key={row.key}><td className="min-w-56"><p className="font-semibold">Số ngày tổng hợp lại thống kê</p><p className="mt-1 text-slate-600">{row.key}</p></td><td className="whitespace-nowrap">{row.value} ngày</td><td>{row.version}</td><td className="min-w-48">{row.updatedAtUtc ? <><p>{auditTime(row.updatedAtUtc)}</p><p className="mt-1 break-all text-slate-600">{row.updatedBy ?? 'Không có thông tin người cập nhật'}</p></> : 'Đang dùng giá trị mặc định'}</td><td><Button variant="outline" size="small" onClick={() => setEditing(true)}>Chỉnh sửa</Button></td></tr>)}</tbody></table>{settings.data.length === 0 && <p className="py-5 text-center">Chưa có tham số cấu hình.</p>}</div>}
     <Button variant="outline" onClick={onHistory}>Xem lịch sử thay đổi</Button>

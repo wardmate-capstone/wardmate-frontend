@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Skeleton } from '@/components/ui';
+import { Button, Skeleton, ErrorAlert } from '@/components/ui';
 
 const frameHtml = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:;"><style>html,body{margin:0;background:#e2e8f0}body{overflow:auto}.docx-wrapper{width:max-content;min-width:100%;box-sizing:border-box;padding:20px!important}section.docx{margin-bottom:20px!important}a{pointer-events:none}</style></head><body><div id="styles"></div><div id="document"></div></body></html>`;
 
@@ -69,7 +69,7 @@ export function DocxPreview({ blob }: { blob: Blob }) {
         </div>
       </div>
     )}
-    {status === 'error' && <div role="alert" className="space-y-3 rounded-lg bg-red-50 p-4 text-sm text-red-800"><p>Không thể xem trước tệp Word này. Bạn vẫn có thể tải mẫu về để mở bằng Word.</p><Button size="small" variant="outline" onClick={() => void render()}>Thử dựng lại</Button></div>}
+    {status === 'error' && <ErrorAlert retryLabel="Thử dựng lại" onRetry={() => void render()}>Không thể xem trước tệp Word này. Bạn vẫn có thể tải mẫu về để mở bằng Word.</ErrorAlert>}
     <iframe ref={frame} title="Nội dung biểu mẫu Word" sandbox="allow-same-origin" referrerPolicy="no-referrer" srcDoc={frameHtml} onLoad={() => void render()} className={`h-[55dvh] min-h-72 w-full rounded-xl border border-slate-200 bg-slate-200 ${status === 'error' ? 'hidden' : status === 'loading' ? 'invisible' : ''}`} />
   </div>;
 }

@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowsClockwise, MagnifyingGlass, Plus, UploadSimple } from '@phosphor-icons/react';
-import { Button, Input, Modal, Badge, TableSkeletonRows } from '@/components/ui';
+import { ArrowsClockwise, Plus, UploadSimple } from '@phosphor-icons/react';
+import { Button, Input, Modal, Badge, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
@@ -76,15 +76,12 @@ export function FormsView() {
       <div className="flex flex-wrap items-center gap-3">
         <form role="search" className="flex min-w-[280px] flex-1 items-center sm:max-w-md" onSubmit={event => { event.preventDefault(); setSearchCode(searchInput.trim()); setPage(1); }}>
           <label htmlFor="form-template-search" className="sr-only">Tìm theo mã biểu mẫu</label>
-          <div className="relative flex-1">
-            <MagnifyingGlass size={18} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input id="form-template-search" type="search" value={searchInput} onChange={event => setSearchInput(event.target.value)} placeholder="Tìm theo mã, ví dụ: DON_01" className="h-11 w-full rounded-l-xl border border-r-0 border-slate-300 bg-white pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-red-700 focus:ring-2 focus:ring-red-100" />
-          </div>
-          <button type="submit" className="h-11 shrink-0 rounded-r-xl border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100">Tìm kiếm</button>
+          <SearchInput containerClassName="flex-1" id="form-template-search" value={searchInput} onChange={event => setSearchInput(event.target.value)} onClear={() => { setSearchInput(''); setSearchCode(''); setPage(1); }} placeholder="Tìm theo mã, ví dụ: DON_01" />
+          <button type="submit" className="ml-2 h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800">Tìm kiếm</button>
         </form>
         <label className="sr-only" htmlFor="form-template-status">Trạng thái</label>
-        <select id="form-template-status" className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-red-700 focus:ring-2 focus:ring-red-100" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="INACTIVE">Tạm dừng</option></select>
-        {canManage && <Button className="ml-auto h-11 min-h-0 gap-1.5 px-4" onClick={() => { create.reset(); setCreateOpen(true); }}><Plus size={18} weight="bold" aria-hidden />Thêm biểu mẫu</Button>}
+        <Select id="form-template-status" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="INACTIVE">Tạm dừng</option></Select>
+        {canManage && <Button size="toolbar" className="ml-auto" onClick={() => { create.reset(); setCreateOpen(true); }}><Plus size={16} weight="bold" aria-hidden />Thêm biểu mẫu</Button>}
       </div>
       {list.isError ? (
         <div role="alert" className="space-y-3 text-red-800">
@@ -131,8 +128,8 @@ export function FormsView() {
                 )}
                 {!list.isPending && list.data.items.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-6 text-center text-slate-500">
-                      Không tìm thấy biểu mẫu phù hợp.
+                    <td colSpan={4}>
+                      <EmptyState title="Không tìm thấy biểu mẫu phù hợp." description="Thử tìm theo mã khác hoặc đổi trạng thái." />
                     </td>
                   </tr>
                 )}
@@ -140,20 +137,17 @@ export function FormsView() {
             </table>
           </div>
           {!list.isPending && (
-            <nav aria-label="Phân trang biểu mẫu" className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm">{list.data.totalCount} biểu mẫu · Trang {page}/{totalPages}</p>
-              <div className="flex gap-2">
-                <Button variant="outline" loading={list.isFetching} onClick={() => void list.refetch()}>
-                  Làm mới
-                </Button>
-                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>
-                  Trang trước
-                </Button>
-                <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)}>
-                  Trang sau
-                </Button>
-              </div>
-            </nav>
+            <Pagination
+              label="Phân trang biểu mẫu"
+              page={page}
+              total={list.data.totalCount}
+              pageSize={10}
+              totalPages={totalPages}
+              unit="biểu mẫu"
+              disabled={list.isFetching}
+              onPageChange={setPage}
+              extra={<RefreshButton loading={list.isFetching} onClick={() => void list.refetch()} />}
+            />
           )}
         </>
       )}

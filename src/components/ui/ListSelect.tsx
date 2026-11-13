@@ -32,7 +32,16 @@ export type ListSelectProps = {
   loading?: boolean;
   /** Nhãn hiển thị khi giá trị đang chọn không có trong options (vd: kết quả tìm kiếm khác) */
   selectedLabel?: string;
+  /** Tên cho trình đọc màn hình khi ô chọn không có <label> đi kèm (vd: ô lọc trên thanh công cụ) */
+  ariaLabel?: string;
+  /** Danh sách nổi đè lên nội dung bên dưới thay vì đẩy xuống — dùng trên thanh công cụ/bộ lọc */
+  floating?: boolean;
+  /** Lớp bổ sung cho nút chọn (ghi đè kích thước, chữ) */
+  className?: string;
 };
+
+/** Danh sách có nhiều hơn số lựa chọn này thì hiện ô tìm kiếm */
+export const LIST_SEARCH_THRESHOLD = 7;
 
 // Bỏ dấu tiếng Việt để tìm "dat dai" vẫn ra "đất đai"
 const normalize = (text: string) =>
@@ -44,7 +53,7 @@ const normalize = (text: string) =>
  * nên danh sách ở đây được hiển thị ngay trong luồng form (đẩy nội dung bên dưới xuống), tự xuống dòng
  * và cuộn bên trong khi quá dài.
  */
-export function ListSelect({ id, value, onChange, onBlur, options, placeholder, disabled, invalid, describedBy, searchable, searchPlaceholder = 'Tìm kiếm…', onSearch, loading, selectedLabel }: ListSelectProps) {
+export function ListSelect({ id, value, onChange, onBlur, options, placeholder, disabled, invalid, describedBy, searchable, searchPlaceholder = 'Tìm kiếm…', onSearch, loading, selectedLabel, ariaLabel, floating, className }: ListSelectProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [query, setQuery] = useState('');
@@ -173,7 +182,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
   const activeId = open && active >= 0 && active < visible.length ? optionId(active) : undefined;
 
   return (
-    <div ref={root} className="min-w-0" onBlur={onRootBlur}>
+    <div ref={root} className={cn('min-w-0', floating && 'relative')} onBlur={onRootBlur}>
       <button
         ref={trigger}
         id={id}
@@ -185,6 +194,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
         aria-activedescendant={searchable ? undefined : activeId}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
+        aria-label={ariaLabel}
         data-value={value}
         disabled={disabled}
         onClick={() => (open ? close() : openList())}
@@ -193,6 +203,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
           'flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-left text-sm transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50',
           invalid ? 'border-red-500 focus:border-red-600 focus:ring-red-100' : 'border-slate-300 hover:border-slate-400 focus:border-red-600 focus:ring-red-100',
           open && !invalid && 'border-red-600 ring-4 ring-red-100',
+          className,
         )}
       >
         <span className={cn('min-w-0 flex-1 break-words leading-5', shownLabel ? 'text-slate-900' : 'text-slate-500')}>
@@ -201,7 +212,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
         <CaretDown size={16} aria-hidden="true" className={cn('shrink-0 text-slate-500 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className={cn('mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white', floating ? 'absolute left-0 top-full z-30 w-full min-w-64 shadow-lg' : 'shadow-sm')}>
           {searchable && (
             <div className="border-b border-slate-200 p-2">
               <div className="relative">
@@ -210,7 +221,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
                   ref={search}
                   type="text"
                   role="searchbox"
-                  aria-label={searchPlaceholder}
+                  aria-label={ariaLabel ? `${ariaLabel}: ${searchPlaceholder}` : searchPlaceholder}
                   aria-controls={listId}
                   aria-activedescendant={activeId}
                   autoComplete="off"
