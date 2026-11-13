@@ -2,15 +2,15 @@ import { checklistQuantityLabel } from '@/lib/procedureDisplay';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, Modal, Skeleton, toast } from '@/components/ui';
+import { Badge, Button, ListSelect, Modal, Skeleton, toast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
-import { formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
+import { compareSubmissionSnapshots, diffFieldLabel, diffValueText, humanizeFieldName, workflowStatusLabel, formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
 import { ReleaseApplicationModal } from '@/components/workflow/AssignmentModals';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
@@ -88,6 +88,8 @@ export function OfficerReviewWorkspaceView({
   const [from, setFrom] = useState(1);
   const [to, setTo] = useState(application.currentVersion);
   const diff = useApplicationDiff(application.id, from, to, tab === 'versions');
+  const snapshotDiff = compareSubmissionSnapshots(versions.data?.find(item => item.versionNumber === from)?.snapshotData, versions.data?.find(item => item.versionNumber === to)?.snapshotData);
+  const comparedFields = snapshotDiff ?? diff.data;
   const isRefreshing = detail.isFetching || comments.isFetching || submissions.isFetching;
   const addComment = useAddCommentMutation();
   const withdrawCommentMutation = useWithdrawCommentMutation();
@@ -738,7 +740,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-900">{x.fieldLabel}</span>
+                        <span className="font-semibold text-slate-900">{humanizeFieldName(x.fieldLabel || 'Nhận xét')}</span>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant={isWithdrawn ? 'neutral' : isOpen ? 'warning' : 'success'}
@@ -840,21 +842,11 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
               <label className="grid gap-1.5 text-sm font-semibold" htmlFor="comment-target">
                 Mục cần nhận xét
-                <select
-                  id="comment-target"
-                  className="min-h-11 rounded-xl border border-slate-300 bg-white p-2.5 text-sm text-slate-800 shadow-sm focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
-                  disabled={!editable || addComment.isPending}
-                  aria-invalid={Boolean(commentForm.formState.errors.targetId)}
-                  aria-describedby="comment-target-error"
-                  {...commentForm.register('targetId')}
-                >
-                  <option value="">Chọn mục cần nhận xét</option>
-                  {targets.map(x => (
-                    <option key={x.id} value={x.id}>
-                      {x.label}
-                    </option>
-                  ))}
-                </select>
+                <Controller control={commentForm.control} name="targetId" render={({ field, fieldState }) => (
+                  <ListSelect id="comment-target" value={field.value} onChange={field.onChange} onBlur={field.onBlur}
+                    disabled={!editable || addComment.isPending} invalid={Boolean(fieldState.error)} describedBy="comment-target-error"
+                    searchable placeholder="Chọn mục cần nhận xét" options={targets.map(item => ({ value: item.id, label: item.label }))} />
+                )} />
               </label>
               <p id="comment-target-error" role="alert" className="text-xs text-red-700">
                 {commentForm.formState.errors.targetId?.message}
@@ -950,7 +942,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div>
               <h3 className="text-lg font-bold text-slate-900">So sánh các lần gửi</h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                So sánh dữ liệu JSON đã chụp; chưa hỗ trợ xem lại tệp nhị phân theo phiên bản cũ.
+                Đối chiếu thông tin và danh mục giấy tờ giữa hai lần gửi. Chưa hỗ trợ mở lại nội dung tệp đính kèm cũ theo phiên bản.
               </p>
             </div>
 
@@ -967,7 +959,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   >
                     {versions.data?.map(x => (
                       <option key={x.id} value={x.versionNumber}>
-                        v{x.versionNumber}
+                        Lần gửi {x.versionNumber}
                       </option>
                     ))}
                   </select>
@@ -979,19 +971,20 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
                 Chọn phiên bản đích lớn hơn phiên bản nguồn để so sánh.
               </p>
-            ) : diff.isPending ? (
+            ) : snapshotDiff === undefined && diff.isPending ? (
               <div role="status" aria-label="Đang so sánh phiên bản" className="space-y-3 py-1">
                 <Skeleton className="h-16 w-full rounded-xl" />
                 <Skeleton className="h-16 w-full rounded-xl" />
               </div>
-            ) : diff.isError ? (
+            ) : snapshotDiff === undefined && diff.isError ? (
               <p role="alert" className="text-sm text-red-700">{workflowError(diff.error)}</p>
             ) : (
               <div className="space-y-3">
-                {diff.data?.map((x, i) => (
+                {comparedFields?.length === 0 && <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Hai lần gửi không có thay đổi về thông tin hoặc danh mục giấy tờ.</p>}
+                {comparedFields?.map((x, i) => (
                   <div key={i} className="rounded-xl border border-slate-200 p-4">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-800">{x.fieldLabel || x.fieldKey}</span>
+                      <span className="min-w-0 break-words font-semibold text-slate-800">{diffFieldLabel(x.fieldKey || '', x.fieldLabel)}</span>
                       <Badge variant={x.hasChanged ? 'warning' : 'neutral'} className="text-xs">
                         {x.hasChanged ? 'Đã thay đổi' : 'Không đổi'}
                       </Badge>
@@ -999,11 +992,11 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     <div className="mt-2 grid gap-2 sm:grid-cols-2 text-xs">
                       <div className="rounded-lg bg-slate-50 p-2.5">
                         <span className="font-semibold text-slate-500">Trước:</span>
-                        <p className="mt-1 break-all text-slate-700">{JSON.stringify(x.oldValue)}</p>
+                        <p className="mt-1 break-all text-slate-700">{diffValueText(x.oldValue, x.oldExists, x.fieldKey || '')}</p>
                       </div>
                       <div className="rounded-lg bg-emerald-50/60 p-2.5">
                         <span className="font-semibold text-emerald-700">Sau:</span>
-                        <p className="mt-1 break-all text-emerald-900">{JSON.stringify(x.newValue)}</p>
+                        <p className="mt-1 break-all text-emerald-900">{diffValueText(x.newValue, x.newExists, x.fieldKey || '')}</p>
                       </div>
                     </div>
                   </div>
@@ -1025,7 +1018,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 <div key={x.id} className="relative rounded-xl border border-slate-200 p-4 pl-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold text-slate-800">
-                      {x.fromStatus || 'Khởi tạo'} → <span className="text-red-700">{x.toStatus}</span>
+                      {x.fromStatus ? workflowStatusLabel(x.fromStatus) : 'Khởi tạo'} → <span className="text-red-700">{workflowStatusLabel(x.toStatus)}</span>
                     </p>
                     <time className="text-xs text-slate-400">
                       {new Date(x.createdAt).toLocaleString('vi-VN')}
