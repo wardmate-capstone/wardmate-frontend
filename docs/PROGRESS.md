@@ -1,5 +1,20 @@
 # Tiến độ và bàn giao WardMate
 
+## Đồng nhất UI nhóm C: focus, ô nhập nhiều dòng/ô chọn trong form, icon — 13/11/2026 (Asia/Saigon)
+
+- Focus: ô nhập (input/select/textarea, khung focus-within) dùng `focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100`; nút/liên kết dùng `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2` (chỉ hiện khi dùng bàn phím). Script chuẩn hóa 107 thẻ/46 file + hằng số class, `Button` (bỏ vòng vàng gold-200), `.admin-primary-action`, `Input`, `Select`, `SearchInput`, các ô CSS trong globals.css (red-500 → red-600). Giữ: ô tờ khai đổi màu theo hợp lệ/lỗi, đích nhảy tabIndex=-1, viền vàng mặc định toàn cục cho phần tử không tự khai báo.
+- Ô nhập: `components/ui/fieldStyles.ts` (`textareaClass`, `formSelectClass`). Áp cho ô nhiều dòng/ô chọn ở hồ sơ cá nhân (cán bộ, công dân, Manager xem hồ sơ), không gian tiền kiểm, cấu hình hệ thống, giao/chuyển cán bộ, phôi biểu mẫu, bộ lọc nhật ký/sao lưu/lịch sử phát. Hằng số khu vực đưa về cùng khung (rounded-xl, slate-300, nền trắng, ô lỗi red-700): `fieldClass` staffing (48px), KnowledgeModals, ProcedureApiEditor (trước focus xám đen), CreateStaffAccountModal, ChangePasswordOtpForm, ProcedureChecklistModal.
+- Icon: OfficerReviewWorkspaceView đổi 10 icon lucide sang phosphor (AlertTriangle→Warning, Sparkles→Sparkle, History→ClockCounterClockwise, GitCompare→GitDiff, FileCheck→ListChecks, RefreshCw→ArrowsClockwise…). Không còn file dùng `lucide-react`; chưa gỡ khỏi package.json.
+- Kiểm tra: typecheck/lint đạt; không chạy Playwright theo yêu cầu. Chưa commit.
+
+## Đồng nhất UI nhóm B: nút nguy hiểm, ngày giờ, nhãn trạng thái, bảng — 13/11/2026 (Asia/Saigon)
+
+- Nút nguy hiểm: `Button` thêm `danger` (đỏ đặc, xác nhận cuối trong hộp thoại), `dangerOutline` (mở hành động), `dangerGhost` (thao tác nhỏ trong dòng). Áp cho ConfirmDeleteModal, Hủy hồ sơ tiền kiểm/Đồng ý hủy, Xóa thông tin cá nhân/Xác nhận xóa, Hủy xuất bản (chi tiết + bảng bản nháp), Xóa mục giấy tờ, Rút nhận xét. Trước đây 4 tông đỏ/hồng khác nhau.
+- Ngày giờ: `src/lib/dateFormat.ts` (`formatDate` "12/11/2026", `formatTime` "14:30", `formatDateTime` "12/11/2026 14:30"), luôn theo Asia/Ho_Chi_Minh, giờ 24h, không giây. Thay 27 file (lời gọi `toLocale*String('vi-VN')` và các hàm tự viết dateText/formatDateTime/auditTime/feedbackTime…). Giữ: ngày sinh dạng chuỗi ở trang hồ sơ, dòng "thứ, ngày" ở bảng điều khiển cán bộ, định dạng số.
+- Nhãn trạng thái hồ sơ: `components/workflow/ApplicationStatusBadge.tsx` (mỗi trạng thái một màu + icon, nhận cả mã API và mã màn cán bộ). Dùng ở Hàng đợi cán bộ, Điều phối, bảng Giám sát hồ sơ (trước chỉ là chữ đậm). Phía công dân giữ bộ nhãn riêng vì logic dựa trên chuỗi tiếng Việt.
+- Bảng: 16 bảng dữ liệu chính về `.admin-table-wrap` (tiêu đề in hoa 10px nền xám, ô 20px/14px, hover dòng); chỉ gỡ class giao diện, giữ căn lề/cột ghim/độ rộng. Gồm 6 bảng hệ thống Admin, Tài khoản, Biểu mẫu, Hàng đợi, Nhật ký cán bộ, Danh sách/Danh mục/Bản nháp thủ tục, Điều phối, Lịch, Phản hồi. Không đổi bảng trang công khai, bảng nhỏ trong thẻ AI/biểu đồ, bảng hồ sơ công dân.
+- Kiểm tra: typecheck/lint đạt; không chạy Playwright theo yêu cầu. Nhãn/định dạng ngày đổi nên test so chữ cũ có thể cần cập nhật. Chưa commit.
+
 ## Đồng bộ origin/main, commit và đẩy thay đổi local — 13/11/2026 (Asia/Saigon)
 
 - Chia thay đổi chưa commit thành 8 commit theo chủ đề: ảnh đại diện; MarkAllRead; ảnh HEIC/HEIF/WebP; chatbot hỏi lại/đánh giá; tham vấn STAFFING-01; trang điều phối (mới nhất lên đầu, tìm kiếm, bỏ tiêu đề trùng); bộ component UI dùng chung; tài liệu. Một số file chứa thay đổi của nhiều chủ đề được xếp vào chủ đề chính của file.
