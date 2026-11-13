@@ -25,7 +25,23 @@ const messages: Record<string, string> = {
   'staffing.closure_cancelled': 'Ngày nghỉ này đã được hủy. Vui lòng xem lại lịch.',
   'dispatch.officer_ineligible': 'Cán bộ không còn đủ điều kiện nhận hồ sơ. Vui lòng xem lại danh sách.',
   'consultation.specialist_ineligible': 'Chuyên viên không đủ điều kiện tham vấn. Vui lòng chọn lại.',
+  // Tham vấn do cán bộ phụ trách khởi tạo (STAFFING-01, 12/11/2026)
+  'consultation.already_pending': 'Hồ sơ đã có yêu cầu tham vấn đang chờ điều phối. Vui lòng mở yêu cầu đó thay vì gửi mới.',
+  'consultation.already_open': 'Cán bộ này đang có tham vấn chưa đóng cho hồ sơ. Vui lòng chọn cán bộ khác.',
+  'consultation.application_changed': 'Hồ sơ hoặc phân công đã thay đổi. Tải lại hồ sơ và tham vấn trước khi thao tác tiếp.',
+  'consultation.version_conflict': 'Tham vấn hoặc phiên bản phân công đã thay đổi. Tải lại dữ liệu trước khi gửi lại.',
+  'consultation.invalid_status': 'Quyết định chưa phù hợp với trạng thái hiện tại của tham vấn. Vui lòng tải lại.',
+  'consultation.invalid_decision': 'Quyết định không hợp lệ. Vui lòng chọn lại thao tác.',
+  'consultation.takeover_not_accepted': 'Cán bộ tư vấn chỉ đồng ý góp ý, chưa đồng ý nhận hồ sơ. Hãy giữ cán bộ hiện tại.',
+  'consultation.officer_ineligible': 'Cán bộ tư vấn chưa đủ điều kiện nhận hồ sơ lúc này (ca làm, nghỉ phép, quyền hoặc lĩnh vực).',
+  'consultation.category_mismatch': 'Bạn không còn phụ trách lĩnh vực của hồ sơ này.',
+  'consultation.category_unavailable': 'Chưa xác minh được lĩnh vực của hồ sơ. Vui lòng thử lại sau.',
+  'consultation.snapshot_missing': 'Hồ sơ chưa có phiên bản đã nộp nên chưa thể tham vấn.',
+  'consultation.dependency_unavailable': 'Chưa xác minh được cán bộ hoặc lĩnh vực. Tải lại tham vấn để kiểm tra lần gửi trước trước khi thử lại.',
 };
+
+// Lý do cán bộ chưa đủ điều kiện (danh sách ứng viên phân công/tham vấn)
+export const officerBlockers: Record<string, string> = { NO_ACTIVE_SHIFT: 'Không có ca làm hiện tại', APPROVED_LEAVE: 'Đang nghỉ phép', CATEGORY_MISMATCH: 'Không phụ trách lĩnh vực', WARD_MISMATCH: 'Khác phường', ROLE_MISMATCH: 'Sai vai trò', ACCOUNT_INACTIVE: 'Tài khoản bị khóa', ASSIGN_PERMISSION_MISSING: 'Thiếu quyền nhận hồ sơ', RESPOND_PERMISSION_MISSING: 'Thiếu quyền trả lời tham vấn', APPLICATION_OWNER: 'Là chủ hồ sơ', CURRENT_ASSIGNEE: 'Đang phụ trách hồ sơ' };
 
 export function staffingError(error: unknown): string {
   if (axios.isAxiosError(error)) {

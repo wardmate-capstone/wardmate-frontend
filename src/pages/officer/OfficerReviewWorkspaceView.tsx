@@ -1,4 +1,5 @@
 import { checklistQuantityLabel } from '@/lib/procedureDisplay';
+import { ChatCircleDots } from '@phosphor-icons/react';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
@@ -6,7 +7,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, ListSelect, Modal, Skeleton, toast } from '@/components/ui';
+import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
@@ -294,7 +295,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         return;
       }
       if (!Array.isArray(currentApplication.checklists)) {
-        throw new Error('Chưa tải được danh sách giấy tờ của hồ sơ. Vui lòng bấm Làm mới dữ liệu.');
+        throw new Error('Chưa tải được danh sách giấy tờ của hồ sơ. Vui lòng bấm nút Làm mới.');
       }
       const latestSubmissions = await submissions.refetch();
       if (latestSubmissions.isError) throw latestSubmissions.error;
@@ -388,20 +389,12 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             Quay lại danh sách hồ sơ
           </Button>
 
-          <Button
-            variant="outline"
-            size="small"
-            disabled={busy || isRefreshing}
-            onClick={async () => {
-              await Promise.all([detail.refetch(), comments.refetch(), submissions.refetch()]);
-              toast.success('Đã cập nhật dữ liệu hồ sơ mới nhất.');
-            }}
-            className="gap-2 text-xs font-semibold text-slate-700 hover:text-slate-900"
-            title="Làm mới dữ liệu hồ sơ"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-red-600' : 'text-slate-500'}`} />
-            <span>{isRefreshing ? 'Đang cập nhật…' : 'Làm mới dữ liệu'}</span>
-          </Button>
+          <RefreshButton
+            label="Làm mới dữ liệu hồ sơ"
+            loading={isRefreshing}
+            disabled={busy}
+            onClick={() => void Promise.all([detail.refetch(), comments.refetch(), submissions.refetch()]).then(() => toast.success('Đã cập nhật dữ liệu hồ sơ mới nhất.'))}
+          />
         </div>
 
         <div className="p-5 sm:p-6">
@@ -499,17 +492,11 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           </div>
 
           {detail.isError && (
-            <div role="alert" className="mt-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <p>{workflowError(detail.error)}</p>
-              <Button size="small" variant="outline" onClick={() => void detail.refetch()}>Tải lại hồ sơ</Button>
-            </div>
+            <ErrorAlert className="mt-4" retryLabel="Tải lại hồ sơ" retrying={detail.isFetching} onRetry={() => void detail.refetch()}>{workflowError(detail.error)}</ErrorAlert>
           )}
 
           {submissions.isError && (
-            <div role="alert" className="mt-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <p>{documentFormError(submissions.error)}</p>
-              <Button size="small" variant="outline" onClick={() => void submissions.refetch()}>Tải lại tờ khai</Button>
-            </div>
+            <ErrorAlert className="mt-4" retryLabel="Tải lại tờ khai" retrying={submissions.isFetching} onRetry={() => void submissions.refetch()}>{documentFormError(submissions.error)}</ErrorAlert>
           )}
 
           {!editable && detail.isSuccess && (
@@ -660,7 +647,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         )}
 
         {/* Tab 2: Documents Panel */}
-        {tab === 'consultations' && <ApplicationConsultations applicationId={application.id} />}
+        {tab === 'consultations' && <ApplicationConsultations applicationId={application.id} context={detail.data} />}
 
         {tab === 'documents' && (
           <div className="space-y-6">
@@ -718,10 +705,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 </div>
               )}
               {comments.isError && (
-                <div role="alert" className="mt-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                  <p>{workflowError(comments.error)}</p>
-                  <Button size="small" variant="outline" onClick={() => void comments.refetch()}>Thử lại nhận xét</Button>
-                </div>
+                <ErrorAlert className="mt-4" retryLabel="Thử lại nhận xét" retrying={comments.isFetching} onRetry={() => void comments.refetch()}>{workflowError(comments.error)}</ErrorAlert>
               )}
 
               <div className="mt-4 space-y-3">
@@ -791,11 +775,12 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               </div>
 
               {comments.isSuccess && !comments.data?.length && (
-                <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center">
-                  <CheckCircle className="mx-auto h-8 w-8 text-emerald-500" />
-                  <p className="mt-2 text-sm font-semibold text-slate-700">Chưa có nhận xét trên phiên bản này</p>
-                  <p className="mt-0.5 text-xs text-slate-400">Nếu hồ sơ đủ điều kiện, bạn có thể chuyển sang xác nhận giấy tờ sẵn sàng.</p>
-                </div>
+                <EmptyState
+                  className="mt-4 rounded-xl border border-dashed border-slate-200 py-6"
+                  icon={ChatCircleDots}
+                  title="Chưa có nhận xét trên phiên bản này"
+                  description="Nếu hồ sơ đủ điều kiện, bạn có thể chuyển sang xác nhận giấy tờ sẵn sàng."
+                />
               )}
             </div>
 
@@ -1218,9 +1203,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           )}
 
           {actionError && (
-            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              {actionError}
-            </p>
+            <ErrorAlert>{actionError}</ErrorAlert>
           )}
 
           <Button
@@ -1275,9 +1258,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               </span>
             </div>
             {withdrawError && (
-              <p role="alert" className="text-xs text-red-700 bg-red-50 p-2 rounded-lg border border-red-200">
-                {withdrawError}
-              </p>
+              <ErrorAlert>{withdrawError}</ErrorAlert>
             )}
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
               <Button
