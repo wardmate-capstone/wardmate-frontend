@@ -969,7 +969,7 @@ const SYSTEM_ROLE_CONFIGS: SystemRoleConfig[] = [
   },
   {
     value: 'MANAGER',
-    label: 'Lãnh đạo UBND',
+    label: 'Quản lý cán bộ',
     keywords: ['MANAGER', 'LÃNH ĐẠO'],
     badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
   },
