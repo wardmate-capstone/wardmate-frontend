@@ -30,7 +30,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
     await expect(page.getByText('Nguyễn Văn An')).toBeVisible();
     await expect(page.getByText('Trần Thị Mai Hương')).toBeVisible();
-    await expect(page.getByText('WARD_A').first()).toBeVisible();
+    await expect(page.getByText('Phường A').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Phân công lĩnh vực' }).first().click();
     await page.getByRole('checkbox', { name: 'Chứng thực' }).check();
