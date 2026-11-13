@@ -22,9 +22,9 @@ test('Điều phối hồ sơ: mới nhất lên đầu, phân trang đúng và 
   await expect(table.getByRole('row').nth(10)).toContainText('HS-014');
   await expect(page.getByRole('heading', { name: 'Danh sách hồ sơ điều phối' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Điều phối hồ sơ', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Sau', exact: true }).click();
-  await page.getByRole('button', { name: 'Sau', exact: true }).click();
-  await expect(page.getByText('Trang 3 · 23 mục')).toBeVisible();
+  await page.getByRole('button', { name: 'Trang sau', exact: true }).click();
+  await page.getByRole('button', { name: 'Trang sau', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: 'Phân trang' })).toContainText('Trang 3/3 · 23 mục');
   await expect(table.getByRole('row')).toHaveCount(4);
   await expect(table.getByRole('row').nth(1)).toContainText('HS-003');
   await expect(table.getByRole('row').nth(3)).toContainText('HS-001');
@@ -32,7 +32,7 @@ test('Điều phối hồ sơ: mới nhất lên đầu, phân trang đúng và 
   // Tìm không dấu vẫn khớp tên có dấu; kết quả mới nhất lên đầu và quay về trang 1
   await page.getByRole('searchbox', { name: 'Tìm hồ sơ điều phối' }).fill('thu tuc so 7');
   await expect(page.getByText('Tìm thấy 2 hồ sơ khớp “thu tuc so 7”.')).toBeVisible();
-  await expect(page.getByText('Trang 1 · 2 mục')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Phân trang' })).toContainText('Trang 1/1 · 2 mục');
   await expect(table.getByRole('row').nth(1)).toContainText('HS-017');
   await expect(table.getByRole('row').nth(2)).toContainText('HS-007');
   await page.getByRole('searchbox', { name: 'Tìm hồ sơ điều phối' }).fill('HS-007');
