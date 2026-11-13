@@ -1,4 +1,5 @@
 import { copyToClipboard } from '@/lib/clipboard';
+import { AvatarEditor } from '@/components/profile/AvatarEditor';
 import { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
@@ -249,9 +250,7 @@ export function CitizenProfileView({
       <div className="admin-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="size-16 rounded-2xl bg-red-900 text-white font-extrabold text-xl flex items-center justify-center shrink-0 shadow-md">
-              {initials}
-            </div>
+            <AvatarEditor initials={initials} />
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">
@@ -289,7 +288,7 @@ export function CitizenProfileView({
                   <>
                     <button
                       type="button"
-                      className="admin-primary-action text-xs"
+                      className="admin-primary-action"
                       onClick={() => setIsEditing(true)}
                     >
                       <PencilSimple size={16} /> Chỉnh sửa hồ sơ
@@ -310,7 +309,7 @@ export function CitizenProfileView({
                       disabled={saving || isPristine}
                       onClick={() => void handleSaveProfile()}
                       title={isPristine ? "Chưa có thông tin nào được thay đổi" : "Lưu các thay đổi hồ sơ"}
-                      className="admin-primary-action text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="admin-primary-action"
                     >
                       {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                     </button>

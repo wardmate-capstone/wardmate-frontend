@@ -11,6 +11,8 @@ export type CurrentUser = {
   wardId?: string | null;
   /** Lĩnh vực được Manager gán cho cán bộ; rỗng nghĩa là phụ trách mọi lĩnh vực (ưu tiên mềm, không phải phân quyền). */
   assignedCategories?: number[];
+  /** Đường dẫn ảnh đại diện (tương đối, cần Bearer token); null = chưa có ảnh, hiện chữ cái đầu */
+  avatarUrl?: string | null;
 };
 
 // Session metadata only; refresh cookies stay HttpOnly and access tokens stay in the client RAM.

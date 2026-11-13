@@ -128,7 +128,9 @@ async function loadCurrentUser(version: number) {
   const assignedCategories = Array.isArray(data.assignedCategories)
     ? data.assignedCategories.filter((id): id is number => Number.isInteger(id) && id > 0)
     : [];
-  useAuthStore.setState({ status: 'authenticated', user: { ...data, assignedCategories }, error: null, expired: false });
+  // PROFILE-AVATAR-01: chỉ nhận đường dẫn ảnh tương đối của IAM; giá trị khác coi như chưa có ảnh
+  const avatarUrl = typeof data.avatarUrl === 'string' && data.avatarUrl.startsWith('/api/v1/users/') ? data.avatarUrl : null;
+  useAuthStore.setState({ status: 'authenticated', user: { ...data, assignedCategories, avatarUrl }, error: null, expired: false });
 }
 
 /**
@@ -484,6 +486,11 @@ export function iamErrorCode(error: unknown): string | undefined {
 
 // Thông báo theo mã lỗi IAM; ưu tiên hơn thông báo chung theo HTTP status.
 const iamErrorMessages: Record<string, string> = {
+  // PROFILE-AVATAR-01: ảnh đại diện
+  'iam.avatar_empty': 'Chưa chọn ảnh. Vui lòng chọn một tệp ảnh.',
+  'iam.avatar_too_large': 'Ảnh lớn hơn 10 MB. Vui lòng chọn ảnh nhỏ hơn.',
+  'iam.image_unsupported': 'Định dạng ảnh chưa hỗ trợ. Vui lòng chọn ảnh JPEG, PNG, WebP hoặc HEIC.',
+  'iam.image_unreadable': 'Không đọc được ảnh (tệp hỏng hoặc quá lớn). Vui lòng chọn ảnh khác.',
   'iam.invalid_credentials': 'Tên đăng nhập/email hoặc mật khẩu không đúng.',
   'iam.forbidden': 'Bạn không có quyền thực hiện thao tác này hoặc tài khoản nằm ngoài phạm vi quản lý của bạn.',
   'iam.csrf_rejected': 'Yêu cầu xác thực bị từ chối. Vui lòng kiểm tra cấu hình truy cập với quản trị viên.',

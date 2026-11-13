@@ -1,5 +1,6 @@
 import { accountRoleLabel } from '@/lib/personName';
 import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
+import { AvatarEditor } from '@/components/profile/AvatarEditor';
 import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
@@ -166,7 +167,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className="admin-primary-action text-xs"
+                  className="admin-primary-action"
                   onClick={handleStartEdit}
                 >
                   <PencilSimple size={16} /> Chỉnh sửa hồ sơ
@@ -186,7 +187,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   type="button"
                   disabled={isSaving}
                   onClick={() => void handleSaveProfile()}
-                  className="admin-primary-action text-xs disabled:opacity-50"
+                  className="admin-primary-action"
                 >
                   {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
@@ -200,9 +201,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
       <div className="admin-card p-6 border-l-4 border-l-red-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="size-16 rounded-2xl bg-red-900 text-white font-extrabold text-xl flex items-center justify-center shrink-0 shadow-md">
-              {initials || 'CB'}
-            </div>
+            <AvatarEditor initials={initials || 'CB'} />
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">

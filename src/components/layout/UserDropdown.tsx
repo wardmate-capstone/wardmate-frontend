@@ -8,7 +8,7 @@ import {
 import { useLogout } from '@/hooks/useLogout';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
-import { Skeleton } from '@/components/ui';
+import { Skeleton, UserAvatar } from '@/components/ui';
 
 const workspaces = [
   { path: '/citizen', alias: '/cong-dan', label: 'Cổng dịch vụ công dân', roles: ['REGISTERED_CITIZEN'] },
@@ -34,6 +34,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { handleLogout, isLoggingOut } = useLogout();
   const { profile, loading, initials } = useUserProfile();
+  const avatarUrl = useAuthStore((state) => state.user?.avatarUrl);
   const user = useAuthStore(state => state.user);
   const { pathname } = useLocation();
   const currentWorkspace = workspaces.find(workspace => [workspace.path, workspace.alias].some(path => pathname === path || pathname.startsWith(`${path}/`)));
@@ -86,9 +87,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
     return (
       <div className={`border-t border-slate-200 pt-4 mt-6 ${className}`}>
         <div className="flex items-center gap-3 px-1 mb-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shadow-sm">
-            {initials}
-          </span>
+          <UserAvatar url={avatarUrl} initials={initials} className="size-10 rounded-full bg-red-800 text-xs font-bold text-white shadow-sm" />
           <div className="min-w-0 flex-1">
             {loading ? (
               <div className="space-y-1.5 py-0.5">
@@ -143,9 +142,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-800 text-xs font-bold text-white shadow-sm">
-          {initials}
-        </span>
+        <UserAvatar url={avatarUrl} initials={initials} className="size-8 rounded-full bg-red-800 text-xs font-bold text-white shadow-sm" />
         <div className="hidden sm:block">
           {loading ? (
             <div className="space-y-1 py-0.5">
