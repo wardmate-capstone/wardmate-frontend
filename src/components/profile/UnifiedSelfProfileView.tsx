@@ -1,3 +1,4 @@
+import { accountRoleLabel } from '@/lib/personName';
 import { validateProfile, type ProfileFieldErrors } from '@/lib/profileSchema';
 import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -28,25 +29,6 @@ function formatDate(value?: string | null): string {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return value;
-}
-
-function formatRoleLabel(roleName: string): string {
-  switch (roleName) {
-    case 'ADMINISTRATOR':
-    case 'ADMIN':
-    case 'IT_ADMIN':
-      return 'Quản trị viên';
-    case 'MANAGER':
-      return 'Lãnh đạo UBND';
-    case 'FRONT_DESK_OFFICER':
-      return 'Cán bộ Một cửa';
-    case 'PROCEDURE_MANAGER':
-      return 'Quản lý thủ tục';
-    case 'REGISTERED_CITIZEN':
-      return 'Công dân';
-    default:
-      return roleName;
-  }
 }
 
 export const UnifiedSelfProfileView: React.FC = () => {
@@ -609,7 +591,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                       key={idx}
                       className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-900 border border-red-200"
                     >
-                      {formatRoleLabel(r)}
+                      {accountRoleLabel(r)}
                     </span>
                   ))
                 ) : (
