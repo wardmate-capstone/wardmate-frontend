@@ -10,7 +10,7 @@ import { authErrorMessage, createStaffAccount, type StaffAccountRole, type WardD
 
 const roleOptions: Array<{ value: StaffAccountRole; label: string }> = [
   { value: 'FRONT_DESK_OFFICER', label: 'Cán bộ Một cửa' },
-  { value: 'MANAGER', label: 'Lãnh đạo UBND (Quản lý)' },
+  { value: 'MANAGER', label: 'Quản lý cán bộ' },
   { value: 'PROCEDURE_MANAGER', label: 'Quản lý thủ tục' },
 ];
 
