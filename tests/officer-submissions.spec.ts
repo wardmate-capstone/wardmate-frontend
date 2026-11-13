@@ -104,7 +104,8 @@ test('nhận xét chưa lưu chặn quyết định; có thể xóa nội dung v
   state.submissionStatus = 'Submitted'; state.checklistStatus = 'COMPLETED'; state.evidenceQuantity = 2;
   await openReview(page);
   await page.getByRole('button', { name: /^Nhận xét \(/ }).click();
-  await page.getByLabel('Mục cần nhận xét').selectOption(documentIds.checklist);
+  await page.getByLabel('Mục cần nhận xét').click();
+  await page.getByRole('option').first().click();
   await page.getByLabel('Nội dung nhận xét').fill('Nhận xét chưa lưu');
   await page.getByRole('button', { name: 'Xác nhận giấy tờ sẵn sàng', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
