@@ -1,3 +1,4 @@
+import { humanizeFieldName } from '@/lib/api/workflowAdapters';
 import { useState } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
 import { Badge, Button, Modal, Skeleton } from '@/components/ui';
@@ -126,7 +127,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             ) : (
               openComments.map((comment, index) => (
                 <article key={comment.id} className="space-y-1.5 rounded-xl border border-amber-200 bg-white p-3.5 text-xs">
-                  <p className="font-semibold text-slate-900">{index + 1}. {comment.fieldLabel || (comment.targetType === 'FORM_FIELD' ? 'Thông tin kê khai' : 'Giấy tờ đính kèm')}</p>
+                  <p className="font-semibold text-slate-900">{index + 1}. {comment.fieldLabel ? humanizeFieldName(comment.fieldLabel) : (comment.targetType === 'FORM_FIELD' ? 'Thông tin kê khai' : 'Giấy tờ đính kèm')}</p>
                   <p className="whitespace-pre-wrap break-words leading-relaxed text-slate-700">{comment.commentText || 'Chưa có nội dung hướng dẫn.'}</p>
                   <div className="flex items-center justify-between pt-1 text-slate-400 text-[11px]">
                     <span>{new Date(comment.createdAt).toLocaleDateString('vi-VN')}</span>
