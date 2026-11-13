@@ -33,7 +33,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         {...props}
         className={cn(
           'h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 text-xs text-slate-900 transition-colors placeholder:text-slate-400',
-          'focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-800 disabled:cursor-not-allowed disabled:opacity-60',
+          'focus:bg-white focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60',
           // Ẩn nút xóa mặc định của trình duyệt để dùng nút ✕ thống nhất
           '[&::-webkit-search-cancel-button]:appearance-none',
           showClear ? 'pr-10' : 'pr-4',
@@ -46,7 +46,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
           onClick={onClear}
           aria-label="Xóa từ khóa tìm kiếm"
           title="Xóa từ khóa"
-          className="absolute right-1.5 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800"
+          className="absolute right-1.5 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
         >
           <X size={14} weight="bold" aria-hidden="true" />
         </button>

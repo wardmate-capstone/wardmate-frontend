@@ -22,7 +22,7 @@ export function ErrorAlert({ children, onRetry, retryLabel = 'Thử lại', retr
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-800 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 disabled:opacity-60"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-800 transition-colors hover:bg-red-100 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
         >
           <ArrowsClockwise size={14} aria-hidden="true" className={retrying ? 'motion-safe:animate-spin' : undefined} />
           {retryLabel}

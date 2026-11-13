@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold-200',
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2',
   {
     variants: {
       variant: {
@@ -12,6 +12,11 @@ const buttonVariants = cva(
         outline: 'border border-red-200 bg-white text-red-800 hover:-translate-y-0.5 hover:border-red-400 hover:bg-red-50',
         ghost: 'text-slate-700 hover:bg-slate-100 hover:text-red-800',
         light: 'bg-white text-red-800 shadow-sm hover:bg-amber-50',
+        // Hành động không hoàn tác (xóa, hủy hồ sơ, hủy xuất bản…):
+        // danger = nút xác nhận cuối cùng trong hộp thoại; dangerOutline = nút mở hành động; dangerGhost = thao tác nhỏ trong dòng
+        danger: 'bg-red-700 text-white shadow-sm hover:bg-red-800',
+        dangerOutline: 'border border-red-300 bg-white text-red-700 hover:border-red-400 hover:bg-red-50',
+        dangerGhost: 'text-red-700 hover:bg-red-50 hover:text-red-800',
       },
       size: {
         default: 'min-h-12 px-5',

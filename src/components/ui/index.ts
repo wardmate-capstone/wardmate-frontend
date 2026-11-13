@@ -12,4 +12,5 @@ export { Pagination, type PaginationProps } from './Pagination';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { ErrorAlert, type ErrorAlertProps } from './ErrorAlert';
 export { UserAvatar, type UserAvatarProps } from './UserAvatar';
+export { textareaClass, formSelectClass } from './fieldStyles';
 export { ListSelect, LIST_SEARCH_THRESHOLD, type ListSelectProps, type ListSelectOption } from './ListSelect';

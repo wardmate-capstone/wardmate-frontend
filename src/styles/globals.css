@@ -138,7 +138,7 @@
   .hero-description { @apply mt-3 max-w-3xl text-sm font-medium leading-7 text-slate-700 sm:text-lg sm:leading-8; }
   .national-pattern { position: absolute; inset: 0; background-image: linear-gradient(180deg, rgba(254,251,245,0.72) 0%, rgba(251,247,238,0.78) 45%, rgba(246,238,223,0.88) 100%), url('/journey-vietnam-background.png'); background-position: center; background-size: cover; }
   .hero-search-box { @apply max-w-3xl rounded-3xl border border-amber-900/10 bg-white/95 p-4 text-slate-900 shadow-[0_22px_55px_rgba(72,18,23,.10)] backdrop-blur-sm sm:p-5; }
-  .hero-search-input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .hero-search-input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .hero-suggestion { @apply min-h-9 rounded-full border border-slate-200 bg-slate-50/80 px-3 font-semibold text-slate-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800; }
   .hero-journey-card { @apply rounded-3xl border border-white/15 bg-white/[0.08] p-5 shadow-[0_24px_60px_rgba(40,5,10,.18)] backdrop-blur-sm sm:p-7; }
   .journey-step { @apply flex min-h-24 flex-col justify-between rounded-2xl border border-white/15 bg-red-950/25 p-4 transition-colors hover:bg-white/[0.12]; }
@@ -226,7 +226,7 @@
   .auth-form-heading p { @apply text-xs font-bold uppercase tracking-[0.14em] text-red-700; }
   .auth-form-heading h2 { @apply mt-1 text-2xl font-bold text-slate-950 sm:text-3xl; }
   .auth-label { @apply mb-1.5 block text-xs sm:text-sm font-bold text-slate-800; }
-  .auth-input { @apply min-h-11 sm:min-h-12 w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm sm:text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .auth-input { @apply min-h-11 sm:min-h-12 w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm sm:text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .auth-field-icon { @apply absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400; }
   .auth-password-toggle { @apply absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
   .auth-form-fields .auth-field-icon, .auth-form-fields .auth-password-toggle { top: 1.45rem; }
@@ -259,7 +259,7 @@
   .faq-search label { @apply mb-3 block text-sm font-bold text-slate-900; }
   .faq-search > div { @apply relative; }
   .faq-search > div > svg { @apply absolute left-4 top-1/2 -translate-y-1/2 text-slate-400; }
-  .faq-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .faq-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .faq-search button { @apply absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
   .faq-content { @apply mx-auto grid max-w-[1240px] gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[280px_1fr]; }
   .faq-categories { @apply self-start lg:sticky lg:top-[150px]; }
@@ -341,7 +341,7 @@
   .profile-form { @apply mt-6 grid gap-5 sm:grid-cols-2; }
   .profile-field-wide { @apply sm:col-span-2; }
   .profile-field label { @apply mb-2 block text-sm font-bold text-slate-800; }
-  .profile-field input, .profile-field textarea { @apply min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .profile-field input, .profile-field textarea { @apply min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .profile-field textarea { @apply resize-y py-3 leading-7; }
   .profile-form-actions { @apply flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:col-span-2 sm:flex-row sm:justify-end; }
   .profile-cancel-button { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50; }
@@ -416,7 +416,7 @@
   .procedures-search label { @apply block text-sm font-semibold text-slate-800 sm:col-span-2; }
   .procedures-search > div { @apply relative; }
   .procedures-search > div > svg { @apply pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-400; }
-  .procedures-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-slate-50/50 py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-500 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .procedures-search input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-slate-50/50 py-3 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-500 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .procedures-search input::-webkit-search-cancel-button { display: none; }
   .procedures-search > div > button { @apply absolute right-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-800; }
   .procedures-search > button { @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 text-sm font-bold text-white hover:bg-red-900; }
@@ -504,7 +504,7 @@
   .account-form-grid { @apply grid gap-5 sm:grid-cols-2; }
   .account-field-wide { @apply sm:col-span-2; }
   .account-field label { @apply mb-2 block text-sm font-bold text-slate-800; }
-  .account-field input, .account-field textarea { @apply min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-base text-slate-950 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100; }
+  .account-field input, .account-field textarea { @apply min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-base text-slate-950 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
   .account-field textarea { @apply resize-y py-3 leading-7; }
   .account-form-actions { @apply mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end; }
   .account-cancel-action { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50; }
@@ -650,13 +650,13 @@
     .admin-sidebar.is-compact .admin-subnav-btn > small { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; opacity: 0; display: none; }
   }
   /* Cùng kiểu với <Button size="toolbar">: cao 44px, bo vừa, chữ nhỏ đậm, đỏ chính */
-  .admin-primary-action { @apply inline-flex h-11 min-h-11 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg bg-red-700 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold-200 disabled:cursor-not-allowed disabled:opacity-50; }
+  .admin-primary-action { @apply inline-flex h-11 min-h-11 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg bg-red-700 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50; }
   .admin-content-card { @apply mt-5; }
   .admin-toolbar { @apply flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between; }
   .admin-toolbar > button { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-red-800; }
   .admin-search { @apply relative flex min-h-11 w-full max-w-lg items-center; }
   .admin-search > svg { @apply pointer-events-none absolute left-3.5 text-slate-400; }
-  .admin-search input { @apply min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-400 focus:bg-white focus:ring-4 focus:ring-red-50; }
+  .admin-search input { @apply min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-red-600 focus:bg-white focus:ring-4 focus:ring-red-100; }
   .admin-empty { @apply border-t border-slate-100 px-5 py-10 text-center text-sm text-slate-500; }
   .admin-chart-card { @apply mt-4 overflow-hidden; }
   .admin-chart-heading { @apply flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between; }

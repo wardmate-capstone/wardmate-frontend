@@ -54,7 +54,7 @@ export function ConfirmDeleteModal({
               type="button"
               loading={loading}
               disabled={loading || confirmDisabled}
-              className="bg-red-700 text-white hover:bg-red-800"
+              variant="danger"
               onClick={onConfirm}
             >
               <Trash size={18} weight="bold" />

@@ -22,7 +22,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         {...props}
         className={cn(
           'h-11 w-full min-w-0 cursor-pointer appearance-none truncate rounded-lg border border-slate-200 bg-white pl-3 pr-9 text-xs font-semibold text-slate-700 transition-colors',
-          'hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-red-800 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
+          'hover:border-slate-300 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
           className,
         )}
       >
