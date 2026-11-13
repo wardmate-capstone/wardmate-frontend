@@ -107,8 +107,18 @@ function mapStatus(status?: string | null, resubmitCount = 0): ApplicationStatus
   return 'UNKNOWN';
 }
 
-function humanizeFieldName(key: string): string {
+export function humanizeFieldName(key: string): string {
   const map: Record<string, string> = {
+    procedureCode: 'Mã thủ tục',
+    procedureTitle: 'Tên thủ tục',
+    identityNumber: 'Số định danh cá nhân / CCCD',
+    title: 'Tên giấy tờ', code: 'Mã giấy tờ', status: 'Trạng thái',
+    isRequired: 'Bắt buộc', fileUrl: 'Tệp đính kèm', note: 'Ghi chú',
+    quantity: 'Số lượng', quantityText: 'Yêu cầu số lượng', sortOrder: 'Thứ tự',
+    submissionType: 'Hình thức nộp', documentCopyType: 'Loại bản',
+    conditionNote: 'Điều kiện áp dụng', itemNote: 'Lưu ý giấy tờ',
+    formTemplateId: 'Mẫu tờ khai', formCode: 'Mã mẫu', formName: 'Tên mẫu',
+    id: 'Mã mục giấy tờ', forms: 'Mẫu tờ khai liên kết',
     fullName: 'Họ và tên',
     applicantName: 'Họ và tên người nộp',
     citizenId: 'Số định danh cá nhân / CCCD',
@@ -118,7 +128,7 @@ function humanizeFieldName(key: string): string {
     dob: 'Ngày sinh',
     phoneNumber: 'Số điện thoại liên hệ',
     phone: 'Số điện thoại',
-    email: 'Địa chỉ Email',
+    email: 'Địa chỉ thư điện tử',
     address: 'Địa chỉ thường trú',
     permanentAddress: 'Nơi đăng ký thường trú',
     temporaryAddress: 'Nơi tạm trú',
@@ -129,14 +139,14 @@ function humanizeFieldName(key: string): string {
     wardCode: 'Mã Phường/Xã tiếp nhận',
     caseCode: 'Trường hợp thủ tục',
   };
-  return map[key] || key;
+  return map[key] || (/^[a-z][a-zA-Z0-9_]*$/.test(key) ? 'Thông tin bổ sung' : key);
 }
 
 export function mapCommentDtoToOfficerReviewComment(c: CommentDto, officerFallback = 'Cán bộ Một cửa'): OfficerReviewComment {
   return {
     id: c.id,
     category: c.targetType === 'CHECKLIST_ITEM' ? 'checklist' : 'eform',
-    target: c.fieldLabel || c.targetId || 'Nhận xét',
+    target: c.fieldLabel ? humanizeFieldName(c.fieldLabel) : 'Nhận xét',
     content: c.commentText || '',
     createdAt: formatDateTime(c.createdAt),
     officerName: officerFallback,
@@ -509,4 +519,68 @@ export function formDataFields(raw: unknown): EformField[] {
   }
   visit(parseFormData(raw), '/formData', '');
   return result;
+}
+
+export function workflowStatusLabel(value: string): string {
+  return ({ DRAFT: 'Bản nháp', SUBMITTED: 'Chờ tiền kiểm', UNDER_REVIEW: 'Đang kiểm tra',
+    NEED_REVISION: 'Cần bổ sung', RESUBMITTED: 'Đã gửi lại', DOCUMENTS_READY: 'Giấy tờ sẵn sàng',
+    OFFICIALLY_RECEIVED: 'Đã tiếp nhận tại quầy', CANCELLED: 'Đã hủy', APPROVED: 'Đã duyệt',
+    REJECTED: 'Đã từ chối', PENDING: 'Chưa hoàn tất', COMPLETED: 'Đã hoàn tất',
+    NOP: 'Nộp', XUAT_TRINH: 'Xuất trình', BAN_CHINH: 'Bản chính', BAN_SAO: 'Bản sao',
+    ORIGINAL: 'Bản chính', COPY: 'Bản sao', CERTIFIED_COPY: 'Bản sao có chứng thực',
+  } as Record<string, string>)[value] ?? 'Chưa xác định';
+}
+
+export function diffFieldLabel(key: string, label?: string | null, checklistTitle?: string): string {
+  const parts = key.split('/').filter(Boolean).map(part => part.replace(/~1/g, '/').replace(/~0/g, '~'));
+  const field = parts.at(-1) ?? '';
+  const translated = humanizeFieldName(field);
+  const title = label && label !== key ? humanizeFieldName(label) : undefined;
+  return parts[0] === 'checklists'
+    ? `${checklistTitle || title || 'Giấy tờ'} — ${translated}`
+    : parts.slice(1).map(part => /^\d+$/.test(part) ? `Mục ${Number(part) + 1}` : humanizeFieldName(part)).join(' / ') || title || translated;
+}
+
+export function diffValueText(value: unknown, exists: boolean, key: string): string {
+  if (!exists) return 'Chưa có mục này trong lần gửi';
+  if (value === null || value === undefined || value === '') return 'Chưa có dữ liệu';
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return value.length ? value.map(item => diffValueText(item, true, key)).join('; ') : 'Danh sách trống';
+    return Object.entries(value).map(([field, child]) => `${humanizeFieldName(field)}: ${diffValueText(child, true, field)}`).join('; ') || 'Chưa có dữ liệu';
+  }
+  if (/(?:^|\/)(status|submissionType|documentCopyType)$/.test(key)) return workflowStatusLabel(String(value));
+  return String(value);
+}
+
+// Use the submitted snapshots, never today's editable form, for historical values.
+export function compareSubmissionSnapshots(before: unknown, after: unknown) {
+  function fields(raw: unknown): Map<string, unknown> | undefined {
+    let data = raw;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch { return; } }
+    if (!data || typeof data !== 'object' || !('formData' in data) || !('checklists' in data) || !Array.isArray(data.checklists)) return;
+    const result = new Map<string, unknown>();
+    function visit(value: unknown, path: string) {
+      if (value && typeof value === 'object' && Object.keys(value).length) {
+        Object.entries(value).forEach(([key, child]) => visit(child, `${path}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`));
+      } else result.set(path, value);
+    }
+    visit(data.formData, '/formData');
+    for (const item of data.checklists) {
+      if (!item || typeof item !== 'object' || typeof item.id !== 'string') return;
+      visit(item, `/checklists/${item.id}`);
+    }
+    return result;
+  }
+  const oldFields = fields(before), newFields = fields(after);
+  if (!oldFields || !newFields) return;
+  return [...new Set([...oldFields.keys(), ...newFields.keys()])].sort().flatMap(fieldKey => {
+    const oldExists = oldFields.has(fieldKey), newExists = newFields.has(fieldKey);
+    const oldValue = oldFields.get(fieldKey), newValue = newFields.get(fieldKey);
+    const titlePath = fieldKey.startsWith('/checklists/') ? fieldKey.split('/').slice(0, 3).join('/') + '/title' : '';
+    const title = newFields.get(titlePath) ?? oldFields.get(titlePath);
+    return oldExists === newExists && JSON.stringify(oldValue) === JSON.stringify(newValue) ? [] : [{
+      fieldKey, fieldLabel: typeof title === 'string' ? title : fieldKey, oldValue, newValue, oldExists, newExists, hasChanged: true,
+    }];
+  });
 }
