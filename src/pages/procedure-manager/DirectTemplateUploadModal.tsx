@@ -142,7 +142,7 @@ export function DirectTemplateUploadModal({
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               disabled={submitting}
-              className="w-full h-9 px-3 text-xs font-mono font-bold uppercase bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              className="w-full h-9 px-3 text-xs font-mono font-bold uppercase bg-white border border-slate-300 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
             />
           </div>
 
@@ -158,7 +158,7 @@ export function DirectTemplateUploadModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={submitting}
-              className="w-full h-9 px-3 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              className="w-full h-9 px-3 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
             />
           </div>
         </div>

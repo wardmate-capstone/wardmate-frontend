@@ -104,7 +104,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       const complete = ready(item);
       const needsConfirmation = submissions.some(x => x.status === 'Draft' && x.fileExists);
       const fileInput = (
-        <label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-red-700 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+        <label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
           <UploadSimple size={20} className="shrink-0 text-slate-500" aria-hidden />
           <span className="min-w-0">
             <span className="block text-xs font-semibold text-slate-800">
@@ -321,7 +321,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
           {item.formTemplateId && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/40 px-4 sm:px-5 py-1 text-xs">
               <details className="group py-0.5">
-                <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-red-700">
+                <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
                   <span>Xem hoặc tải mẫu trống</span>
                   <CaretDown size={13} className="transition group-open:rotate-180" aria-hidden />
                 </summary>
@@ -331,7 +331,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
               </details>
               {editable && (
                 <details className="group py-0.5" open={Boolean(errors[item.checklistId]) || undefined}>
-                  <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-red-700">
+                  <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 font-medium text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
                     <span>{submissions.length ? 'Thay tệp Word khác' : 'Đã điền bằng Word? Tải tệp lên'}</span>
                     <CaretDown size={13} className="transition group-open:rotate-180" aria-hidden />
                   </summary>

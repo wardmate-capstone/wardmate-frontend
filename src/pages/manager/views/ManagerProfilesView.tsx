@@ -437,7 +437,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 placeholder="Ví dụ: Trần Minh Hoàng"
                 value={fdData.fullName}
                 onChange={(e) => setFdData({ ...fdData, fullName: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div>
@@ -450,7 +450,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 placeholder="Ví dụ: hoang.tm"
                 value={fdData.username}
                 onChange={(e) => setFdData({ ...fdData, username: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div>
@@ -463,7 +463,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 placeholder="hoang.tm@phuong.gov.vn"
                 value={fdData.email}
                 onChange={(e) => setFdData({ ...fdData, email: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div>
@@ -476,7 +476,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 placeholder="••••••••"
                 value={fdData.password}
                 onChange={(e) => setFdData({ ...fdData, password: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <p className="text-[11px] text-slate-500 italic">

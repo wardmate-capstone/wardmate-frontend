@@ -112,7 +112,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative grid size-10 place-items-center rounded-xl border border-red-100 bg-white text-slate-700 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/50 hover:text-red-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-800"
+        className="relative grid size-10 place-items-center rounded-xl border border-red-100 bg-white text-slate-700 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/50 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={

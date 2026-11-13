@@ -177,7 +177,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
               placeholder="Nhập mật khẩu hiện tại"
               disabled={loading}
               required
-              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100/70 disabled:bg-slate-100 transition-all shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 disabled:bg-slate-100 transition-all shadow-2xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
             />
             <button
               type="button"
@@ -208,7 +208,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
               placeholder="Nhập mật khẩu mới"
               disabled={loading}
               required
-              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100/70 disabled:bg-slate-100 transition-all shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 disabled:bg-slate-100 transition-all shadow-2xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
             />
             <button
               type="button"
@@ -238,7 +238,7 @@ export const AccountSecuritySection: React.FC<AccountSecuritySectionProps> = ({
               placeholder="Nhập lại mật khẩu mới"
               disabled={loading}
               required
-              className={`w-full rounded-xl border bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-3 disabled:bg-slate-100 transition-all shadow-2xs ${
+              className={`w-full rounded-xl border bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 disabled:bg-slate-100 transition-all shadow-2xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 ${
                 confirmNewPassword && !isMatched
                   ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100/70'
                   : confirmNewPassword && isMatched

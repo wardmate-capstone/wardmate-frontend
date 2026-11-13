@@ -27,7 +27,7 @@ const COPY_TYPES: CopyType[] = ['ORIGINAL', 'CERTIFIED_COPY', 'REGULAR_COPY', 'O
 const copyLabel = (t: CopyType) => ({ ORIGINAL: 'bản chính', CERTIFIED_COPY: 'bản sao chứng thực', REGULAR_COPY: 'bản chụp', OTHER: 'bản khác' })[t];
 
 const boxClass =
-  'min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-900 transition focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100';
+  'min-h-11 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100';
 
 export function ProcedureChecklistModal({
   open,
@@ -294,8 +294,7 @@ export function ProcedureChecklistModal({
                       </span>
                       <Button
                         size="small"
-                        variant="ghost"
-                        className="text-red-600 hover:bg-red-50 hover:text-red-800"
+                        variant="dangerGhost"
                         onClick={() => removeItem(index)}
                         disabled={busy}
                       >

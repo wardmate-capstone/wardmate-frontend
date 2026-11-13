@@ -87,7 +87,7 @@ export function CitizenDashboardView({
             key={label}
             type="button"
             onClick={() => onSelectSection(section)}
-            className={`admin-stat-card is-${tone} w-full text-left transition hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100`}
+            className={`admin-stat-card is-${tone} w-full text-left transition hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2`}
           >
             <div>
               <span>
@@ -195,7 +195,7 @@ export function CitizenDashboardView({
                 key={label}
                 type="button"
                 onClick={() => onSelectSection(section)}
-                className="group flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                className="group flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800">
                   <Icon size={20} weight="duotone" aria-hidden />

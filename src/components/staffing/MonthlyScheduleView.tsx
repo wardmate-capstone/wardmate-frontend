@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { Plus } from '@phosphor-icons/react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -203,7 +204,7 @@ function CalendarBoard({ initial, officerId, officerIds, month, name, onDirty, o
       return receipt;
     }, receipt => setConfirmedFingerprint(receipt.fingerprint))}>Xác nhận đã xem lịch</Button>}
     {manager && can('workflow.staffing.manage') && <details className="staff-card">
-      <summary className="cursor-pointer rounded font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">Tiện ích xếp lịch</summary>
+      <summary className="cursor-pointer rounded font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Tiện ích xếp lịch</summary>
       <div className="mt-4 space-y-4">
 
         <p className="text-sm text-slate-600">Điền nhanh lịch cho <strong className="text-slate-800">{name(officerId)}</strong> · Tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)}.</p>
@@ -265,5 +266,5 @@ function DayEditor({ day, rows, all, data, officerId, name, onSave, onClose }: {
 }
 function ScheduleHistory({ month, onClose }: { month: string; onClose: () => void }) {
   const query = useStaffQuery(['schedule-history', month], signal => workScheduleApi.history(month, signal));
-  return <Modal open title="Các lần công bố lịch" onOpenChange={v => !v && onClose()}><QueryState query={query} empty={!query.data?.length} /><div className="space-y-3">{query.data?.map(r => <article key={r.id} className="staff-card"><h3>{r.status === 'BASELINE' ? 'Dữ liệu ban đầu' : 'Lịch đã công bố'}</h3><p>{r.reason}</p><p>{r.slots.length} ca{r.publishedAtUtc ? ` · ${new Date(r.publishedAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}` : ''}</p></article>)}</div></Modal>;
+  return <Modal open title="Các lần công bố lịch" onOpenChange={v => !v && onClose()}><QueryState query={query} empty={!query.data?.length} /><div className="space-y-3">{query.data?.map(r => <article key={r.id} className="staff-card"><h3>{r.status === 'BASELINE' ? 'Dữ liệu ban đầu' : 'Lịch đã công bố'}</h3><p>{r.reason}</p><p>{r.slots.length} ca{r.publishedAtUtc ? ` · ${formatDateTime(r.publishedAtUtc)}` : ''}</p></article>)}</div></Modal>;
 }

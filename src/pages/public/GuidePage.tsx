@@ -100,7 +100,7 @@ export function GuidePage() {
                 <li key={step.id}>
                   <a
                     href={'#' + step.id}
-                    className="group flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold leading-6 text-slate-700 transition-all hover:bg-red-50 hover:text-red-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-100"
+                    className="group flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold leading-6 text-slate-700 transition-all hover:bg-red-50 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                   >
                     <span className="grid size-6 shrink-0 place-items-center rounded-md bg-slate-100 text-xs font-bold text-red-800 group-hover:bg-red-800 group-hover:text-white transition-colors">
                       {step.number}

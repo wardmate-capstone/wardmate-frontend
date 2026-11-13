@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useQuery } from '@tanstack/react-query';
 import { Star } from '@phosphor-icons/react';
 import { RefreshButton, EmptyState } from '@/components/ui';
@@ -130,10 +131,7 @@ function FeedbackApplication({ row }: { row: FeedbackRow }) {
 }
 
 function feedbackTime(value: string) {
-  const date = new Date(value);
-  const time = date.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
-  const day = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' });
-  return `${time}, ${day}`;
+  return formatDateTime(value);
 }
 
 function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]; total: number }) {
@@ -149,21 +147,21 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
     </div>
     {rows.length === 0 && <EmptyState title="Chưa có phản hồi nào trong kỳ đã chọn." description="Thử chọn khoảng ngày rộng hơn." />}
     {rows.length > 0 && <p className="px-5 py-2 text-xs text-slate-500 sm:hidden">Vuốt ngang bảng để xem hồ sơ, đánh giá và góp ý.</p>}
-    {rows.length > 0 && <div className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="w-full min-w-[900px] text-left text-sm">
+    {rows.length > 0 && <div className="admin-table-wrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="min-w-[900px]">
       <caption className="sr-only">Danh sách phản hồi người dân</caption>
-      <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        <th scope="col" className="w-36 px-5 py-3">Thời gian</th>
-        <th scope="col" className="w-44 px-5 py-3">Người dân</th>
-        <th scope="col" className="w-72 px-5 py-3">Hồ sơ</th>
-        <th scope="col" className="w-44 px-5 py-3">Đánh giá</th>
-        <th scope="col" className="px-5 py-3">Góp ý</th>
+      <thead><tr>
+        <th scope="col" className="w-36">Thời gian</th>
+        <th scope="col" className="w-44">Người dân</th>
+        <th scope="col" className="w-72">Hồ sơ</th>
+        <th scope="col" className="w-44">Đánh giá</th>
+        <th scope="col">Góp ý</th>
       </tr></thead>
       <tbody>{rows.map(row => <tr key={row.id} className="border-b border-slate-100 align-top last:border-0 hover:bg-slate-50/70">
-        <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{feedbackTime(row.createdAtUtc)}</td>
-        <td className="px-5 py-3.5"><FeedbackCitizen row={row} /></td>
-        <td className="max-w-72 px-5 py-3.5"><FeedbackApplication row={row} /></td>
-        <td className="px-5 py-3.5"><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
-        <td className="min-w-48 px-5 py-3.5">{row.comment
+        <td className="whitespace-nowrap text-slate-600">{feedbackTime(row.createdAtUtc)}</td>
+        <td><FeedbackCitizen row={row} /></td>
+        <td className="max-w-72"><FeedbackApplication row={row} /></td>
+        <td><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
+        <td className="min-w-48">{row.comment
           ? row.comment.length > 160
             ? <div className="space-y-2"><p className="line-clamp-2 break-words text-slate-700">{row.comment.slice(0, 120)}…</p><Button size="small" variant="outline" onClick={() => setReading(row)}>Xem đầy đủ góp ý</Button></div>
             : <p className="whitespace-pre-wrap break-words text-slate-800">{row.comment}</p>

@@ -38,7 +38,7 @@ function FeedbackCard({ item }: { item: ChatFeedbackItem }) {
         <p className="text-xs font-semibold text-slate-500">Câu trả lời của chatbot</p>
         <p className={`whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 ${!expanded && long ? 'line-clamp-4' : ''}`}>{item.answer}</p>
         {long && (
-          <button type="button" onClick={() => setExpanded((v) => !v)} className="text-xs font-semibold text-red-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800">
+          <button type="button" onClick={() => setExpanded((v) => !v)} className="text-xs font-semibold text-red-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
             {expanded ? 'Thu gọn' : 'Xem đầy đủ'}
           </button>
         )}

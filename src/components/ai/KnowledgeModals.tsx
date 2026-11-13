@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { formatDateTime as vnDateTime } from '@/lib/dateFormat';
 import { FilePdf, UploadSimple, X } from '@phosphor-icons/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,13 +31,11 @@ export const statusLabels: Record<string, { label: string; variant: 'neutral' | 
 };
 
 export function formatDateTime(value?: string | null) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+  return vnDateTime(value, value || '—');
 }
 
 const fieldClass =
-  'w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100 disabled:opacity-50';
+  'w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 aria-[invalid=true]:border-red-700';
 
 function FormError({ message, onReload }: { message: string; onReload?: () => void }) {
   if (!message) return null;
@@ -371,7 +370,7 @@ export function KnowledgePdfModal({ open, onOpenChange }: { open: boolean; onOpe
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => { e.preventDefault(); setDragging(false); pickFile(e.dataTransfer.files?.[0] ?? null); }}
               aria-describedby={fileError ? `${formId}-file-error` : undefined}
-              className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-50 ${dragging ? 'border-red-400 bg-red-50' : fileError ? 'border-red-300 bg-red-50/40' : 'border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/40'}`}
+              className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${dragging ? 'border-red-400 bg-red-50' : fileError ? 'border-red-300 bg-red-50/40' : 'border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/40'}`}
             >
               <span className="grid size-10 place-items-center rounded-full bg-white text-red-700 shadow-2xs" aria-hidden="true"><UploadSimple size={20} /></span>
               <span className="text-sm font-semibold text-slate-800">Chọn tệp PDF hoặc kéo thả vào đây</span>

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { formatDate } from '@/lib/dateFormat';
 import {
   Files,
   Prohibit,
@@ -93,7 +94,7 @@ export function ProcedureDashboardView({
             key={label}
             type="button"
             onClick={open}
-            className="group relative flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 text-left shadow-[0_4px_14px_rgba(15,23,42,.035)] transition-all hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600/30"
+            className="group relative flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 text-left shadow-[0_4px_14px_rgba(15,23,42,.035)] transition-all hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition-colors">
@@ -162,7 +163,7 @@ export function ProcedureDashboardView({
                   type="button"
                   key={proc.id}
                   onClick={() => onSelectProcedure(proc)}
-                  className="group block w-full rounded-xl border border-slate-200/80 bg-white p-4 text-left transition-all hover:border-red-200 hover:bg-red-50/20 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600/30"
+                  className="group block w-full rounded-xl border border-slate-200/80 bg-white p-4 text-left transition-all hover:border-red-200 hover:bg-red-50/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                 >
                   {/* Dòng 1: Mã thủ tục, Huy hiệu trạng thái và Danh mục */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -199,7 +200,7 @@ export function ProcedureDashboardView({
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100/90 pt-2.5 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1.5 text-slate-400">
                       <CalendarBlank size={13} weight="bold" />
-                      Cập nhật: {new Date(proc.updatedAt).toLocaleDateString('vi-VN')}
+                      Cập nhật: {formatDate(proc.updatedAt)}
                     </span>
                     <span className="inline-flex items-center gap-1 font-semibold text-slate-500 transition-colors group-hover:text-red-800">
                       Xem chi tiết

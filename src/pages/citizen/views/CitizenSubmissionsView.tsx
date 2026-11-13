@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import {
   FileDoc,
   Eye,
@@ -234,7 +235,7 @@ export function CitizenSubmissionsView({
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
                         <span className="inline-flex items-center gap-1">
                           <Clock size={13} className="text-slate-400" />
-                          {new Date(item.updatedAt || item.createdAt).toLocaleString('vi-VN')}
+                          {formatDateTime(item.updatedAt || item.createdAt)}
                         </span>
                         {item.fileSizeBytes > 0 && (
                           <span className="text-slate-400">

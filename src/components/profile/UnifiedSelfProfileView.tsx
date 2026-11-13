@@ -19,7 +19,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
-import { Skeleton } from '@/components/ui';
+import { Skeleton, formSelectClass, textareaClass } from '@/components/ui';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
 
 function formatDate(value?: string | null): string {
@@ -332,7 +332,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                       aria-label="Số định danh cá nhân (CCCD)" id="self-profile-identityNumber" disabled={isSaving} aria-invalid={Boolean(errors.identityNumber)} aria-describedby={errors.identityNumber ? "self-error-identityNumber" : undefined} value={formData.identityNumber}
                       onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
                       placeholder="Nhập 12 chữ số CCCD"
-                      className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
+                      className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">
                       {formData.identityNumber?.length || 0}/12
@@ -375,7 +375,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   aria-label="Họ và tên khai sinh" id="self-profile-fullName" disabled={isSaving} aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? "self-error-fullName" : undefined} value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Ví dụ: NGUYỄN VĂN A"
-                  className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                  className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                 />
               ) : loading ? (
                 <Skeleton className="my-1 h-5 w-48 rounded" />
@@ -399,7 +399,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                     type="date"
                     aria-label="Ngày sinh" id="self-profile-dateOfBirth" disabled={isSaving} aria-invalid={Boolean(errors.dateOfBirth)} aria-describedby={errors.dateOfBirth ? "self-error-dateOfBirth" : undefined} value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                    className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                   />
                 ) : loading ? (
                   <Skeleton className="my-1.5 h-4 w-28 rounded" />
@@ -419,7 +419,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   <select
                     aria-label="Giới tính" id="self-profile-gender" disabled={isSaving} aria-invalid={Boolean(errors.gender)} aria-describedby={errors.gender ? "self-error-gender" : undefined} value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                    className={formSelectClass}
                   >
                     <option value="Nam">Nam</option>
                     <option value="Nữ">Nữ</option>
@@ -448,7 +448,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   aria-label="Số điện thoại" id="self-profile-phoneNumber" disabled={isSaving} aria-invalid={Boolean(errors.phoneNumber)} aria-describedby={errors.phoneNumber ? "self-error-phoneNumber" : undefined} value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   placeholder="Ví dụ: 0912345678"
-                  className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                  className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                 />
               ) : loading ? (
                 <Skeleton className="my-1.5 h-4 w-32 rounded" />
@@ -492,7 +492,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   aria-label="Địa chỉ thường trú" id="self-profile-permanentAddress" disabled={isSaving} aria-invalid={Boolean(errors.permanentAddress)} aria-describedby={errors.permanentAddress ? "self-error-permanentAddress" : undefined} value={formData.permanentAddress}
                   onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
                   placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
-                  className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                  className={textareaClass}
                 />
               ) : loading ? (
                 <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">
@@ -518,7 +518,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   aria-label="Địa chỉ tạm trú" id="self-profile-temporaryAddress" disabled={isSaving} aria-invalid={Boolean(errors.temporaryAddress)} aria-describedby={errors.temporaryAddress ? "self-error-temporaryAddress" : undefined} value={formData.temporaryAddress}
                   onChange={(e) => setFormData({ ...formData, temporaryAddress: e.target.value })}
                   placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
-                  className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                  className={textareaClass}
                 />
               ) : loading ? (
                 <div className="space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-[72px]">

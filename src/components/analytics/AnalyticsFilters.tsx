@@ -1,4 +1,5 @@
 import { useForm } from 'react-hook-form';
+import { formatDateTime } from '@/lib/dateFormat';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   analyticsQuerySchema,
@@ -120,7 +121,7 @@ export function AnalyticsFilters({
         <div className="sm:col-span-2 lg:col-span-1">
           <label htmlFor="analytics-filter-procedure" className={labelClass}>Thủ tục</label>
           {/* Ô tìm và ô chọn gộp thành một khối: gõ để thu hẹp danh sách thủ tục */}
-          <div className="flex rounded-lg border border-slate-300 bg-white transition focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100">
+          <div className="flex rounded-lg border border-slate-300 bg-white transition focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100">
             <div className="relative w-40 shrink-0 border-r border-slate-200">
               <MagnifyingGlass size={15} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -194,7 +195,7 @@ export function CoverageNotice({ data }: { data?: z.infer<typeof coverageSchema>
         </span>
       )}
       <span>
-        Cập nhật: {data.latestRefreshAtUtc ? new Date(data.latestRefreshAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa có lần tổng hợp'} (Giờ VN)
+        Cập nhật: {data.latestRefreshAtUtc ? formatDateTime(data.latestRefreshAtUtc) : 'Chưa có lần tổng hợp'} (Giờ VN)
       </span>
     </div>
   );

@@ -12,7 +12,7 @@ import {
   Trash,
 } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
-import { Button, Input, Modal, Skeleton } from '@/components/ui';
+import { Button, Input, Modal, Skeleton, formSelectClass, textareaClass } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
 import { updateMyProfile, deleteMyProfile, authErrorMessage } from '@/lib/api';
@@ -414,7 +414,7 @@ export function CitizenProfileView({
                       aria-label="Số định danh cá nhân (CCCD)" value={formData.identityNumber}
                       onChange={(e) => handleChange('identityNumber', e.target.value.replace(/\D/g, ''))}
                       placeholder="Nhập 12 chữ số CCCD"
-                      className={`w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs ${
+                      className={`w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border rounded-xl shadow-2xs transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 ${
                         errors.identityNumber ? 'border-red-500 bg-red-50/20' : 'border-red-300'
                       }`}
                     />
@@ -468,7 +468,7 @@ export function CitizenProfileView({
                     aria-label="Họ và tên khai sinh" value={formData.fullName}
                     onChange={(e) => handleChange('fullName', e.target.value)}
                     placeholder="Ví dụ: NGUYỄN VĂN A"
-                    className={`w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
+                    className={`w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 ${
                       errors.fullName ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                     }`}
                   />
@@ -502,7 +502,7 @@ export function CitizenProfileView({
                       max={todayStr}
                       min="1900-01-01"
                       onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                      className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
+                      className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 ${
                         errors.dateOfBirth ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                       }`}
                     />
@@ -532,7 +532,7 @@ export function CitizenProfileView({
                       id="profile-gender"
                       aria-label="Giới tính" value={formData.gender}
                       onChange={(e) => handleChange('gender', e.target.value)}
-                      className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
+                      className={`${formSelectClass} ${
                         errors.gender ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                       }`}
                     >
@@ -576,7 +576,7 @@ export function CitizenProfileView({
                     aria-label="Số điện thoại" value={formData.phoneNumber}
                     onChange={(e) => handleChange('phoneNumber', e.target.value)}
                     placeholder="Ví dụ: 0912345678"
-                    className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all ${
+                    className={`w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 ${
                       errors.phoneNumber ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                     }`}
                   />
@@ -628,7 +628,7 @@ export function CitizenProfileView({
                     aria-label="Địa chỉ thường trú" value={formData.permanentAddress}
                     onChange={(e) => handleChange('permanentAddress', e.target.value)}
                     placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
-                    className={`w-full p-3 text-xs font-medium text-slate-900 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400 ${
+                    className={`${textareaClass} ${
                       errors.permanentAddress ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                     }`}
                   />
@@ -662,7 +662,7 @@ export function CitizenProfileView({
                     aria-label="Địa chỉ tạm trú" value={formData.temporaryAddress}
                     onChange={(e) => handleChange('temporaryAddress', e.target.value)}
                     placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
-                    className={`w-full p-3 text-xs font-medium text-slate-900 bg-white border rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400 ${
+                    className={`${textareaClass} ${
                       errors.temporaryAddress ? 'border-red-500 bg-red-50/20' : 'border-slate-300'
                     }`}
                   />
@@ -695,14 +695,10 @@ export function CitizenProfileView({
                   Xóa các thông tin kê khai cá nhân khỏi tài khoản này.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-2 text-xs font-bold text-red-700 hover:bg-red-50 hover:border-red-400 transition-colors shadow-2xs"
-              >
-                <Trash size={16} />
+              <Button variant="dangerOutline" size="small" onClick={() => setIsDeleteModalOpen(true)}>
+                <Trash size={16} aria-hidden="true" />
                 <span>Xóa thông tin cá nhân</span>
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -743,9 +739,8 @@ export function CitizenProfileView({
               Hủy
             </Button>
             <Button
-              variant="outline"
+              variant="danger"
               size="small"
-              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
               loading={deleting}
               onClick={() => void handleDeleteProfile()}
             >

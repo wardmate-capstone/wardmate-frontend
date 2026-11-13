@@ -1,16 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { formatDate } from '@/lib/dateFormat';
 import {
   Funnel,
   Eye,
-  CheckCircle,
-  Hourglass,
-  ClockCounterClockwise,
-  WarningCircle,
-  ArrowCounterClockwise,
-  FileText,
-  FilePdf,
 } from '@phosphor-icons/react';
 import { Button, ListSelect, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
+import { ApplicationStatusBadge } from '@/components/workflow/ApplicationStatusBadge';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
 
 export interface PaginationConfig {
@@ -170,74 +165,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   };
 
 
+  // Nhãn trạng thái dùng chung (ApplicationStatusBadge); hồ sơ gửi lại giữ nhãn ưu tiên nếu có
   function renderStatusBadge(status: ApplicationStatus, priorityBadge?: string) {
-    switch (status) {
-      case 'SUBMITTED_FOR_REVIEW':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-            <Hourglass size={14} />
-            <span>Chờ tiền kiểm</span>
-          </span>
-        );
-      case 'UNDER_REVIEW':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-            <ClockCounterClockwise size={14} />
-            <span>Đang kiểm tra</span>
-          </span>
-        );
-      case 'NEED_REVISION':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-            <WarningCircle size={14} />
-            <span>Cần bổ sung</span>
-          </span>
-        );
-      case 'RESUBMITTED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-900 border border-purple-300 ring-1 ring-purple-300">
-            <ArrowCounterClockwise size={14} weight="bold" />
-            <span>{priorityBadge || 'Đã gửi lại'}</span>
-          </span>
-        );
-      case 'DOCUMENTS_READY':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle size={14} />
-            <span>Giấy tờ sẵn sàng</span>
-          </span>
-        );
-      case 'APPROVED':
-        return <span className="text-xs text-slate-600">Đã duyệt</span>;
-      case 'READY_TO_SUBMIT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-            <FileText size={14} />
-            <span>Chờ tiếp nhận</span>
-          </span>
-        );
-      case 'OFFICIALLY_RECEIVED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-            <FilePdf size={14} />
-            <span>Đã tiếp nhận tại UBND</span>
-          </span>
-        );
-      case 'DRAFT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-            <span>Bản nháp</span>
-          </span>
-        );
-      case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-            <span>Đã hủy</span>
-          </span>
-        );
-      default:
-        return <span className="text-xs text-slate-600">Chưa xác định trạng thái</span>;
-    }
+    return <ApplicationStatusBadge status={status} label={status === 'RESUBMITTED' ? priorityBadge : undefined} />;
   }
 
   return (
@@ -254,7 +184,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 role="tab"
                 aria-selected={queueTab === tab.id}
                 onClick={() => onQueueTabChange(tab.id)}
-                className={`min-h-10 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-600 ${
+                className={`min-h-10 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${
                   queueTab === tab.id ? 'bg-red-800 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
@@ -375,7 +305,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
               </label>
               <label htmlFor="filter-submitted-to" className="grid min-w-0 gap-1 text-xs font-semibold text-slate-600">Đến ngày
@@ -387,7 +317,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
               </label>
               </div>
@@ -437,20 +367,20 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
       {/* Semantic Application Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left" aria-label="Bảng danh sách hồ sơ hành chính">
+        <div className="admin-table-wrap">
+          <table className="min-w-[900px]" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th scope="col" className="px-5 py-3.5">Mã hồ sơ</th>
-                <th scope="col" className="px-4 py-3.5">Người dân</th>
-                <th scope="col" className="px-4 py-3.5">Thủ tục</th>
-                <th scope="col" className="px-4 py-3.5">Ngày gửi</th>
-                <th scope="col" className="px-4 py-3.5">Cán bộ</th>
-                <th scope="col" className="px-4 py-3.5">Trạng thái</th>
-                <th scope="col" className="sticky right-0 z-10 bg-slate-50 px-5 py-3.5 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">Thao tác</th>
+              <tr>
+                <th scope="col">Mã hồ sơ</th>
+                <th scope="col">Người dân</th>
+                <th scope="col">Thủ tục</th>
+                <th scope="col">Ngày gửi</th>
+                <th scope="col">Cán bộ</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col" className="sticky right-0 z-10 bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
+            <tbody>
               {isLoading ? (
                 <TableSkeletonRows
                   columns={7}
@@ -493,7 +423,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     className="hover:bg-slate-50/80 transition-colors group"
                   >
                     {/* Mã HS */}
-                    <td className="px-5 py-3.5 font-mono font-bold text-slate-950">
+                    <td className="font-mono font-bold text-slate-950">
                       <div className="flex items-center gap-1.5">
                         <span>{app.applicationNumber}</span>
                         {app.currentVersion > 1 && (
@@ -505,7 +435,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Người dân */}
-                    <td className="px-4 py-3.5">
+                    <td>
                       <strong className="block font-bold text-slate-900">{app.citizen.fullName}</strong>
                       {app.citizen.citizenId !== '—' && (
                         <span className="block text-[11px] text-slate-500 font-mono">{app.citizen.citizenId}</span>
@@ -513,7 +443,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Thủ tục */}
-                    <td className="px-4 py-3.5 max-w-xs">
+                    <td className="max-w-xs">
                       <span className="block font-medium text-slate-900 truncate" title={app.procedureName}>
                         {app.procedureName}
                       </span>
@@ -528,7 +458,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Ngày gửi */}
-                    <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                    <td className="text-slate-600 whitespace-nowrap">
                       <div>{app.submittedAt}</div>
                       {app.dueAtUtc && app.status !== 'DOCUMENTS_READY' && app.status !== 'OFFICIALLY_RECEIVED' && app.status !== 'REJECTED' && app.status !== 'CANCELLED' && (
                         <div className="mt-1">
@@ -538,7 +468,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              Hạn: {new Date(app.dueAtUtc).toLocaleDateString('vi-VN')}
+                              Hạn: {formatDate(app.dueAtUtc)}
                             </span>
                           )}
                         </div>
@@ -546,7 +476,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Cán bộ */}
-                    <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                    <td className="text-slate-600 whitespace-nowrap">
                       {app.assignedOfficer === 'Chưa phân công' ? (
                         <span className="text-slate-400 italic">—</span>
                       ) : (
@@ -555,13 +485,13 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Trạng thái */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       {renderStatusBadge(app.status, app.priorityBadge)}
                     </td>
 
                     {/* Actions */}
                     {/* Ghim cột thao tác bên phải để không phải cuộn ngang mới thấy nút Nhận xử lý */}
-                    <td className="sticky right-0 z-10 bg-white px-5 py-3.5 text-right whitespace-nowrap shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)] group-hover:bg-slate-50">
+                    <td className="sticky right-0 z-10 bg-white text-right whitespace-nowrap shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)] group-hover:bg-slate-50">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Quick Preview button */}
                         <button

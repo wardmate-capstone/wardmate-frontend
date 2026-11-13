@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { formatTime, formatDateTime } from '@/lib/dateFormat';
 import {
   PaperPlaneTilt,
   X,
@@ -53,7 +54,7 @@ function formatChatTime(date: Date | string | number | undefined | null): string
   try {
     const d = date instanceof Date ? date : new Date(date);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return formatTime(d, '');
   } catch {
     return '';
   }
@@ -552,7 +553,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
           ref={toggleRef}
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2.5 rounded-full bg-red-800 p-3 sm:px-4 text-white shadow-xl hover:bg-red-900 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-200"
+          className="flex items-center gap-2.5 rounded-full bg-red-800 p-3 sm:px-4 text-white shadow-xl hover:bg-red-900 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
           aria-label="Mở trợ lý hỗ trợ thủ tục"
         >
           <div className="relative grid size-7 place-items-center rounded-full bg-white/20">
@@ -679,13 +680,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
 
               {!loadingSessions && sessions.map(s => {
                 const isCurrent = s.id === conversationId;
-                const dateStr = new Date(s.createdAt).toLocaleString('vi-VN', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
+                const dateStr = formatDateTime(s.createdAt);
                 return (
                   <button
                     key={s.id}
@@ -727,7 +722,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                   value={wardCode}
                   disabled={loading || wards.isPending || wards.isError}
                   onChange={event => { setWardCode(event.target.value); handleResetConversation(); }}
-                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-2 text-slate-800 focus:outline-red-700"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-2 text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                 >
                   <option value="">Chọn phường/xã</option>
                   {wards.data?.map(ward => <option key={ward.id} value={ward.code}>{ward.name}</option>)}
@@ -952,7 +947,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={loading ? 'Trợ lý đang suy nghĩ và trả lời...' : 'Nhập câu hỏi cần tư vấn...'}
                       disabled={loading}
-                      className="min-w-0 min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:bg-slate-100 disabled:text-slate-500"
+                      className="min-w-0 min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-500 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                     <button
                       type="submit"

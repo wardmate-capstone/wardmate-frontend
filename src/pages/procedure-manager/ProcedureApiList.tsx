@@ -146,7 +146,7 @@ export function ProcedureApiList({
               <input
                 type="text"
                 placeholder="Ví dụ: Cấp Xã, Cấp Tỉnh..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-800 focus:border-red-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-100"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-800 focus:bg-white focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                 value={level}
                 onChange={(e) => {
                   setLevel(e.target.value);
@@ -198,19 +198,19 @@ export function ProcedureApiList({
       {/* Procedure Table */}
       {!result.error && (
         <div className="admin-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/80">
+          <div className="admin-table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <th className="px-4 py-3.5">Mã thủ tục</th>
-                  <th className="px-4 py-3.5">Tên thủ tục</th>
-                  <th className="px-4 py-3.5">Lĩnh vực</th>
-                  <th className="px-4 py-3.5">Trạng thái</th>
-                  <th className="px-4 py-3.5 text-center">Bản lưu</th>
-                  {onSelect && <th className="px-4 py-3.5 text-right">Thao tác</th>}
+                  <th>Mã thủ tục</th>
+                  <th>Tên thủ tục</th>
+                  <th>Lĩnh vực</th>
+                  <th>Trạng thái</th>
+                  <th className="text-center">Bản lưu</th>
+                  {onSelect && <th className="text-right">Thao tác</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody>
                 {result.loading ? (
                   <TableSkeletonRows
                     columns={onSelect ? 6 : 5}
@@ -229,18 +229,18 @@ export function ProcedureApiList({
                 ) : (
                   (result.data?.items ?? []).map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-4 py-3.5 font-mono text-xs font-bold text-red-900 whitespace-nowrap">
+                    <td className="font-mono font-bold text-red-900 whitespace-nowrap">
                       {row.procedureCode}
                     </td>
-                    <td className="px-4 py-3.5 font-medium text-slate-900 max-w-md">
+                    <td className="font-medium text-slate-900 max-w-md">
                       <p className="line-clamp-2">{row.title}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600 whitespace-nowrap">
+                    <td className="text-slate-600 whitespace-nowrap">
                       <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium">
                         {row.categoryName}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                           row.isActive
@@ -256,7 +256,7 @@ export function ProcedureApiList({
                         {row.isActive ? 'Đang công khai' : 'Đang ẩn'}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                    <td className="text-center whitespace-nowrap">
                       {onViewVersions ? <button
                         type="button"
                         onClick={() => onViewVersions?.(row)}
@@ -267,7 +267,7 @@ export function ProcedureApiList({
                         <span>{row.versionCount ?? 0}</span>
                       </button> : <span className="text-xs text-slate-600">{row.versionCount ?? 0}</span>}
                     </td>
-                    {onSelect && <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                    {onSelect && <td className="text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
                         <Button size="small" variant="outline" onClick={() => onSelect(row)}>
                           Chi tiết

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useQuery } from '@tanstack/react-query';
 import { CaretDown, CaretUp, ClockCounterClockwise, Tray, UserSwitch, UserPlus, WarningCircle } from '@phosphor-icons/react';
 import { Button, LIST_SEARCH_THRESHOLD, ListSelect, Modal, Pagination, RefreshButton, SearchInput, TableSkeletonRows, toast, type ListSelectOption, EmptyState, ErrorAlert } from '@/components/ui';
 import { AssignDialog } from '@/components/staffing/DispatchView';
+import { ApplicationStatusBadge } from '@/components/workflow/ApplicationStatusBadge';
 import type { DispatchApplication } from '@/lib/api/staffing';
 import { useOfficerApplications, useAssignmentSummary } from '@/hooks/useWorkflow';
 import { useProcedureCategories } from '@/hooks/useProcedureCategories';
@@ -19,7 +21,7 @@ const WORKLOAD_PREVIEW = 8;
 // Bỏ dấu tiếng Việt để tìm "huong" vẫn ra "Hương"
 const foldVietnamese = (text: string) =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
-const quickChip ='inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-800';
+const quickChip ='inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2';
 const TRANSFERABLE = ['UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'];
 // Cùng nhóm trạng thái BE dùng để đếm activeCount trong assignment-summary.
 const ACTIVE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY';
@@ -48,9 +50,7 @@ function statusLabel(item: ApplicationSummaryDto): string {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return formatDateTime(value);
 }
 
 function isOverdue(item: ApplicationSummaryDto) {
@@ -236,7 +236,7 @@ export function ManagerApplicationsView() {
                     setOverdue(false);
                     resetPage();
                   }}
-                  className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-800 ${assignee === o.id ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${assignee === o.id ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                 >
                   <span>{o.fullName?.trim() || o.username}</span>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{workload.get(o.id.toLowerCase()) ?? (summary.isError ? '—' : '…')}</span>
@@ -248,7 +248,7 @@ export function ManagerApplicationsView() {
             <button
               type="button"
               onClick={() => setWorkloadExpanded(true)}
-              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
             >
               Xem thêm {hiddenWorkloadCount} cán bộ
               <CaretDown size={14} aria-hidden="true" />
@@ -258,7 +258,7 @@ export function ManagerApplicationsView() {
             <button
               type="button"
               onClick={() => setWorkloadExpanded(false)}
-              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-slate-600 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+              className="mt-3 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-slate-600 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
             >
               Thu gọn
               <CaretUp size={14} aria-hidden="true" />
@@ -337,7 +337,7 @@ export function ManagerApplicationsView() {
             <button
               type="button"
               onClick={() => { setStatus(''); setCategoryId(null); setAssignee(''); setOverdue(false); setCodeInput(''); setCode(''); resetPage(); }}
-              className="inline-flex min-h-10 items-center px-2 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-red-800"
+              className="inline-flex min-h-10 items-center px-2 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
             >
               Xóa bộ lọc
             </button>
@@ -397,7 +397,7 @@ export function ManagerApplicationsView() {
                       <div>{formatDate(item.submittedAt || item.createdAt)}</div>
                       {isOverdue(item) && <span className="mt-1 inline-flex rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">Quá hạn</span>}
                     </td>
-                    <td className="whitespace-nowrap text-xs font-semibold text-slate-700">{statusLabel(item)}</td>
+                    <td className="whitespace-nowrap"><ApplicationStatusBadge status={(item.status || '').toUpperCase() === 'SUBMITTED' && (item.resubmitCount ?? 0) > 0 ? 'RESUBMITTED' : item.status || ''} label={statusLabel(item)} /></td>
                     <td className="text-xs">
                       {item.assignedOfficerId
                         ? <span className="font-semibold text-slate-800">{officerName(item.assignedOfficerId, item.assignedOfficerName)}</span>

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { Modal, Button, Input, ListSkeleton, EmptyState } from '@/components/ui';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
@@ -56,7 +57,7 @@ export function ProcedureVersionsModal({ procedure, categories, onClose, onChang
             </summary>
             <div className="mt-3 space-y-3 pt-3 border-t border-slate-100 text-sm">
               <p className="text-xs text-slate-500">
-                Thời điểm ghi nhận bản lưu: {new Date(version.createdAt).toLocaleString('vi-VN')}
+                Thời điểm ghi nhận bản lưu: {formatDateTime(version.createdAt)}
               </p>
               <ProcedureApiEditor
                 value={version.snapshotData}

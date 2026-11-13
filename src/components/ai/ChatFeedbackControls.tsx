@@ -97,7 +97,7 @@ export function ChatFeedbackControls({ messageId, value, onRated }: {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Góp ý thêm (không bắt buộc), ví dụ: Tôi hỏi về lệ phí"
-              className="w-full resize-none rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-800"
+              className="w-full resize-none rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
             />
           </label>
           {error && <p role="alert" className="text-[11px] text-red-700">{error}</p>}

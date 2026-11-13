@@ -25,7 +25,7 @@ import {
 import { AiUsageCard } from './AiUsageCard';
 
 const PAGE_SIZE = 20;
-const selectClass = 'min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-100';
+const selectClass = 'min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100';
 
 function IndexStatusCard() {
   const status = useKnowledgeIndexStatus();
@@ -189,7 +189,7 @@ export function KnowledgeBaseView() {
           aria-selected={tab === id}
           aria-controls={`knowledge-panel-${id}`}
           onClick={() => setTab(id)}
-          className={`inline-flex h-10 items-center gap-1.5 rounded-lg px-4 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 ${tab === id ? 'bg-red-50 text-red-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+          className={`inline-flex h-10 items-center gap-1.5 rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${tab === id ? 'bg-red-50 text-red-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
         >
           <Icon size={16} aria-hidden="true" />
           {label}

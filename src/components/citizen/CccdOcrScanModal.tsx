@@ -638,7 +638,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       value={manualForm.citizenId || ''}
                       onChange={(e) => setManualForm({ ...manualForm, citizenId: e.target.value.replace(/\D/g, '') })}
                       placeholder="Ví dụ: 080204013474"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 font-mono"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg font-mono focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   </div>
 
@@ -651,7 +651,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       value={manualForm.fullName || ''}
                       onChange={(e) => setManualForm({ ...manualForm, fullName: e.target.value.toUpperCase() })}
                       placeholder="Ví dụ: NGUYỄN TRUNG NGHĨA"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 uppercase"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg uppercase focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   </div>
 
@@ -664,7 +664,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       value={manualForm.dateOfBirth || ''}
                       onChange={(e) => setManualForm({ ...manualForm, dateOfBirth: e.target.value })}
                       placeholder="Ví dụ: 10/08/2004"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   </div>
 
@@ -675,7 +675,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                     <select
                       value={manualForm.gender || ''}
                       onChange={(e) => setManualForm({ ...manualForm, gender: e.target.value })}
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-white"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     >
                       <option value="">Chưa cập nhật</option>
                       <option value="Nam">Nam</option>
@@ -693,7 +693,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       value={manualForm.placeOfOrigin || ''}
                       onChange={(e) => setManualForm({ ...manualForm, placeOfOrigin: e.target.value })}
                       placeholder="Ví dụ: Thạnh Lợi, Bến Lức, Long An"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   </div>
 
@@ -706,7 +706,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       value={manualForm.placeOfResidence || ''}
                       onChange={(e) => setManualForm({ ...manualForm, placeOfResidence: e.target.value })}
                       placeholder="Ví dụ: Ấp 6, Thạnh Lợi, Bến Lức, Long An"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   </div>
                 </div>

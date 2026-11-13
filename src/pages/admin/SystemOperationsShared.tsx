@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Badge, Button, Input } from '@/components/ui';
+import { Badge, Button, Input, formSelectClass } from '@/components/ui';
 import { backupStates, healthStates, emptyOperationsFilters, operationsFilterSchema, type OperationsFilters, type HealthObservation } from '@/lib/api/systemOperations';
 
 // Tên dễ đọc cho mã dịch vụ trong cấu hình vận hành; mã chưa biết thì giữ nguyên
@@ -31,7 +31,7 @@ export function OperationsFilter({ backup = false, services = [], onApply }: { b
   const form = useForm<OperationsFilters>({ resolver: zodResolver(operationsFilterSchema), defaultValues: emptyOperationsFilters });
   return <form noValidate onSubmit={form.handleSubmit(onApply)} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <Input label="Dịch vụ (mã)" list={`${id}-services`} {...form.register('service')} error={form.formState.errors.service?.message} hint="Để trống để xem mọi dịch vụ." /><datalist id={`${id}-services`}>{services.map(name => <option key={name} value={name} label={serviceLabel(name)} />)}</datalist>
-    {backup && <div className="grid content-start gap-2"><label htmlFor={`${id}-status`} className="text-sm font-semibold">Trạng thái sao lưu</label><select id={`${id}-status`} {...form.register('status')} className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-base"><option value="">Tất cả trạng thái</option>{Object.entries(backupStates).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>}
+    {backup && <div className="grid content-start gap-2"><label htmlFor={`${id}-status`} className="text-sm font-semibold">Trạng thái sao lưu</label><select id={`${id}-status`} {...form.register('status')} className={formSelectClass}><option value="">Tất cả trạng thái</option>{Object.entries(backupStates).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>}
     <Input label="Từ ngày" type="date" {...form.register('from')} error={form.formState.errors.from?.message} /><Input label="Đến ngày" type="date" {...form.register('to')} error={form.formState.errors.to?.message} />
     </div><div className="flex flex-wrap gap-3"><Button type="submit">Áp dụng</Button><Button variant="outline" onClick={() => { form.reset(emptyOperationsFilters); onApply({ ...emptyOperationsFilters }); }}>Xóa bộ lọc</Button></div><p className="text-sm text-slate-600">Khoảng ngày theo giờ Việt Nam. Nhập đúng mã dịch vụ (chọn từ gợi ý).</p></form>;
 }

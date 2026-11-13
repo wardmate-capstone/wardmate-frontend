@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { ErrorAlert } from '@/components/ui';
 import axios from 'axios';
 import { Controller, useForm } from 'react-hook-form';
@@ -17,8 +18,7 @@ const RATING_LABELS = ['Rất không hài lòng', 'Không hài lòng', 'Bình th
 
 // Đánh giá đã gửi: hiện lại bằng sao như lúc chấm, góp ý trong khung riêng
 function SubmittedFeedback({ rating, comment, createdAtUtc, onClose }: { rating: number; comment?: string | null; createdAtUtc: string; onClose: () => void }) {
-  const date = new Date(createdAtUtc);
-  const when = `${date.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}, ${date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  const when = formatDateTime(createdAtUtc);
   return <div role="status" className="space-y-5">
     <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 text-center">
       <div className="flex items-center gap-1" aria-hidden="true">
@@ -116,7 +116,7 @@ function FeedbackForm({ id, onClose, onRefreshApplication, description }: { id: 
         </fieldset>
         <div>
           <label htmlFor="feedback-comment" className="mb-2 block text-sm font-semibold text-slate-900">Góp ý bổ sung <span className="font-normal text-slate-500">(tùy chọn)</span></label>
-          <div className="rounded-xl border border-slate-300 bg-white transition focus-within:border-red-700 focus-within:ring-2 focus-within:ring-red-100">
+          <div className="rounded-xl border border-slate-300 bg-white transition focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100">
             <textarea id="feedback-comment" rows={4} maxLength={2000} {...register('comment')} placeholder="Chia sẻ điều bạn hài lòng hoặc cần cải thiện..." aria-invalid={!!errors.comment} aria-describedby="feedback-comment-error feedback-comment-count" className="block w-full resize-none rounded-xl bg-transparent px-3.5 pt-3 text-sm outline-none placeholder:text-slate-400" />
             <p id="feedback-comment-count" className="px-3.5 pb-2 text-right text-xs text-slate-400">{comment.length}/2000 ký tự</p>
           </div>

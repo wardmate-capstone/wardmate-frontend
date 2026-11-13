@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import {
   ClockCounterClockwise,
 } from '@phosphor-icons/react';
@@ -36,8 +37,7 @@ const FILTER_OPTIONS: Array<{ value: '' | OfficerActivityAction; label: string }
 ];
 
 function formatTime(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return formatDateTime(value);
 }
 
 function applicationNumber(item: OfficerActivityDto) {
@@ -115,19 +115,19 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
 
       {/* Semantic Audit Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[800px] text-left text-xs border-collapse" aria-label="Lịch sử thao tác của cán bộ">
+        <div className="admin-table-wrap">
+          <table className="min-w-[800px]" aria-label="Lịch sử thao tác của cán bộ">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-500">
-                <th className="px-5 py-3.5">Thời gian</th>
-                <th className="px-4 py-3.5">Mã hồ sơ</th>
-                <th className="px-4 py-3.5">Công dân</th>
-                <th className="px-4 py-3.5">Hành động nghiệp vụ</th>
-                <th className="px-4 py-3.5">Chi tiết thao tác</th>
-                <th className="px-5 py-3.5 text-right">Cán bộ thực hiện</th>
+              <tr>
+                <th>Thời gian</th>
+                <th>Mã hồ sơ</th>
+                <th>Công dân</th>
+                <th>Hành động nghiệp vụ</th>
+                <th>Chi tiết thao tác</th>
+                <th className="text-right">Cán bộ thực hiện</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {activity.isPending ? (
                 <TableSkeletonRows
                   columns={6}
@@ -147,10 +147,10 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
                   const meta = ACTION_META[item.action.toUpperCase()] ?? { label: item.action, tone: 'info' as Tone };
                   return (
                     <tr key={`${item.source}-${item.id}`} className="hover:bg-slate-50">
-                      <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap font-mono text-[11px]">
+                      <td className="text-slate-500 whitespace-nowrap font-mono">
                         {formatTime(item.createdAt)}
                       </td>
-                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
+                      <td className="font-mono font-bold text-slate-900">
                         {onOpenApplication ? (
                           <button
                             type="button"
@@ -163,10 +163,10 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
                           applicationNumber(item)
                         )}
                       </td>
-                      <td className="px-4 py-3.5 font-medium text-slate-800">
+                      <td className="font-medium text-slate-800">
                         {item.applicantName?.trim() || 'Công dân'}
                       </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             meta.tone === 'success'
@@ -181,11 +181,11 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
                           {meta.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-slate-600 max-w-sm">
+                      <td className="text-slate-600 max-w-sm">
                         <span className="block">{item.procedureTitle || 'Thủ tục hành chính'}</span>
                         {item.reason && <span className="block text-slate-500">Lý do: {item.reason}</span>}
                       </td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-slate-800 whitespace-nowrap">
+                      <td className="text-right font-semibold text-slate-800 whitespace-nowrap">
                         {officerName}
                       </td>
                     </tr>

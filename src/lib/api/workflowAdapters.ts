@@ -18,22 +18,11 @@ import type {
   CommentDto,
   HistoryDto,
 } from './workflow';
+import { formatDateTime as vnDateTime } from '@/lib/dateFormat';
 
+// Định dạng chung "12/11/2026 14:30" theo giờ Việt Nam; giá trị không đọc được thì giữ nguyên chuỗi gốc
 function formatDateTime(isoString?: string | null): string {
-  if (!isoString) return '—';
-  try {
-    const d = new Date(isoString);
-    if (Number.isNaN(d.getTime())) return isoString;
-    return d.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return isoString;
-  }
+  return vnDateTime(isoString, isoString || '—');
 }
 
 export function parseFormData(raw: unknown): Record<string, unknown> {

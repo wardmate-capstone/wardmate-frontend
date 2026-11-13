@@ -71,7 +71,7 @@ export function MainLayout() {
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/98 shadow-[0_4px_20px_-4px_rgba(60,15,20,0.06)] backdrop-blur-md">
         <div className="mx-auto flex h-[82px] max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
           <div className="flex min-w-0 items-center gap-4">
-            <Link to={logoTarget} className="group flex min-w-0 items-center gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 rounded-xl" aria-label="WardMate - Trang chủ">
+            <Link to={logoTarget} className="group flex min-w-0 items-center gap-3.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" aria-label="WardMate - Trang chủ">
               <BrandMark className="brand-mark transition-transform duration-200 group-hover:scale-105" size={54} />
               <BrandWordmark subtitle="Dịch vụ công xã - phường" />
             </Link>

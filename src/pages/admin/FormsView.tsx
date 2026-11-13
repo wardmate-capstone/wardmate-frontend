@@ -77,7 +77,7 @@ export function FormsView() {
         <form role="search" className="flex min-w-[280px] flex-1 items-center sm:max-w-md" onSubmit={event => { event.preventDefault(); setSearchCode(searchInput.trim()); setPage(1); }}>
           <label htmlFor="form-template-search" className="sr-only">Tìm theo mã biểu mẫu</label>
           <SearchInput containerClassName="flex-1" id="form-template-search" value={searchInput} onChange={event => setSearchInput(event.target.value)} onClear={() => { setSearchInput(''); setSearchCode(''); setPage(1); }} placeholder="Tìm theo mã, ví dụ: DON_01" />
-          <button type="submit" className="ml-2 h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800">Tìm kiếm</button>
+          <button type="submit" className="ml-2 h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Tìm kiếm</button>
         </form>
         <label className="sr-only" htmlFor="form-template-status">Trạng thái</label>
         <Select id="form-template-status" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="INACTIVE">Tạm dừng</option></Select>
@@ -90,11 +90,11 @@ export function FormsView() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+          <div className="admin-table-wrap">
+            <table className="min-w-[720px]">
               <caption className="sr-only">Danh sách mẫu Word</caption>
               <thead>
-                <tr className="border-b bg-slate-50">
+                <tr>
                   {['Mã / Tên biểu mẫu', 'Tệp Word', 'Trạng thái', 'Thao tác'].map((label, idx) => (
                     <th key={label} scope="col" className={cn('p-3', idx === 3 && 'text-right')}>
                       {label}
@@ -114,10 +114,10 @@ export function FormsView() {
                 ) : (
                   list.data.items.map((item) => (
                     <tr key={item.id} className="border-b border-slate-100">
-            <td className="min-w-44 p-3"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
-            <td className="p-3"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
-            <td className="p-3">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
-            <td className="w-[380px] min-w-[350px] p-3">
+            <td className="min-w-44"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
+            <td><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
+            <td>{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
+            <td className="w-[380px] min-w-[350px]">
               <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
                 {item.fileDocxUrl ? <ArrowsClockwise size={16} aria-hidden /> : <UploadSimple size={16} aria-hidden />}
                 {item.fileDocxUrl ? 'Thay đổi' : 'Tải lên'}

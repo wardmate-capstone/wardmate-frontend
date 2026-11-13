@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatTime } from '@/lib/dateFormat';
 import {
   Sparkle,
   CheckCircle,
@@ -159,7 +160,7 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
             </div>
 
             <div className="text-[11px] text-slate-500 shrink-0 self-end sm:self-center">
-              Quét lúc: {new Date(result.analyzedAt).toLocaleTimeString('vi-VN')}
+              Quét lúc: {formatTime(result.analyzedAt)}
             </div>
           </div>
 

@@ -24,8 +24,8 @@ export function AdminAuditView({ tab, onTab }: { tab: AdminAuditTab; onTab: (tab
       else if (event.key === 'End') next = visible.length - 1;
       else return;
       event.preventDefault(); refs.current[next]?.focus(); onTab(visible[next].id);
-    }} className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-100 ${current === item.id ? 'border-red-800 bg-red-800 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>)}</div>
-    {visible.map(item => <div key={item.id} role="tabpanel" id={`${id}-panel-${item.id}`} aria-labelledby={`${id}-${item.id}`} hidden={current !== item.id} tabIndex={0} className="min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700">
+    }} className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${current === item.id ? 'border-red-800 bg-red-800 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>)}</div>
+    {visible.map(item => <div key={item.id} role="tabpanel" id={`${id}-panel-${item.id}`} aria-labelledby={`${id}-${item.id}`} hidden={current !== item.id} tabIndex={0} className="min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
       {current === item.id && (item.id === 'events' ? <BusinessAuditEventsView /> : item.id === 'settings' ? <SystemAuditLogsView /> : <AdminRbacAuditView />)}
     </div>)}</div>;
 }

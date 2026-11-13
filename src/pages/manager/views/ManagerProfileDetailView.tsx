@@ -1,4 +1,5 @@
 import { accountRoleLabel } from '@/lib/personName';
+import { formSelectClass, textareaClass } from '@/components/ui';
 import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -337,7 +338,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                           maxLength={12}
                           aria-label="Số định danh cá nhân (CCCD)" {...form.register('identityNumber')} aria-invalid={Boolean(form.formState.errors.identityNumber)} aria-describedby={form.formState.errors.identityNumber ? 'managed-profile-errors' : undefined}
                           placeholder="Nhập 12 chữ số CCCD"
-                          className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
+                          className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">
                           {formData.identityNumber?.length || 0}/12
@@ -375,7 +376,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       type="text"
                       aria-label="Họ và tên khai sinh" {...form.register('fullName')} aria-invalid={Boolean(form.formState.errors.fullName)} aria-describedby={form.formState.errors.fullName ? 'managed-profile-errors' : undefined}
                       placeholder="Ví dụ: NGUYỄN VĂN A"
-                      className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                      className="w-full h-9 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   ) : (
                     <div className="text-sm font-bold text-slate-900 py-1 border-b border-slate-100">
@@ -394,7 +395,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       <input
                         type="date"
                         aria-label="Ngày sinh" {...form.register('dateOfBirth')} aria-invalid={Boolean(form.formState.errors.dateOfBirth)} aria-describedby={form.formState.errors.dateOfBirth ? 'managed-profile-errors' : undefined}
-                        className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                        className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                       />
                     ) : (
                       <div className="text-xs font-semibold text-slate-800 py-1.5 border-b border-slate-100">
@@ -411,7 +412,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                     {isEditing ? (
                       <select
                         aria-label="Giới tính" {...form.register('gender')} aria-invalid={Boolean(form.formState.errors.gender)} aria-describedby={form.formState.errors.gender ? 'managed-profile-errors' : undefined}
-                        className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                        className={formSelectClass}
                       >
                         <option value="">Chưa cập nhật</option>
                         <option value="Nam">Nam</option>
@@ -455,7 +456,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       type="tel"
                       aria-label="Số điện thoại" {...form.register('phoneNumber')} aria-invalid={Boolean(form.formState.errors.phoneNumber)} aria-describedby={form.formState.errors.phoneNumber ? 'managed-profile-errors' : undefined}
                       placeholder="Ví dụ: 0912345678"
-                      className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all"
+                      className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                   ) : (
                     <div className="text-xs font-bold text-slate-900 py-1.5 border-b border-slate-100">
@@ -494,7 +495,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       rows={3}
                       aria-label="Địa chỉ thường trú" {...form.register('permanentAddress')} aria-invalid={Boolean(form.formState.errors.permanentAddress)} aria-describedby={form.formState.errors.permanentAddress ? 'managed-profile-errors' : undefined}
                       placeholder="Số nhà, ngõ/ngách, đường phố, thôn/tổ dân phố, phường/xã, quận/huyện, tỉnh/thành phố"
-                      className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                      className={textareaClass}
                     />
                   ) : (
                     <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">
@@ -514,7 +515,7 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       rows={3}
                       aria-label="Địa chỉ tạm trú" {...form.register('temporaryAddress')} aria-invalid={Boolean(form.formState.errors.temporaryAddress)} aria-describedby={form.formState.errors.temporaryAddress ? 'managed-profile-errors' : undefined}
                       placeholder="Địa chỉ đang sinh sống hoặc làm việc thực tế"
-                      className="w-full p-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all resize-none leading-relaxed placeholder:text-slate-400"
+                      className={textareaClass}
                     />
                   ) : (
                     <p className="text-slate-800 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed text-xs min-h-[72px]">

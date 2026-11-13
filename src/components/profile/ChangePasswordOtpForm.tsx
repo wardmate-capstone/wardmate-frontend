@@ -27,7 +27,7 @@ import { useAuthStore } from "@/stores/authStore";
 
 const RESEND_SECONDS = 60;
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100/70 disabled:bg-slate-100 transition-all shadow-2xs aria-[invalid=true]:border-rose-400";
+  "w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:bg-slate-100 transition-colors aria-[invalid=true]:border-red-700";
 
 /** Đổi mật khẩu khi đã đăng nhập bằng mã OTP gửi về email (IAM password-otp, purpose CHANGE_PASSWORD). */
 export function ChangePasswordOtpForm({

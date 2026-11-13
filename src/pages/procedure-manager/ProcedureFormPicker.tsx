@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Plus, X, Sliders, CaretDown, UploadSimple, Warning } from '@phosphor-icons/react';
-import { Button, Input, Badge, ListSkeleton, Pagination, EmptyState } from '@/components/ui';
+import { Button, Input, Badge, ListSkeleton, Pagination, EmptyState, formSelectClass } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { PROCEDURE_LIMITS, procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
 import { useAuthStore } from '@/stores/authStore';
@@ -209,7 +209,7 @@ export function ProcedureFormPicker({
                     maxLength={PROCEDURE_LIMITS.singleLine}
                     placeholder="Ví dụ: Tờ khai đăng ký khai sinh"
                     aria-invalid={!String(row.formName ?? '').trim() || Boolean(errors[`formDefinitions.${index}.formName`])}
-                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium aria-[invalid=true]:border-red-500"
+                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg font-medium aria-[invalid=true]:border-red-500 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     onChange={event => update(index, { formName: event.target.value })}
                   />
                   {!String(row.formName ?? '').trim()
@@ -226,7 +226,7 @@ export function ProcedureFormPicker({
                     step={1}
                     value={String(row.quantity ?? '')}
                     placeholder="1"
-                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-lg font-medium focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     onChange={event => update(index, { quantity: event.target.value === '' ? null : Number(event.target.value) })}
                   />
                   {errors[`formDefinitions.${index}.quantity`] && (
@@ -238,7 +238,7 @@ export function ProcedureFormPicker({
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Quy định nộp</label>
                   <select
                     aria-label="Yêu cầu"
-                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    className={formSelectClass}
                     value={row.isMandatory === false ? 'optional' : 'required'}
                     onChange={event => update(index, { isMandatory: event.target.value === 'required' })}
                   >
@@ -252,7 +252,7 @@ export function ProcedureFormPicker({
                   <select
                     aria-label="Loại biểu mẫu"
                     data-field={`formDefinitions.${index}.formType`}
-                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium"
+                    className={formSelectClass}
                     value={row.formType === 'ONLINE_INTERACTIVE' ? 'ONLINE_INTERACTIVE' : 'DOCX_TEMPLATE'}
                     onChange={event => update(index, { formType: event.target.value as 'DOCX_TEMPLATE' | 'ONLINE_INTERACTIVE' })}
                   >
@@ -266,7 +266,7 @@ export function ProcedureFormPicker({
                   <select
                     aria-label="Trường hợp áp dụng"
                     data-field={`formDefinitions.${index}.caseCode`}
-                    className="w-full h-9 px-2.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 font-medium truncate"
+                    className={`${formSelectClass} truncate`}
                     value={String(row.caseCode ?? '')}
                     onChange={event => update(index, { caseCode: event.target.value || null })}
                   >

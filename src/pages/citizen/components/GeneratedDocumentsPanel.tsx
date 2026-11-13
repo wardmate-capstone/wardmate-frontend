@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { Button, ListSkeleton, toast } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useGeneratedDocuments } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, type GeneratedDocumentDto } from '@/lib/api/documentForms';
@@ -17,7 +18,7 @@ export function GeneratedDocumentsPanel({ applicationId }: { applicationId: stri
   const knownIds = new Set(contents.data?.submissions.map(x => x.id));
   const unmatched = generated.data?.filter(x => !x.submissionId || !knownIds.has(x.submissionId)) ?? [];
   function renderPdfs(items: GeneratedDocumentDto[]) {
-    return items.length ? <ul className="space-y-2">{items.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span>PDF · {new Date(item.createdAtUtc).toLocaleString('vi-VN')}</span><Button variant="outline" size="small" onClick={() => setSelected(item)}>Xem và tải PDF</Button></li>)}</ul> : <p className="text-sm text-slate-600">Chưa có bản PDF.</p>;
+    return items.length ? <ul className="space-y-2">{items.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span>PDF · {formatDateTime(item.createdAtUtc)}</span><Button variant="outline" size="small" onClick={() => setSelected(item)}>Xem và tải PDF</Button></li>)}</ul> : <p className="text-sm text-slate-600">Chưa có bản PDF.</p>;
   }
   return <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
     <h3 className="font-bold text-slate-900">Bản PDF sau tiền kiểm</h3>

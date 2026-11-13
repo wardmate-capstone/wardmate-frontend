@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { formatDateTime } from '@/lib/dateFormat';
 import { z } from 'zod';
 import { ArrowArcLeft, ArrowLeft, Eye, EyeSlash, Info, PencilSimple } from "@phosphor-icons/react";
 import { Badge, Button, ConfirmDeleteModal, Input, Modal } from "@/components/ui";
@@ -147,8 +148,7 @@ export function ProcedureApiDetail({
             {active ? "Ngừng công khai" : "Mở công khai"}
           </Button>}
           {canUnpublish && can("procedure.publish") && <Button
-            variant="outline"
-            className="border-red-200 text-red-700 hover:bg-red-50"
+            variant="dangerOutline"
             onClick={() => {
               setUnpublishOpen(true);
               setError("");
@@ -213,7 +213,7 @@ export function ProcedureApiDetail({
               {version.effectiveDate}
             </summary>
             <p className="my-3 text-sm text-slate-600">
-              Ngày lưu: {new Date(version.createdAt).toLocaleString("vi-VN")}.
+              Ngày lưu: {formatDateTime(version.createdAt)}.
               Đây là nội dung đã lưu ở phiên bản này.
             </p>
             <ProcedureApiEditor

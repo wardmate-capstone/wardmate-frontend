@@ -1,11 +1,12 @@
 import { useId, type ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input, Pagination, Select, toast, ErrorAlert } from '@/components/ui';
+import { Button, Input, Pagination, Select, toast, ErrorAlert, formSelectClass } from '@/components/ui';
 import { auditFilterSchema, auditSources, emptyAuditFilters, systemError, type AuditFilters } from '@/lib/api/systemAdministration';
 
 export function auditTime(value: string | null) {
-  return value ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false }) : 'Chưa có thông tin';
+  return formatDateTime(value, 'Chưa có thông tin');
 }
 export function SystemRequestStatus({ pending, error, retry, fetching = false }: { pending: boolean; error: unknown; retry: () => void; fetching?: boolean }) {
   if (pending) return <p role="status" className="p-5 text-sm text-slate-600">Đang tải dữ liệu…</p>;
@@ -18,7 +19,7 @@ export function AuditFilterForm({ business = false, onApply }: { business?: bool
   const { errors } = form.formState;
   return <form noValidate onSubmit={form.handleSubmit(onApply)} className="space-y-4 border-b border-slate-200 pb-5">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {business && <><div className="grid content-start gap-2"><label htmlFor={sourceId} className="text-sm font-semibold">Nguồn phát sinh</label><select id={sourceId} {...form.register('source')} className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-base"><option value="">Tất cả nguồn</option>{Object.entries(auditSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
+      {business && <><div className="grid content-start gap-2"><label htmlFor={sourceId} className="text-sm font-semibold">Nguồn phát sinh</label><select id={sourceId} {...form.register('source')} className={formSelectClass}><option value="">Tất cả nguồn</option>{Object.entries(auditSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
         <Input label="Loại dữ liệu" hint="Nhập đúng tên loại dữ liệu cần tra cứu" {...form.register('entity')} error={errors.entity?.message} /></>}
       <Input label="Từ ngày" type="date" {...form.register('from')} error={errors.from?.message} />
       <Input label="Đến ngày" type="date" {...form.register('to')} error={errors.to?.message} />

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { Badge, Button, ListSkeleton } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
@@ -75,7 +76,7 @@ export function OfficerDocumentsPanel({
               <Badge variant={item.status === 'ReadyForDownload' ? 'success' : item.status === 'RevisionRequested' ? 'warning' : 'neutral'}>
                 {submissionStatusLabel(item.status)}
               </Badge>
-              {item.submittedAt && <p className="text-xs text-slate-500 mt-1">Ngày gửi: {new Date(item.submittedAt).toLocaleString('vi-VN')}</p>}
+              {item.submittedAt && <p className="text-xs text-slate-500 mt-1">Ngày gửi: {formatDateTime(item.submittedAt)}</p>}
               {item.officerComment && <p className="whitespace-pre-wrap break-words text-sm mt-1">Ghi chú: {item.officerComment}</p>}
               <p className="text-sm mt-1">
                 {(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MB{evidence && !evidence.fileExists && ' · Không tìm thấy tệp'}
@@ -97,7 +98,7 @@ export function OfficerDocumentsPanel({
             </div>
           </div>
           {canAnnotate && (
-            <label className="relative grid min-w-0 cursor-pointer gap-2 rounded-lg text-sm font-semibold focus-within:ring-2 focus-within:ring-red-700 focus-within:ring-offset-2">
+            <label className="relative grid min-w-0 cursor-pointer gap-2 rounded-lg text-sm font-semibold focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100">
               Tải lên tờ khai Word có ghi chú
               <span aria-hidden="true" className="flex min-h-12 min-w-0 items-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 font-normal text-slate-600">
                 Chọn tệp Word · Tối đa 20 MB

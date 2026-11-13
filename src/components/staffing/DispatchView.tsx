@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { personName } from "@/lib/personName";
 import { Button, Modal, RefreshButton, SearchInput } from "@/components/ui";
+import { ApplicationStatusBadge } from "@/components/workflow/ApplicationStatusBadge";
 import { staffingApi, type DispatchApplication } from "@/lib/api/staffing";
 import { getManagerOfficers } from "@/lib/api";
 import { officerBlockers } from "@/lib/api/staffingError";
@@ -10,7 +11,6 @@ import {
   dateText,
   Pager,
   QueryState,
-  statusText,
   useStaffAccess,
   useStaffQuery,
 } from "./shared";
@@ -20,15 +20,12 @@ import { useManagerReleaseMutation } from "@/hooks/useWorkflow";
 import { workflowApi } from "@/lib/api/workflow";
 import { toast } from "@/components/ui/Toast";
 import {
-  FileText,
   User,
   UserSwitch,
   UserPlus,
   UserMinus,
   ClockCounterClockwise,
   ChatCircleText,
-  CheckCircle,
-  Clock,
   WarningCircle,
   ArrowsClockwise,
   X,
@@ -324,44 +321,10 @@ export function DispatchView({
     return officerDir.get(id.toLowerCase()) || `Cán bộ (${id.slice(0, 8)})`;
   };
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case "DOCUMENTS_READY":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle size={14} weight="fill" />
-            <span>Giấy tờ sẵn sàng</span>
-          </span>
-        );
-      case "UNDER_REVIEW":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-            <Clock size={14} weight="fill" />
-            <span>Đang kiểm tra</span>
-          </span>
-        );
-      case "SUBMITTED":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-            <FileText size={14} weight="fill" />
-            <span>Chờ tiền kiểm</span>
-          </span>
-        );
-      case "NEED_REVISION":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-            <WarningCircle size={14} weight="fill" />
-            <span>Cần bổ sung</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-            <span>{statusText(status)}</span>
-          </span>
-        );
-    }
-  };
+  // Nhãn trạng thái dùng chung với Hàng đợi cán bộ và Giám sát hồ sơ (cùng màu, cùng icon)
+  const renderStatusBadge = (status: string) => (
+    <ApplicationStatusBadge status={status} />
+  );
 
   if (!manager || !can("workflow.dispatch.read"))
     return <p role="alert">Bạn không có quyền xem điều phối hồ sơ.</p>;
@@ -507,21 +470,21 @@ export function DispatchView({
 
       {!query.isError && !query.isPending && !!query.data?.items.length && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+          <div className="admin-table-wrap">
+            <table className="min-w-[820px]">
               <caption className="sr-only">Danh sách hồ sơ điều phối</caption>
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th scope="col" className="px-4 py-3">
+                <tr>
+                  <th scope="col">
                     Hồ sơ
                   </th>
-                  <th scope="col" className="px-4 py-3">
+                  <th scope="col">
                     Trạng thái
                   </th>
-                  <th scope="col" className="px-4 py-3">
+                  <th scope="col">
                     Cán bộ phụ trách
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right">
+                  <th scope="col" className="text-right">
                     <span className="sr-only">Thao tác</span>
                   </th>
                 </tr>
@@ -546,7 +509,7 @@ export function DispatchView({
                       key={app.id}
                       className="border-b border-slate-100 align-middle transition-colors last:border-0 hover:bg-slate-50/70"
                     >
-                      <td className="max-w-md px-4 py-3">
+                      <td className="max-w-md">
                         <p className="truncate font-semibold text-slate-900">
                           {app.procedureTitle || "Thủ tục hành chính"}
                         </p>
@@ -555,10 +518,10 @@ export function DispatchView({
                             `HS-${app.id.slice(0, 8).toUpperCase()}`}
                         </p>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3">
+                      <td className="whitespace-nowrap">
                         {renderStatusBadge(app.status)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {app.assignedOfficerId ? (
                           <span className="inline-flex items-center gap-2 text-slate-800">
                             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500">
@@ -574,7 +537,7 @@ export function DispatchView({
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <div className="flex items-center justify-end gap-1">
                           {canAssign && (
                             <Button
@@ -624,7 +587,7 @@ export function DispatchView({
                             onClick={() =>
                               setSelection({ app, mode: "history" })
                             }
-                            className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                            className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                           >
                             <ClockCounterClockwise size={18} aria-hidden />
                           </button>
@@ -636,7 +599,7 @@ export function DispatchView({
                               onClick={() =>
                                 setSelection({ app, mode: "consult" })
                               }
-                              className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                              className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                             >
                               <ChatCircleText size={18} aria-hidden />
                             </button>

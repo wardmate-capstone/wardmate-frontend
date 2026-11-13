@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { useQuery } from '@tanstack/react-query';
 import {
   QrCode,
@@ -45,7 +46,7 @@ function renderDossierDate(raw?: string): string {
   try {
     const d = new Date(raw);
     if (Number.isNaN(d.getTime())) return raw;
-    return d.toLocaleDateString('vi-VN');
+    return formatDate(d);
   } catch {
     return raw;
   }
@@ -240,7 +241,7 @@ function ApprovedQr({
   }
 
   const generatedTime = qr.data?.generatedAt
-    ? new Date(qr.data.generatedAt).toLocaleString('vi-VN')
+    ? formatDateTime(qr.data.generatedAt)
     : 'Chưa có thông tin';
 
   if (qr.isPending || (qr.isSuccess && binaryQuery.isPending)) {

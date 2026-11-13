@@ -58,7 +58,7 @@ export function QuickCategoryCreate({ onCreated, disabled }: { onCreated: (categ
       type="button"
       disabled={disabled}
       onClick={() => { setName(''); setDescription(''); setError(''); setOpen(true); }}
-      className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
     >
       <Plus size={14} weight="bold" aria-hidden="true" />
       Tạo danh mục

@@ -100,24 +100,24 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
 
       {/* Bảng danh mục */}
       <section className="admin-card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+        <div className="admin-table-wrap">
+          <table className="min-w-[640px]">
             <caption className="sr-only">Danh sách danh mục thủ tục</caption>
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th scope="col" className="w-20 px-4 py-3">Mã</th>
-                <th scope="col" className="px-4 py-3">Tên danh mục</th>
-                <th scope="col" className="px-4 py-3">Mô tả</th>
-                {canManage && <th scope="col" className="w-28 px-4 py-3 text-right"><span className="sr-only">Thao tác</span></th>}
+              <tr>
+                <th scope="col" className="w-20">Mã</th>
+                <th scope="col">Tên danh mục</th>
+                <th scope="col">Mô tả</th>
+                {canManage && <th scope="col" className="w-28 text-right"><span className="sr-only">Thao tác</span></th>}
               </tr>
             </thead>
             <tbody>
               {visibleCategories.map((cat) => (
                 <tr key={cat.id} className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/70">
-                  <td className="px-4 py-3">
+                  <td>
                     <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-500">#{cat.id}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2.5">
                       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800">
                         <FolderSimple size={17} weight="duotone" aria-hidden />
@@ -125,18 +125,18 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
                       <span className="font-semibold text-slate-900">{cat.categoryName}</span>
                     </div>
                   </td>
-                  <td className="max-w-md px-4 py-3">
+                  <td className="max-w-md">
                     {cat.description
                       ? <p className="line-clamp-2 text-slate-600">{cat.description}</p>
                       : <p className="italic text-slate-400">Chưa có mô tả</p>}
                   </td>
-                  {canManage && <td className="px-4 py-3">
+                  {canManage && <td>
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
                         aria-label="Chỉnh sửa"
                         title="Chỉnh sửa"
-                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                         onClick={() => open(cat)}
                       >
                         <PencilSimple size={18} aria-hidden />
@@ -145,7 +145,7 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
                         type="button"
                         aria-label="Xóa"
                         title="Xóa"
-                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                         onClick={() => {
                           setDeleting(cat);
                           setDeleteError('');

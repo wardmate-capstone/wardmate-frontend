@@ -57,7 +57,7 @@ export function AvatarEditor({ initials, className }: { initials: string; classN
         disabled={busy !== null}
         title={avatarUrl ? 'Đổi ảnh đại diện' : 'Thêm ảnh đại diện'}
         aria-label={avatarUrl ? 'Đổi ảnh đại diện' : 'Thêm ảnh đại diện'}
-        className="group relative rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 disabled:cursor-wait"
+        className="group relative rounded-2xl disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
       >
         <UserAvatar
           url={avatarUrl}
@@ -78,7 +78,7 @@ export function AvatarEditor({ initials, className }: { initials: string; classN
           type="button"
           onClick={() => setConfirmOpen(true)}
           disabled={busy !== null}
-          className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-slate-500 transition-colors hover:bg-red-50 hover:text-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 disabled:opacity-50"
+          className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-slate-500 transition-colors hover:bg-red-50 hover:text-red-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
         >
           <Trash size={12} aria-hidden="true" /> Xóa ảnh
         </button>

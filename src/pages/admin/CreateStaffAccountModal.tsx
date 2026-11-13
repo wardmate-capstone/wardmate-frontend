@@ -38,7 +38,7 @@ const staffSchema = z.object({
 type StaffFormValues = z.infer<typeof staffSchema>;
 const defaultValues: StaffFormValues = { role: 'FRONT_DESK_OFFICER', fullName: '', username: '', email: '', password: '', wardId: '' };
 
-const inputClass = 'w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 aria-[invalid=true]:border-red-400';
+const inputClass = 'w-full min-h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 aria-[invalid=true]:border-red-700';
 
 export function CreateStaffAccountModal({ open, wards, onOpenChange, onCreated }: {
   open: boolean;

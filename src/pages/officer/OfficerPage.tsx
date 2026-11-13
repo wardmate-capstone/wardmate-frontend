@@ -1,4 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
+import { formatDateTime } from '@/lib/dateFormat';
 import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -139,7 +140,7 @@ export const OfficerPage: React.FC = () => {
   const notificationHub = useNotificationHub(Boolean(user?.id));
   const notifications = useMemo<OfficerNotification[]>(() => notificationHub.items.map((n) => ({
     id: n.id,
-    time: new Date(n.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+    time: formatDateTime(n.createdAt),
     title: n.title,
     message: n.content,
     applicationId: n.applicationId ?? undefined,

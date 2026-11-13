@@ -136,7 +136,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        className="flex min-h-11 items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1.5 pr-3 text-left transition-all hover:border-red-200 hover:bg-red-50/40 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600/20"
+        className="flex min-h-11 items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1.5 pr-3 text-left transition-all hover:border-red-200 hover:bg-red-50/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
         aria-label="Menu tài khoản"
         aria-haspopup="menu"
         aria-expanded={isOpen}

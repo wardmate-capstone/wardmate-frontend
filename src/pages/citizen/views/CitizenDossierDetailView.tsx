@@ -1,4 +1,5 @@
 import { humanizeFieldName } from '@/lib/api/workflowAdapters';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { useState } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
 import { Badge, Button, Modal, Skeleton } from '@/components/ui';
@@ -130,7 +131,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   <p className="font-semibold text-slate-900">{index + 1}. {comment.fieldLabel ? humanizeFieldName(comment.fieldLabel) : (comment.targetType === 'FORM_FIELD' ? 'Thông tin kê khai' : 'Giấy tờ đính kèm')}</p>
                   <p className="whitespace-pre-wrap break-words leading-relaxed text-slate-700">{comment.commentText || 'Chưa có nội dung hướng dẫn.'}</p>
                   <div className="flex items-center justify-between pt-1 text-slate-400 text-[11px]">
-                    <span>{new Date(comment.createdAt).toLocaleDateString('vi-VN')}</span>
+                    <span>{formatDate(comment.createdAt)}</span>
                     {comment.targetType === 'CHECKLIST_ITEM' && comment.targetId && (
                       <Button variant="ghost" size="small" className="-mr-2 text-red-800 text-xs" onClick={() => goToPaper(comment.targetId)}>
                         Đến mục cần sửa<ArrowRight size={14} aria-hidden />
@@ -208,7 +209,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
               <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs">
                 <span className="block text-[11px] font-semibold text-slate-500">Thời hạn phản hồi (trong 45 giờ làm việc):</span>
                 <strong className="text-slate-900 block mt-0.5">
-                  {new Date(dossier.dueAtUtc).toLocaleString('vi-VN')}
+                  {formatDateTime(dossier.dueAtUtc)}
                 </strong>
               </div>
             )}
@@ -250,7 +251,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                         <li key={item.checklistId}>
                           <button
                             type="button"
-                            className="flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-red-700 transition-colors"
+                            className="flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                             onClick={() => goToPaper(item.checklistId)}
                           >
                             <span className="truncate">{item.itemName}</span>
@@ -280,8 +281,8 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   <span>{revising ? 'Gửi lại hồ sơ đã sửa' : 'Gửi hồ sơ tiền kiểm'}</span>
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full gap-2 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                  variant="dangerOutline"
+                  className="w-full gap-2"
                   disabled={submitting || mutating || cancelMutation.isPending}
                   onClick={() => setCancelModalOpen(true)}
                 >
@@ -320,9 +321,8 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             Quay lại
           </Button>
           <Button
-            variant="outline"
+            variant="danger"
             size="small"
-            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
             loading={cancelMutation.isPending}
             onClick={async () => {
               if (!dossier.id) return;

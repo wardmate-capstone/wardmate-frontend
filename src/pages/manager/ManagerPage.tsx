@@ -1,4 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
+import { formatDate } from '@/lib/dateFormat';
 import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
 import { DispatchView } from '@/components/staffing/DispatchView';
@@ -228,7 +229,7 @@ export const ManagerPage: React.FC = () => {
         code: a.applicationCode || `HS-${a.id.slice(0, 8).toUpperCase()}`,
         procedureName: a.procedureTitle || 'Thủ tục hành chính',
         field: a.categoryName?.trim() || UNKNOWN_CATEGORY_LABEL,
-        submittedAt: a.submittedAt ? new Date(a.submittedAt).toLocaleDateString('vi-VN') : '—',
+        submittedAt: a.submittedAt ? formatDate(a.submittedAt) : '—',
         status: a.status === 'DOCUMENTS_READY' || a.status === 'OFFICIALLY_RECEIVED'
           ? 'Đã hoàn thành'
           : a.status === 'NEED_REVISION' ? 'Cần bổ sung' : 'Đang xử lý',

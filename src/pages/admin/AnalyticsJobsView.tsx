@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -71,13 +72,13 @@ export function AnalyticsJobsView() {
           {status.data.state === 'Failed' && <p className="text-sm text-red-800">Chưa cập nhật thành công. Gửi mã tác vụ cho bộ phận vận hành để kiểm tra trước khi tạo yêu cầu mới.</p>}
           {status.data.state === 'Deleted' && <p className="text-sm text-slate-700">Tác vụ đã bị xóa. Trạng thái này không xác nhận số liệu đã cập nhật xong.</p>}
           {!stateNames[status.data.state] && <p className="text-sm text-slate-700">Chưa xác định được kết quả. Bấm Kiểm tra trạng thái hoặc liên hệ bộ phận vận hành.</p>}
-          <details><summary className="cursor-pointer rounded text-sm text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">Chi tiết lần cập nhật</summary><div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 space-y-1 text-sm text-slate-600"><p className="break-all">Mã tác vụ: <strong className="text-slate-800">{status.data.jobId}</strong></p><p>Tạo lúc: {new Date(status.data.createdAtUtc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} (giờ Việt Nam)</p></div>
+          <details><summary className="cursor-pointer rounded text-sm text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Chi tiết lần cập nhật</summary><div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 space-y-1 text-sm text-slate-600"><p className="break-all">Mã tác vụ: <strong className="text-slate-800">{status.data.jobId}</strong></p><p>Tạo lúc: {formatDateTime(status.data.createdAtUtc)} (giờ Việt Nam)</p></div>
             <Button variant="outline" size="small" loading={status.isFetching} onClick={() => void status.refetch()}>Kiểm tra trạng thái</Button>
           </div></details>
         </div>}
       </>}
-      <details className="border-t border-slate-200 pt-4"><summary className="cursor-pointer rounded text-sm text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500">Tra cứu lần cập nhật cũ</summary>
+      <details className="border-t border-slate-200 pt-4"><summary className="cursor-pointer rounded text-sm text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Tra cứu lần cập nhật cũ</summary>
         <p className="mb-4 mt-3 text-sm text-slate-600">Nhập mã tác vụ đã nhận để xem lại kết quả.</p>
         <form className="grid items-start gap-3 sm:max-w-lg sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault(); const parsed = jobIdSchema.safeParse(lookup.trim()); if (!parsed.success) { setLookupError(parsed.error.issues[0].message); return; } setLookupError(''); if (parsed.data === jobId) void status.refetch(); else setJobId(parsed.data); }}>
           <Input label="Mã tác vụ" inputMode="numeric" placeholder="Nhập mã đã nhận, ví dụ: 19" value={lookup} onChange={event => setLookup(event.target.value)} error={lookupError} />

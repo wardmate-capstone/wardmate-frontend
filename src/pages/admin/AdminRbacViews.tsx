@@ -1,4 +1,5 @@
 import { copyToClipboard } from "@/lib/clipboard";
+import { formatDateTime } from '@/lib/dateFormat';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsClockwise,
@@ -850,7 +851,7 @@ function AuditDetailModal({
               Thời gian ghi nhận
             </span>
             <strong className="text-slate-900">
-              {new Date(log.createdAt).toLocaleString("vi-VN")}
+              {formatDateTime(log.createdAt)}
             </strong>
           </div>
           <div>
@@ -1235,7 +1236,7 @@ export function AdminRbacAuditView() {
                   return (
                     <tr key={log.id}>
                       <td className="whitespace-nowrap text-xs text-slate-600">
-                        {new Date(log.createdAt).toLocaleString("vi-VN")}
+                        {formatDateTime(log.createdAt)}
                       </td>
                       <td>
                         <strong className="block text-sm font-semibold text-slate-900">

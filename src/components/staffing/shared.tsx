@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,8 +13,9 @@ import { getManagerOfficers } from '@/lib/api';
 import { staffingFormSchema } from '@/lib/staffingValidation';
 export { validatePeriod, vietnamIso } from '@/lib/staffingValidation';
 
-export const fieldClass = 'w-full min-w-0 min-h-11 rounded-lg border border-slate-300 bg-white p-2.5 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700';
-export const dateText = (value: string) => new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+// Cùng khung với <Input> chuẩn: cao 48px, bo rounded-xl, viền slate-300, focus đỏ
+export const fieldClass = 'w-full min-w-0 min-h-12 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 aria-[invalid=true]:border-red-700';
+export const dateText = (value: string) => formatDateTime(value);
 export const statusText = (value: string) => ({ PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy', OPEN: 'Chờ trả lời', PENDING_DISPATCH: 'Chờ điều phối', ANSWERED: 'Đã trả lời', CLOSED: 'Đã đóng', SUBMITTED: 'Chờ tiền kiểm', UNDER_REVIEW: 'Đang kiểm tra', NEED_REVISION: 'Cần bổ sung', DOCUMENTS_READY: 'Giấy tờ sẵn sàng' }[value] || value);
 export function StaffStatus({ value, label }: { value: string; label?: string }) {
   const variant = ['APPROVED', 'ANSWERED', 'ACTIVE'].includes(value) ? 'success' : ['PENDING', 'OPEN', 'PENDING_DISPATCH'].includes(value) ? 'warning' : value === 'REJECTED' ? 'danger' : 'neutral';

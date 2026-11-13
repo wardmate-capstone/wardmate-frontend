@@ -2,11 +2,9 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Modal, ErrorAlert } from '@/components/ui';
+import { Button, Modal, ErrorAlert, formSelectClass, textareaClass } from '@/components/ui';
 import { reasonSchema, workflowError } from '@/lib/api/workflow';
 
-const textareaClass =
-  'w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100 disabled:opacity-50';
 
 // Lý do phân công là dữ liệu nội bộ: BE chỉ trả cho cán bộ/Manager, không hiển thị cho công dân.
 const releaseSchema = z.object({ reason: reasonSchema });
@@ -221,7 +219,7 @@ export function AssignOfficerModal({
             aria-invalid={Boolean(form.formState.errors.officerId)}
             aria-describedby={form.formState.errors.officerId ? `${baseId}-officer-error` : undefined}
             {...form.register('officerId')}
-            className="min-h-11 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100"
+            className={formSelectClass}
           >
             <option value="">— Chọn cán bộ —</option>
             {options.map((o) => (

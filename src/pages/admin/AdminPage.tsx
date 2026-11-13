@@ -1,4 +1,5 @@
 import { UserDropdown } from '@/components/layout/UserDropdown';
+import { formatTime, formatDate } from '@/lib/dateFormat';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -913,8 +914,8 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
                   </p>
                 </div>
                 <time className="shrink-0 text-right text-xs leading-5 text-slate-500" dateTime={log.createdAt}>
-                  <span className="block font-semibold text-slate-700">{new Date(log.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                  <span>{new Date(log.createdAt).toLocaleDateString('vi-VN')}</span>
+                  <span className="block font-semibold text-slate-700">{formatTime(log.createdAt)}</span>
+                  <span>{formatDate(log.createdAt)}</span>
                 </time>
               </div>
             ))}
@@ -1104,19 +1105,19 @@ function AccountsView({
       {error ? (
         <ErrorAlert className="m-4" retrying={loading} onRetry={onRetry}>{error}</ErrorAlert>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="admin-table w-full text-left border-collapse text-xs">
+        <div className="admin-table-wrap">
+          <table>
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/75 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                <th className="px-4 py-3">Tên đăng nhập</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Đơn vị Phường / Xã</th>
-                <th className="px-4 py-3">Ngày tạo</th>
-                <th className="px-4 py-3">Trạng thái</th>
-                <th className="px-4 py-3 text-right">Thao tác</th>
+              <tr>
+                <th>Tên đăng nhập</th>
+                <th>Email</th>
+                <th>Đơn vị Phường / Xã</th>
+                <th>Ngày tạo</th>
+                <th>Trạng thái</th>
+                <th className="text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {loading ? (
                 <TableSkeletonRows
                   rows={5}
@@ -1137,25 +1138,21 @@ function AccountsView({
 
                   return (
                     <tr key={account.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3.5 font-bold text-slate-900 font-mono">
+                      <td className="font-bold text-slate-900 font-mono">
                         @{account.username}
                       </td>
-                      <td className="px-4 py-3.5 text-slate-700">{account.email}</td>
-                      <td className="px-4 py-3.5 text-slate-600">
+                      <td className="text-slate-700">{account.email}</td>
+                      <td className="text-slate-600">
                         {ward ? (
                           <span className="font-medium text-slate-800">{ward.name}</span>
                         ) : (
                           <span className="text-slate-400 italic">— Chưa gán —</span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-slate-600 font-mono text-[11px]">
-                        {new Date(account.createdAt).toLocaleDateString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                      <td className="text-slate-600 font-mono">
+                        {formatDate(account.createdAt)}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td>
                         {account.isActive ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
                             <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -1168,7 +1165,7 @@ function AccountsView({
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-right">
+                      <td className="text-right">
                         <button
                           type="button"
                           disabled={isToggling}
@@ -1416,7 +1413,7 @@ function UsersView({
                                 <select
                                   value={assignedWardId}
                                   onChange={(e) => onAssignWard(item.id, e.target.value || null)}
-                                  className="text-[11px] bg-slate-50 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-800"
+                                  className="text-[11px] bg-slate-50 hover:bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                                   title="Gán đơn vị phường công tác cho cán bộ"
                                 >
                                   <option value="">(Chưa gán phường)</option>
@@ -1683,7 +1680,7 @@ function WardsView({
                     .replace(/[^A-Z0-9_-]/g, '');
                   setWardInput({ ...wardInput, code: sanitized });
                 }}
-                className="w-full h-10 px-3 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div>
@@ -1697,7 +1694,7 @@ function WardsView({
                 placeholder="Ví dụ: Phường Bến Nghé"
                 value={wardInput.name}
                 onChange={(e) => setWardInput({ ...wardInput, name: e.target.value })}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">

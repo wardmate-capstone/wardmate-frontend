@@ -432,7 +432,7 @@ export default function DocxOnlineEditor({
                 type="button"
                 aria-pressed={tab === item.id}
                 onClick={() => setTab(item.id)}
-                className="min-h-9 border-b-2 border-transparent px-3 text-xs sm:text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 focus-visible:outline-red-700 aria-pressed:border-red-700 aria-pressed:text-red-800"
+                className="min-h-9 border-b-2 border-transparent px-3 text-xs sm:text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 aria-pressed:border-red-700 aria-pressed:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
               >
                 {item.label}
               </button>
@@ -528,7 +528,7 @@ export default function DocxOnlineEditor({
                         runToolbarCommand(engine, tool.id);
                         engine?.focus();
                       }}
-                      className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-700 hover:bg-slate-200 focus-visible:outline-2 focus-visible:outline-red-700 disabled:opacity-40 aria-pressed:bg-red-100 aria-pressed:text-red-900 transition-colors"
+                      className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-700 hover:bg-slate-200 disabled:opacity-40 aria-pressed:bg-red-100 aria-pressed:text-red-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                     >
                       <Icon size={18} aria-hidden />
                     </button>
@@ -795,7 +795,7 @@ export default function DocxOnlineEditor({
             <span className="text-slate-500">Thu phóng:</span>
             <select
               aria-label="Thu phóng tài liệu"
-              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-600"
+              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               value={zoom}
               onChange={(e) => setZoom(e.target.value === 'fit' ? 'fit' : Number(e.target.value))}
             >

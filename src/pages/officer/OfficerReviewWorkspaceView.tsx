@@ -1,5 +1,5 @@
 import { checklistQuantityLabel } from '@/lib/procedureDisplay';
-import { ChatCircleDots } from '@phosphor-icons/react';
+import { formatDateTime } from '@/lib/dateFormat';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
@@ -7,7 +7,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert } from '@/components/ui';
+import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert, formSelectClass, textareaClass } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
@@ -23,17 +23,18 @@ import { aiOcrApi, getAiRetryAfterSeconds, type DossierAssistResultDto } from '@
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
 import {
   ArrowLeft,
+  ArrowsClockwise,
+  ChatCircleDots,
   CheckCircle,
-  AlertTriangle,
-  FileText,
   Clock,
-  Sparkles,
+  ClockCounterClockwise,
+  FileText,
+  GitDiff,
+  ListChecks,
   ShieldCheck,
-  History,
-  GitCompare,
-  FileCheck,
-  RefreshCw,
-} from 'lucide-react';
+  Sparkle,
+  Warning,
+} from '@phosphor-icons/react';
 
 interface Props {
   application: OfficerApplication;
@@ -164,11 +165,11 @@ export function OfficerReviewWorkspaceView({
 
   const tabs: { id: Tab; label: string; count?: number; icon: React.ReactNode }[] = [
     { id: 'info', label: 'Thông tin & giấy tờ', count: checklists.length, icon: <FileText className="h-4 w-4" /> },
-    { id: 'documents', label: 'Tờ khai & giấy tờ', count: submissions.data?.length, icon: <FileCheck className="h-4 w-4" /> },
-    { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <AlertTriangle className="h-4 w-4" /> },
-    { id: 'versions', label: 'So sánh các lần gửi', icon: <GitCompare className="h-4 w-4" /> },
+    { id: 'documents', label: 'Tờ khai & giấy tờ', count: submissions.data?.length, icon: <ListChecks className="h-4 w-4" /> },
+    { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <Warning className="h-4 w-4" /> },
+    { id: 'versions', label: 'So sánh các lần gửi', icon: <GitDiff className="h-4 w-4" /> },
     ...(user?.permissions.includes('workflow.consultation.read') ? [{ id: 'consultations' as const, label: 'Tham vấn chuyên môn', icon: <FileText className="h-4 w-4" /> }] : []),
-    { id: 'timeline', label: 'Lịch sử', icon: <History className="h-4 w-4" /> },
+    { id: 'timeline', label: 'Lịch sử', icon: <ClockCounterClockwise className="h-4 w-4" /> },
     { id: 'pdf', label: 'PDF sau tiền kiểm', icon: <ShieldCheck className="h-4 w-4" /> },
   ];
 
@@ -437,7 +438,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 disabled={!editable || busy || !comments.isSuccess || !submissions.isSuccess}
                 onClick={() => openDecision('revision')}
               >
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <Warning className="h-4 w-4 text-amber-600" />
                 Yêu cầu bổ sung
               </Button>
               <Button
@@ -456,7 +457,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   disabled={busy}
                   onClick={() => setReleaseOpen(true)}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <ArrowsClockwise className="h-4 w-4" />
                   {releaseVariant === 'revision' ? 'Trả lại hồ sơ' : 'Trả về hàng đợi'}
                 </Button>
               )}
@@ -507,7 +508,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
           {decisionWarning && (
             <div role="alert" className="mt-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+              <Warning className="h-4 w-4 shrink-0 text-amber-600" />
               <p>{decisionWarning}</p>
             </div>
           )}
@@ -620,7 +621,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                             className="gap-1.5 text-xs font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50"
                             title="Mở tab tài liệu để xem tệp và đối chiếu bằng AI"
                           >
-                            <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                            <Sparkle className="h-3.5 w-3.5 text-purple-600" />
                             <span>Tài liệu & AI</span>
                           </Button>
                         )}
@@ -634,7 +635,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                           }}
                           className="gap-1.5"
                         >
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                          <Warning className="h-3.5 w-3.5 text-amber-600" />
                           Nhận xét
                         </Button>
                       </div>
@@ -735,8 +736,8 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                           {editable && isOpen && (
                             <Button
                               size="small"
-                              variant="ghost"
-                              className="h-6 px-2 text-xs text-red-700 hover:bg-red-50 hover:text-red-900 font-semibold"
+                              variant="dangerGhost"
+                              className="h-6 min-h-0 px-2 text-xs"
                               onClick={() => {
                                 setWithdrawingComment({
                                   id: x.id,
@@ -761,13 +762,13 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                           <span>{x.withdrawReason}</span>
                           {x.withdrawnAt && (
                             <span className="text-[11px] text-slate-400 block mt-0.5">
-                              Thời gian: {new Date(x.withdrawnAt).toLocaleString('vi-VN')}
+                              Thời gian: {formatDateTime(x.withdrawnAt)}
                             </span>
                           )}
                         </div>
                       )}
                       <p className="text-xs text-slate-400">
-                        {new Date(x.createdAt).toLocaleString('vi-VN')}
+                        {formatDateTime(x.createdAt)}
                       </p>
                     </div>
                   );
@@ -841,7 +842,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               {editable && (
                 <div className="space-y-1.5">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                    <Sparkle className="h-3.5 w-3.5 text-amber-500" />
                     Gợi ý nhận xét nhanh:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -878,7 +879,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   required
                   disabled={!editable || addComment.isPending}
                   placeholder="Nhập nội dung nhận xét chi tiết gửi cho công dân..."
-                  className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-800 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600 disabled:bg-slate-100 disabled:opacity-75"
+                  className={textareaClass}
                   aria-invalid={Boolean(commentForm.formState.errors.commentText)}
                   aria-describedby={commentForm.formState.errors.commentText ? 'comment-text-error' : undefined}
                   {...commentForm.register('commentText')}
@@ -938,7 +939,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 <label key={side} className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   {side === 'from' ? 'Lần gửi trước' : 'Lần gửi sau'}
                   <select
-                    className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm"
+                    className={formSelectClass}
                     value={side === 'from' ? from : to}
                     onChange={e => (side === 'from' ? setFrom(Number(e.target.value)) : setTo(Number(e.target.value)))}
                   >
@@ -1006,7 +1007,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       {x.fromStatus ? workflowStatusLabel(x.fromStatus) : 'Khởi tạo'} → <span className="text-red-700">{workflowStatusLabel(x.toStatus)}</span>
                     </p>
                     <time className="text-xs text-slate-400">
-                      {new Date(x.createdAt).toLocaleString('vi-VN')}
+                      {formatDateTime(x.createdAt)}
                     </time>
                   </div>
                   {x.reason && <p className="mt-1.5 text-sm text-slate-600">{x.reason}</p>}
@@ -1080,7 +1081,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   {isAllMandatoryCompleted ? (
                     <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
                   ) : (
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <Warning className="h-4 w-4 shrink-0 text-amber-600" />
                   )}
                   <span className={isAllMandatoryCompleted ? 'text-emerald-900 font-medium' : 'text-amber-900'}>
                     Giấy tờ bắt buộc: {completedMandatoryCount}/{mandatoryChecklists.length} mục đã hoàn tất
@@ -1090,7 +1091,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   {openComments.length === 0 ? (
                     <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
                   ) : (
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+                    <Warning className="h-4 w-4 shrink-0 text-red-600" />
                   )}
                   <span className={openComments.length === 0 ? 'text-emerald-900 font-medium' : 'text-red-900 font-medium'}>
                     Nhận xét cần công dân sửa: {openComments.length === 0 ? 'Không còn' : `Còn ${openComments.length} nhận xét chưa sửa`}
@@ -1120,7 +1121,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <select
                 ref={submissionSelect}
                 id="decision-submission"
-                className="min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white p-2.5 text-sm"
+                className={`${formSelectClass} min-w-0`}
                 disabled={busy}
                 value={submissionId}
                 aria-invalid={Boolean(selectionError)}
@@ -1164,7 +1165,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors disabled:opacity-50"
                   title="Dùng AI soạn lý do bổ sung từ các mục giấy tờ chưa đạt"
                 >
-                  <Sparkles className={`size-3.5 ${isGeneratingAiReason ? 'animate-spin text-purple-600' : ''}`} />
+                  <Sparkle className={`size-3.5 ${isGeneratingAiReason ? 'animate-spin text-purple-600' : ''}`} />
                   <span>{isGeneratingAiReason ? 'Đang tạo văn bản...' : 'AI gợi ý lý do'}</span>
                 </button>
               </div>
@@ -1192,7 +1193,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 disabled={busy}
                 placeholder="Nhập chi tiết các nội dung công dân cần chỉnh sửa, bổ sung..."
                 {...reasonForm.register('reason')}
-                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-3 focus:ring-red-100 disabled:opacity-50"
+                className={textareaClass}
               />
               {reasonForm.formState.errors.reason?.message && (
                 <span role="alert" className="text-xs text-red-600 font-medium">
@@ -1251,7 +1252,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 onChange={e => setWithdrawReason(e.target.value)}
                 placeholder="Nhập lý do rút nhận xét (từ 5 đến 500 ký tự)..."
                 maxLength={500}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-red-700"
+                className={textareaClass}
               />
               <span className="text-[11px] text-slate-400 block text-right mt-0.5">
                 {withdrawReason.trim().length}/500 ký tự (tối thiểu 5 ký tự)

@@ -76,7 +76,7 @@ export function CitizenNotificationsView({ notifications, connectionStatus, onMa
             const label = value === 'all' ? 'Tất cả' : 'Chưa đọc';
             const count = value === 'all' ? notifications.length : unread;
             const active = filter === value;
-            return <button key={value} type="button" aria-pressed={active} aria-label={known ? `${label} (${count})` : label} onClick={() => changeFilter(value)} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100 ${active ? 'bg-red-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+            return <button key={value} type="button" aria-pressed={active} aria-label={known ? `${label} (${count})` : label} onClick={() => changeFilter(value)} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${active ? 'bg-red-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
               {label}
               {known && <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{count}</span>}
             </button>;

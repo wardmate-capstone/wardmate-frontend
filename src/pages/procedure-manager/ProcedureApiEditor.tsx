@@ -29,10 +29,11 @@ const SUBMISSION_TYPE_LABELS: Record<string, string> = { NOP: "Nộp", XUAT_TRIN
 const TIME_UNIT_LABELS: Record<string, string> = { WORKING_DAY: "Ngày làm việc", DAY: "Ngày", HOUR: "Giờ", MINUTE: "Phút" };
 const FEE_KIND_LABELS: Record<string, string> = { PHI: "Phí", LE_PHI: "Lệ phí" };
 const getInputBoxClass = (hasError: boolean) =>
-  `min-h-11 w-full rounded-xl border p-3 text-sm transition focus:bg-white focus:outline-none focus:ring-2 ${
+  // Khung chuẩn của ô nhập; ô lỗi viền đỏ + nền đỏ rất nhạt (trước đây focus ô thường màu xám đen, lệch toàn hệ thống)
+  `min-h-11 w-full rounded-xl border p-3 text-sm text-slate-900 transition-colors focus:border-red-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 ${
     hasError
-      ? "border-red-400 bg-red-50/40 text-slate-900 placeholder:text-red-300 focus:border-red-600 focus:ring-red-100"
-      : "border-slate-200 bg-slate-50/60 text-slate-900 focus:border-slate-800 focus:ring-slate-100"
+      ? "border-red-700 bg-red-50/40 placeholder:text-red-300"
+      : "border-slate-300 bg-white placeholder:text-slate-400"
   }`;
 const record = (value: unknown): Row =>
   value && typeof value === "object" && !Array.isArray(value)

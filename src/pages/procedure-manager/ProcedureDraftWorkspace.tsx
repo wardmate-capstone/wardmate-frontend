@@ -1,4 +1,5 @@
 import { ProcedureValidationError } from '@/lib/procedureValidation';
+import { formatDateTime } from '@/lib/dateFormat';
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -686,7 +687,7 @@ export function ProcedureDraftWorkspace({
 
                     <div className="mt-8 border-t border-slate-100 pt-4">
                       <details className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                        <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700">
+                        <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
                           Văn bản nhận diện từ PDF (AI OCR Text)
                         </summary>
                         <pre className="mt-3 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-950 p-3 font-mono text-xs text-slate-100">
@@ -704,7 +705,7 @@ export function ProcedureDraftWorkspace({
                       <label className="flex cursor-pointer items-center gap-2 select-none text-xs text-slate-700">
                         <input
                           type="checkbox"
-                          className="size-4 rounded border-slate-300 text-red-700 focus:ring-red-600"
+                          className="size-4 rounded border-slate-300 text-red-700 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                           checked={confirmed}
                           disabled={busy}
                           onChange={(e) => setConfirmed(e.target.checked)}
@@ -941,16 +942,16 @@ export function ProcedureDraftWorkspace({
             </div>
             <div className="space-y-3 p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Cách xử lý PDF">
-                <button type="button" role="radio" aria-checked={uploadMode === "draft"} onClick={() => { setUploadMode("draft"); setPreview(undefined); setPreviewConfirmed(false); }} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 ${uploadMode === "draft" ? "border-red-300 bg-red-50 ring-1 ring-red-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                <button type="button" role="radio" aria-checked={uploadMode === "draft"} onClick={() => { setUploadMode("draft"); setPreview(undefined); setPreviewConfirmed(false); }} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${uploadMode === "draft" ? "border-red-300 bg-red-50 ring-1 ring-red-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
                   <span className="flex items-center justify-between gap-2"><strong className="text-sm text-slate-950">Tạo bản nháp có PDF gốc</strong><span className="rounded-full bg-red-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Khuyến nghị</span></span>
                   <span className="mt-1.5 block text-xs leading-5 text-slate-600">Lưu tệp để kiểm tra, chỉnh sửa và công khai sau.</span>
                 </button>
-                <button type="button" role="radio" aria-checked={uploadMode === "preview"} onClick={() => setUploadMode("preview")} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 ${uploadMode === "preview" ? "border-amber-300 bg-amber-50 ring-1 ring-amber-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                <button type="button" role="radio" aria-checked={uploadMode === "preview"} onClick={() => setUploadMode("preview")} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${uploadMode === "preview" ? "border-amber-300 bg-amber-50 ring-1 ring-amber-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
                   <strong className="text-sm text-slate-950">Xem và nhận diện nội dung</strong>
                   <span className="mt-1.5 block text-xs leading-5 text-slate-600">{can("procedure.publish") ? "Kiểm tra nội dung và công khai ngay. Tệp PDF sẽ không được lưu." : "Xem tài liệu và nội dung nhận diện. Bạn chưa có quyền công khai thủ tục."}</span>
                 </button>
               </div>
-              <label className={`group flex min-h-20 cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition focus-within:border-red-700 focus-within:ring-4 focus-within:ring-red-100 ${file ? "border-red-300 bg-red-50/40" : "border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/30"}`}>
+              <label className={`group flex min-h-20 cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100 ${file ? "border-red-300 bg-red-50/40" : "border-slate-300 bg-slate-50/60 hover:border-red-300 hover:bg-red-50/30"}`}>
                 <input
                   ref={fileInput}
                   className="sr-only"
@@ -1080,7 +1081,7 @@ export function ProcedureDraftWorkspace({
                   <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100">{preview.extractedText}</pre>
                 )}
                 <details open className="rounded-xl border border-slate-200 bg-white">
-                  <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-700">Kiểm tra thông tin đã nhận diện</summary>
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:ring-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Kiểm tra thông tin đã nhận diện</summary>
                   <div className="border-t border-slate-200 p-4">
                     <ProcedureApiEditor
                       validationError={validationError}
@@ -1119,22 +1120,22 @@ export function ProcedureDraftWorkspace({
               <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
               {!list.loading && !!list.data?.length && <span className="text-xs text-slate-500">Trang {page} · {list.data.length} bản nháp</span>}
             </div>
-            <div className="overflow-x-auto">
+            <div className="admin-table-wrap">
             {/* Cột cố định: tên tệp chiếm phần còn lại; trạng thái và thao tác không xuống dòng */}
-            <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+            <table className="min-w-[760px] table-fixed">
               <colgroup>
                 <col />
                 <col className="w-44" />
                 <col className="w-[300px]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th scope="col" className="px-5 py-3">Tệp PDF</th>
-                  <th scope="col" className="px-4 py-3">Trạng thái</th>
-                  <th scope="col" className="px-5 py-3 text-right">Thao tác</th>
+                <tr>
+                  <th scope="col">Tệp PDF</th>
+                  <th scope="col">Trạng thái</th>
+                  <th scope="col" className="text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {list.loading ? (
                   <TableSkeletonRows
                     columns={3}
@@ -1147,7 +1148,7 @@ export function ProcedureDraftWorkspace({
                   const state = publishedState(row.publishedProcedureId);
                   return (
                   <tr key={row.id} className="align-middle transition-colors hover:bg-slate-50/70">
-                    <td className="px-5 py-3.5">
+                    <td>
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-red-50 text-red-700" aria-hidden="true">
                           <FilePdf size={20} weight="duotone" />
@@ -1155,11 +1156,11 @@ export function ProcedureDraftWorkspace({
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-900" title={row.pdfFileName}>{row.pdfFileName}</p>
                           {/* Thời gian cập nhật giúp phân biệt các bản nháp cùng tên tệp */}
-                          <p className="mt-0.5 text-xs text-slate-500">Cập nhật {new Date(row.updatedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">Cập nhật {formatDateTime(row.updatedAt)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td>
                       <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[row.status] ?? "bg-slate-100 text-slate-700 ring-slate-200"}`}>
                         {labels[row.status] ?? row.status}
                       </span>
@@ -1169,13 +1170,13 @@ export function ProcedureDraftWorkspace({
                         {state.label}
                       </span>}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td>
                       {/* "Mở bản nháp" và "Xóa" luôn ở cùng vị trí; "Hủy xuất bản" chỉ thêm vào bên trái khi được phép */}
                       <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                         {can("procedure.publish") && state?.canUnpublish && <Button
                           size="small"
-                          variant="ghost"
-                          className="whitespace-nowrap text-red-700 hover:bg-red-50 hover:text-red-800"
+                          variant="dangerGhost"
+                          className="whitespace-nowrap"
                           onClick={() => {
                             setUnpublishing({ procedureId: row.publishedProcedureId!, name: state.detail.title });
                             setUnpublishError("");
