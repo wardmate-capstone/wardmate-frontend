@@ -109,7 +109,8 @@ export type GeneratedDocumentDto = z.infer<typeof generatedDocumentSchema>;
 export type ApprovedQrDto = z.infer<typeof approvedQrSchema>;
 
 export const DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
-export const SUPPORTING_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'] as const;
+// DOC-HEIC-01: ảnh HEIC/HEIF (iPhone) và WebP được server tự chuyển sang JPEG để cán bộ xem trực tiếp
+export const SUPPORTING_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'doc', 'docx'] as const;
 
 function appendFile(data: FormData, file: File) {
   data.append('File', file);
@@ -231,7 +232,7 @@ export function validateDocumentFile(file: File, docxOnly = false): string | nul
   if (file.size > DOCUMENT_MAX_BYTES) return 'Tệp vượt quá giới hạn 20 MB.';
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (docxOnly ? extension !== 'docx' : !SUPPORTING_EXTENSIONS.includes(extension as typeof SUPPORTING_EXTENSIONS[number]))
-    return docxOnly ? 'Vui lòng chọn tệp DOCX.' : 'Chỉ hỗ trợ PDF, JPG, JPEG, PNG, DOC và DOCX.';
+    return docxOnly ? 'Vui lòng chọn tệp DOCX.' : 'Chỉ hỗ trợ PDF, ảnh (JPG, PNG, HEIC, WebP), DOC và DOCX.';
   return null;
 }
 

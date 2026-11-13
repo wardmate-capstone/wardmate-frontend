@@ -23,6 +23,25 @@ import { Modal, Button } from '@/components/ui';
 import { aiOcrApi, type CccdExtractionDto } from '@/lib/api/aiOcr';
 import { toast } from '@/components/ui/Toast';
 
+// DOC-HEIC-01: AI đọc CCCD nhận thêm ảnh WebP và HEIC/HEIF (ảnh chụp từ iPhone)
+const CCCD_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif';
+function isSupportedCccdImage(file: File) {
+  // Một số trình duyệt để trống MIME của ảnh HEIC nên kiểm tra thêm theo đuôi tệp
+  return /^image\/(jpe?g|png|webp|heic|heif)$/.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+}
+
+/** Khung thay ảnh xem trước khi trình duyệt không hiển thị được ảnh (thường là HEIC trên Chrome/Edge) */
+function HeicPlaceholder({ name }: { name?: string }) {
+  return (
+    <div className="flex max-w-[95%] flex-col items-center gap-2 rounded-lg bg-slate-800 px-4 py-6 text-center text-slate-200">
+      <Info size={24} aria-hidden="true" />
+      <p className="text-xs font-semibold">Trình duyệt chưa xem trước được ảnh này</p>
+      {name && <p className="max-w-full truncate text-[11px] text-slate-400">{name}</p>}
+      <p className="text-[11px] text-slate-400">Ảnh vẫn được gửi để đọc thông tin bình thường.</p>
+    </div>
+  );
+}
+
 export interface CccdOcrScanModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,6 +65,9 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
   const [backPreview, setBackPreview] = useState<string | null>(null);
   const [frontRotation, setFrontRotation] = useState<number>(0);
   const [backRotation, setBackRotation] = useState<number>(0);
+  // Chrome/Edge không hiển thị được ảnh HEIC: đánh dấu để hiện khung thay thế (ảnh vẫn gửi đọc được)
+  const [frontBroken, setFrontBroken] = useState(false);
+  const [backBroken, setBackBroken] = useState(false);
 
   // Portal-based Lightbox state
   const [lightboxImage, setLightboxImage] = useState<LightboxState | null>(null);
@@ -143,8 +165,8 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
       return;
     }
 
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      setError('Ảnh mặt trước phải có định dạng JPEG hoặc PNG.');
+    if (!isSupportedCccdImage(file)) {
+      setError('Ảnh mặt trước phải là ảnh JPEG, PNG, WebP hoặc HEIC.');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -155,6 +177,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     setError(null);
     setFrontFile(file);
     setFrontRotation(0);
+    setFrontBroken(false);
     setFrontPreview(URL.createObjectURL(file));
   };
 
@@ -173,8 +196,8 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
       return;
     }
 
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      setError('Ảnh mặt sau phải có định dạng JPEG hoặc PNG.');
+    if (!isSupportedCccdImage(file)) {
+      setError('Ảnh mặt sau phải là ảnh JPEG, PNG, WebP hoặc HEIC.');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -185,6 +208,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     setError(null);
     setBackFile(file);
     setBackRotation(0);
+    setBackBroken(false);
     setBackPreview(URL.createObjectURL(file));
   };
 
@@ -321,7 +345,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                     ref={frontInputRef}
                     type="file"
                     aria-label="Ảnh CCCD mặt trước"
-                    accept="image/jpeg,image/png,image/jpg"
+                    accept={CCCD_ACCEPT}
                     className="hidden"
                     onChange={handleFrontChange}
                   />
@@ -335,12 +359,13 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                           transformOrigin: 'center center',
                         }}
                       >
-                        <img
+                        {frontBroken ? <HeicPlaceholder name={frontFile?.name} /> : <img
                           src={frontPreview}
                           alt="CCCD Mặt trước"
+                          onError={() => setFrontBroken(true)}
                           className="max-h-[190px] max-w-[95%] w-auto object-contain rounded-lg shadow-md transition-transform duration-200 group-hover:scale-[1.02] cursor-pointer"
                           onClick={() => openLightbox(frontPreview, 'Ảnh mặt trước Căn cước công dân', frontRotation)}
-                        />
+                        />}
                       </div>
 
                       {/* Top badges & controls */}
@@ -403,7 +428,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       </div>
                       <div>
                         <span className="font-semibold text-slate-800 block text-xs group-hover:text-red-800 transition-colors">Tải ảnh mặt trước</span>
-                        <span className="text-[10px] text-slate-500 block mt-0.5">Hỗ trợ JPG, PNG (tối đa 8MB)</span>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Hỗ trợ JPG, PNG, WebP, HEIC (tối đa 8MB)</span>
                         <span className="text-[10px] text-slate-400 block mt-1">Chụp đủ 4 góc, rõ nét chữ và số</span>
                       </div>
                     </button>
@@ -426,7 +451,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                     ref={backInputRef}
                     type="file"
                     aria-label="Ảnh CCCD mặt sau"
-                    accept="image/jpeg,image/png,image/jpg"
+                    accept={CCCD_ACCEPT}
                     className="hidden"
                     onChange={handleBackChange}
                   />
@@ -439,12 +464,13 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                           transformOrigin: 'center center',
                         }}
                       >
-                        <img
+                        {backBroken ? <HeicPlaceholder name={backFile?.name} /> : <img
                           src={backPreview}
                           alt="CCCD Mặt sau"
+                          onError={() => setBackBroken(true)}
                           className="max-h-[190px] max-w-[95%] w-auto object-contain rounded-lg shadow-md transition-transform duration-200 group-hover:scale-[1.02] cursor-pointer"
                           onClick={() => openLightbox(backPreview, 'Ảnh mặt sau Căn cước công dân', backRotation)}
-                        />
+                        />}
                       </div>
 
                       <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">

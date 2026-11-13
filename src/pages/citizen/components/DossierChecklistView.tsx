@@ -114,7 +114,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                   : 'Tải lên tệp Word đã điền'
                 : 'Chọn tệp đính kèm'}
             </span>
-            <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp Word, tối đa 20 MB' : 'PDF, JPG/PNG hoặc Word · Tối đa 20 MB'}</span>
+            <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp Word, tối đa 20 MB' : 'PDF, ảnh chụp (JPG, PNG, HEIC) hoặc Word · Tối đa 20 MB'}</span>
           </span>
           <input
             aria-label={item.formTemplateId ? (submissions.length ? 'Thay tệp Word đã điền' : 'Tải lên tệp Word đã điền') : 'Đính kèm giấy tờ'}
@@ -123,7 +123,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
             className="sr-only"
             disabled={busy}
             type="file"
-            accept={item.formTemplateId ? '.docx' : '.pdf,.jpg,.jpeg,.png,.doc,.docx'}
+            accept={item.formTemplateId ? '.docx' : '.pdf,.jpg,.jpeg,.png,.heic,.heif,.webp,.doc,.docx'}
             onChange={e => {
               const file = e.target.files?.[0];
               e.target.value = '';
