@@ -139,6 +139,14 @@ const relatedProceduresSchema = z
     }),
   );
 
+// Gợi ý câu hỏi: bỏ chuỗi rỗng/sai kiểu, tối đa 4 nút để không làm chật khung chat
+const suggestedQuestionsSchema = z
+  .array(z.unknown())
+  .nullish()
+  .transform((items) =>
+    (items ?? []).filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim()).slice(0, 4),
+  );
+
 export const chatCompletionSchema = z.object({
   conversationId: z.string(),
   answer: z.string(),
@@ -148,6 +156,10 @@ export const chatCompletionSchema = z.object({
     .boolean()
     .nullish()
     .transform((value) => value ?? false),
+  // CHAT-QUALITY-01: mã câu trả lời để đánh giá; đang hỏi lại; gợi ý câu hỏi (≤ 4) hiện thành nút bấm
+  messageId: z.string().nullish(),
+  needsClarification: z.boolean().nullish().transform((value) => value ?? false),
+  suggestedQuestions: suggestedQuestionsSchema,
 });
 
 export type ChatCompletionDto = z.infer<typeof chatCompletionSchema>;
@@ -172,11 +184,44 @@ const chatHistoryMessageSchema = z.object({
   content: z.string(),
   createdAt: z.string(),
   citations: z.array(chatCitationSchema).nullish(),
+  needsClarification: z.boolean().nullish().transform((value) => value ?? false),
+  suggestedQuestions: suggestedQuestionsSchema,
+  /** Đánh giá đã gửi: true 👍, false 👎, null chưa đánh giá */
+  feedbackHelpful: z.boolean().nullish(),
 });
 const chatSessionPageSchema = pageSchema(chatSessionSchema);
 const chatMessagePageSchema = pageSchema(chatHistoryMessageSchema);
 export type ChatSession = z.infer<typeof chatSessionSchema>;
 export type ChatHistoryMessage = z.infer<typeof chatHistoryMessageSchema>;
+
+// CHAT-FEEDBACK-01: lý do khi người dân bấm 👎
+export const chatFeedbackReasons = [
+  { value: 'WRONG_INFO', label: 'Sai thông tin' },
+  { value: 'NOT_WHAT_I_ASKED', label: 'Không đúng điều tôi hỏi' },
+  { value: 'HARD_TO_UNDERSTAND', label: 'Khó hiểu' },
+  { value: 'MISSING_INFO', label: 'Thiếu thông tin' },
+  { value: 'OTHER', label: 'Khác' },
+] as const;
+export type ChatFeedbackReason = (typeof chatFeedbackReasons)[number]['value'];
+export interface ChatFeedbackInput {
+  helpful: boolean;
+  reason?: ChatFeedbackReason | null;
+  comment?: string | null;
+}
+const chatFeedbackItemSchema = z.object({
+  messageId: z.string(),
+  sessionId: z.string(),
+  question: z.string().nullish(),
+  answer: z.string(),
+  grounded: z.boolean(),
+  needsClarification: z.boolean(),
+  helpful: z.boolean(),
+  reason: z.string().nullish(),
+  comment: z.string().nullish(),
+  ratedAt: z.string(),
+});
+export type ChatFeedbackItem = z.infer<typeof chatFeedbackItemSchema>;
+const chatFeedbackPageSchema = pageSchema(chatFeedbackItemSchema);
 
 export interface ChatMessageInput {
   message: string;
@@ -422,6 +467,30 @@ export const aiOcrApi = {
       throw new Error(aiError(err));
     }
   },
+
+  /** CHAT-FEEDBACK-01: đánh giá một câu trả lời; đánh giá lại thì ghi đè (khách cũng gửi được) */
+  chatFeedback: async (messageId: string, input: ChatFeedbackInput) => {
+    await api.post(
+      aiPath(`/api/v1/ai/chat/messages/${encodeURIComponent(messageId)}/feedback`),
+      {
+        helpful: input.helpful,
+        reason: input.helpful ? null : input.reason ?? null,
+        comment: input.comment?.trim() ? input.comment.trim().slice(0, 1000) : null,
+      },
+      { suppressSessionExpiry: true },
+    );
+  },
+
+  /** CHAT-FEEDBACK-01: quản lý kho kiến thức xem đánh giá (mới nhất trước); helpful bỏ trống = tất cả */
+  chatFeedbackList: async (params: { helpful?: boolean; pageNumber?: number; pageSize?: number }, signal?: AbortSignal) =>
+    chatFeedbackPageSchema.parse(
+      (
+        await api.get(aiPath(`${knowledgeBase}/chat-feedback`), {
+          params: { helpful: params.helpful, pageNumber: params.pageNumber ?? 1, pageSize: params.pageSize ?? 20 },
+          signal,
+        })
+      ).data,
+    ),
 
   chatSessions: async (pageNumber = 1, pageSize = 20, signal?: AbortSignal) =>
     chatSessionPageSchema.parse(
@@ -725,6 +794,8 @@ const aiErrorMessages: Record<string, string> = {
   "knowledge.index_too_large":
     "Kho kiến thức vượt giới hạn tìm kiếm của máy chủ.",
   "chat.invalid_input": "Câu hỏi chưa hợp lệ. Vui lòng nhập lại.",
+  "chat.invalid_feedback": "Đánh giá chưa hợp lệ. Vui lòng chọn lại lý do hoặc rút ngắn góp ý.",
+  "chat.message_not_found": "Không tìm thấy câu trả lời để đánh giá. Vui lòng tải lại cuộc trò chuyện.",
   "chat.busy":
     "Trợ lý đang trả lời câu trước. Vui lòng chờ hoàn tất rồi gửi tiếp.",
   "chat.ward_mismatch":

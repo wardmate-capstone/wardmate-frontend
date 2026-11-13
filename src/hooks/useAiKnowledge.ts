@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { knowledgeApi, type KnowledgeListQuery } from '@/lib/api/aiOcr';
+import { aiOcrApi, knowledgeApi, type KnowledgeListQuery } from '@/lib/api/aiOcr';
 import { useAuthStore } from '@/stores/authStore';
 
 export function useCanManageKnowledge() {
@@ -17,6 +17,18 @@ export function useKnowledgeDocuments(query: KnowledgeListQuery) {
   return useQuery({
     queryKey: [...key, 'documents', query],
     queryFn: ({ signal }) => knowledgeApi.list(query, signal),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** CHAT-FEEDBACK-01: đánh giá của người dân về câu trả lời chatbot (mới nhất trước) */
+export function useChatFeedbackList(params: { helpful?: boolean; pageNumber: number; pageSize: number }) {
+  const key = useKnowledgeKey();
+  const enabled = useCanManageKnowledge();
+  return useQuery({
+    queryKey: [...key, 'chat-feedback', params],
+    queryFn: ({ signal }) => aiOcrApi.chatFeedbackList(params, signal),
     enabled,
     placeholderData: keepPreviousData,
   });

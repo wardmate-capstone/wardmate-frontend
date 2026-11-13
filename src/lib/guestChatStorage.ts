@@ -10,10 +10,22 @@ export interface ChatMessage {
   sender: 'user' | 'assistant';
   text: string;
   timestamp: Date;
+  /** CHAT-QUALITY-01/CHAT-FEEDBACK-01: mã câu trả lời trên server (để đánh giá) */
+  messageId?: string;
+  /** Chatbot đang hỏi lại để hiểu đúng nhu cầu */
+  needsClarification?: boolean;
+  /** Gợi ý câu hỏi tiếp theo hoặc lựa chọn trả lời nhanh (≤ 4) */
+  suggestedQuestions?: string[];
+  /** Đánh giá đã gửi: true 👍, false 👎 */
+  feedbackHelpful?: boolean | null;
 }
 const messageSchema = z.object({
   id: z.string().min(1).max(200), sender: z.enum(['user', 'assistant']), text: z.string().max(64000),
   timestamp: z.string().datetime({ offset: true }),
+  messageId: z.string().min(1).max(200).optional(),
+  needsClarification: z.boolean().optional(),
+  suggestedQuestions: z.array(z.string().max(500)).max(4).optional(),
+  feedbackHelpful: z.boolean().nullable().optional(),
 }).transform(message => ({ ...message, timestamp: new Date(message.timestamp) }));
 const sessionSchema = z.object({
   version: z.literal(2), updatedAt: z.number().int().nonnegative(), expiresAt: z.number().int().nonnegative(),

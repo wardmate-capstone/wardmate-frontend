@@ -19,6 +19,7 @@ import { copyToClipboard } from '@/lib/clipboard';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui';
 import { BrandMark } from '@/components/brand/BrandMark';
+import { ChatFeedbackControls } from '@/components/ai/ChatFeedbackControls';
 import { clearGuestChat, GUEST_CHAT_KEY, loadGuestChat, saveGuestChat, type ChatMessage } from '@/lib/guestChatStorage';
 
 const WELCOME_MESSAGE: ChatMessage = {
@@ -310,6 +311,10 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
         sender: 'assistant',
         text: res.answer,
         timestamp: new Date(),
+        // CHAT-QUALITY-01: hỏi lại / gợi ý câu hỏi; messageId để đánh giá câu trả lời
+        messageId: res.messageId ?? undefined,
+        needsClarification: res.needsClarification,
+        suggestedQuestions: res.suggestedQuestions,
       };
 
       const finalMessages = [...nextMessages, assistantMessage];
@@ -489,6 +494,12 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
           sender: isAssistant ? 'assistant' : 'user',
           text: m.content,
           timestamp: new Date(m.createdAt),
+          ...(isAssistant ? {
+            messageId: m.id,
+            needsClarification: m.needsClarification,
+            suggestedQuestions: m.suggestedQuestions,
+            feedbackHelpful: m.feedbackHelpful ?? null,
+          } : {}),
         };
       });
 
@@ -519,6 +530,13 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
   };
 
   const hasUserMessages = messages.some((m) => m.sender === 'user');
+  // Nút gợi ý chỉ hiện ở câu trả lời mới nhất để khung chat gọn và người dân không bấm nhầm gợi ý cũ
+  const lastAssistantId = [...messages].reverse().find((m) => m.sender === 'assistant')?.id;
+  const markRated = (id: string, helpful: boolean) => {
+    const next = messages.map((m) => (m.id === id ? { ...m, feedbackHelpful: helpful } : m));
+    setMessages(next);
+    if (!authenticated) persistGuest(next, conversationId, wardCode || 'WARD_001');
+  };
 
   return (
     <div role="region" aria-label="Trợ lý hỗ trợ thủ tục" className="fixed bottom-3 right-3 z-40 sm:bottom-6 sm:right-6" onKeyDown={event => {
@@ -768,9 +786,31 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                         </div>
                       )}
 
+                      {/* CHAT-QUALITY-01: lựa chọn trả lời nhanh khi chatbot hỏi lại, hoặc câu hỏi tiếp theo */}
+                      {msg.sender === 'assistant' && msg.id === lastAssistantId && !!msg.suggestedQuestions?.length && (
+                        <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2.5 whitespace-normal">
+                          <p className="text-[10px] font-semibold text-slate-500">
+                            {msg.needsClarification ? 'Chọn trường hợp của bạn:' : 'Câu hỏi tiếp theo:'}
+                          </p>
+                          <div className="flex flex-col gap-1.5">
+                            {msg.suggestedQuestions.map((question) => (
+                              <button
+                                key={question}
+                                type="button"
+                                disabled={loading}
+                                onClick={() => void handleSend(question)}
+                                className="rounded-lg border border-red-100 bg-red-50/70 px-2.5 py-1.5 text-left text-[11px] font-medium text-red-800 transition-colors hover:bg-red-100/80 disabled:opacity-60"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Assistant message footer: timestamp & copy */}
                       {msg.sender === 'assistant' && (
-                        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-1 text-[10px] text-slate-400">
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-1 border-t border-slate-100 pt-1 text-[10px] text-slate-400 whitespace-normal">
                           <span className="select-none">{formatChatTime(msg.timestamp)}</span>
                           {msg.id !== 'welcome' ? (
                             <button
@@ -792,6 +832,14 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                               )}
                             </button>
                           ) : <span />}
+                          {/* CHAT-FEEDBACK-01: 👍/👎 dưới câu trả lời có mã trên server */}
+                          {msg.messageId && (
+                            <ChatFeedbackControls
+                              messageId={msg.messageId}
+                              value={msg.feedbackHelpful}
+                              onRated={(helpful) => markRated(msg.id, helpful)}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
