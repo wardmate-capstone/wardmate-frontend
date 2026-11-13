@@ -32,7 +32,7 @@ import { getAccount, getWards, type ManagedUserDto } from "@/lib/api";
 export const roleLabels: Record<string, string> = {
   IT_ADMIN: "Quản trị hệ thống",
   PROCEDURE_MANAGER: "Quản lý thủ tục",
-  MANAGER: "Lãnh đạo UBND",
+  MANAGER: "Quản lý cán bộ",
   FRONT_DESK_OFFICER: "Cán bộ Một cửa",
   REGISTERED_CITIZEN: "Công dân",
 };
@@ -52,7 +52,7 @@ export const actionLabels: Record<string, string> = {
   "ward.created": "Tạo đơn vị Phường/Xã",
   "account.ward_changed": "Chuyển đơn vị công tác",
   "account.front_desk_created": "Tạo tài khoản cán bộ Một cửa",
-  "account.manager_created": "Tạo tài khoản Lãnh đạo UBND",
+  "account.manager_created": "Tạo tài khoản Quản lý cán bộ",
   "account.procedure_manager_created": "Tạo tài khoản Quản lý thủ tục",
   OFFICER_CATEGORIES_ASSIGNED: "Gán lĩnh vực phụ trách",
   OFFICER_CATEGORIES_RECONCILED: "Đồng bộ lĩnh vực phụ trách",
