@@ -1,5 +1,12 @@
 # Nền tảng FE Web
 
+## MOBILE-FE-1113 — Rà lại avatar/chatbot theo bàn giao (13/11/2026)
+
+- Avatar tiếp tục dùng Bearer → Blob/object URL, không đưa token vào img/src. Service tự kiểm tra file ≤10 MiB và MIME/đuôi cho phép, đường dẫn trả về phải thuộc `/api/v1/users/`; chỉ cập nhật store sau PUT 200/DELETE 204 và khi phiên/tài khoản còn khớp. Cache ảnh bị xóa khi danh tính/trạng thái phiên đổi; ảnh không tải/giải mã được trở về chữ cái đầu. Lỗi iam.avatar_too_large/iam.image_unsupported/iam.image_unreadable ưu tiên **title** từ ProblemDetails. Chặn bấm lặp ở AvatarEditor.
+- Đánh giá chat: service kiểm tra GUID không rỗng (không ép version UUID khác hợp đồng Guid của .NET), helpful, năm mã reason và comment trim ≤1000; không cắt góp ý âm thầm, chỉ thành công với HTTP 204. Nút 👍/👎 có vùng bấm 44px và khóa chống gửi lặp; reason/comment bị khóa khi gửi. Thẻ quản lý xuống dòng câu hỏi/góp ý dài không có dấu cách. Widget đã có gợi ý hỏi lại/câu tiếp theo và khôi phục đánh giá khách, không làm lại luồng.
+- Kiểm thử mới `tests/mobile-handoff.spec.ts` và fixture `tests/fixtures/mobile-handoff.{html,tsx}`: avatar HEIC/validation/title/404/xóa, đổi tài khoản khi response muộn, feedback payload/lỗi/validation, widget giữ conversationId/gợi ý/đánh giá khi reload, tab quản lý lọc helpful=false và chuỗi dài ở 360px. Fixture độc lập, không đưa token kiểm thử vào app production. Xem docs/PROGRESS.md cho kết quả; không coi HTTP mock là nghiệm thu API Azure.
+- Không đổi API Backend hoặc tạo deep link association giả; thiếu thông tin ký/phát hành app. OS push bỏ theo xác nhận người dùng ngày 13/11.
+
 ## Sửa giao diện cán bộ/quản lý — 13/11/2026
 
 - Chỉ sửa FE; BE tại `E:/wardmate-backend` dùng để đọc hợp đồng. Không chạy Git, migration hoặc chỉnh quyền dịch vụ. Vai trò `MANAGER` giữ nguyên mã/quyền; nhãn là **Quản lý cán bộ** trong hồ sơ cá nhân, chi tiết cán bộ và quản trị tài khoản.
