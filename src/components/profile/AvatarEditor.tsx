@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
 import { Camera, CircleNotch, Trash } from '@phosphor-icons/react';
 import { ConfirmDeleteModal, UserAvatar, toast } from '@/components/ui';
-import { authErrorMessage } from '@/lib/api';
-import { AVATAR_ACCEPT, deleteMyAvatar, uploadMyAvatar, validateAvatarFile } from '@/lib/api/avatar';
+import { AVATAR_ACCEPT, avatarErrorMessage, deleteMyAvatar, uploadMyAvatar, validateAvatarFile } from '@/lib/api/avatar';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -14,37 +13,43 @@ export function AvatarEditor({ initials, className }: { initials: string; classN
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<'upload' | 'delete' | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const locked = useRef(false);
 
   const pick = () => input.current?.click();
 
   const onFile = async (file: File | undefined) => {
     if (input.current) input.current.value = '';
-    if (!file) return;
+    if (!file || locked.current) return;
     const invalid = validateAvatarFile(file);
     if (invalid) {
       toast.error(invalid);
       return;
     }
+    locked.current = true;
     setBusy('upload');
     try {
       await uploadMyAvatar(file);
       toast.success('Đã cập nhật ảnh đại diện.');
     } catch (error) {
-      toast.error(authErrorMessage(error));
+      toast.error(avatarErrorMessage(error));
     } finally {
+      locked.current = false;
       setBusy(null);
     }
   };
 
   const remove = async () => {
+    if (locked.current) return;
+    locked.current = true;
     setBusy('delete');
     try {
       await deleteMyAvatar();
       setConfirmOpen(false);
       toast.success('Đã xóa ảnh đại diện.');
     } catch (error) {
-      toast.error(authErrorMessage(error));
+      toast.error(avatarErrorMessage(error));
     } finally {
+      locked.current = false;
       setBusy(null);
     }
   };

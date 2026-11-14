@@ -32,7 +32,7 @@ export function UserAvatar({ url, initials, className, alt = '' }: UserAvatarPro
 
   return (
     <span className={cn('relative grid shrink-0 place-items-center overflow-hidden', className)}>
-      {src ? <img src={src} alt={alt} className="size-full object-cover" draggable={false} /> : <span aria-hidden={alt ? undefined : true}>{initials}</span>}
+      {src ? <img src={src} alt={alt} className="size-full object-cover" draggable={false} onError={() => setSrc(null)} /> : <span aria-hidden={alt ? undefined : true}>{initials}</span>}
     </span>
   );
 }
