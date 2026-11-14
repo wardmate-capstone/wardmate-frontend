@@ -1,5 +1,13 @@
 # Tiến độ và bàn giao WardMate
 
+## Điều phối hồ sơ dùng tìm kiếm/sắp xếp/lọc phía server (DISPATCH-SEARCH-01) — 14/11/2026 (Asia/Saigon)
+
+- Theo bàn giao BE `fe-handoff-2026-11-13.md` mục 1 (Workflow `workflow-20261113-01`, SQL unaccent + index đã chạy). Đối chiếu `ManagerDispatchController`/`DispatchService` trên `origin/main` BE: `search` ≤ 200, `sort` createdAt_asc|createdAt_desc, `status` theo danh sách trạng thái Workflow, sai tham số 400 `dispatch.invalid_query`. Không sửa BE.
+- `src/lib/api/staffing.ts`: bỏ `applicationsNewestFirst` (đọc khối 100 rồi đảo ngược) và `searchApplications` (đọc toàn bộ phường rồi lọc ở FE); thay bằng `listApplications({ page, pageSize, search, sort, status })` — một lần gọi mỗi trang, mặc định `createdAt_desc`. `staffingError.ts` thêm câu cho `dispatch.invalid_query`, `dispatch.invalid_page`.
+- `DispatchView.tsx`: gọi `listApplications` với sort mới nhất trước; thêm ô **Lọc theo trạng thái hồ sơ** (Chờ tiền kiểm, Đang kiểm tra, Cần bổ sung, Giấy tờ sẵn sàng, Đã tiếp nhận tại quầy, Đã hủy), đổi lọc về trang 1; ô tìm giới hạn 200 ký tự.
+- `tests/dispatch-order.spec.ts`: mock xử lý search/sort/status như BE, thêm kiểm tra luôn gửi `sort=createdAt_desc`, gửi nguyên từ khóa và `status`. typecheck/lint đạt; theo yêu cầu người dùng không chạy Playwright.
+- Ghi chú bàn giao cùng file, mục 2 (Mobile): BE xác nhận MOBILE-1112 đã deploy 12/11 (IAM `iam-20261112-m1`, DocumentForm `documentform-20261112-m1`, Analytics `analytics-20261112-m1`, AIOCR `aiocr-20261112-m1`, 3 SQL đã chạy), `main` BE đã gộp `kha`, `MobileApp:*` đã đặt (`webBaseUrl=https://wardmate-frontend.vercel.app`). Mục "chưa deploy" trong ghi chú 13/11 phía dưới không còn đúng. Phần Mobile để làm sau theo yêu cầu người dùng. Chưa commit.
+
 ## Đồng nhất UI nhóm C: focus, ô nhập nhiều dòng/ô chọn trong form, icon — 13/11/2026 (Asia/Saigon)
 
 - Focus: ô nhập (input/select/textarea, khung focus-within) dùng `focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100`; nút/liên kết dùng `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2` (chỉ hiện khi dùng bàn phím). Script chuẩn hóa 107 thẻ/46 file + hằng số class, `Button` (bỏ vòng vàng gold-200), `.admin-primary-action`, `Input`, `Select`, `SearchInput`, các ô CSS trong globals.css (red-500 → red-600). Giữ: ô tờ khai đổi màu theo hợp lệ/lỗi, đích nhảy tabIndex=-1, viền vàng mặc định toàn cục cho phần tử không tự khai báo.

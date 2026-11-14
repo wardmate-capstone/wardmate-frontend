@@ -1,5 +1,7 @@
 # Đề nghị BE — Thêm `search` và `sort` cho danh sách điều phối hồ sơ
 
+> **Trạng thái 14/11/2026: BE đã làm xong** (DISPATCH-SEARCH-01, Workflow `workflow-20261113-01`, kèm cả `status`; bàn giao `fe-handoff-2026-11-13.md`). FE đã chuyển `DispatchView` sang `staffingApi.listApplications` — một lần gọi mỗi trang. Phần dưới giữ làm lịch sử.
+
 | | |
 |---|---|
 | Ngày | 13/11/2026 |
