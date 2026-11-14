@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { personName } from "@/lib/personName";
-import { Button, Modal, RefreshButton, SearchInput } from "@/components/ui";
+import { Button, Modal, RefreshButton, SearchInput, Select } from "@/components/ui";
 import { ApplicationStatusBadge } from "@/components/workflow/ApplicationStatusBadge";
 import { staffingApi, type DispatchApplication } from "@/lib/api/staffing";
 import { getManagerOfficers } from "@/lib/api";
@@ -243,6 +243,17 @@ function AssignmentHistory({
   );
 }
 
+// Trạng thái lọc gửi lên server (DISPATCH-SEARCH-01 nhận mọi trạng thái Workflow, không phân biệt hoa thường)
+const DISPATCH_STATUS_OPTIONS = [
+  { value: "", label: "Tất cả trạng thái" },
+  { value: "SUBMITTED", label: "Chờ tiền kiểm" },
+  { value: "UNDER_REVIEW", label: "Đang kiểm tra" },
+  { value: "NEED_REVISION", label: "Cần bổ sung" },
+  { value: "DOCUMENTS_READY", label: "Giấy tờ sẵn sàng" },
+  { value: "OFFICIALLY_RECEIVED", label: "Đã tiếp nhận tại quầy" },
+  { value: "CANCELLED", label: "Đã hủy" },
+];
+
 // Mỗi trang điều phối hiển thị 10 hồ sơ
 const DISPATCH_PAGE_SIZE = 10;
 
@@ -283,6 +294,8 @@ export function DispatchView({
   // Ô tìm kiếm: chờ người dùng ngừng gõ 300ms mới tìm, đổi từ khóa thì quay về trang 1
   const [searchInput, setSearchInput] = useState("");
   const [term, setTerm] = useState("");
+  // Lọc theo trạng thái do server xử lý (DISPATCH-SEARCH-01); đổi trạng thái thì về trang 1
+  const [statusFilter, setStatusFilter] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => {
       const next = searchInput.trim();
@@ -293,12 +306,14 @@ export function DispatchView({
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
+  // Mới nhất lên đầu; tìm kiếm và lọc trạng thái làm ở server, mỗi trang một lần gọi
   const query = useStaffQuery(
-    ["dispatch", term, page],
+    ["dispatch", term, statusFilter, page],
     (signal) =>
-      term
-        ? staffingApi.searchApplications(term, page, signal, DISPATCH_PAGE_SIZE)
-        : staffingApi.applicationsNewestFirst(page, signal, DISPATCH_PAGE_SIZE),
+      staffingApi.listApplications(
+        { page, pageSize: DISPATCH_PAGE_SIZE, search: term, sort: "createdAt_desc", status: statusFilter },
+        signal,
+      ),
     manager && can("workflow.dispatch.read"),
   );
 
@@ -338,17 +353,29 @@ export function DispatchView({
         />
       </StaffHeading>
 
-      <div role="search" className="w-full max-w-md">
+      <div role="search" className="flex flex-wrap items-center gap-2">
         <label htmlFor="dispatch-search" className="sr-only">
           Tìm hồ sơ điều phối
         </label>
         <SearchInput
           id="dispatch-search"
+          containerClassName="w-full min-w-[220px] flex-1 sm:max-w-md"
+          maxLength={200}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onClear={() => setSearchInput("")}
           placeholder="Tìm theo mã hồ sơ, tên thủ tục hoặc cán bộ…"
         />
+        <Select
+          aria-label="Lọc theo trạng thái hồ sơ"
+          containerClassName="w-full sm:w-52"
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+        >
+          {DISPATCH_STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </Select>
       </div>
       {term && query.isSuccess && (
         <p role="status" className="text-sm text-slate-600">

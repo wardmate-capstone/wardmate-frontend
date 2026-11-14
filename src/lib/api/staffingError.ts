@@ -23,6 +23,8 @@ const messages: Record<string, string> = {
   'staffing.closure_exists': 'Đã có ngày nghỉ đang hiệu lực trong phạm vi này. Vui lòng xem lại lịch.',
   'staffing.closure_started': 'Ngày nghỉ đã bắt đầu, không thể hủy.',
   'staffing.closure_cancelled': 'Ngày nghỉ này đã được hủy. Vui lòng xem lại lịch.',
+  'dispatch.invalid_query': 'Từ khóa, cách sắp xếp hoặc trạng thái lọc chưa hợp lệ. Vui lòng rút ngắn từ khóa (tối đa 200 ký tự) và thử lại.',
+  'dispatch.invalid_page': 'Trang danh sách không hợp lệ. Vui lòng quay về trang 1.',
   'dispatch.officer_ineligible': 'Cán bộ không còn đủ điều kiện nhận hồ sơ. Vui lòng xem lại danh sách.',
   'consultation.specialist_ineligible': 'Chuyên viên không đủ điều kiện tham vấn. Vui lòng chọn lại.',
   // Tham vấn do cán bộ phụ trách khởi tạo (STAFFING-01, 12/11/2026)

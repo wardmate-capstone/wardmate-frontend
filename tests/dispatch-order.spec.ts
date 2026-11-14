@@ -3,18 +3,25 @@ import { authReply, mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog } from './fixtures/procedures';
 import { mockAnalytics } from './fixtures/analytics';
 
-// BE trả danh sách điều phối theo CreatedAt tăng dần; FE phải hiện hồ sơ mới nhất trước (mock 23 hồ sơ như dữ liệu thật)
-const rows = Array.from({ length: 23 }, (_, i) => ({ id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, applicationCode: `HS-${String(i + 1).padStart(3, '0')}`, procedureId: '00000000-0000-4000-8000-999999999999', procedureTitle: `Thủ tục số ${i + 1}`, status: 'SUBMITTED', assignedOfficerId: null, assignmentVersion: 0 }));
+// DISPATCH-SEARCH-01: server tìm (không dấu, mọi từ phải khớp), sắp xếp theo sort và lọc status; mock làm giống BE (23 hồ sơ)
+const rows = Array.from({ length: 23 }, (_, i) => ({ id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, applicationCode: `HS-${String(i + 1).padStart(3, '0')}`, procedureId: '00000000-0000-4000-8000-999999999999', procedureTitle: `Thủ tục số ${i + 1}`, status: i === 4 ? 'UNDER_REVIEW' : 'SUBMITTED', assignedOfficerId: null, assignmentVersion: 0 }));
+const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
 
 test('Điều phối hồ sơ: mới nhất lên đầu, phân trang đúng và không lặp tiêu đề', async ({ page }) => {
   await mockWorkspaceAuth(page, ['MANAGER'], ['iam.profile.read', 'workflow.dispatch.read', 'workflow.dispatch.write']);
   await mockCatalog(page);
   await mockAnalytics(page);
   await page.route('**/api/v1/manager/officers?*', route => authReply(route, { json: { items: [], page: 1, pageSize: 100, total: 0 } }));
+  const requests: URL[] = [];
   await page.route('**/api/v1/manager/applications?*', route => {
     const url = new URL(route.request().url());
+    requests.push(url);
     const p = Number(url.searchParams.get('page')); const size = Number(url.searchParams.get('pageSize'));
-    return authReply(route, { json: { items: rows.slice((p - 1) * size, p * size), page: p, pageSize: size, total: rows.length } });
+    const words = fold(url.searchParams.get('search') ?? '').split(/\s+/).filter(Boolean);
+    const status = url.searchParams.get('status')?.toUpperCase();
+    let list = rows.filter(r => (!status || r.status === status) && words.every(w => fold(`${r.applicationCode} ${r.procedureTitle}`).includes(w)));
+    if (url.searchParams.get('sort') === 'createdAt_desc') list = [...list].reverse();
+    return authReply(route, { json: { items: list.slice((p - 1) * size, p * size), page: p, pageSize: size, total: list.length } });
   });
   await page.goto('/manager?section=dispatch');
   const table = page.getByRole('table');
@@ -42,4 +49,15 @@ test('Điều phối hồ sơ: mới nhất lên đầu, phân trang đúng và 
   await expect(page.getByText('Không có hồ sơ nào khớp “không tồn tại”.', { exact: false })).toBeVisible();
   await page.getByRole('searchbox', { name: 'Tìm hồ sơ điều phối' }).fill('');
   await expect(table.getByRole('row').nth(1)).toContainText('HS-023');
+
+  // Lọc trạng thái gửi lên server và quay về trang 1
+  await page.getByLabel('Lọc theo trạng thái hồ sơ').selectOption('UNDER_REVIEW');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await expect(table.getByRole('row').nth(1)).toContainText('HS-005');
+
+  // Mỗi trang chỉ một lần gọi, luôn kèm sort mới nhất trước; từ khóa gửi nguyên văn cho server
+  expect(requests.every(url => url.searchParams.get('sort') === 'createdAt_desc')).toBe(true);
+  expect(requests.every(url => Number(url.searchParams.get('pageSize')) <= 100)).toBe(true);
+  expect(requests.some(url => url.searchParams.get('search') === 'thu tuc so 7')).toBe(true);
+  expect(requests.at(-1)?.searchParams.get('status')).toBe('UNDER_REVIEW');
 });
