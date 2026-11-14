@@ -208,6 +208,11 @@ export interface ChatFeedbackInput {
   reason?: ChatFeedbackReason | null;
   comment?: string | null;
 }
+const chatFeedbackInputSchema = z.object({
+  helpful: z.boolean(),
+  reason: z.enum(['WRONG_INFO', 'NOT_WHAT_I_ASKED', 'HARD_TO_UNDERSTAND', 'MISSING_INFO', 'OTHER']).nullish(),
+  comment: z.string().trim().max(1000, 'Góp ý tối đa 1.000 ký tự.').nullish(),
+});
 const chatFeedbackItemSchema = z.object({
   messageId: z.string(),
   sessionId: z.string(),
@@ -470,15 +475,18 @@ export const aiOcrApi = {
 
   /** CHAT-FEEDBACK-01: đánh giá một câu trả lời; đánh giá lại thì ghi đè (khách cũng gửi được) */
   chatFeedback: async (messageId: string, input: ChatFeedbackInput) => {
-    await api.post(
-      aiPath(`/api/v1/ai/chat/messages/${encodeURIComponent(messageId)}/feedback`),
+    const id = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).refine(value => !/^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(value)).parse(messageId);
+    const values = chatFeedbackInputSchema.parse(input);
+    const response = await api.post(
+      aiPath(`/api/v1/ai/chat/messages/${encodeURIComponent(id)}/feedback`),
       {
-        helpful: input.helpful,
-        reason: input.helpful ? null : input.reason ?? null,
-        comment: input.comment?.trim() ? input.comment.trim().slice(0, 1000) : null,
+        helpful: values.helpful,
+        reason: values.helpful ? null : values.reason ?? null,
+        comment: values.comment || null,
       },
       { suppressSessionExpiry: true },
     );
+    if (response.status !== 204) throw new Error('Chưa xác nhận được đánh giá. Vui lòng thử lại.');
   },
 
   /** CHAT-FEEDBACK-01: quản lý kho kiến thức xem đánh giá (mới nhất trước); helpful bỏ trống = tất cả */

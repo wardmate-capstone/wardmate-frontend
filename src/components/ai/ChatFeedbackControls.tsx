@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CircleNotch, ThumbsDown, ThumbsUp } from '@phosphor-icons/react';
 import { aiError, aiOcrApi, chatFeedbackReasons, type ChatFeedbackReason } from '@/lib/api/aiOcr';
 import { cn } from '@/lib/utils';
@@ -19,8 +19,11 @@ export function ChatFeedbackControls({ messageId, value, onRated }: {
   const [busy, setBusy] = useState<'up' | 'down' | null>(null);
   const [error, setError] = useState('');
   const [thanks, setThanks] = useState(false);
+  const lock = useRef(false);
 
   const send = async (helpful: boolean) => {
+    if (lock.current) return;
+    lock.current = true;
     setBusy(helpful ? 'up' : 'down');
     setError('');
     try {
@@ -31,12 +34,13 @@ export function ChatFeedbackControls({ messageId, value, onRated }: {
     } catch (err) {
       setError(aiError(err));
     } finally {
+      lock.current = false;
       setBusy(null);
     }
   };
 
   const iconButton = (active: boolean) => cn(
-    'inline-flex size-7 items-center justify-center rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 disabled:opacity-50',
+    'inline-flex size-11 items-center justify-center rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800 disabled:opacity-50',
     active ? 'bg-red-50 text-red-800' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700',
   );
 
@@ -79,6 +83,7 @@ export function ChatFeedbackControls({ messageId, value, onRated }: {
                 type="button"
                 role="radio"
                 aria-checked={reason === r.value}
+                disabled={busy !== null}
                 onClick={() => setReason(reason === r.value ? null : r.value)}
                 className={cn(
                   'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-800',
@@ -94,6 +99,7 @@ export function ChatFeedbackControls({ messageId, value, onRated }: {
             <textarea
               rows={2}
               maxLength={1000}
+              disabled={busy !== null}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Góp ý thêm (không bắt buộc), ví dụ: Tôi hỏi về lệ phí"

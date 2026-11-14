@@ -32,7 +32,7 @@ function FeedbackCard({ item }: { item: ChatFeedbackItem }) {
       </div>
       <div className="space-y-1">
         <p className="text-xs font-semibold text-slate-500">Câu hỏi của người dân</p>
-        <p className="text-sm font-semibold text-slate-900">{item.question?.trim() || <span className="font-normal italic text-slate-400">Không lưu câu hỏi</span>}</p>
+        <p className="break-words [overflow-wrap:anywhere] text-sm font-semibold text-slate-900">{item.question?.trim() || <span className="font-normal italic text-slate-400">Không lưu câu hỏi</span>}</p>
       </div>
       <div className="space-y-1">
         <p className="text-xs font-semibold text-slate-500">Câu trả lời của chatbot</p>
@@ -44,7 +44,7 @@ function FeedbackCard({ item }: { item: ChatFeedbackItem }) {
         )}
       </div>
       {item.comment?.trim() && (
-        <blockquote className="rounded-lg border-l-4 border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+        <blockquote className="break-words [overflow-wrap:anywhere] rounded-lg border-l-4 border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <span className="block text-xs font-semibold text-amber-800">Góp ý của người dân</span>
           {item.comment}
         </blockquote>
