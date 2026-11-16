@@ -8,6 +8,7 @@ export const dispatchSchema = z.object({ id, applicationCode: z.string().nullish
 const candidateSchema = z.object({ officerId: id, fullName: z.string().nullish(), eligible: z.boolean(), activeApplicationCount: z.number().int(), blockingReasons: z.array(z.string()) });
 const assignmentSchema = z.object({ id, applicationId: id, fromOfficerId: id.nullish(), toOfficerId: id, actorId: id, version, reason: z.string().nullish(), createdAt: z.string(), action: z.string(), fromOfficerName: z.string().nullish(), toOfficerName: z.string().nullish(), actorName: z.string().nullish() });
 const shiftSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), version: version.optional(), cancelledAtUtc: z.string().nullish(), cancellationReason: z.string().nullish() });
+const wardShiftSchema = z.object({ officerId: id, shifts: z.array(shiftSchema) });
 export const leaveSchema = z.object({ id, officerId: id, wardCode: z.string(), startsAtUtc: z.string(), endsAtUtc: z.string(), reason: z.string(), status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']), version, decisionReason: z.string().nullish() });
 const historySchema = z.object({ id, actorId: id, version, fromStatus: z.string(), toStatus: z.string(), reason: z.string(), createdAtUtc: z.string() });
 // Tham vấn: specialistId null khi cán bộ phụ trách vừa gửi yêu cầu (PENDING_DISPATCH), chờ Manager chọn người tư vấn (STAFFING-01)
@@ -48,6 +49,7 @@ export const staffingApi = {
   assign: (app: string, input: AssignmentInput) => post(`${manager}/${app}/assignments`, assignmentSchema, input),
   assignments: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignments`, z.array(assignmentSchema), undefined, signal),
   shifts: (from: string, to: string, signal?: AbortSignal) => get(`${root}/shifts`, z.array(shiftSchema), { from, to }, signal),
+  wardShifts: (year: number, month: number, signal?: AbortSignal) => get(`${root}/ward-shifts`, z.array(wardShiftSchema), { year, month }, signal),
   createShift: (input: { officerId: string; startsAt: string; endsAt: string }) => post(`${root}/shifts`, shiftSchema, input),
   cancelShift: (shift: string, reason: string) => post(`${root}/shifts/${shift}/cancel`, shiftSchema, { reason }),
   leaves: (from: string, to: string, signal?: AbortSignal) => get(`${root}/leaves`, z.array(leaveSchema), { from, to }, signal),
