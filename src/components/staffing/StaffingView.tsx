@@ -5,15 +5,17 @@ import type { ScheduleSlot } from '@/lib/api/workSchedules';
 import { StaffHeading, useStaffAccess } from './shared';
 import { ScheduleListView } from './ScheduleListView';
 import { MonthlyScheduleView } from './MonthlyScheduleView';
+import { WardScheduleView } from './WardScheduleView';
 import { LeaveRequestsView } from './LeaveRequestsView';
 import { RequestShiftChange, ShiftChangesView } from './ShiftChangesView';
 
-function ScheduleWorkspace({ initialTab }: { initialTab: 'list' | 'month' | 'changes' }) {
+function ScheduleWorkspace({ initialTab }: { initialTab: 'ward' | 'list' | 'month' | 'changes' }) {
   const { manager } = useStaffAccess();
-  const [tab, setTab] = useState<'list' | 'month' | 'changes'>(initialTab === 'list' && !manager ? 'month' : initialTab);
+  const [tab, setTab] = useState<'ward' | 'list' | 'month' | 'changes'>((initialTab === 'list' || initialTab === 'ward') && !manager ? 'month' : initialTab);
   const [change, setChange] = useState<ScheduleSlot>();
-  return <section className="staff-workspace"><StaffHeading title={manager ? 'Lịch ca làm của phường' : 'Lịch ca làm của tôi'} description={manager ? "Chọn cán bộ và tháng, bấm ngày để đặt giờ làm rồi công bố lịch. Thời gian theo giờ Việt Nam." : "Chọn tháng và bấm ngày để xem giờ làm. Bạn có thể xác nhận đã xem lịch hoặc đề nghị đổi giờ ca."} />
-    <div className="staff-tabs" aria-label="Chế độ lịch làm việc">{([['month', manager ? 'Sắp xếp lịch tháng' : 'Lịch tháng'], ['list', 'Danh sách ca'], ['changes', 'Yêu cầu đổi ca']] as const).filter(([value]) => manager || value !== 'list').map(([value, label]) => <Button key={value} variant={tab === value ? 'primary' : 'outline'} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</Button>)}</div>
+  return <section className="staff-workspace"><StaffHeading title={manager ? 'Lịch ca làm của phường' : 'Lịch ca làm của tôi'} description={manager ? "Xem lịch toàn bộ cán bộ Frontdesk theo tuần và tháng. Chuyển sang Sắp xếp lịch tháng để đặt giờ và công bố lịch. Thời gian theo giờ Việt Nam." : "Chọn tháng và bấm ngày để xem giờ làm. Bạn có thể xác nhận đã xem lịch hoặc đề nghị đổi giờ ca."} />
+    <div className="staff-tabs" aria-label="Chế độ lịch làm việc">{([['ward', 'Lịch toàn phường'], ['month', manager ? 'Sắp xếp lịch tháng' : 'Lịch tháng'], ['list', 'Danh sách ca'], ['changes', 'Yêu cầu đổi ca']] as const).filter(([value]) => manager || (value !== 'list' && value !== 'ward')).map(([value, label]) => <Button key={value} variant={tab === value ? 'primary' : 'outline'} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</Button>)}</div>
+    {manager && tab === 'ward' && <WardScheduleView />}
     {manager && tab === 'list' && <ScheduleListView />}
     <div hidden={tab !== 'month'}><MonthlyScheduleView onRequestChange={setChange} /></div>
     {tab === 'changes' && <ShiftChangesView />}{change && <RequestShiftChange slot={change} onClose={() => setChange(undefined)} />}
@@ -21,11 +23,11 @@ function ScheduleWorkspace({ initialTab }: { initialTab: 'list' | 'month' | 'cha
 }
 
 export function StaffingView({ mode }: { mode: 'shifts' | 'leaves' }) {
-  const { user, can } = useStaffAccess();
+  const { user, manager, can } = useStaffAccess();
   const [params] = useSearchParams();
   const location = useLocation();
   if (!user || !can('workflow.staffing.read')) return <p role="alert">Bạn không có quyền xem lịch làm và nghỉ phép.</p>;
   const key = [user.id, user.wardId, user.roles.slice().sort().join('|'), user.permissions.slice().sort().join('|'), location.key].join(':');
   const view = params.get('view');
-  return mode === 'shifts' ? <ScheduleWorkspace key={key} initialTab={view === 'list' || view === 'changes' ? view : 'month'} /> : <LeaveRequestsView key={key} />;
+  return mode === 'shifts' ? <ScheduleWorkspace key={key} initialTab={view === 'list' || view === 'changes' || view === 'month' || view === 'ward' ? view : manager ? 'ward' : 'month'} /> : <LeaveRequestsView key={key} />;
 }

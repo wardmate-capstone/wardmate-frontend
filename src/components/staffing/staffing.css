@@ -1,5 +1,43 @@
 @reference "../../styles/globals.css";
 
+.ward-roster { min-width: 0; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 1.5rem; background: #faf7fb; padding: 1.25rem; }
+.ward-roster-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding-bottom: 1.25rem; }
+.ward-roster-toolbar h3 { font-size: 1.25rem; font-weight: 700; color: #134e4a; }
+.ward-roster-toolbar p { font-size: .875rem; color: #64748b; margin-top: .25rem; }
+.ward-roster-period { display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; color: #134e4a; }
+.ward-roster-scroll { position: relative; max-width: 100%; overflow-x: auto; border-radius: 1rem; background: white; }
+.ward-roster-scroll:focus-visible { outline: 2px solid #991b1b; outline-offset: 2px; }
+.ward-roster-table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: .8rem; }
+.ward-roster-table th, .ward-roster-table td { border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; }
+.ward-roster-table thead th { background: #f0fdfa; padding: .9rem .5rem; text-align: center; color: #475569; font-weight: 500; }
+.ward-roster-table thead th span, .ward-roster-table thead th strong { display: block; }
+.ward-roster-table thead th strong { margin-top: .3rem; color: #134e4a; }
+.ward-roster-table th:first-child { position: sticky; left: 0; z-index: 1; width: 200px; padding: 1rem; text-align: left; background: #fff; }
+.ward-roster-table thead th:first-child { background: #f0fdfa; z-index: 2; }
+.ward-roster-table td { height: 120px; vertical-align: top; padding: .4rem; }
+.ward-roster-person { display: flex; align-items: center; gap: .65rem; }
+.ward-roster-person > div { min-width: 0; overflow-wrap: anywhere; }
+.ward-roster-person strong { display: block; font-size: .85rem; font-weight: 600; }
+.ward-roster-person div > span { display: block; margin-top: .3rem; color: #64748b; font-size: .7rem; font-weight: 400; }
+.ward-roster-avatar { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #ccfbf1; color: #115e59; font-weight: 700; }
+.ward-shift { display: flex; flex-direction: column; gap: .3rem; border-left: 3px solid; padding: .65rem .5rem; border-radius: .2rem .5rem .5rem .2rem; margin-bottom: .35rem; overflow-wrap: anywhere; }
+.ward-shift strong { font-size: .8rem; font-variant-numeric: tabular-nums; }
+.ward-shift span, .ward-shift small { font-size: .7rem; }
+.ward-shift-morning { background: #f0fdfa; border-color: #0d9488; color: #115e59; }
+.ward-shift-afternoon { background: #f5f3ff; border-color: #7c3aed; color: #5b21b6; }
+.ward-shift-cancelled { background: #f1f5f9; border-color: #94a3b8; color: #475569; }
+.ward-shift-cancelled strong { text-decoration: line-through; }
+.ward-roster-today { background: #fffbeb; }
+.ward-roster-legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; padding-top: 1rem; font-size: .75rem; color: #475569; }
+.ward-roster-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.ward-roster-legend i { width: .6rem; height: .6rem; border-radius: 50%; }
+@media (max-width: 639px) {
+  .ward-roster { padding: .75rem; border-radius: 1rem; }
+  .ward-roster-table { min-width: 1000px; }
+  .ward-roster-table th:first-child { width: 160px; padding: .65rem; }
+  .ward-roster-avatar { display: none; }
+}
+
 @layer components {
   .staff-workspace { @apply min-w-0 space-y-5 text-slate-900; }
   .staff-heading { @apply flex flex-wrap items-start justify-between gap-4; }
