@@ -4,7 +4,7 @@ import { authReply } from './fixtures/auth';
 
 test.setTimeout(60000);
 async function openCalendar(page: Page) {
-  await page.goto('/manager?section=shifts');
+  await page.goto('/manager?section=shifts&view=month');
   await page.getByRole('combobox', { name: '1. Chọn cán bộ', exact: true }).selectOption(ids.officer);
   await expect(page.getByRole('button', { name: /^Ngày 07\/11\/2026/ })).toBeVisible({ timeout: 15000 });
 }
@@ -69,7 +69,7 @@ test('Chọn cán bộ trước tháng; sửa giờ và công bố giữ đủ l
   const state = await mockWorkSchedules(page, true);
   const other = { ...state.slots[0], officerId: ids.officer2, shiftId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' };
   state.slots.push(other);
-  await page.goto('/manager?section=shifts');
+  await page.goto('/manager?section=shifts&view=month');
   await expect(page.getByRole('combobox', { name: 'Tháng làm việc', exact: true })).toBeDisabled();
   await expect(page.getByText('Chọn cán bộ để xem và xếp lịch tháng.', { exact: true })).toBeVisible();
   await page.getByRole('combobox', { name: '1. Chọn cán bộ', exact: true }).selectOption(ids.officer);

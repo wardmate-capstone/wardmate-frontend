@@ -1,0 +1,97 @@
+import { test, expect, type Page } from '@playwright/test';
+import { authReply, mockWorkspaceAuth } from './fixtures/auth';
+
+const officer = '11111111-1111-4111-8111-111111111111';
+const missing = '22222222-2222-4222-8222-222222222222';
+const shift = (id: string, officerId: string, startsAtUtc: string, endsAtUtc: string, cancelled = false) => ({
+  id, officerId, wardCode: 'P01', startsAtUtc, endsAtUtc,
+  cancelledAtUtc: cancelled ? '2026-10-30T00:00:00Z' : null,
+  cancellationReason: cancelled ? 'Điều chỉnh nhân sự' : null,
+});
+const morning = shift('33333333-3333-4333-8333-333333333333', officer, '2026-11-01T00:30:00Z', '2026-11-01T04:30:00Z');
+const cancelled = shift('44444444-4444-4444-8444-444444444444', officer, '2026-11-02T06:00:00Z', '2026-11-02T10:00:00Z', true);
+const overnight = shift('55555555-5555-4555-8555-555555555555', missing, '2026-10-31T16:00:00Z', '2026-10-31T19:00:00Z');
+
+async function setup(page: Page, manage = true) {
+  await page.clock.setFixedTime(new Date('2026-11-01T02:00:00Z'));
+  await mockWorkspaceAuth(page, ['MANAGER'], ['iam.profile.read', 'workflow.staffing.read', ...(manage ? ['workflow.staffing.manage'] : [])]);
+  await page.route('**/api/v1/manager/officers?*', route => authReply(route, { json: { items: [
+    { id: officer, username: 'frontdesk', email: 'frontdesk@example.test', fullName: 'Nguyễn Văn An', isActive: true, roles: ['FRONT_DESK_OFFICER'], wardCode: 'P01', assignedCategories: [] },
+    { id: '66666666-6666-4666-8666-666666666666', username: 'no.shift', email: 'empty@example.test', fullName: 'Trần Thị Bình', isActive: true, roles: ['FRONT_DESK_OFFICER'], wardCode: 'P01', assignedCategories: [] },
+  ], page: 1, pageSize: 100, total: 2 } }));
+  const requests: string[] = [];
+  await page.route('**/api/v1/staffing/ward-shifts?*', route => {
+    const url = new URL(route.request().url());
+    requests.push(url.search);
+    return authReply(route, { json: url.searchParams.get('month') === '10' ? [{ officerId: missing, shifts: [overnight] }] : [{ officerId: officer, shifts: [morning, cancelled] }] });
+  });
+  return requests;
+}
+
+test('Lịch toàn phường: mọi cán bộ, ca qua tháng UTC, ca hủy và tìm kiếm', async ({ page }, testInfo) => {
+  const requests = await setup(page);
+  await page.goto('/manager?section=shifts');
+  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
+  await expect(table).toContainText('Nguyễn Văn An');
+  await expect(table).toContainText('Trần Thị Bình');
+  await expect(table).toContainText('07:30–11:30');
+  await expect(table).toContainText('23:00–02:00');
+  await expect(table).toContainText('Từ 31/10/2026');
+  expect(requests).toEqual(expect.arrayContaining(['?year=2026&month=11', '?year=2026&month=10']));
+  await page.screenshot({ path: testInfo.outputPath('ward-schedule-desktop.png'), fullPage: true });
+  await expect(table).toContainText('Điều chỉnh nhân sự');
+  await page.getByLabel('Hiện ca đã hủy', { exact: true }).uncheck();
+  await expect(table).not.toContainText('Điều chỉnh nhân sự');
+  await page.getByRole('searchbox', { name: 'Tìm cán bộ' }).fill('Nguyễn');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Tuần sau', exact: true }).click();
+  await expect(table).not.toContainText('07:30–11:30');
+  await expect(page.getByText('08/11/2026 – 14/11/2026')).toBeVisible();
+});
+
+test('Lịch toàn phường: đổi tháng/năm, lỗi API và thử lại', async ({ page }) => {
+  await setup(page);
+  let fail = true;
+  await page.route('**/api/v1/staffing/ward-shifts?*', route => fail ? authReply(route, { status: 503, json: { code: 'staffing.iam_unavailable' } }) : route.fallback());
+  await page.goto('/manager?section=shifts');
+  await expect(page.locator('.ward-schedule').getByRole('alert')).toBeVisible();
+  await expect(page.locator('.ward-roster')).toHaveCount(0);
+  fail = false;
+  await page.locator('.ward-schedule').getByRole('button', { name: 'Thử lại', exact: true }).click();
+  await expect(page.locator('.ward-roster')).toBeVisible();
+  const next = page.waitForRequest(r => r.url().includes('ward-shifts?year=2026&month=12'));
+  await page.getByRole('combobox', { name: 'Tháng lịch toàn phường' }).selectOption('12');
+  await next;
+  await expect(page.getByText('01/12/2026 – 07/12/2026')).toBeVisible();
+  const year = page.waitForRequest(r => r.url().includes('ward-shifts?year=2100&month=12'));
+  await page.getByRole('combobox', { name: 'Năm lịch toàn phường' }).selectOption('2100');
+  await year;
+});
+
+test('Manager thiếu quyền manage không gọi ward-shifts', async ({ page }) => {
+  const requests = await setup(page, false);
+  await page.goto('/manager?section=shifts');
+  await expect(page.getByText('Bạn cần quyền quản lý lịch để xem lịch toàn phường.')).toBeVisible();
+  expect(requests).toEqual([]);
+});
+
+test('Response sai cấu trúc không hiển thị thành lịch trống', async ({ page }) => {
+  await setup(page);
+  await page.route('**/api/v1/staffing/ward-shifts?*', route => authReply(route, { json: [{ officerId: officer, shifts: [{ ...morning, officerId: missing }] }] }));
+  await page.goto('/manager?section=shifts');
+  await expect(page.locator('.ward-schedule').getByRole('alert')).toContainText('Dữ liệu ca làm không hợp lệ');
+  await expect(page.locator('.ward-roster')).toHaveCount(0);
+});
+
+test('Bảng lịch trên mobile cuộn bên trong, giữ cột cán bộ', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await setup(page);
+  await page.goto('/manager?section=shifts');
+  await expect(page.locator('.ward-roster-table')).toContainText('Nguyễn Văn An');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const scroll = page.locator('.ward-roster-scroll');
+  await page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' }).scrollIntoViewIfNeeded();
+  await scroll.evaluate(el => { el.scrollLeft = 350; });
+  await expect(page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' })).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('ward-schedule-mobile.png'), fullPage: true });
+});

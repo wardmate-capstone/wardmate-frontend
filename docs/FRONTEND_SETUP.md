@@ -1,5 +1,13 @@
 # Nền tảng FE Web
 
+## FE-WARD-SCHEDULE-1116 — Lịch toàn phường cho Manager (16/11/2026)
+
+- `/manager?section=shifts` mặc định mở Lịch toàn phường; `view=month|list|changes|ward` chọn tab ban đầu. Sắp xếp lịch tháng vẫn giữ state khi đổi tab, tránh mất nháp. Cán bộ Frontdesk tiếp tục xem lịch cá nhân.
+- `staffingApi.wardShifts(year, month, signal)` dùng client JWT/Workflow có sẵn, GET `/api/v1/staffing/ward-shifts?year=&month=`, không body, 200 mảng `{officerId, shifts: Shift[]}`. Cần MANAGER và `workflow.staffing.read` + `workflow.staffing.manage`; 400 invalid_month hoặc 403 được xử lý qua staffingError/QueryState, lỗi tải có Thử lại. Schema Zod và kiểm tra ngày/quan hệ officerId loại dữ liệu sai. Không đổi token RAM/cookie HttpOnly, không thêm URL Azure cố định.
+- Bảng chỉ xem lịch chính thức, có toàn bộ Frontdesk trong danh bạ (kể cả chưa có ca), giữ ca lịch sử bằng ID khi thiếu cán bộ trong danh bạ; phân trang danh bạ dùng helper hiện có. Mỗi hàng một người, tối đa bảy cột ngày; chuyển tuần bao phủ tháng, chọn tháng/năm 2000–2100, tìm tên/mã, hiện/ẩn ca hủy và làm mới. Không tạo ca/nghỉ giải lao/ảnh đại diện giả. Ô trống không khẳng định là ngày nghỉ.
+- API lọc tháng UTC; UI UTC+7 lấy tháng trước và tháng chọn, khử trùng ID, lọc giao với tháng Việt Nam, ca qua đêm hiện trên từng ngày có giao. 01/2000 không gọi 12/1999 (ngoài giới hạn): chưa bảo đảm bảy giờ đầu 01/01/2000. Query key có danh tính/phường/quyền/tháng; AbortSignal cho lịch, không retry tự động. Chưa kiểm API Azure/DB/IAM thật.
+- Bảng cuộn ngang trong khung trên màn nhỏ; cột tên sticky, chữ chỉ dành cho trình đọc màn hình nằm trong containing block của khung cuộn để không làm tràn trang. Màu phân biệt ca bắt đầu trước/từ 12 giờ và ca hủy, đồng thời có nhãn chữ.
+
 ## MOBILE-FE-1113 — Rà lại avatar/chatbot theo bàn giao (13/11/2026)
 
 - Avatar tiếp tục dùng Bearer → Blob/object URL, không đưa token vào img/src. Service tự kiểm tra file ≤10 MiB và MIME/đuôi cho phép, đường dẫn trả về phải thuộc `/api/v1/users/`; chỉ cập nhật store sau PUT 200/DELETE 204 và khi phiên/tài khoản còn khớp. Cache ảnh bị xóa khi danh tính/trạng thái phiên đổi; ảnh không tải/giải mã được trở về chữ cái đầu. Lỗi iam.avatar_too_large/iam.image_unsupported/iam.image_unreadable ưu tiên **title** từ ProblemDetails. Chặn bấm lặp ở AvatarEditor.
