@@ -36,7 +36,7 @@
 - Không tự đặt hợp đồng API hoặc chọn nơi lưu refresh token khi chưa có thông tin backend.
 - Khi phiên không còn hợp lệ: về `/dang-nhap`, giải thích hết phiên và giữ `returnTo` nội bộ an toàn. Điều hướng sau đăng nhập cần thành công thật.
 - FE-TASK-03 dùng Zustand, Zod/React Hook Form và Protected Routes theo role IAM. Access token chỉ ở RAM; refresh token qua cookie HttpOnly. Khôi phục phiên và gọi API đã có code; phân biệt kiểm thử mock với xác minh môi trường thật.
-- “Ghi nhớ đăng nhập” được tạm bỏ qua theo quyết định người dùng; checkbox giữ nguyên, chưa có logic hoặc hợp đồng rememberMe.
+- “Ghi nhớ đăng nhập” không có chức năng (BE không có hợp đồng rememberMe); checkbox đã bỏ khỏi màn đăng nhập theo yêu cầu người dùng 17/11/2026. Không thêm lại khi chưa có hợp đồng BE.
 - Ponytail là công cụ cá nhân đã cài trên máy người dùng, không phải dependency frontend. Không giả định máy khác có plugin hoặc hooks đã được chấp thuận.
 
 ## Kiểm tra và Git

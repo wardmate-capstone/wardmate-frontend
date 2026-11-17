@@ -227,35 +227,31 @@ export function AuthPage({ mode }: AuthPageProps) {
             )}
             {isRegister && <PasswordMatchHint password={passwordValue} confirm={confirmValue} />}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-xs sm:text-sm">
-              <label className="auth-checkbox">
-                <input
-                  type="checkbox"
-                  {...(isRegister ? field('terms') : { name: 'remember' })}
-                  required={isRegister}
-                  aria-invalid={!!errors.terms}
-                  aria-describedby={errors.terms ? 'terms-error' : undefined}
-                />
-                <span>
-                  {isRegister ? (
-                    <>
-                      Tôi đồng ý với{' '}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTermsModalOpen(true);
-                        }}
-                        className="text-red-800 underline font-semibold hover:text-red-950"
-                      >
-                        điều khoản sử dụng
-                      </button>
-                    </>
-                  ) : (
-                    'Ghi nhớ đăng nhập'
-                  )}
-                </span>
-              </label>
+            <div className={`flex flex-wrap items-center gap-2 pt-0.5 text-xs sm:text-sm ${isRegister ? 'justify-between' : 'justify-end'}`}>
+              {isRegister && (
+                <label className="auth-checkbox">
+                  <input
+                    type="checkbox"
+                    {...field('terms')}
+                    required
+                    aria-invalid={!!errors.terms}
+                    aria-describedby={errors.terms ? 'terms-error' : undefined}
+                  />
+                  <span>
+                    Tôi đồng ý với{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setTermsModalOpen(true);
+                      }}
+                      className="text-red-800 underline font-semibold hover:text-red-950"
+                    >
+                      điều khoản sử dụng
+                    </button>
+                  </span>
+                </label>
+              )}
               {!isRegister && (
                 <Link to="/quen-mat-khau" className="font-semibold text-red-800 hover:underline">
                   Quên mật khẩu?
