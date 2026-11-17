@@ -1,5 +1,13 @@
 # Nền tảng FE Web
 
+## FE-DOCX-COMMENTS-1117 — Bình luận Word trực tiếp trên tờ khai (17/11/2026)
+
+- @docx-editor.dev 2.31 bản Apache-2.0 từ chối `addComment`/`review.addComment` ("comments and tracked changes require the pro review module"); gói `@docx-editor.dev/pro` là thương mại nên không dùng. Vì vậy bước "thêm slot `review.addComment` vào tools" trong tài liệu bàn giao BE không chạy được.
+- `src/lib/docxComments.ts` tự đọc/ghi bình luận OpenXML bằng `jszip` (khai báo thẳng bản 3.10.2 vốn đã có qua docx-preview) và DOMParser. Bình luận được neo theo `paraId` lấy từ vùng chọn của editor, nếu không có thì tìm theo nội dung chữ (bỏ khoảng trắng); hỗ trợ vùng chọn qua nhiều đoạn. Khi cần, module tách `w:r`, chèn `commentRangeStart/End` + `commentReference`, tạo hoặc nối `word/comments.xml`, quan hệ và Override content type. Không neo được thì báo lỗi, không lưu một phần.
+- `DocxOnlineEditor` có prop `commentable`. Cán bộ bôi đen văn bản → bấm "Thêm bình luận" → nhập nội dung (tối đa 1000 ký tự) → bình luận nằm ở trạng thái nháp "Chưa lưu" → bấm lưu thì gọi PUT `annotate-docx` như cũ. Nếu chỉ thêm bình luận, bình luận được ghi vào đúng bản tệp đã tải; nếu có sửa chữ, ghi vào bản editor xuất ra, đồng thời kiểm tra không mất bình luận cũ. Sau khi lưu, editor nạp lại tệp đã có bình luận.
+- Bảng "Bình luận" hiện mọi bình luận có trong tệp (tác giả, thời gian, đoạn trích, nội dung, hiển thị dạng text) cho mọi người dùng editor; người xem tệp có bình luận mà không phải cán bộ thì bảng tự mở. Editor bản miễn phí không vẽ bong bóng/đánh dấu trên trang; vị trí đánh dấu xem đầy đủ khi mở bằng Word.
+- `OfficerDocumentsPanel`: nút "Chú thích & nhận xét Word" nằm trên từng tờ khai khi `canAnnotate`; vẫn giữ ô tải lên Word có ghi chú. Bình luận Word không thay cho nhận xét yêu cầu bổ sung của hồ sơ.
+
 ## FE-WARD-SCHEDULE-1116 — Lịch toàn phường cho Manager (16/11/2026)
 
 - `/manager?section=shifts` mặc định mở Lịch toàn phường; `view=month|list|changes|ward` chọn tab ban đầu. Sắp xếp lịch tháng vẫn giữ state khi đổi tab, tránh mất nháp. Cán bộ Frontdesk tiếp tục xem lịch cá nhân.

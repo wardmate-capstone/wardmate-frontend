@@ -27,17 +27,27 @@ import {
   FileDoc,
   DownloadSimple,
   FloppyDisk,
-  Table,
   X,
   SidebarSimple,
   CheckCircle,
   Warning,
   Info,
+  ChatCircleDots,
+  ChatCircleText,
+  Trash,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { documentFormError, downloadBlob, validateDocumentFile } from '@/lib/api/documentForms';
 import { displayDocumentFileName } from '@/lib/documentFileName';
+import { formatDateTime } from '@/lib/dateFormat';
+import {
+  addDocxComments,
+  MAX_COMMENT_LENGTH,
+  readDocxComments,
+  type DocxComment,
+  type DocxCommentDraft,
+} from '@/lib/docxComments';
 
 const fonts = packagedFonts();
 
@@ -55,6 +65,13 @@ const tools: { id: ChromeSlotId; label: string; icon: typeof TextB }[] = [
   { id: 'list.bullet', label: 'Danh sách dấu đầu dòng', icon: ListBullets },
   { id: 'list.numbered', label: 'Danh sách đánh số', icon: ListNumbers },
 ];
+
+// Bảng bên phải: trên điện thoại phủ lên vùng tài liệu, từ sm trở lên nằm cạnh tài liệu.
+const sidePanelClass =
+  'absolute inset-y-0 right-0 z-20 flex w-full max-w-sm min-h-0 flex-col border-l border-slate-300 bg-white shadow-xl sm:relative sm:w-80 sm:shrink-0 animate-in slide-in-from-right duration-200';
+
+const paraIdOf = (target: unknown) =>
+  target && typeof target === 'object' && 'paraId' in target && typeof target.paraId === 'string' ? target.paraId : undefined;
 
 const selectClass =
   'min-h-9 max-w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs sm:text-sm text-slate-800 shadow-2xs focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:opacity-50';
@@ -127,6 +144,8 @@ export interface DocxOnlineEditorProps {
   saveLabel?: string;
   savedLabel?: string;
   saveAndCloseLabel?: string;
+  /** Cho phép bôi đen văn bản và thêm bình luận Word (dùng cho cán bộ thụ lý). */
+  commentable?: boolean;
 }
 
 export default function DocxOnlineEditor({
@@ -143,9 +162,12 @@ export default function DocxOnlineEditor({
   saveLabel = 'Lưu vào hồ sơ',
   savedLabel = 'Đã lưu vào hồ sơ',
   saveAndCloseLabel,
+  commentable = false,
 }: DocxOnlineEditorProps) {
   const editorRef = useRef<DocxEditorRef>(null);
   const loader = useRef(load);
+  /** Bản tệp gần nhất đã tải/lưu, dùng để ghi bình luận khi cán bộ không sửa chữ. */
+  const source = useRef<Uint8Array>(undefined);
   const unsubscribe = useRef<(() => void)[]>([]);
   const lock = useRef(false);
   const revision = useRef(0);
@@ -159,11 +181,15 @@ export default function DocxOnlineEditor({
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
-  const [tab, setTab] = useState<'home' | 'insert' | 'layout'>('home');
   const [compatibilityWarning, setCompatibilityWarning] = useState(false);
-  const [showReferenceDrawer, setShowReferenceDrawer] = useState(Boolean(referenceData && referenceData.length > 0));
+  const [panel, setPanel] = useState<'reference' | 'comments' | null>(referenceData && referenceData.length > 0 ? 'reference' : null);
+  const [comments, setComments] = useState<DocxComment[]>([]);
+  const [drafts, setDrafts] = useState<DocxCommentDraft[]>([]);
+  const [composer, setComposer] = useState<Omit<DocxCommentDraft, 'key' | 'text' | 'createdAt'>>();
+  const [composerText, setComposerText] = useState('');
+  const [composerError, setComposerError] = useState('');
 
-  const guard = useUnsavedChanges(dirty, busy);
+  const guard = useUnsavedChanges(dirty || drafts.length > 0, busy);
 
   useEffect(() => {
     loader.current = load;
@@ -178,6 +204,10 @@ export default function DocxOnlineEditor({
     setDirty(false);
     setSaved(false);
     setCompatibilityWarning(false);
+    setComments([]);
+    setDrafts([]);
+    setComposer(undefined);
+    source.current = undefined;
 
     void loader
       .current(controller.signal)
@@ -186,9 +216,15 @@ export default function DocxOnlineEditor({
         const issue = validateDocumentFile(new File([file.blob], fileName), true);
         if (issue) throw new Error(issue);
         const data = new Uint8Array(await file.blob.arrayBuffer());
+        // Không đọc được bình luận thì vẫn mở tài liệu bình thường.
+        const existing = await readDocxComments(data).catch(() => []);
         if (!controller.signal.aborted) {
+          source.current = data;
           setName(fileName);
           setBytes(data);
+          setComments(existing);
+          // Người xem tờ khai có ghi chú của cán bộ: mở sẵn bảng bình luận.
+          if (existing.length && !commentable) setPanel((current) => current ?? 'comments');
         }
       })
       .catch((err) => {
@@ -203,7 +239,7 @@ export default function DocxOnlineEditor({
       unsubscribe.current.forEach((dispose) => dispose());
       unsubscribe.current = [];
     };
-  }, [sourceKey, retry, errorMessage]);
+  }, [sourceKey, retry, errorMessage, commentable]);
 
   function ready(editor: Editor) {
     unsubscribe.current.forEach((dispose) => dispose());
@@ -223,14 +259,23 @@ export default function DocxOnlineEditor({
   }
 
   async function exportFile() {
-    const data = await editorRef.current?.save();
-    if (!data) throw new Error('Tài liệu chưa sẵn sàng. Vui lòng chờ rồi thử lại.');
+    const pending = drafts;
+    // Chỉ thêm bình luận, không sửa chữ: ghi vào đúng bản đã tải để giữ nguyên định dạng gốc.
+    const base = !dirty && pending.length && source.current ? source.current : await editorRef.current?.save();
+    if (!base) throw new Error('Tài liệu chưa sẵn sàng. Vui lòng chờ rồi thử lại.');
+    const data = pending.length ? await addDocxComments(new Uint8Array(base), pending, author) : base;
+    if (commentable && (pending.length || comments.length)) {
+      const kept = await readDocxComments(new Uint8Array(data)).catch(() => []);
+      if (kept.length < comments.length + pending.length) {
+        throw new Error('Trình soạn thảo không giữ được bình luận cũ sau khi sửa chữ. Hãy đóng, mở lại tờ khai, chỉ thêm bình luận rồi lưu.');
+      }
+    }
     const file = new File([data], name, {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
     const issue = validateDocumentFile(file, true);
     if (issue) throw new Error(issue);
-    return file;
+    return { file, data: new Uint8Array(data), pending };
   }
 
   async function save(closeAfterSave = false) {
@@ -240,7 +285,15 @@ export default function DocxOnlineEditor({
     setError('');
     const savingRevision = revision.current;
     try {
-      await onSave(await exportFile());
+      const result = await exportFile();
+      await onSave(result.file);
+      if (result.pending.length) {
+        // Tệp trên hồ sơ giờ đã có bình luận: nạp lại để lần lưu sau không làm mất chúng.
+        source.current = result.data;
+        setDrafts((current) => current.filter((draft) => !result.pending.includes(draft)));
+        setComments(await readDocxComments(result.data).catch(() => comments));
+        if (savingRevision === revision.current) setBytes(result.data);
+      }
       if (savingRevision === revision.current) {
         setDirty(false);
         if (closeAfterSave) onClose();
@@ -260,7 +313,7 @@ export default function DocxOnlineEditor({
     setBusy(true);
     setError('');
     try {
-      const file = await exportFile();
+      const { file } = await exportFile();
       downloadBlob(file, file.name);
     } catch (err) {
       setError(errorMessage(err));
@@ -270,8 +323,38 @@ export default function DocxOnlineEditor({
     }
   }
 
+  function startComment() {
+    const editor = editorRef.current?.getEditor();
+    if (!editor) return;
+    const quote = editor.query({ type: 'selectedText' }).trim();
+    if (!quote) {
+      setError('Hãy bôi đen đoạn văn bản cần nhận xét trong tờ khai, rồi bấm “Thêm bình luận”.');
+      return;
+    }
+    const range = editor.snapshot().selection;
+    setError('');
+    setComposerError('');
+    setComposerText('');
+    setComposer({ quote: quote.slice(0, 2000), fromParaId: paraIdOf(range?.from), toParaId: paraIdOf(range?.to) });
+    setPanel('comments');
+  }
+
+  function addDraft() {
+    const text = composerText.trim();
+    if (!composer) return;
+    if (!text) return setComposerError('Nhập nội dung bình luận.');
+    if (text.length > MAX_COMMENT_LENGTH) return setComposerError(`Bình luận tối đa ${MAX_COMMENT_LENGTH} ký tự.`);
+    setDrafts((current) => [...current, { ...composer, key: crypto.randomUUID(), text, createdAt: new Date().toISOString() }]);
+    setComposer(undefined);
+    setComposerText('');
+    setSaved(false);
+  }
+
   const engine = editorRef.current?.getEditor() ?? null;
   const editable = !readOnly && !busy && Boolean(snapshot?.editable);
+  const pendingChanges = dirty || drafts.length > 0;
+  const canComment = commentable && !readOnly && Boolean(onSave);
+  const commentCount = comments.length + drafts.length;
 
   return (
     <div
@@ -326,19 +409,19 @@ export default function DocxOnlineEditor({
                 <span>Đang xử lý…</span>
               </span>
             )}
-            {!busy && dirty && (
+            {!busy && pendingChanges && (
               <span role="status" className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
                 <span className="size-2 rounded-full bg-amber-500 animate-ping" />
-                <span>Có thay đổi chưa lưu</span>
+                <span>{drafts.length ? `${drafts.length} bình luận chưa lưu` : 'Có thay đổi chưa lưu'}</span>
               </span>
             )}
-            {!busy && !dirty && saved && (
+            {!busy && !pendingChanges && saved && (
               <span role="status" className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                 <CheckCircle size={14} weight="bold" />
                 <span>{savedLabel}</span>
               </span>
             )}
-            {!busy && !dirty && !saved && readOnly && (
+            {!busy && !pendingChanges && !saved && readOnly && (
               <span role="status" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
                 Chỉ xem
               </span>
@@ -388,13 +471,30 @@ export default function DocxOnlineEditor({
           ) : referenceData && referenceData.length > 0 && (
             <Button
               size="small"
-              variant={showReferenceDrawer ? 'primary' : 'outline'}
-              onClick={() => setShowReferenceDrawer(!showReferenceDrawer)}
+              variant={panel === 'reference' ? 'primary' : 'outline'}
+              aria-pressed={panel === 'reference'}
+              onClick={() => setPanel(panel === 'reference' ? null : 'reference')}
               className="gap-1.5 text-xs"
               title="Mở bảng thông tin đối chiếu của hồ sơ"
             >
               <SidebarSimple size={16} weight="bold" />
               <span className="hidden lg:inline">Đối chiếu thông tin</span>
+            </Button>
+          )}
+
+          {/* Comments panel toggle */}
+          {(canComment || commentCount > 0) && (
+            <Button
+              size="small"
+              variant={panel === 'comments' ? 'primary' : 'outline'}
+              aria-pressed={panel === 'comments'}
+              onClick={() => setPanel(panel === 'comments' ? null : 'comments')}
+              className="gap-1.5 text-xs"
+              title="Hiện hoặc ẩn bảng bình luận trên tờ khai"
+            >
+              <ChatCircleText size={16} weight="bold" />
+              <span className="hidden lg:inline">Bình luận</span>
+              <span className="rounded-full bg-white/80 px-1.5 text-[11px] font-bold text-red-800 ring-1 ring-red-200">{commentCount}</span>
             </Button>
           )}
 
@@ -418,34 +518,13 @@ export default function DocxOnlineEditor({
       {/* ======================================================== */}
       {!readOnly && (
         <div className="flex shrink-0 flex-col border-b border-slate-200 bg-white shadow-2xs z-10">
-          {/* Ribbon Tabs */}
-          <nav aria-label="Nhóm công cụ soạn thảo" className="flex shrink-0 gap-1 border-b border-slate-100 px-4">
-            {(
-              [
-                { id: 'home', label: 'Trang đầu (Văn bản)' },
-                { id: 'insert', label: 'Chèn (Bảng & Ngắt trang)' },
-                { id: 'layout', label: 'Bố trí (Trang in A4)' },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={tab === item.id}
-                onClick={() => setTab(item.id)}
-                className="min-h-9 border-b-2 border-transparent px-3 text-xs sm:text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 aria-pressed:border-red-700 aria-pressed:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
           {/* Ribbon Actions */}
           <div
             role="toolbar"
             aria-label="Định dạng văn bản"
             className="flex min-h-12 flex-wrap items-center gap-1.5 bg-slate-50/80 px-4 py-1.5 overflow-x-auto"
           >
-            {tab === 'home' && (
+            {(
               <>
                 {/* Font Family */}
                 <select
@@ -537,96 +616,20 @@ export default function DocxOnlineEditor({
               </>
             )}
 
-            {tab === 'insert' && (
-              <div className="flex items-center gap-2">
+            {/* Bình luận Word */}
+            {canComment && (
+              <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
                 <Button
                   variant="outline"
                   size="small"
-                  disabled={!editable}
+                  disabled={!editable || snapshot?.selectionCollapsed !== false}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    const result = engine?.exec({ type: 'insertTable', rows: 2, cols: 2 });
-                    if (result && !result.ok) {
-                      setError('Chưa thể chèn bảng tại vị trí này. Hãy đặt con trỏ vào một đoạn văn khác.');
-                    }
-                    engine?.focus();
-                  }}
-                  className="gap-1.5 text-xs bg-white"
+                  onClick={startComment}
+                  className="gap-1.5 border-red-200 bg-white text-xs text-red-800 hover:bg-red-50"
+                  title={snapshot?.selectionCollapsed === false ? 'Thêm bình luận cho đoạn đang chọn' : 'Bôi đen đoạn văn bản để thêm bình luận'}
                 >
-                  <Table size={16} />
-                  <span>Chèn bảng 2 × 2</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="small"
-                  disabled={!editable}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    runToolbarCommand(engine, 'insert.pageBreak');
-                    engine?.focus();
-                  }}
-                  className="text-xs bg-white"
-                >
-                  <span>Ngắt trang</span>
-                </Button>
-              </div>
-            )}
-
-            {tab === 'layout' && (
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                  <span>Hướng giấy:</span>
-                  <select
-                    aria-label="Hướng giấy"
-                    className={selectClass}
-                    disabled={!editable}
-                    value={snapshot?.pageSetup?.orientation ?? 'portrait'}
-                    onChange={(e) => {
-                      engine?.exec({ type: 'setPageSetup', orientation: e.target.value as 'portrait' | 'landscape' });
-                      engine?.focus();
-                    }}
-                  >
-                    <option value="portrait">Trang dọc</option>
-                    <option value="landscape">Trang ngang (Landscape)</option>
-                  </select>
-                </label>
-
-                <Button
-                  variant="outline"
-                  size="small"
-                  disabled={!editable}
-                  onClick={() => {
-                    engine?.exec({
-                      type: 'setPageSetup',
-                      pageWidth: 11906,
-                      pageHeight: 16838,
-                      orientation: 'portrait',
-                    });
-                    engine?.focus();
-                  }}
-                  className="text-xs bg-white"
-                >
-                  <span>Khổ A4 chuẩn</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="small"
-                  disabled={!editable}
-                  onClick={() => {
-                    engine?.exec({
-                      type: 'setPageSetup',
-                      marginTop: 1440,
-                      marginRight: 1440,
-                      marginBottom: 1440,
-                      marginLeft: 1440,
-                    });
-                    engine?.focus();
-                  }}
-                  className="text-xs bg-white"
-                >
-                  <span>Lề đều 2,54 cm</span>
+                  <ChatCircleDots size={16} weight="bold" />
+                  <span>Thêm bình luận</span>
                 </Button>
               </div>
             )}
@@ -655,7 +658,7 @@ export default function DocxOnlineEditor({
       {snapshot?.hasReviewContent && (
         <div className="flex shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-900">
           <Info size={16} weight="bold" className="shrink-0 text-amber-700" />
-          <p>Tài liệu có bình luận hoặc theo dõi thay đổi. Để đọc đầy đủ các bình luận gốc, bạn có thể tải về và mở bằng Word.</p>
+          <p>Tài liệu có bình luận hoặc theo dõi thay đổi. Nội dung bình luận xem ở bảng “Bình luận”; vị trí đánh dấu và theo dõi thay đổi xem đầy đủ khi tải về mở bằng Word.</p>
         </div>
       )}
 
@@ -730,10 +733,10 @@ export default function DocxOnlineEditor({
         </main>
 
         {/* Collapsible Reference Side Drawer */}
-        {referenceData && referenceData.length > 0 && showReferenceDrawer && (
+        {referenceData && referenceData.length > 0 && panel === 'reference' && (
           <aside
             aria-label="Thông tin đối chiếu của hồ sơ"
-            className="w-80 shrink-0 border-l border-slate-300 bg-white shadow-xl flex flex-col min-h-0 z-20 animate-in slide-in-from-right duration-200"
+            className={sidePanelClass}
           >
             <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4 bg-slate-50">
               <div className="flex items-center gap-2">
@@ -742,7 +745,7 @@ export default function DocxOnlineEditor({
               </div>
               <button
                 type="button"
-                onClick={() => setShowReferenceDrawer(false)}
+                onClick={() => setPanel(null)}
                 className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200"
                 aria-label="Đóng bảng đối chiếu"
               >
@@ -757,7 +760,7 @@ export default function DocxOnlineEditor({
                   <span>Hướng dẫn tiền kiểm:</span>
                 </p>
                 <p className="leading-relaxed">
-                  Đối chiếu từng thông tin của người gửi bên dưới với các trường trong tờ khai Word. Nếu phát hiện thông tin sai lệch, hãy sửa hoặc bôi màu ghi chú trước khi lưu.
+                  Đối chiếu từng thông tin của người gửi bên dưới với các trường trong tờ khai Word. Nếu phát hiện thông tin sai lệch, hãy sửa hoặc thêm bình luận trước khi lưu.
                 </p>
               </div>
 
@@ -776,6 +779,132 @@ export default function DocxOnlineEditor({
             </div>
           </aside>
         )}
+
+        {/* Bảng bình luận Word: cán bộ thêm nhận xét, người dân đọc ghi chú của cán bộ */}
+        {panel === 'comments' && (
+          <aside aria-label="Bình luận trên tờ khai" className={sidePanelClass}>
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-4">
+              <div className="flex items-center gap-2">
+                <ChatCircleText size={18} weight="bold" className="text-red-800" />
+                <h3 className="text-xs font-bold text-slate-900 sm:text-sm">Bình luận ({commentCount})</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPanel(null)}
+                className="grid size-9 place-items-center rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800"
+                aria-label="Đóng bảng bình luận"
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 text-xs sm:text-sm">
+              <p className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 leading-relaxed text-amber-900">
+                {canComment
+                  ? 'Bôi đen đoạn cần nhận xét trong tờ khai rồi bấm “Thêm bình luận”. Bình luận chỉ được ghi vào tệp khi bấm lưu. Bình luận Word không thay cho nhận xét yêu cầu bổ sung của hồ sơ.'
+                  : 'Đây là ghi chú của cán bộ trên tờ khai, giúp bạn biết chỗ cần kiểm tra lại. Tải tệp về và mở bằng Word để thấy vị trí đánh dấu.'}
+              </p>
+
+              {composer && (
+                <form
+                  className="space-y-2 rounded-xl border border-red-200 bg-red-50/40 p-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    addDraft();
+                  }}
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Đoạn được chọn</p>
+                  <blockquote className="line-clamp-4 whitespace-pre-wrap wrap-break-word border-l-2 border-red-300 pl-2 italic text-slate-700">{composer.quote}</blockquote>
+                  <label className="block space-y-1 font-semibold text-slate-800">
+                    <span>Nội dung bình luận</span>
+                    <textarea
+                      autoFocus
+                      rows={4}
+                      maxLength={MAX_COMMENT_LENGTH}
+                      value={composerText}
+                      aria-invalid={Boolean(composerError)}
+                      aria-describedby={composerError ? 'docx-comment-error' : undefined}
+                      onChange={(e) => {
+                        setComposerText(e.target.value);
+                        setComposerError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.stopPropagation();
+                          setComposer(undefined);
+                        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          addDraft();
+                        }
+                      }}
+                      placeholder="Ví dụ: Chưa điền họ tên người làm đơn."
+                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100"
+                    />
+                  </label>
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                    <span>{composerText.trim().length}/{MAX_COMMENT_LENGTH} · Ctrl + Enter để thêm</span>
+                  </div>
+                  {composerError && <p id="docx-comment-error" role="alert" className="text-xs font-medium text-red-700">{composerError}</p>}
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" size="small" variant="ghost" onClick={() => setComposer(undefined)}>Hủy</Button>
+                    <Button type="submit" size="small" variant="primary">Thêm vào tờ khai</Button>
+                  </div>
+                </form>
+              )}
+
+              {!composer && commentCount === 0 && (
+                <p className="py-6 text-center text-slate-500">Chưa có bình luận nào trên tờ khai.</p>
+              )}
+
+              <ul className="space-y-3">
+                {drafts.map((draft) => (
+                  <li key={draft.key} className="space-y-2 rounded-xl border border-dashed border-amber-300 bg-white p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-red-100 text-[11px] font-bold text-red-800">
+                          {author.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join('').toLocaleUpperCase('vi')}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-900">{author}</p>
+                          <span className="inline-flex rounded-full bg-amber-100 px-2 text-[11px] font-semibold text-amber-900">Chưa lưu</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setDrafts((current) => current.filter((item) => item.key !== draft.key))}
+                        className="grid size-9 shrink-0 place-items-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800"
+                        aria-label={`Xóa bình luận chưa lưu: ${draft.text.slice(0, 40)}`}
+                        title="Xóa bình luận chưa lưu"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                    <blockquote className="line-clamp-3 whitespace-pre-wrap wrap-break-word border-l-2 border-slate-300 pl-2 italic text-slate-600">{draft.quote}</blockquote>
+                    <p className="whitespace-pre-wrap wrap-break-word text-slate-900">{draft.text}</p>
+                  </li>
+                ))}
+                {comments.map((comment) => (
+                  <li key={comment.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-700">
+                        {comment.initials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900">{comment.author}</p>
+                        {comment.date && <p className="text-[11px] text-slate-500">{formatDateTime(comment.date)}</p>}
+                      </div>
+                    </div>
+                    {comment.quote && (
+                      <blockquote className="line-clamp-3 whitespace-pre-wrap wrap-break-word border-l-2 border-slate-300 pl-2 italic text-slate-600">{comment.quote}</blockquote>
+                    )}
+                    <p className="whitespace-pre-wrap wrap-break-word text-slate-900">{comment.text || '(Bình luận trống)'}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* ======================================================== */}
@@ -787,7 +916,7 @@ export default function DocxOnlineEditor({
             Trang {snapshot?.page.current ?? 0} / {snapshot?.page.total ?? 0}
           </span>
           <span className="text-slate-300" aria-hidden="true">|</span>
-          <span>{readOnly ? 'Chế độ: Chỉ đọc' : 'Chế độ: Soạn thảo & Chú thích trực tuyến'}</span>
+          <span>{readOnly ? 'Chế độ: Chỉ đọc' : canComment ? 'Chế độ: Soạn thảo & Bình luận trực tuyến' : 'Chế độ: Soạn thảo trực tuyến'}</span>
         </div>
 
         <div className="flex items-center gap-3">

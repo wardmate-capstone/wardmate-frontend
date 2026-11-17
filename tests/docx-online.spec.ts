@@ -56,7 +56,7 @@ async function setup(page: Page, actor: 'citizen' | 'officer' = 'citizen') {
     await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
     await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
     await page.getByRole('button', { name: 'Tờ khai & giấy tờ', exact: true }).click();
-    await page.getByRole('button', { name: 'Chỉnh sửa trực tuyến: to-khai.docx', exact: true }).click();
+    await page.getByRole('button', { name: 'Chú thích & nhận xét Word', exact: true }).click();
   }
   const editor = page.getByRole('dialog').filter({ has: page.getByRole('toolbar', { name: 'Định dạng văn bản' }) });
   await expect(editor.getByRole('button', { name: 'Lưu vào hồ sơ', exact: true })).toBeEnabled({ timeout: 30000 });
