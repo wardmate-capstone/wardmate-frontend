@@ -21,12 +21,13 @@ import { useOfficerSubmissions } from '@/hooks/useDocumentForms';
 import { documentFormError } from '@/lib/api/documentForms';
 import { aiOcrApi, getAiRetryAfterSeconds, type DossierAssistResultDto } from '@/lib/api/aiOcr';
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
+import type { CommentDto } from '@/lib/api/workflow';
+import { QUICK_COMMENT_TEMPLATES, TargetComments } from './TargetComments';
 import {
   ArrowLeft,
   ArrowsClockwise,
   ChatCircleDots,
   CheckCircle,
-  Clock,
   ClockCounterClockwise,
   FileText,
   GitDiff,
@@ -49,18 +50,14 @@ const commentSchema = z.object({
   commentText: z.string().trim().min(1, 'Nhập nội dung nhận xét.').max(4000, 'Nhận xét tối đa 4.000 ký tự.'),
 });
 
+// Khóa trong formData do hệ thống tự ghi (không phải công dân khai) — không làm mục nhận xét
+const SYSTEM_FORM_KEYS = new Set(['procedureCode', 'procedureTitle']);
+
 const reasonSchema = z.object({
   reason: z.string().trim().min(1, 'Nhập lý do.').max(4000, 'Lý do tối đa 4.000 ký tự.'),
 });
 
 type Tab = 'consultations' | 'info' | 'documents' | 'comments' | 'versions' | 'timeline' | 'pdf';
-
-const QUICK_COMMENT_TEMPLATES = [
-  'Ảnh chụp/bản scan chưa rõ nét, vui lòng chụp lại góc thẳng đủ 4 góc.',
-  'Cần ký và ghi rõ họ tên người làm đơn ở trang cuối.',
-  'Thông tin họ tên hoặc ngày sinh chưa khớp chính xác với CCCD.',
-  'Vui lòng tải lại bản chính hoặc bản sao có chứng thực theo đúng quy định.',
-];
 
 const QUICK_REVISION_TEMPLATES = [
   'Ảnh chụp/bản scan giấy tờ bị mờ, lóa hoặc mất góc, không đối chiếu được thông tin.',
@@ -84,12 +81,26 @@ export function OfficerReviewWorkspaceView({
   const version = detail.data?.currentVersionNumber ?? application.currentVersion;
   const comments = useApplicationComments(application.id, version);
   const submissions = useOfficerSubmissions(application.id);
-  const [submissionId, setSubmissionId] = useState('');
   const [tab, setTab] = useState<Tab>('info');
-  const versions = useApplicationVersions(application.id, tab === 'versions');
+  // Trường tờ khai đang mở ô nhập nhận xét tại chỗ (tab Thông tin người gửi)
+  const [commentingField, setCommentingField] = useState<string>();
+  const [scrollTarget, setScrollTarget] = useState<string>();
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`comment-target-${scrollTarget}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setScrollTarget(undefined);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [scrollTarget, tab]);
+  const versions = useApplicationVersions(application.id, tab === 'versions' || (tab === 'documents' && version > 1));
   const [from, setFrom] = useState(1);
   const [to, setTo] = useState(application.currentVersion);
   const diff = useApplicationDiff(application.id, from, to, tab === 'versions');
+  // Nhận xét cán bộ đã ghi ở lần gửi trước (versionNumber = 0 thì hook không gọi API)
+  const previousComments = useApplicationComments(application.id, tab === 'versions' && from < to ? from : 0);
+  // Thời điểm công dân gửi lần trước: tờ khai gửi sau mốc này được đánh dấu "Mới cập nhật"
+  const previousSubmittedAt = version > 1 ? versions.data?.find(x => x.versionNumber === version - 1)?.submittedAt : undefined;
   const snapshotDiff = compareSubmissionSnapshots(versions.data?.find(item => item.versionNumber === from)?.snapshotData, versions.data?.find(item => item.versionNumber === to)?.snapshotData);
   const comparedFields = snapshotDiff ?? diff.data;
   const isRefreshing = detail.isFetching || comments.isFetching || submissions.isFetching;
@@ -105,7 +116,6 @@ export function OfficerReviewWorkspaceView({
   const [decision, setDecision] = useState<'ready' | 'revision'>();
   const [decisionContext, setDecisionContext] = useState<{ version: number; hadSubmissions: boolean }>();
   const [decisionWarning, setDecisionWarning] = useState('');
-  const [selectionError, setSelectionError] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
@@ -116,12 +126,12 @@ export function OfficerReviewWorkspaceView({
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
   const decisionLock = useRef(false);
   const commentLock = useRef(false);
-  const submissionSelect = useRef<HTMLSelectElement>(null);
 
   const commentForm = useForm<z.infer<typeof commentSchema>>({
     resolver: zodResolver(commentSchema),
     defaultValues: { targetId: '', commentText: '' },
   });
+  const [targetKindPref, setTargetKindPref] = useState<'CHECKLIST_ITEM' | 'FORM_FIELD'>('CHECKLIST_ITEM');
 
   const reasonForm = useForm<z.infer<typeof reasonSchema>>({
     resolver: zodResolver(reasonSchema),
@@ -156,39 +166,83 @@ export function OfficerReviewWorkspaceView({
 
   const targets = [
     ...checklists.map(x => ({ id: x.id, label: x.title || x.code || 'Giấy tờ', type: 'CHECKLIST_ITEM' as const })),
-    ...fields.map(x => ({ id: x.key, label: x.label, type: 'FORM_FIELD' as const })),
+    ...fields
+      // Mã/tên thủ tục do hệ thống tự gắn khi công dân chọn thủ tục, công dân không sửa được nên không cho nhận xét
+      .filter(x => !SYSTEM_FORM_KEYS.has(x.key.split('/').pop() ?? ''))
+      .map(x => ({ id: x.key, label: x.label, type: 'FORM_FIELD' as const })),
   ];
+  // Loại mục nhận xét: nếu mục đã được chọn (kể cả chọn từ nút "Nhận xét" ở tab khác) thì theo loại của mục đó
+  const selectedTargetId = commentForm.watch('targetId');
+  const selectedTargetType = targets.find(x => x.id === selectedTargetId)?.type;
+  const targetKind = selectedTargetType
+    ?? (targets.some(x => x.type === targetKindPref) ? targetKindPref : targetKindPref === 'CHECKLIST_ITEM' ? 'FORM_FIELD' : 'CHECKLIST_ITEM');
+  const targetKinds = [
+    { id: 'CHECKLIST_ITEM' as const, label: 'Giấy tờ', count: checklists.length },
+    { id: 'FORM_FIELD' as const, label: 'Thông tin tờ khai', count: targets.filter(x => x.type === 'FORM_FIELD').length },
+  ];
+
+  // Nhận xét ngay tại từng mục (tab Thông tin người gửi và tab Tờ khai & giấy tờ)
+  const commentsFor = (targetId: string) =>
+    comments.data?.filter(x => x.versionNumber === version && x.targetId === targetId) ?? [];
+  const openCountFor = (targetId: string) => commentsFor(targetId).filter(x => x.status === 'OPEN').length;
+  const saveTargetComment = (targetId: string) => async (text: string): Promise<string | undefined> => {
+    if (commentLock.current || !editable) return 'Hồ sơ hiện không cho phép thêm nhận xét.';
+    const target = targets.find(x => x.id === targetId);
+    if (!target || !target.label.trim() || target.label.length > 255) return 'Mục không còn trong hồ sơ hiện tại. Vui lòng tải lại hồ sơ.';
+    commentLock.current = true;
+    try {
+      await addComment.mutateAsync({
+        id: application.id,
+        input: { versionNumber: version, targetType: target.type, targetId: target.id, fieldLabel: target.label, commentText: text },
+      });
+      setDecisionWarning('');
+      return undefined;
+    } catch (error) {
+      return workflowError(error);
+    } finally {
+      commentLock.current = false;
+    }
+  };
+  const startWithdraw = (x: CommentDto) => {
+    setWithdrawingComment({ id: x.id, fieldLabel: x.fieldLabel, commentText: x.commentText });
+    setWithdrawReason('');
+    setWithdrawError('');
+  };
+  // Từ tab Nhận xét: nhảy tới đúng mục đang được nhận xét
+  const goToTarget = (targetId?: string | null, targetType?: string | null) => {
+    if (!targetId) return;
+    setTab(targetType === 'CHECKLIST_ITEM' ? 'documents' : 'info');
+    setScrollTarget(targetId);
+  };
 
   const mandatoryChecklists = checklists.filter(x => x.isRequired);
   const completedMandatoryCount = mandatoryChecklists.filter(x => x.status === 'COMPLETED').length;
   const isAllMandatoryCompleted = mandatoryChecklists.length > 0 && completedMandatoryCount === mandatoryChecklists.length;
 
   const tabs: { id: Tab; label: string; count?: number; icon: React.ReactNode }[] = [
-    { id: 'info', label: 'Thông tin & giấy tờ', count: checklists.length, icon: <FileText className="h-4 w-4" /> },
+    { id: 'info', label: 'Người gửi', icon: <FileText className="h-4 w-4" /> },
     { id: 'documents', label: 'Tờ khai & giấy tờ', count: submissions.data?.length, icon: <ListChecks className="h-4 w-4" /> },
-    { id: 'comments', label: `Nhận xét (${openComments.length} đang mở)`, count: openComments.length, icon: <Warning className="h-4 w-4" /> },
-    { id: 'versions', label: 'So sánh các lần gửi', icon: <GitDiff className="h-4 w-4" /> },
-    ...(user?.permissions.includes('workflow.consultation.read') ? [{ id: 'consultations' as const, label: 'Tham vấn chuyên môn', icon: <FileText className="h-4 w-4" /> }] : []),
+    { id: 'comments', label: openComments.length ? `Nhận xét (${openComments.length})` : 'Nhận xét', count: openComments.length, icon: <Warning className="h-4 w-4" /> },
+    { id: 'versions', label: 'So sánh lần gửi', icon: <GitDiff className="h-4 w-4" /> },
+    ...(user?.permissions.includes('workflow.consultation.read') ? [{ id: 'consultations' as const, label: 'Tham vấn', icon: <FileText className="h-4 w-4" /> }] : []),
     { id: 'timeline', label: 'Lịch sử', icon: <ClockCounterClockwise className="h-4 w-4" /> },
-    { id: 'pdf', label: 'PDF sau tiền kiểm', icon: <ShieldCheck className="h-4 w-4" /> },
+    { id: 'pdf', label: 'PDF tiền kiểm', icon: <ShieldCheck className="h-4 w-4" /> },
   ];
 
   function openDecision(next: 'ready' | 'revision') {
     if (commentForm.formState.isDirty) {
-      setDecisionWarning('Bạn có nhận xét chưa lưu. Hãy lưu hoặc xóa nội dung đang nhập trước khi gửi quyết định.');
+      setDecisionWarning('Còn nhận xét chưa lưu. Lưu hoặc xóa trước khi gửi quyết định.');
       setTab('comments');
       return;
     }
     // Chặn sớm: yêu cầu bổ sung phải dựa trên nhận xét cụ thể để công dân biết cần sửa gì.
     if (next === 'revision' && comments.isSuccess && openComments.length === 0) {
-      setDecisionWarning(`Bạn chưa ghi nhận xét nào cho lần gửi này. Hãy ghi rõ điểm công dân cần sửa ở mục “Thêm nhận xét mới” bên dưới, bấm Lưu nhận xét, rồi bấm lại Yêu cầu bổ sung.`);
+      setDecisionWarning(`Chưa có nhận xét nào. Ghi nhận xét ở mục cần sửa trước khi yêu cầu bổ sung.`);
       setTab('comments');
       return;
     }
     setDecisionWarning('');
     setActionError('');
-    setSelectionError('');
-    setSubmissionId(submissions.data?.[0]?.id ?? '');
     setDecisionContext({ version, hadSubmissions: Boolean(submissions.data?.length) });
     reasonForm.reset({ reason: '' });
     setDecision(next);
@@ -281,7 +335,6 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
     decisionLock.current = true;
     setBusy(true);
     setActionError('');
-    setSelectionError('');
     try {
       const current = await detail.refetch();
       if (current.isError) throw current.error;
@@ -305,19 +358,17 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         setActionError('Danh sách tờ khai đã thay đổi. Đóng hộp thoại và kiểm tra lại hồ sơ.');
         return;
       }
-      if (
-        linked.length &&
-        !linked.some(
-          x =>
-            x.id === submissionId &&
-            x.applicationId === application.id &&
-            x.applicantId === currentApplication.userId &&
-            // Giấy tờ gắn nhiều mẫu (BE-H forms[]): tờ khai theo mẫu nào trong số đó cũng hợp lệ
-            currentApplication.checklists?.some(item => item.id === x.checklistId && (item.formTemplateId === x.templateId || item.forms?.some(f => f.formTemplateId === x.templateId))),
-        )
-      ) {
-        setSelectionError('Chọn tờ khai liên kết đúng mục giấy tờ của hồ sơ hiện tại.');
-        submissionSelect.current?.focus();
+      // Quyết định áp dụng cho cả hồ sơ: BE chỉ dùng tờ khai để tìm hồ sơ rồi gọi Workflow, và tự đồng bộ
+      // mọi tờ khai của hồ sơ. Vì vậy FE tự chọn một tờ khai hợp lệ, cán bộ không cần chọn.
+      const linkedSubmission = linked.find(
+        x =>
+          x.applicationId === application.id &&
+          x.applicantId === currentApplication.userId &&
+          // Giấy tờ gắn nhiều mẫu (BE-H forms[]): tờ khai theo mẫu nào trong số đó cũng hợp lệ
+          currentApplication.checklists?.some(item => item.id === x.checklistId && (item.formTemplateId === x.templateId || item.forms?.some(f => f.formTemplateId === x.templateId))),
+      );
+      if (linked.length && !linkedSubmission) {
+        setActionError('Tờ khai của hồ sơ không còn khớp danh mục giấy tờ hiện tại. Đóng hộp thoại và tải lại hồ sơ.');
         return;
       }
       const latest = await comments.refetch();
@@ -328,14 +379,14 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         return;
       }
       if (decision === 'ready' && currentApplication.checklists?.some(x => x.isRequired && x.status !== 'COMPLETED')) {
-        setActionError('Còn giấy tờ bắt buộc chưa hoàn tất. Vui lòng kiểm tra tab Thông tin & giấy tờ.');
+        setActionError('Còn giấy tờ bắt buộc chưa hoàn tất. Vui lòng kiểm tra tab Tờ khai & giấy tờ.');
         return;
       }
       if (decision === 'revision' && !open.length) {
         setActionError(`Chưa có nhận xét nào về điểm cần sửa. Hãy đóng hộp thoại, ghi và lưu nhận xét ở tab Nhận xét, rồi thử lại.`);
         return;
       }
-      const selectedId = linked.length ? submissionId : undefined;
+      const selectedId = linkedSubmission?.id;
       if (decision === 'ready') await onConfirmReadiness(application.id, selectedId);
       else await onRequestRevision(application.id, reasonForm.getValues('reason').trim(), open.map(x => x.commentText || ''), selectedId);
       // Đóng hộp thoại ngay khi BE xác nhận; không chờ tải lại (Azure mất vài giây) để tránh tưởng bị treo.
@@ -469,25 +520,25 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div className="rounded-xl bg-slate-50 p-3">
               <span className="text-xs font-medium text-slate-500">Giấy tờ bắt buộc</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {completedMandatoryCount} / {mandatoryChecklists.length} mục hoàn tất
+                {completedMandatoryCount}/{mandatoryChecklists.length} hoàn tất
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <span className="text-xs font-medium text-slate-500">Nhận xét đang mở</span>
               <p className={`mt-1 text-sm font-bold ${openComments.length ? 'text-amber-700' : 'text-slate-800'}`}>
-                {openComments.length} nhận xét cần sửa
+                {openComments.length}
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <span className="text-xs font-medium text-slate-500">Tờ khai Word</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {submissions.data?.length ?? 0} tờ khai liên kết
+                {submissions.data?.length ?? 0}
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
-              <span className="text-xs font-medium text-slate-500">Thẩm quyền xử lý</span>
+              <span className="text-xs font-medium text-slate-500">Quyền xử lý</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {editable ? 'Đang được phân công' : 'Chế độ chỉ xem'}
+                {editable ? 'Bạn đang thụ lý' : 'Chỉ xem'}
               </p>
             </div>
           </div>
@@ -502,7 +553,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
           {!editable && detail.isSuccess && (
             <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-              Chỉ cán bộ được phân công mới được ghi nhận xét khi hồ sơ đang kiểm tra. Hồ sơ ở trạng thái khác chỉ được xem.
+              Chế độ chỉ xem: chỉ cán bộ thụ lý được nhận xét khi hồ sơ đang kiểm tra.
             </p>
           )}
 
@@ -541,108 +592,60 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
 
       {/* 2. Main Workspace Body */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        {/* Tab 1: Info & Checklist */}
+        {/* Tab 1: Thông tin người gửi (danh mục giấy tờ nằm ở tab Tờ khai & giấy tờ) */}
         {tab === 'info' && (
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900">Thông tin người gửi</h3>
-              <p className="mt-0.5 text-xs text-slate-500">Thông tin kê khai chưa phải xác minh danh tính hay xác nhận đủ điều kiện pháp lý.</p>
+              <p className="mt-0.5 text-xs text-slate-500">Công dân tự kê khai, chưa được xác minh.</p>
               <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {fields.map(x => (
-                  <div key={x.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 transition hover:bg-slate-50">
-                    <dt className="text-xs font-medium text-slate-500">{x.label}</dt>
-                    <dd className="mt-1 break-words text-sm font-semibold text-slate-800">
-                      {x.value || 'Chưa có thông tin'}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <div className="border-t border-slate-100 pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Danh mục giấy tờ</h3>
-                  <p className="mt-0.5 text-xs text-slate-500">Danh mục giấy tờ và tài liệu công dân cần cung cấp.</p>
-                </div>
-                <span className="text-xs font-semibold text-slate-500">
-                  {completedMandatoryCount}/{mandatoryChecklists.length} mục bắt buộc
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {checklists.map(x => {
-                  const completed = x.status === 'COMPLETED';
+                {fields.map(x => {
+                  const commentable = targets.some(t => t.id === x.key);
+                  const openCount = openCountFor(x.key);
+                  const composing = commentingField === x.key;
                   return (
                     <div
-                      key={x.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50/50"
+                      key={x.key}
+                      id={`comment-target-${x.key}`}
+                      className={`space-y-2 rounded-xl border p-3 transition ${openCount ? 'border-amber-200 bg-amber-50/30' : 'border-slate-100 bg-slate-50/80 hover:bg-slate-50'} ${composing ? 'sm:col-span-2 lg:col-span-3' : ''}`}
                     >
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <span
-                          className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
-                            completed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {completed ? <CheckCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                        </span>
+                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="font-semibold text-slate-800 break-words">{x.title || x.code}</h4>
-                            <Badge variant={x.isRequired ? 'danger' : 'neutral'} className="text-[10px] px-2">
-                              {x.isRequired ? 'Bắt buộc' : 'Tùy chọn'}
-                            </Badge>
-                          </div>
-                          <p className="mt-0.5 text-xs text-slate-500">
-                            {checklistQuantityLabel(x)} · {completed ? 'Công dân đã chuẩn bị' : 'Chưa hoàn tất'}
-                          </p>
-                          {(x.conditionNote || x.itemNote) && (
-                            <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-600">
-                              {[x.conditionNote, x.itemNote !== x.conditionNote ? x.itemNote : null].filter(Boolean).join('\n')}
-                            </p>
-                          )}
-                          {(x.forms?.length ?? 0) > 0 && (
-                            <p className="mt-1 text-xs text-slate-600">
-                              <span className="font-semibold text-slate-700">
-                                {x.forms!.length > 1 ? 'Mẫu đơn (điền một trong các mẫu): ' : 'Mẫu đơn: '}
-                              </span>
-                              {x.forms!.map(f => f.formName || f.formCode).join('; ')}
-                            </p>
-                          )}
+                          <dt className="text-xs font-medium text-slate-500">{x.label}</dt>
+                          <dd className="mt-1 break-words text-sm font-semibold text-slate-800">
+                            {x.value || 'Chưa có thông tin'}
+                          </dd>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {completed && canVerifyAi && (
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            onClick={() => setTab('documents')}
-                            className="gap-1.5 text-xs font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50"
-                            title="Mở tab tài liệu để xem tệp và đối chiếu bằng AI"
+                        {commentable && editable && !composing && (
+                          <button
+                            type="button"
+                            title="Nhận xét trường này"
+                            aria-label={`Nhận xét: ${x.label}`}
+                            onClick={() => setCommentingField(x.key)}
+                            className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800"
                           >
-                            <Sparkle className="h-3.5 w-3.5 text-purple-600" />
-                            <span>Tài liệu & AI</span>
-                          </Button>
+                            <ChatCircleDots className="h-4 w-4" />
+                          </button>
                         )}
-                        <Button
-                          size="small"
-                          variant="outline"
-                          disabled={!editable}
-                          onClick={() => {
-                            commentForm.setValue('targetId', x.id);
-                            setTab('comments');
-                          }}
-                          className="gap-1.5"
-                        >
-                          <Warning className="h-3.5 w-3.5 text-amber-600" />
-                          Nhận xét
-                        </Button>
                       </div>
+                      {commentable && (
+                        <dd>
+                          <TargetComments
+                            idPrefix={`field-${x.key.replace(/[^a-zA-Z0-9_-]/g, '_')}`}
+                            label={x.label}
+                            comments={commentsFor(x.key)}
+                            editable={editable && !busy}
+                            composerOpen={composing}
+                            onCloseComposer={() => setCommentingField(undefined)}
+                            onSave={saveTargetComment(x.key)}
+                            onWithdraw={startWithdraw}
+                          />
+                        </dd>
+                      )}
                     </div>
                   );
                 })}
-              </div>
+              </dl>
             </div>
           </div>
         )}
@@ -676,7 +679,32 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 commentForm.setValue('targetId', id);
                 setTab('comments');
               }}
+              renderTargetComments={(id, title, composerOpen, close) => (
+                <TargetComments
+                  idPrefix={`checklist-${id}`}
+                  label={title}
+                  comments={commentsFor(id)}
+                  editable={editable && !busy}
+                  composerOpen={composerOpen}
+                  onCloseComposer={close}
+                  onSave={saveTargetComment(id)}
+                  onWithdraw={startWithdraw}
+                />
+              )}
+              openCommentCount={openCountFor}
+              updatedSince={previousSubmittedAt}
+              previousVersion={version > 1 ? version - 1 : undefined}
               referenceData={fields.map(f => ({ label: f.label, value: String(f.value || 'Chưa có thông tin') }))}
+              checklists={checklists.map(x => ({
+                id: x.id,
+                title: x.title || x.code || 'Giấy tờ',
+                isRequired: x.isRequired,
+                completed: x.status === 'COMPLETED',
+                meta: checklistQuantityLabel(x),
+                // Ghi chú điều kiện + mẫu đơn trước đây hiện ở tab Thông tin, nay chuyển sang đây
+                note: [x.conditionNote, x.itemNote !== x.conditionNote ? x.itemNote : null].filter(Boolean).join('\n') || undefined,
+                forms: x.forms?.map(f => f.formName || f.formCode).filter(Boolean) as string[] | undefined,
+              }))}
             />
           </div>
         )}
@@ -690,9 +718,6 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   <h3 className="text-lg font-bold text-slate-900">
                     Nhận xét trên phiên bản {version}
                   </h3>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Các nhận xét cần công dân lưu ý chỉnh sửa trước khi hồ sơ sẵn sàng.
-                  </p>
                 </div>
                 <Badge variant={openComments.length ? 'warning' : 'success'} className="px-2.5 text-xs">
                   {openComments.length} nhận xét đang mở
@@ -725,7 +750,18 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-900">{humanizeFieldName(x.fieldLabel || 'Nhận xét')}</span>
+                        <span className="min-w-0 font-semibold text-slate-900">
+                          {humanizeFieldName(x.fieldLabel || 'Nhận xét')}
+                          {x.targetId && targets.some(t => t.id === x.targetId) && (
+                            <button
+                              type="button"
+                              onClick={() => goToTarget(x.targetId, x.targetType)}
+                              className="ml-2 text-xs font-semibold text-red-800 hover:underline"
+                            >
+                              Xem tại mục →
+                            </button>
+                          )}
+                        </span>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant={isWithdrawn ? 'neutral' : isOpen ? 'warning' : 'success'}
@@ -738,15 +774,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                               size="small"
                               variant="dangerGhost"
                               className="h-6 min-h-0 px-2 text-xs"
-                              onClick={() => {
-                                setWithdrawingComment({
-                                  id: x.id,
-                                  fieldLabel: x.fieldLabel,
-                                  commentText: x.commentText,
-                                });
-                                setWithdrawReason('');
-                                setWithdrawError('');
-                              }}
+                              onClick={() => startWithdraw(x)}
                             >
                               Rút nhận xét
                             </Button>
@@ -780,7 +808,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   className="mt-4 rounded-xl border border-dashed border-slate-200 py-6"
                   icon={ChatCircleDots}
                   title="Chưa có nhận xét trên phiên bản này"
-                  description="Nếu hồ sơ đủ điều kiện, bạn có thể chuyển sang xác nhận giấy tờ sẵn sàng."
+                  description="Hồ sơ đủ điều kiện thì có thể xác nhận sẵn sàng."
                 />
               )}
             </div>
@@ -824,14 +852,44 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 }
               })}
             >
-              <h4 className="font-bold text-slate-900">Thêm nhận xét mới</h4>
+              <div>
+                <h4 className="font-bold text-slate-900">Thêm nhận xét mới</h4>
+                <p className="mt-0.5 text-xs text-slate-500">Có thể nhận xét ngay tại từng mục ở tab Người gửi và Tờ khai & giấy tờ.</p>
+              </div>
+
+              {/* Chọn loại mục trước: giấy tờ trong danh mục hoặc trường thông tin trên tờ khai */}
+              <div className="grid gap-1.5">
+                <span id="comment-target-kind" className="text-sm font-semibold">Nhận xét về</span>
+                <div role="radiogroup" aria-labelledby="comment-target-kind" className="inline-flex w-fit rounded-xl border border-slate-200 bg-slate-100 p-1">
+                  {targetKinds.map(kind => (
+                    <button
+                      key={kind.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={targetKind === kind.id}
+                      disabled={!editable || addComment.isPending || kind.count === 0}
+                      onClick={() => {
+                        if (targetKind === kind.id) return;
+                        setTargetKindPref(kind.id);
+                        // Đổi loại thì bỏ mục đang chọn của loại cũ
+                        if (selectedTargetType) commentForm.setValue('targetId', '', { shouldValidate: false });
+                      }}
+                      className="min-h-9 rounded-lg px-3.5 text-sm font-semibold text-slate-600 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 aria-checked:bg-white aria-checked:text-red-800 aria-checked:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-1"
+                    >
+                      {kind.label} <span className="font-normal text-slate-500">({kind.count})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <label className="grid gap-1.5 text-sm font-semibold" htmlFor="comment-target">
                 Mục cần nhận xét
                 <Controller control={commentForm.control} name="targetId" render={({ field, fieldState }) => (
                   <ListSelect id="comment-target" value={field.value} onChange={field.onChange} onBlur={field.onBlur}
                     disabled={!editable || addComment.isPending} invalid={Boolean(fieldState.error)} describedBy="comment-target-error"
-                    searchable placeholder="Chọn mục cần nhận xét" options={targets.map(item => ({ value: item.id, label: item.label }))} />
+                    searchable
+                    placeholder={targetKind === 'CHECKLIST_ITEM' ? 'Chọn giấy tờ cần nhận xét' : 'Chọn thông tin tờ khai cần nhận xét'}
+                    options={targets.filter(item => item.type === targetKind).map(item => ({ value: item.id, label: item.label }))} />
                 )} />
               </label>
               <p id="comment-target-error" role="alert" className="text-xs text-red-700">
@@ -916,9 +974,6 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 )}
               </div>
             </form>
-            <p className="text-xs text-slate-500">
-              Nhận xét cũ được xử lý khi công dân gửi lại hồ sơ. Chưa hỗ trợ xóa hoặc đổi trạng thái nhận xét thủ công.
-            </p>
           </div>
         )}
 
@@ -928,7 +983,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div>
               <h3 className="text-lg font-bold text-slate-900">So sánh các lần gửi</h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                Đối chiếu thông tin và danh mục giấy tờ giữa hai lần gửi. Chưa hỗ trợ mở lại nội dung tệp đính kèm cũ theo phiên bản.
+                Đối chiếu thông tin kê khai và danh mục giấy tờ giữa hai lần gửi.
               </p>
             </div>
 
@@ -966,7 +1021,17 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <p role="alert" className="text-sm text-red-700">{workflowError(diff.error)}</p>
             ) : (
               <div className="space-y-3">
-                {comparedFields?.length === 0 && <p role="status" className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Hai lần gửi không có thay đổi về thông tin hoặc danh mục giấy tờ.</p>}
+                {comparedFields?.length === 0 && (
+                  <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                    <p className="min-w-0 flex-1">
+                      Thông tin kê khai không đổi.{' '}
+                      <span className="font-semibold text-slate-800">Nội dung tờ khai Word và giấy tờ chưa được so sánh.</span>
+                    </p>
+                    <Button size="small" variant="outline" className="bg-white" onClick={() => setTab('documents')}>
+                      Xem tờ khai & giấy tờ
+                    </Button>
+                  </div>
+                )}
                 {comparedFields?.map((x, i) => (
                   <div key={i} className="rounded-xl border border-slate-200 p-4">
                     <div className="flex items-center justify-between">
@@ -989,6 +1054,53 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 ))}
               </div>
             )}
+
+            {/* Nhận xét ở lần gửi trước: để cán bộ đối chiếu công dân đã sửa các điểm được yêu cầu chưa */}
+            {from < to && (
+              <div className="space-y-3 border-t border-slate-100 pt-5">
+                <div>
+                  <h4 className="font-bold text-slate-900">Nhận xét ở lần gửi {from}</h4>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    “Đã xử lý” là công dân đã gửi lại, chưa chắc đã sửa đúng.
+                  </p>
+                </div>
+                {previousComments.isPending && <Skeleton className="h-14 w-full rounded-xl" />}
+                {previousComments.isError && (
+                  <ErrorAlert retryLabel="Thử lại" retrying={previousComments.isFetching} onRetry={() => void previousComments.refetch()}>
+                    {workflowError(previousComments.error)}
+                  </ErrorAlert>
+                )}
+                {previousComments.isSuccess && !previousComments.data.filter(x => x.status !== 'WITHDRAWN').length && (
+                  <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Lần gửi {from} không có nhận xét nào.</p>
+                )}
+                {previousComments.data?.filter(x => x.status !== 'WITHDRAWN').map(x => {
+                  const isOpen = x.status === 'OPEN';
+                  return (
+                    <div key={x.id} className={`rounded-xl border p-3 ${isOpen ? 'border-amber-200 bg-amber-50/40' : 'border-slate-200 bg-white'}`}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="min-w-0 text-sm font-semibold text-slate-900">
+                          {humanizeFieldName(x.fieldLabel || 'Nhận xét')}
+                          {x.targetId && targets.some(t => t.id === x.targetId) && (
+                            <button
+                              type="button"
+                              onClick={() => goToTarget(x.targetId, x.targetType)}
+                              className="ml-2 text-xs font-semibold text-red-800 hover:underline"
+                            >
+                              Xem tại mục →
+                            </button>
+                          )}
+                        </span>
+                        <Badge variant={isOpen ? 'warning' : 'success'} className="text-xs">
+                          {isOpen ? 'Còn mở' : 'Đã xử lý'}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{x.commentText}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(x.createdAt)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -997,7 +1109,6 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           <div className="space-y-5">
             <div>
               <h3 className="text-lg font-bold text-slate-900">Lịch sử trạng thái</h3>
-              <p className="mt-0.5 text-xs text-slate-500">Quá trình thụ lý và cập nhật tiến trình hồ sơ.</p>
             </div>
             <div className="space-y-3">
               {detail.data?.history?.map(x => (
@@ -1065,16 +1176,16 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           if (!open && !busy) setDecision(undefined);
         }}
         title={decision === 'ready' ? 'Xác nhận giấy tờ sẵn sàng' : 'Yêu cầu bổ sung hồ sơ'}
-        description="Thao tác áp dụng cho toàn bộ hồ sơ và các tờ khai liên quan. Xác nhận giấy tờ sẵn sàng không phải tiếp nhận chính thức hay quyết định giải quyết thủ tục."
+        description={decision === 'ready'
+          ? 'Áp dụng cho cả hồ sơ. Đây không phải tiếp nhận chính thức.'
+          : 'Hồ sơ được trả về công dân kèm các nhận xét đang mở.'}
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-500">Lần nộp đang kiểm tra: {decisionContext?.version}</p>
-
           {/* Pre-flight Condition Checklist for 'ready' */}
           {decision === 'ready' && (
             <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
               <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Điều kiện để xác nhận
+                Điều kiện
               </span>
               <ul className="space-y-1.5 text-xs">
                 <li className="flex items-center gap-2">
@@ -1084,7 +1195,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     <Warning className="h-4 w-4 shrink-0 text-amber-600" />
                   )}
                   <span className={isAllMandatoryCompleted ? 'text-emerald-900 font-medium' : 'text-amber-900'}>
-                    Giấy tờ bắt buộc: {completedMandatoryCount}/{mandatoryChecklists.length} mục đã hoàn tất
+                    Giấy tờ bắt buộc: {completedMandatoryCount}/{mandatoryChecklists.length}
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
@@ -1094,7 +1205,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     <Warning className="h-4 w-4 shrink-0 text-red-600" />
                   )}
                   <span className={openComments.length === 0 ? 'text-emerald-900 font-medium' : 'text-red-900 font-medium'}>
-                    Nhận xét cần công dân sửa: {openComments.length === 0 ? 'Không còn' : `Còn ${openComments.length} nhận xét chưa sửa`}
+                    Nhận xét đang mở: {openComments.length}
                   </span>
                 </li>
               </ul>
@@ -1115,42 +1226,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             </div>
           )}
 
-          {Boolean(submissions.data?.length) && (
-            <label className="grid gap-1.5 text-sm font-semibold" htmlFor="decision-submission">
-              Tờ khai đang kiểm tra
-              <select
-                ref={submissionSelect}
-                id="decision-submission"
-                className={`${formSelectClass} min-w-0`}
-                disabled={busy}
-                value={submissionId}
-                aria-invalid={Boolean(selectionError)}
-                aria-describedby={selectionError ? 'decision-submission-error' : undefined}
-                onChange={e => {
-                  setSubmissionId(e.target.value);
-                  setSelectionError('');
-                }}
-              >
-                <option value="">Chọn tờ khai</option>
-                {submissions.data?.map(x => (
-                  <option key={x.id} value={x.id}>
-                    {x.fileName}
-                  </option>
-                ))}
-              </select>
-              {selectionError && (
-                <span id="decision-submission-error" role="alert" className="text-xs text-red-700">
-                  {selectionError}
-                </span>
-              )}
-            </label>
-          )}
 
-          {submissions.isSuccess && !submissions.data?.length && (
-            <p className="text-sm text-slate-600">
-              Hồ sơ không có tờ khai điện tử. Thao tác được thực hiện trực tiếp trên hồ sơ.
-            </p>
-          )}
 
           {decision === 'revision' && (
             <div className="space-y-3">
@@ -1163,7 +1239,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   disabled={isGeneratingAiReason || busy}
                   onClick={() => void handleGenerateAiReason()}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors disabled:opacity-50"
-                  title="Dùng AI soạn lý do bổ sung từ các mục giấy tờ chưa đạt"
+                  title="AI soạn lý do từ các mục chưa đạt"
                 >
                   <Sparkle className={`size-3.5 ${isGeneratingAiReason ? 'animate-spin text-purple-600' : ''}`} />
                   <span>{isGeneratingAiReason ? 'Đang tạo văn bản...' : 'AI gợi ý lý do'}</span>
@@ -1191,7 +1267,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 rows={4}
                 maxLength={4000}
                 disabled={busy}
-                placeholder="Nhập chi tiết các nội dung công dân cần chỉnh sửa, bổ sung..."
+                placeholder="Nội dung công dân cần bổ sung…"
                 {...reasonForm.register('reason')}
                 className={textareaClass}
               />
@@ -1213,7 +1289,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             onClick={() => void confirmDecision()}
             className="w-full"
           >
-            Xác nhận quyết định
+            {decision === 'ready' ? 'Xác nhận sẵn sàng' : 'Gửi yêu cầu bổ sung'}
           </Button>
         </div>
       </Modal>
@@ -1234,8 +1310,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         >
           <div className="space-y-4 text-xs">
             <p className="text-slate-600 leading-relaxed">
-              Bạn đang rút nhận xét cho mục: <strong className="text-slate-900">{withdrawingComment.fieldLabel}</strong>.
-              Nhận xét đã rút sẽ không còn tính là lỗi chưa giải quyết và không hiển thị cho công dân.
+              Mục: <strong className="text-slate-900">{withdrawingComment.fieldLabel}</strong>. Nhận xét đã rút sẽ ẩn với công dân.
             </p>
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-amber-900">
               <span className="font-semibold">Nội dung nhận xét:</span>
@@ -1250,12 +1325,12 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 rows={3}
                 value={withdrawReason}
                 onChange={e => setWithdrawReason(e.target.value)}
-                placeholder="Nhập lý do rút nhận xét (từ 5 đến 500 ký tự)..."
+                placeholder="Lý do rút (5–500 ký tự)…"
                 maxLength={500}
                 className={textareaClass}
               />
               <span className="text-[11px] text-slate-400 block text-right mt-0.5">
-                {withdrawReason.trim().length}/500 ký tự (tối thiểu 5 ký tự)
+                {withdrawReason.trim().length}/500
               </span>
             </div>
             {withdrawError && (

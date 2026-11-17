@@ -15,21 +15,21 @@ type ReleaseVariant = 'queue' | 'revision' | 'manager';
 const releaseCopy: Record<ReleaseVariant, { title: string; description: (n: string) => string; action: string; busy: string; placeholder: string }> = {
   queue: {
     title: 'Trả hồ sơ về hàng đợi',
-    description: n => `Hồ sơ ${n} sẽ quay về trạng thái Chờ tiền kiểm, không còn người phụ trách để cán bộ khác nhận. Nhận xét đã ghi và hạn xử lý được giữ nguyên.`,
+    description: n => `Hồ sơ ${n} quay về Chờ tiền kiểm để cán bộ khác nhận. Nhận xét được giữ nguyên.`,
     action: 'Trả về hàng đợi',
     busy: 'Đang trả hồ sơ…',
-    placeholder: 'Ví dụ: Hồ sơ thuộc lĩnh vực Đất đai, cần cán bộ phụ trách lĩnh vực này xử lý.',
+    placeholder: 'Ví dụ: Cần cán bộ lĩnh vực Đất đai xử lý.',
   },
   revision: {
     title: 'Trả lại hồ sơ đang chờ bổ sung',
-    description: n => `Hồ sơ ${n} vẫn ở trạng thái Cần bổ sung nhưng bạn không còn phụ trách. Khi người dân nộp lại, hồ sơ vào hàng chờ chung để cán bộ khác nhận.`,
+    description: n => `Bạn thôi phụ trách hồ sơ ${n}. Khi công dân nộp lại, hồ sơ vào hàng chờ chung.`,
     action: 'Trả lại hồ sơ',
     busy: 'Đang trả lại…',
-    placeholder: 'Ví dụ: Nghỉ phép 2 tuần, không kịp xử lý khi người dân nộp lại.',
+    placeholder: 'Ví dụ: Nghỉ phép 2 tuần.',
   },
   manager: {
     title: 'Gỡ cán bộ khỏi hồ sơ',
-    description: n => `Hồ sơ ${n} vẫn ở trạng thái Cần bổ sung nhưng không còn cán bộ phụ trách. Khi người dân nộp lại, hồ sơ vào hàng chờ chung và bạn sẽ nhận thông báo để giao người.`,
+    description: n => `Hồ sơ ${n} không còn cán bộ phụ trách. Khi công dân nộp lại, bạn sẽ được báo để giao người.`,
     action: 'Gỡ cán bộ',
     busy: 'Đang gỡ…',
     placeholder: 'Ví dụ: Cán bộ nghỉ dài ngày.',

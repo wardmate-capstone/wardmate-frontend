@@ -53,13 +53,10 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>Trợ lý AI kiểm tra hồ sơ Một cửa</span>
-              <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-800 uppercase tracking-wide">
-                Đối soát Word & Giấy tờ
-              </span>
+              <span>Trợ lý AI kiểm tra hồ sơ</span>
             </h3>
             <p className="text-xs text-slate-500">
-              Tự động đọc tờ khai Word, đối chiếu chéo CCCD và phát hiện sai sót giấy tờ.
+              Đối chiếu tờ khai Word với CCCD, phát hiện sai sót.
             </p>
           </div>
         </div>
