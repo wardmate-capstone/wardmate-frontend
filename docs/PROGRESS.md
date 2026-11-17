@@ -1,5 +1,27 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-OFFICER-REVIEW-UX-1117 — Gọn khu làm việc cán bộ, nhận xét tại chỗ — 17/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Đăng nhập: bỏ checkbox "Ghi nhớ đăng nhập" (không có chức năng/hợp đồng BE); đăng ký vẫn giữ checkbox điều khoản (`AuthPage.tsx`).
+- `DocxOnlineEditor`: bỏ tab ribbon "Chèn" (bảng, ngắt trang) và "Bố trí" (hướng giấy, khổ, lề) để không làm lệch mẫu tờ khai; chỉ còn thanh định dạng chữ.
+- Khu làm việc cán bộ (`OfficerReviewWorkspaceView`, `OfficerDocumentsPanel`, mới `TargetComments.tsx`):
+  - Tab "Tờ khai & giấy tờ" nhóm tờ khai/giấy tờ theo từng mục danh mục, đánh số 1, 2, 3…, kèm ghi chú điều kiện, mẫu đơn, "x/y mục bắt buộc"; tệp không thuộc mục nào nằm ở "Tệp khác". Bỏ danh mục trùng ở tab đầu (đổi tên "Người gửi").
+  - Nhận xét tại chỗ: nút "Nhận xét" ở đầu mỗi mục giấy tờ và biểu tượng nhận xét ở từng ô thông tin người gửi mở ô nhập ngay tại đó; hiện nhận xét đang mở và nút rút. Tab Nhận xét giữ làm bảng tổng hợp, có "Xem tại mục →". Dropdown chọn mục chia nút gạt Giấy tờ/Thông tin tờ khai, ẩn `procedureCode`/`procedureTitle` (hệ thống tự gắn).
+  - Hộp thoại Yêu cầu bổ sung/Xác nhận sẵn sàng bỏ dropdown "Tờ khai đang kiểm tra": BE (`ApplicationAccess.Decide`) chỉ dùng tờ khai để tìm hồ sơ rồi quyết định cho cả hồ sơ, nên FE tự chọn một tờ khai hợp lệ.
+  - Tab So sánh lần gửi: thông báo rõ nội dung tệp chưa được so sánh, thêm "Nhận xét ở lần gửi trước", nhãn "Mới cập nhật sau lần gửi N" cho tờ khai gửi sau lần trước (giấy tờ tải lên chưa có ngày nên chưa gắn được).
+  - Rút gọn chữ ở phần đầu, tên tab, các hộp thoại (gồm `AssignmentModals`, dùng chung với màn Điều phối của Manager) và thẻ AI.
+- Gửi BE: `docs/BE_REQUEST_2026-11-17_VERSION_FILE_COMPARE.md` (lưu tệp theo lần gửi, API tệp theo phiên bản, diff nội dung DOCX, ngày tải lên giấy tờ).
+- Kiểm tra: `npm run typecheck` đạt. Theo yêu cầu người dùng không chạy Playwright; chưa mở UI thật để xem.
+- Còn chờ: BE làm yêu cầu so sánh tệp; xác nhận mục "Đơn đăng ký đất đai…" trong formData có cần ẩn khỏi danh sách nhận xét không.
+
+## FE-DOCX-COMMENTS-1117 — Cán bộ bình luận trực tiếp trên tờ khai Word — 17/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Đã đối chiếu tài liệu bàn giao BE "DOCX Comments": BE đúng (`GET download-docx`, `PUT annotate-docx` multipart `File`, chỉ ở trạng thái Submitted/RevisionRequested, không đổi Status, OpenXml SDK kiểm tệp, tối đa 20 MB). Tài liệu sai ở Bước 1: editor miễn phí không tạo được bình luận nếu thiếu gói pro thương mại. Người dùng chọn tự làm, không dùng pro.
+- File: mới `src/lib/docxComments.ts`; sửa `src/components/documents/DocxOnlineEditor.tsx`, `src/pages/officer/OfficerDocumentsPanel.tsx`, `tests/docx-online.spec.ts` (selector nút mới), `package.json`/`package-lock.json` (thêm `jszip` 3.10.2 vào dependencies, lockfile chỉ thêm 1 dòng), `docs/FRONTEND_SETUP.md`. Không sửa BE/API/DTO/token.
+- Đã kiểm tra: `npm run typecheck` đạt; eslint 3 file nguồn đã sửa đạt. Đã chạy module ghi bình luận trên Edge thật (Playwright, script tạm ngoài repo) với tờ khai mẫu: đoạn trích qua nhiều run, giữa run, qua hai đoạn, thêm lượt hai (id tăng, giữ bình luận cũ), lỗi khi không tìm thấy — đều đúng; quan hệ, content type và comments.xml đúng chuẩn.
+- Chưa kiểm tra: OpenXml Validator (.NET bị Smart App Control chặn chạy dll); mở bằng Microsoft Word thật; luồng UI trong trình duyệt và bộ Playwright dự án (`docx-online`, `officer-submissions`, `document-workflow`) chưa chạy lại; chưa thử với API Azure thật.
+- Giới hạn: editor miễn phí không vẽ đánh dấu trên trang (bình luận hiện ở bảng bên phải, đánh dấu đầy đủ khi mở bằng Word). Chưa có xóa/trả lời/đánh dấu xong cho bình luận đã lưu. Nếu không có paraId, đoạn trích lặp lại nhiều lần sẽ được neo vào lần xuất hiện đầu tiên.
+
 ## FE-WARD-SCHEDULE-COMMITS-1116 — Chia đúng 3 commit FE, chờ gate main — 16/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Người dùng yêu cầu chia 3 commit và đẩy main cho tính năng lịch toàn phường. Yêu cầu mới cho phép Git và gộp file mới theo 3 nhóm trong repo FE; không suy ngoại lệ bỏ Docker. Ba tài liệu BE giữ local, không commit/push repo BE trong phiên đóng gói FE này.
