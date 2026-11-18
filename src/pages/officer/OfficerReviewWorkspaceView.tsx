@@ -7,11 +7,11 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
-import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert, formSelectClass, textareaClass } from '@/components/ui';
+import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert, textareaClass } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
-import { compareSubmissionSnapshots, diffFieldLabel, diffValueText, humanizeFieldName, workflowStatusLabel, formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
+import { compareSubmissionSnapshots, humanizeFieldName, workflowStatusLabel, formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
 import { ReleaseApplicationModal } from '@/components/workflow/AssignmentModals';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
@@ -23,7 +23,7 @@ import { aiOcrApi, getAiRetryAfterSeconds, type DossierAssistResultDto } from '@
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
 import type { CommentDto } from '@/lib/api/workflow';
 import { QUICK_COMMENT_TEMPLATES, TargetComments } from './TargetComments';
-import { FileVersionCompare } from './FileVersionCompare';
+import { SubmissionReviewCompare } from './SubmissionReviewCompare';
 import {
   ArrowLeft,
   ArrowsClockwise,
@@ -95,7 +95,7 @@ export function OfficerReviewWorkspaceView({
     return () => cancelAnimationFrame(frame);
   }, [scrollTarget, tab]);
   const versions = useApplicationVersions(application.id, tab === 'versions' || (tab === 'documents' && version > 1));
-  const [from, setFrom] = useState(1);
+  const [from, setFrom] = useState(Math.max(1, application.currentVersion - 1));
   const [to, setTo] = useState(application.currentVersion);
   const diff = useApplicationDiff(application.id, from, to, tab === 'versions');
   // Nhận xét cán bộ đã ghi ở lần gửi trước (versionNumber = 0 thì hook không gọi API)
@@ -978,135 +978,35 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
           </div>
         )}
 
-        {/* Tab 4: Versions & Diff */}
+        {/* Tab 4: Kiểm tra lần gửi lại — nhận xét cũ đặt cạnh thay đổi của từng mục */}
         {tab === 'versions' && (
           <div className="space-y-5">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">So sánh các lần gửi</h3>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Đối chiếu thông tin kê khai, danh mục giấy tờ và tệp giữa hai lần gửi.
-              </p>
-            </div>
-
             {versions.isError && <p role="alert" className="text-sm text-red-700">{workflowError(versions.error)}</p>}
-
-            <div className="flex flex-wrap items-center gap-3">
-              {(['from', 'to'] as const).map(side => (
-                <label key={side} className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  {side === 'from' ? 'Lần gửi trước' : 'Lần gửi sau'}
-                  <select
-                    className={formSelectClass}
-                    value={side === 'from' ? from : to}
-                    onChange={e => (side === 'from' ? setFrom(Number(e.target.value)) : setTo(Number(e.target.value)))}
-                  >
-                    {versions.data?.map(x => (
-                      <option key={x.id} value={x.versionNumber}>
-                        Lần gửi {x.versionNumber}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-
-            {from >= to ? (
-              <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-                Chọn phiên bản đích lớn hơn phiên bản nguồn để so sánh.
-              </p>
-            ) : snapshotDiff === undefined && diff.isPending ? (
-              <div role="status" aria-label="Đang so sánh phiên bản" className="space-y-3 py-1">
-                <Skeleton className="h-16 w-full rounded-xl" />
-                <Skeleton className="h-16 w-full rounded-xl" />
-              </div>
-            ) : snapshotDiff === undefined && diff.isError ? (
-              <p role="alert" className="text-sm text-red-700">{workflowError(diff.error)}</p>
-            ) : (
-              <div className="space-y-3">
-                {comparedFields?.length === 0 && (
-                  <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                    <p className="min-w-0 flex-1">Thông tin kê khai và danh mục giấy tờ không đổi. Thay đổi trong tệp xem ở phần “Tệp thay đổi”.</p>
-                  </div>
-                )}
-                {comparedFields?.map((x, i) => (
-                  <div key={i} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="min-w-0 break-words font-semibold text-slate-800">{diffFieldLabel(x.fieldKey || '', x.fieldLabel)}</span>
-                      <Badge variant={x.hasChanged ? 'warning' : 'neutral'} className="text-xs">
-                        {x.hasChanged ? 'Đã thay đổi' : 'Không đổi'}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2 text-xs">
-                      <div className="rounded-lg bg-slate-50 p-2.5">
-                        <span className="font-semibold text-slate-500">Trước:</span>
-                        <p className="mt-1 break-all text-slate-700">{diffValueText(x.oldValue, x.oldExists, x.fieldKey || '')}</p>
-                      </div>
-                      <div className="rounded-lg bg-emerald-50/60 p-2.5">
-                        <span className="font-semibold text-emerald-700">Sau:</span>
-                        <p className="mt-1 break-all text-emerald-900">{diffValueText(x.newValue, x.newExists, x.fieldKey || '')}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* DOC-FILEVER-01: tệp mới / thay / xóa theo từng mục và so sánh nội dung tờ khai Word */}
-            {from < to && (
-              <FileVersionCompare
-                applicationId={application.id}
-                fromVersion={from}
-                toVersion={to}
-                checklists={checklists.map(x => ({ id: x.id, title: x.title || x.code || 'Giấy tờ' }))}
-                onOpenDocuments={() => setTab('documents')}
-              />
-            )}
-
-            {/* Nhận xét ở lần gửi trước: để cán bộ đối chiếu công dân đã sửa các điểm được yêu cầu chưa */}
-            {from < to && (
-              <div className="space-y-3 border-t border-slate-100 pt-5">
-                <div>
-                  <h4 className="font-bold text-slate-900">Nhận xét ở lần gửi {from}</h4>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    “Đã xử lý” là công dân đã gửi lại, chưa chắc đã sửa đúng.
-                  </p>
-                </div>
-                {previousComments.isPending && <Skeleton className="h-14 w-full rounded-xl" />}
-                {previousComments.isError && (
-                  <ErrorAlert retryLabel="Thử lại" retrying={previousComments.isFetching} onRetry={() => void previousComments.refetch()}>
-                    {workflowError(previousComments.error)}
-                  </ErrorAlert>
-                )}
-                {previousComments.isSuccess && !previousComments.data.filter(x => x.status !== 'WITHDRAWN').length && (
-                  <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Lần gửi {from} không có nhận xét nào.</p>
-                )}
-                {previousComments.data?.filter(x => x.status !== 'WITHDRAWN').map(x => {
-                  const isOpen = x.status === 'OPEN';
-                  return (
-                    <div key={x.id} className={`rounded-xl border p-3 ${isOpen ? 'border-amber-200 bg-amber-50/40' : 'border-slate-200 bg-white'}`}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="min-w-0 text-sm font-semibold text-slate-900">
-                          {humanizeFieldName(x.fieldLabel || 'Nhận xét')}
-                          {x.targetId && targets.some(t => t.id === x.targetId) && (
-                            <button
-                              type="button"
-                              onClick={() => goToTarget(x.targetId, x.targetType)}
-                              className="ml-2 text-xs font-semibold text-red-800 hover:underline"
-                            >
-                              Xem tại mục →
-                            </button>
-                          )}
-                        </span>
-                        <Badge variant={isOpen ? 'warning' : 'success'} className="text-xs">
-                          {isOpen ? 'Còn mở' : 'Đã xử lý'}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{x.commentText}</p>
-                      <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(x.createdAt)}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <SubmissionReviewCompare
+              applicationId={application.id}
+              fromVersion={from}
+              toVersion={to}
+              versionNumbers={versions.data?.map(x => x.versionNumber) ?? []}
+              onChangeVersions={(nextFrom, nextTo) => { setFrom(nextFrom); setTo(nextTo); }}
+              checklists={checklists.map(x => ({ id: x.id, title: x.title || x.code || 'Giấy tờ' }))}
+              previousComments={previousComments}
+              fieldChanges={comparedFields}
+              fieldChangesPending={snapshotDiff === undefined && diff.isPending}
+              fieldChangesError={snapshotDiff === undefined && diff.isError ? workflowError(diff.error) : undefined}
+              canComment={editable && !busy}
+              renderTargetComments={(id, title, composerOpen, close) => (
+                <TargetComments
+                  idPrefix={`review-${id}`}
+                  label={title}
+                  comments={commentsFor(id)}
+                  editable={editable && !busy}
+                  composerOpen={composerOpen}
+                  onCloseComposer={close}
+                  onSave={saveTargetComment(id)}
+                  onWithdraw={startWithdraw}
+                />
+              )}
+            />
           </div>
         )}
 

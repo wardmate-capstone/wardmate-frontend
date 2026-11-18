@@ -8,7 +8,14 @@
 - `OfficerDocumentsPanel`: nhãn "Mới cập nhật" thêm cho giấy tờ tải lên (theo `updatedAtUtc`); tờ khai vẫn theo `submittedAt` vì cán bộ chú thích Word cũng làm đổi `updatedAt`.
 - Sửa proxy dev (`vite.config.ts`): regex DocumentForm thiếu `file-versions` nên khi `VITE_USE_API_PROXY=true` request rơi vào route chung `/api/v1/applications` → Workflow → 404 body rỗng. Đã thêm `file-versions(?:/.*)?` (khớp route Gateway) và 3 đường dẫn vào `tests/api-proxy-check.mjs`. Bản build gọi thẳng Gateway nên không bị.
 - Kiểm tra: `npm run typecheck`, eslint các file đã sửa đạt; regex route kiểm bằng node. Người dùng đã chạy với dữ liệu thật (HS-20261118-00000060, lần 1 → 2): hiện "1 đã thay" cho tờ khai mục 1. Không chạy Playwright theo yêu cầu người dùng.
-- Tiếp theo: làm lại giao diện tab So sánh thành "Kiểm tra lần gửi lại" (gom nhận xét cũ với thay đổi theo mục, nhãn Đã sửa/Chưa thấy sửa, hiện sẵn diff, nút Mở 2 bản). Còn treo: nhận xét theo mục không hiện ở màn công dân, chờ Response `comments` từ người dùng.
+- Còn treo: nhận xét theo mục không hiện ở màn công dân, chờ Response `comments` từ người dùng.
+
+## FE-REVIEW-COMPARE-UX-1118 — Tab so sánh thành "Kiểm tra lần gửi lại" — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Mới `src/pages/officer/SubmissionReviewCompare.tsx` thay `FileVersionCompare.tsx` (đã xóa; giữ `pairFileVersions`). Gom theo mục danh mục: nhận xét lần trước ("Bạn yêu cầu") đặt cạnh thay đổi (tệp, snapshot danh mục, diff tờ khai hiện sẵn dạng −/+, tối đa 5 dòng rồi "Xem thêm"). Nhãn mục: Chưa thấy sửa (có nhận xét, không thay đổi) → Chưa xác định (thiếu dữ liệu tệp) → Có chỉnh sửa → gập "Có thay đổi nhưng không có nhận xét" và "Không thay đổi". Thẻ "Thông tin người gửi" xét từng nhận xét FORM_FIELD theo đúng trường đổi trong `formData`.
+- Dòng tóm tắt "x/y mục có nhận xét đã có chỉnh sửa · n tệp thay đổi · Thông tin kê khai …" (cam nếu còn mục chưa sửa); ghi rõ "Có chỉnh sửa" không có nghĩa là sửa đúng. Nút "Mở 2 bản" mở hộp thoại chia đôi bản lần A/B; "Nhận xét lại mục này" dùng lại `TargetComments` cho lần gửi hiện tại. Tên tệp qua `displayDocumentFileName`. Ô chọn lần gửi ẩn sau "Đổi lần so sánh" khi có từ 3 lần gửi; mặc định so lần liền trước với lần mới nhất. Bỏ khối "Nhận xét ở lần gửi trước" riêng.
+- Gọn thêm: bỏ phụ đề và các câu giải thích (chuyển thành tooltip). Nhiều mục/nhiều thay đổi: thẻ thu gọn được, mặc định chỉ mở thẻ Chưa thấy sửa/Chưa xác định (≤ 3 thẻ thì mở hết), thẻ đóng hiện "n nhận xét · n tệp · n thông tin", có "Mở tất cả/Thu gọn tất cả". Diff tờ khai gọi một lần mỗi mục (trước đây lặp theo từng tệp), hiện 3 dòng, "Xem thêm" mở hết trong khung cuộn `max-h-96`.
+- Kiểm tra: `npm run typecheck`, eslint đạt. Chưa xem trên trình duyệt; không chạy Playwright theo yêu cầu người dùng.
 
 ## FE-OFFICER-REVIEW-UX-1117 — Gọn khu làm việc cán bộ, nhận xét tại chỗ — 17/11/2026 (Asia/Saigon, UTC+07:00)
 
