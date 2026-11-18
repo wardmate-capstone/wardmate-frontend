@@ -1,5 +1,7 @@
 # Đề nghị BE: So sánh nội dung tờ khai Word và giấy tờ giữa các lần gửi
 
+> **Trạng thái 18/11/2026: BE đã làm xong và deploy** (DOC-FILEVER-01, DEPLOY-1118a; bàn giao `wardmate-backend/docs/fe-handoff-2026-11-17.md`). Đường dẫn thực tế là `/api/v1/applications/{id}/file-versions…` (không có tiền tố `/officer`). FE đã nối: tab So sánh lần gửi có phần "Tệp thay đổi" và "Xem thay đổi trong tờ khai"; nhãn "Mới cập nhật" cho cả giấy tờ tải lên. Phần dưới giữ làm lịch sử.
+
 | | |
 |---|---|
 | Ngày | 17/11/2026 |

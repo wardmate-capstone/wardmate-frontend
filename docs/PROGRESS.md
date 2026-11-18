@@ -1,5 +1,15 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-FILEVER-1118 — Nối API tệp theo lần gửi (DOC-FILEVER-01) — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- BE đã làm và deploy đề nghị `BE_REQUEST_2026-11-17_VERSION_FILE_COMPARE.md` (bàn giao BE `docs/fe-handoff-2026-11-17.md`, DEPLOY-1118a). Đã kiểm qua Gateway Azure không token: `file-versions`, `file-versions/diff`, `file-versions/{id}/download`, `contents` đều 401 (route có, cần đăng nhập); DocumentForm `/health/ready` 200.
+- `documentForms.ts`: `contentItemSchema` thêm `createdAtUtc`/`updatedAtUtc`; schema `fileVersionSchema`, `fileFieldDiffSchema`; API `listFileVersions`, `downloadFileVersion`, `diffFileVersions`. Hook `useFileVersions`, `useFileVersionDiff`.
+- Mới `src/pages/officer/FileVersionCompare.tsx` ở tab So sánh lần gửi: ghép tệp hai lần gửi theo `sourceId`, rồi theo mục + loại; nhãn Mới / Đã thay / Đã xóa / Không đổi / Không xác định (sha256 rỗng); mở bản lần A/B; "Xem thay đổi trong tờ khai" gọi diff (theo ô hoặc theo đoạn). Lần gửi không có dữ liệu tệp (trước 18/11) hiện thông báo và nút sang tab Tờ khai & giấy tờ.
+- `OfficerDocumentsPanel`: nhãn "Mới cập nhật" thêm cho giấy tờ tải lên (theo `updatedAtUtc`); tờ khai vẫn theo `submittedAt` vì cán bộ chú thích Word cũng làm đổi `updatedAt`.
+- Sửa proxy dev (`vite.config.ts`): regex DocumentForm thiếu `file-versions` nên khi `VITE_USE_API_PROXY=true` request rơi vào route chung `/api/v1/applications` → Workflow → 404 body rỗng. Đã thêm `file-versions(?:/.*)?` (khớp route Gateway) và 3 đường dẫn vào `tests/api-proxy-check.mjs`. Bản build gọi thẳng Gateway nên không bị.
+- Kiểm tra: `npm run typecheck`, eslint các file đã sửa đạt; regex route kiểm bằng node. Người dùng đã chạy với dữ liệu thật (HS-20261118-00000060, lần 1 → 2): hiện "1 đã thay" cho tờ khai mục 1. Không chạy Playwright theo yêu cầu người dùng.
+- Tiếp theo: làm lại giao diện tab So sánh thành "Kiểm tra lần gửi lại" (gom nhận xét cũ với thay đổi theo mục, nhãn Đã sửa/Chưa thấy sửa, hiện sẵn diff, nút Mở 2 bản). Còn treo: nhận xét theo mục không hiện ở màn công dân, chờ Response `comments` từ người dùng.
+
 ## FE-OFFICER-REVIEW-UX-1117 — Gọn khu làm việc cán bộ, nhận xét tại chỗ — 17/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Đăng nhập: bỏ checkbox "Ghi nhớ đăng nhập" (không có chức năng/hợp đồng BE); đăng ký vẫn giữ checkbox điều khoản (`AuthPage.tsx`).

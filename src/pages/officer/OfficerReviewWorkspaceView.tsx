@@ -23,6 +23,7 @@ import { aiOcrApi, getAiRetryAfterSeconds, type DossierAssistResultDto } from '@
 import type { OfficerApplication, OfficerReviewComment } from '@/types/officer';
 import type { CommentDto } from '@/lib/api/workflow';
 import { QUICK_COMMENT_TEMPLATES, TargetComments } from './TargetComments';
+import { FileVersionCompare } from './FileVersionCompare';
 import {
   ArrowLeft,
   ArrowsClockwise,
@@ -983,7 +984,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div>
               <h3 className="text-lg font-bold text-slate-900">So sánh các lần gửi</h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                Đối chiếu thông tin kê khai và danh mục giấy tờ giữa hai lần gửi.
+                Đối chiếu thông tin kê khai, danh mục giấy tờ và tệp giữa hai lần gửi.
               </p>
             </div>
 
@@ -1023,13 +1024,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <div className="space-y-3">
                 {comparedFields?.length === 0 && (
                   <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                    <p className="min-w-0 flex-1">
-                      Thông tin kê khai không đổi.{' '}
-                      <span className="font-semibold text-slate-800">Nội dung tờ khai Word và giấy tờ chưa được so sánh.</span>
-                    </p>
-                    <Button size="small" variant="outline" className="bg-white" onClick={() => setTab('documents')}>
-                      Xem tờ khai & giấy tờ
-                    </Button>
+                    <p className="min-w-0 flex-1">Thông tin kê khai và danh mục giấy tờ không đổi. Thay đổi trong tệp xem ở phần “Tệp thay đổi”.</p>
                   </div>
                 )}
                 {comparedFields?.map((x, i) => (
@@ -1053,6 +1048,17 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* DOC-FILEVER-01: tệp mới / thay / xóa theo từng mục và so sánh nội dung tờ khai Word */}
+            {from < to && (
+              <FileVersionCompare
+                applicationId={application.id}
+                fromVersion={from}
+                toVersion={to}
+                checklists={checklists.map(x => ({ id: x.id, title: x.title || x.code || 'Giấy tờ' }))}
+                onOpenDocuments={() => setTab('documents')}
+              />
             )}
 
             {/* Nhận xét ở lần gửi trước: để cán bộ đối chiếu công dân đã sửa các điểm được yêu cầu chưa */}

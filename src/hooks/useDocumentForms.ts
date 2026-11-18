@@ -26,6 +26,23 @@ export function useGeneratedDocuments(applicationId?: string, enabled = true, su
   const userId = useAuthStore(s => s.user?.id);
   return useQuery({ queryKey: [...documentQueryKeys.generated(applicationId), userId, submissionId], queryFn: ({ signal }) => documentFormApi.listGeneratedDocuments(applicationId!, signal, submissionId), enabled: enabled && Boolean(applicationId && userId) });
 }
+// DOC-FILEVER-01: tệp theo lần gửi (cán bộ thụ lý); versionNumber < 1 thì không gọi
+export function useFileVersions(applicationId: string, versionNumber: number, enabled = true) {
+  const userId = useAuthStore(s => s.user?.id);
+  return useQuery({
+    queryKey: [...documentQueryKeys.application(applicationId), 'file-versions', versionNumber, userId],
+    queryFn: ({ signal }) => documentFormApi.listFileVersions(applicationId, versionNumber, signal),
+    enabled: enabled && Boolean(applicationId && userId) && versionNumber > 0,
+  });
+}
+export function useFileVersionDiff(applicationId: string, fromVersion: number, toVersion: number, checklistId?: string) {
+  const userId = useAuthStore(s => s.user?.id);
+  return useQuery({
+    queryKey: [...documentQueryKeys.application(applicationId), 'file-versions-diff', fromVersion, toVersion, checklistId, userId],
+    queryFn: ({ signal }) => documentFormApi.diffFileVersions(applicationId, fromVersion, toVersion, checklistId!, signal),
+    enabled: Boolean(applicationId && userId && checklistId) && fromVersion > 0 && toVersion > fromVersion,
+  });
+}
 export function useApprovedQr(applicationId?: string) {
   const userId = useAuthStore(s => s.user?.id);
   return useQuery({ queryKey: [...documentQueryKeys.qr(applicationId), userId], queryFn: ({ signal }) => documentFormApi.getApprovedQr(applicationId!, signal), enabled: Boolean(applicationId && userId) });

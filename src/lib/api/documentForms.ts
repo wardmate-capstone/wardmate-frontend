@@ -51,6 +51,9 @@ export const contentItemSchema = z.object({
   submissionType: nullableText,
   documentCopyType: nullableText,
   quantity: z.number().int().nonnegative(),
+  // DOC-FILEVER-01: lúc tải lên / sửa gần nhất (bản cũ của BE không trả)
+  createdAtUtc: nullableText,
+  updatedAtUtc: nullableText,
 });
 
 export const applicationContentsSchema = z.object({
@@ -71,6 +74,33 @@ export const supportingDocumentSchema = z.object({
   submissionType: nullableText,
   documentCopyType: nullableText,
   quantity: z.number().int().positive(),
+});
+
+// DOC-FILEVER-01: tệp của từng lần gửi hồ sơ (chỉ cán bộ thụ lý / được tham vấn)
+export const fileVersionSchema = z.object({
+  id: guid,
+  checklistId: guid.nullish(),
+  sourceType: z.string(), // SUBMISSION | SUPPORTING_DOCUMENT
+  sourceId: guid,
+  applicationVersionNumber: z.number().int().positive(),
+  fileName: z.string(),
+  fileSizeBytes: z.number().nonnegative(),
+  contentType: nullableText,
+  // Rỗng: tệp không còn trong kho lúc ghi (không xác định được thay đổi)
+  sha256: z.string().nullish(),
+  sourceUpdatedAtUtc: nullableText,
+  createdAtUtc: z.string(),
+});
+
+// Cùng dạng FieldDiffDto của Workflow để dùng lại giao diện so sánh
+export const fileFieldDiffSchema = z.object({
+  fieldKey: z.string(),
+  fieldLabel: z.string(),
+  oldValue: z.string().nullish(),
+  newValue: z.string().nullish(),
+  hasChanged: z.boolean(),
+  oldExists: z.boolean(),
+  newExists: z.boolean(),
 });
 
 export const generatedDocumentSchema = z.object({
@@ -106,6 +136,8 @@ export type ApplicationContentItem = z.infer<typeof contentItemSchema>;
 export type ApplicationContentsDto = z.infer<typeof applicationContentsSchema>;
 export type SupportingDocumentDto = z.infer<typeof supportingDocumentSchema>;
 export type GeneratedDocumentDto = z.infer<typeof generatedDocumentSchema>;
+export type FileVersionDto = z.infer<typeof fileVersionSchema>;
+export type FileFieldDiffDto = z.infer<typeof fileFieldDiffSchema>;
 export type ApprovedQrDto = z.infer<typeof approvedQrSchema>;
 
 export const DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
@@ -209,6 +241,17 @@ export const documentFormApi = {
     return z.array(submissionSchema).refine(items => items.every(item => item.applicationId?.toLowerCase() === applicationId.toLowerCase()), 'Danh sách bản khai không khớp hồ sơ.').parse(response.data);
   },
   officerDownloadSubmission: (submissionId: string, signal?: AbortSignal) => binaryRequest(`/api/v1/officer/submissions/${submissionId}/download-docx`, signal),
+  // DOC-FILEVER-01 (DocumentForm, không có tiền tố /officer)
+  listFileVersions: async (applicationId: string, versionNumber: number, signal?: AbortSignal) => {
+    const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/file-versions`), { signal, params: { versionNumber } });
+    return z.array(fileVersionSchema).parse(response.data);
+  },
+  downloadFileVersion: (applicationId: string, fileVersionId: string, signal?: AbortSignal) =>
+    binaryRequest(`/api/v1/applications/${applicationId}/file-versions/${fileVersionId}/download`, signal),
+  diffFileVersions: async (applicationId: string, fromVersion: number, toVersion: number, checklistId: string, signal?: AbortSignal) => {
+    const response = await api.get(documentPath(`/api/v1/applications/${applicationId}/file-versions/diff`), { signal, params: { fromVersion, toVersion, checklistId } });
+    return z.array(fileFieldDiffSchema).parse(response.data);
+  },
   officerAnnotateSubmission: async (submissionId: string, file: File) => {
     const issue = validateDocumentFile(file, true);
     if (issue) throw new Error(issue);

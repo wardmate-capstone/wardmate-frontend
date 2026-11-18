@@ -74,8 +74,11 @@ export function OfficerDocumentsPanel({
   const [retryFiles, setRetryFiles] = useState<Record<string, File | undefined>>({});
   const documents = contents.data?.supportingDocuments ?? [];
   // Chỉ tờ khai có thời điểm gửi; giấy tờ tải lên chưa có ngày nên chưa đánh dấu được (đã ghi yêu cầu BE)
-  const isUpdated = (item: Submission) =>
-    Boolean(updatedSince && item.submittedAt && new Date(item.submittedAt).getTime() > new Date(updatedSince).getTime());
+  const after = (time?: string | null) => Boolean(updatedSince && time && new Date(time).getTime() > new Date(updatedSince).getTime());
+  // Tờ khai: so thời điểm công dân gửi (không dùng updatedAt vì cán bộ chú thích Word cũng làm đổi updatedAt)
+  const isUpdated = (item: Submission) => after(item.submittedAt);
+  // Giấy tờ tải lên: BE trả updatedAtUtc từ DOC-FILEVER-01 (cán bộ không sửa được giấy tờ)
+  const isDocumentUpdated = (item: SupportingDocument) => after(item.updatedAtUtc ?? item.createdAtUtc);
   async function saveAnnotation(id: string, file: File) {
     if (lock.current || !editable) return;
     setSaved(prev => ({ ...prev, [id]: false }));
@@ -196,6 +199,9 @@ export function OfficerDocumentsPanel({
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Giấy tờ tải lên</p>
             <h4 className="break-all font-semibold">{item.fileName}</h4>
+            {isDocumentUpdated(item) && (
+              <Badge variant="info" className="mt-0.5">Mới cập nhật sau lần gửi {previousVersion}</Badge>
+            )}
             <p className="text-sm text-slate-600">{item.quantity} bản{!item.fileExists && ' · Không tìm thấy tệp'}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -281,8 +287,8 @@ export function OfficerDocumentsPanel({
                     {openCount > 0 && (
                       <Badge variant="warning" className="px-2 text-[10px]">{openCount} nhận xét đang mở</Badge>
                     )}
-                    {groupSubmissions.some(isUpdated) && (
-                      <Badge variant="info" className="px-2 text-[10px]">Có tờ khai mới cập nhật</Badge>
+                    {(groupSubmissions.some(isUpdated) || groupDocuments.some(isDocumentUpdated)) && (
+                      <Badge variant="info" className="px-2 text-[10px]">Có tệp mới cập nhật</Badge>
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500">
