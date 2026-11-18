@@ -1,5 +1,5 @@
 import '@/styles/workspace-ui.css';
-import { AdminSystemStatus } from './AdminSystemStatus';
+import { AdminAttention, AdminKpiStrip, AdminServicesPanel, useAdminOverviewData } from './AdminOverviewSections';
 import { useAutoStackTables } from '@/hooks/useAutoStackTables';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { formatTime, formatDate } from '@/lib/dateFormat';
@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { getGreeting } from "@/lib/utils";
 import {
+  ArrowRight,
   ArrowsClockwise,
   Books,
   Broadcast,
@@ -59,7 +60,6 @@ import { ServiceHealthView } from './ServiceHealthView';
 import { SystemBackupsView } from './SystemBackupsView';
 import { rbacApi, rbacError, type AuditLog } from '@/lib/api/rbac';
 import { AdminProceduresView } from './AdminProceduresView';
-import { usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { KnowledgeBaseView } from '@/components/ai/KnowledgeBaseView';
 import { AnalyticsJobsView } from './AnalyticsJobsView';
 import { NotificationDeliveriesView } from './NotificationDeliveriesView';
@@ -778,8 +778,7 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
   const [userCount, setUserCount] = useState<number>();
   const [wardTotal, setWardTotal] = useState<number | undefined>(wardsCount);
 
-  const proceduresQuery = usePublicProcedureList({ pageNumber: 1, pageSize: 1 });
-  const procedureCount = proceduresQuery.data?.totalCount;
+  const overview = useAdminOverviewData();
 
   const loadAuditLogs = useCallback(async () => {
     setAuditLoading(true);
@@ -819,91 +818,52 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
     }
   }, [loadAuditLogs, wardsCount]);
 
-  // Ô số kèm một dòng giải thích; thiếu dữ liệu thì nói rõ thay vì chỉ hiện "—".
-  const stats = [
-    {
-      label: 'Thủ tục đang áp dụng',
-      value: procedureCount !== undefined ? procedureCount.toLocaleString('vi-VN') : (proceduresQuery.isLoading ? '…' : '—'),
-      hint: procedureCount !== undefined ? 'Đang công khai trên cổng dịch vụ' : proceduresQuery.isLoading ? 'Đang tải' : 'Chưa tải được danh mục thủ tục',
-    },
-    {
-      label: 'Tài khoản nội bộ',
-      value: userCount !== undefined ? userCount.toLocaleString('vi-VN') : '—',
-      hint: userCount !== undefined ? 'Cán bộ, quản lý và quản trị viên' : 'Chưa tải được danh sách tài khoản',
-    },
-    {
-      label: 'Đơn vị Phường / Xã',
-      value: wardTotal !== undefined ? wardTotal.toLocaleString('vi-VN') : '—',
-      hint: wardTotal !== undefined ? 'Đơn vị đã khai báo trong hệ thống' : 'Chưa tải được danh sách đơn vị',
-    },
-  ];
-
   return (
     <>
-      <section className="admin-card kpi-strip is-3" aria-label="Chỉ số tổng quan">
-        <dl>{stats.map(({ label, value, hint }) => <div key={label}>
-          <dt>{label}</dt>
-          <dd className="kpi-value">{value}</dd>
-          <dd className="kpi-hint">{hint}</dd>
-        </div>)}</dl>
-      </section>
+      <AdminKpiStrip data={overview} userCount={userCount} wardTotal={wardTotal} />
 
-      <div className="mt-4"><AdminSystemStatus onSelect={onSelect} /></div>
+      <div className="mt-4"><AdminAttention data={overview} onSelect={onSelect} /></div>
 
-      <section className="mt-4">
-        <article className="admin-card">
-          <div className="admin-card-heading">
-            <div>
-              <h2>Phân quyền gần đây</h2>
-            </div>
-            <button type="button" onClick={() => onSelect('audit')}>
-              Xem nhật ký
-            </button>
-          </div>
-          <div className="divide-y divide-slate-100 px-5">
-            {auditLoading && Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex min-h-14 items-center gap-3 py-3" aria-hidden="true">
-                <span className="size-8 shrink-0 animate-pulse rounded-full bg-slate-100" />
+      <div className="ws-panels mt-4">
+        <AdminServicesPanel data={overview} onSelect={onSelect} />
+        <section className="admin-card ws-panel" aria-labelledby="admin-activity-title">
+          <header><h2 id="admin-activity-title">Hoạt động quản trị gần đây</h2><p>5 thay đổi vai trò và quyền mới nhất</p></header>
+          <div className="ws-panel-body activity-list">
+            {auditLoading && Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex min-h-12 items-center py-2" aria-hidden="true">
                 <span className="h-4 flex-1 animate-pulse rounded bg-slate-100" />
               </div>
             ))}
             {!auditLoading && auditError && (
-              <div className="flex min-h-20 items-center justify-between gap-3 py-4 text-sm text-red-700" role="alert">
-                <span>Không thể tải hoạt động gần đây.</span>
-                <button type="button" className="font-bold hover:underline" onClick={() => void loadAuditLogs()}>
-                  Thử lại
-                </button>
-              </div>
+              <p role="alert" className="ws-muted">Không thể tải hoạt động gần đây. <button type="button" className="ws-link" onClick={() => void loadAuditLogs()}>Thử lại</button></p>
             )}
             {!auditLoading && !auditError && auditLogs.map((log) => (
-              <div key={log.id} className="flex min-h-[72px] items-center gap-3 py-3">
-                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${/revoked|deleted|disabled/.test(log.action) ? 'bg-amber-50 text-amber-700' : /granted|assigned|created|enabled/.test(log.action) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
-                  <ClockCounterClockwise size={16} aria-hidden="true" />
-                </span>
+              <div key={log.id} className="activity-row">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-900">
+                  <p className="activity-title">
                     {actionLabels[log.action] ?? log.action}
                     {log.permissionId && auditPermissions[log.permissionId] ? `: ${auditPermissions[log.permissionId]}` : ''}
                     {!log.permissionId && log.targetUserId && auditUsers[log.targetUserId] ? `: @${auditUsers[log.targetUserId]}` : ''}
                     {!log.permissionId && !log.targetUserId && log.roleId && auditRoles[log.roleId] ? `: ${auditRoles[log.roleId]}` : ''}
                   </p>
-                  <p className="mt-1 truncate text-xs text-slate-500">
+                  <p className="activity-meta">
                     {auditUsers[log.actorUserId] ? `Thực hiện bởi @${auditUsers[log.actorUserId]}` : 'Thao tác quản trị'}
                     {log.roleId && auditRoles[log.roleId] ? ` · Vai trò ${auditRoles[log.roleId]}` : ''}
                   </p>
                 </div>
-                <time className="shrink-0 text-right text-xs leading-5 text-slate-500" dateTime={log.createdAt}>
-                  <span className="block font-semibold text-slate-700">{formatTime(log.createdAt)}</span>
+                <time className="activity-time" dateTime={log.createdAt}>
+                  <span>{formatTime(log.createdAt)}</span>
                   <span>{formatDate(log.createdAt)}</span>
                 </time>
               </div>
             ))}
             {!auditLoading && !auditError && auditLogs.length === 0 && (
-              <EmptyState title="Chưa có hoạt động quản trị nào." />
+              <p className="ws-muted">Chưa có hoạt động quản trị nào.</p>
             )}
           </div>
-        </article>
-      </section>
+          <footer><button type="button" className="ws-link" onClick={() => onSelect('audit')}>Nhật ký hoạt động <ArrowRight size={14} aria-hidden="true" /></button></footer>
+        </section>
+      </div>
     </>
   );
 }
