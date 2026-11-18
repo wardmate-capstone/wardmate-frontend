@@ -31,7 +31,8 @@ export default defineConfig(({ mode }) => {
     proxy['/api/v1/officer/submissions'] = documentForm;
     proxy['/api/v1/supporting-documents'] = documentForm;
     proxy['/api/v1/generated-documents'] = documentForm;
-    proxy['^/api/v1/applications/[^/]+/(contents|supporting-documents|generate-pdf|generated-documents|approved-qr(?:/image)?)(?:\\?.*)?$'] = documentForm;
+    // file-versions (DOC-FILEVER-01): danh sách, /diff, /{id}/download đều thuộc DocumentForm, giống route Gateway.
+    proxy['^/api/v1/applications/[^/]+/(contents|supporting-documents|generate-pdf|generated-documents|approved-qr(?:/image)?|file-versions(?:/.*)?)(?:\\?.*)?$'] = documentForm;
     proxy['/api/v1/form-templates'] = documentForm;
     // Hub thông báo (AnalyticsSystem) đi qua gateway; cần WebSocket. Phải đứng trước '/api' của IAM.
     proxy['/api/analytics-system'] = { ...documentForm, ws: true };
