@@ -474,9 +474,12 @@ export function mapApplicationDtoToCitizenDossier(
     sortOrder: c.sortOrder,
   }));
 
-  const officerName = dto.assignedOfficerId
-    ? resolveOfficerDisplayName(dto.assignedOfficerId, undefined, lookup)
+  // Ưu tiên tên cán bộ BE lưu kèm hồ sơ (assignedOfficerName). Hồ sơ cũ chưa có tên thì hiện tên chung,
+  // không hiện mã ID cán bộ cho công dân.
+  const resolvedOfficer = dto.assignedOfficerId
+    ? resolveOfficerDisplayName(dto.assignedOfficerId, dto.assignedOfficerName, lookup)
     : undefined;
+  const officerName = resolvedOfficer && /^Cán bộ \([0-9a-f]{8}\)$/i.test(resolvedOfficer) ? 'Cán bộ một cửa' : resolvedOfficer;
 
   return {
     id: dto.id,
