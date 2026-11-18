@@ -6,7 +6,7 @@ import {
   QrCode,
 } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
-import { getStatusBadgeClass } from '../types';
+import { getStatusBadgeClass, QR_ELIGIBLE_STATUSES } from '../types';
 import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
 
 export interface CitizenInfiniteListProps {
@@ -184,44 +184,34 @@ export function CitizenDossiersView({
                   <td className="whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1.5">
                       {/* Nút Xem chi tiết hồ sơ */}
+                      {/* Một nút mở chi tiết cho mọi trạng thái (trước đây hồ sơ cần chỉnh sửa có thêm nút "Chỉnh sửa" làm cùng việc);
+                          hồ sơ cần bổ sung được tô vàng để nổi bật. */}
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-red-900 active:scale-95"
+                        className={`ws-row-btn gap-1.5${item.status === 'Cần chỉnh sửa' ? ' is-attention' : ''}`}
                         onClick={() => onOpenDossierDetail(item)}
-                        title="Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị"
+                        title={item.status === 'Cần chỉnh sửa' ? 'Mở hồ sơ để bổ sung, chỉnh sửa theo yêu cầu của cán bộ' : 'Xem chi tiết hồ sơ và danh mục giấy tờ cần chuẩn bị'}
                       >
-                        <Eye size={14} weight="bold" />
+                        {item.status === 'Cần chỉnh sửa' ? <NotePencil size={14} weight="bold" aria-hidden="true" /> : <Eye size={14} weight="bold" aria-hidden="true" />}
                         <span>Chi tiết</span>
                       </button>
-
-                      {item.status === 'Cần chỉnh sửa' && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95"
-                          onClick={() => onOpenDossierDetail(item)}
-                          title="Bổ sung / Chỉnh sửa hồ sơ"
-                        >
-                          <NotePencil size={14} weight="bold" />
-                          <span>Chỉnh sửa</span>
-                        </button>
-                      )}
 
                       {['Giấy tờ sẵn sàng', 'Đã tiếp nhận tại quầy'].includes(item.status) && (
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
+                          className="ws-row-btn gap-1.5"
                           onClick={() => onOpenFeedback(item.procedureName, item.code)}
                           title="Đánh giá dịch vụ"
                         >
-                          <Star size={14} weight="bold" />
+                          <Star size={14} weight="bold" aria-hidden="true" />
                           <span>Đánh giá</span>
                         </button>
                       )}
 
-                      {/* Nút Xem mã QR: QR chỉ có sau khi giấy tờ sẵn sàng */}
-                      {item.status === 'Giấy tờ sẵn sàng' && <button
+                      {/* Nút Xem mã QR: cùng các trạng thái có QR như Tổng quan (mục Mã QR đã bỏ khỏi menu) */}
+                      {QR_ELIGIBLE_STATUSES.includes(item.status) && <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-800 active:scale-95"
+                        className="ws-row-btn gap-1.5"
                         onClick={() => (onOpenQr && item.id ? onOpenQr(item.id) : onSelectSection('qr_code'))}
                         title="Xem mã QR hồ sơ"
                       >

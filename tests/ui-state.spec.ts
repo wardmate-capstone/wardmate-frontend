@@ -22,7 +22,8 @@ test('đổi thủ tục giữ phường đã chọn và không mở lại modal
   await page.keyboard.press('Escape');
   await expect(modal).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: 'Bỏ thay đổi chưa lưu?', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Chuẩn bị hồ sơ mới', exact: true }).click();
+  // Khối Thao tác nhanh đã bỏ; nút chính Nộp hồ sơ mới ở đầu trang Tổng quan mở lại đúng hộp thoại.
+  await page.getByRole('button', { name: 'Nộp hồ sơ mới', exact: true }).click();
   await expect(modal.getByLabel('Thủ tục hành chính')).toHaveAttribute('data-value', secondId);
 });
 

@@ -1,10 +1,13 @@
+import '@/styles/workspace-ui.css';
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useAutoStackTables } from '@/hooks/useAutoStackTables';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNotificationHub } from '@/hooks/useNotificationHub';
 import { useAuthStore } from '@/stores/authStore';
 import { UserDropdown } from '@/components/layout/UserDropdown';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
 import { ErrorAlert } from '@/components/ui';
@@ -31,7 +34,6 @@ import { AiChatWidget } from '@/components/ai/AiChatWidget';
 import {
   ArrowCounterClockwise,
   Bell,
-  CaretRight,
   CheckCircle,
   FileText,
   Files,
@@ -39,9 +41,7 @@ import {
   Hourglass,
   List,
   Plus,
-  QrCode,
   SidebarSimple,
-  Star,
   UserCircle,
   WarningCircle,
   XCircle,
@@ -55,14 +55,14 @@ import { CitizenDossierDetailView } from './views/CitizenDossierDetailView';
 import { CitizenNotificationsView } from './views/CitizenNotificationsView';
 import { CitizenQrCodeView } from './views/CitizenQrCodeView';
 import { CitizenFeedbackView } from './views/CitizenFeedbackView';
-import { CitizenProfileView } from './views/CitizenProfileView';
+import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
 import { CitizenSubmissionsView } from './views/CitizenSubmissionsView';
 
 // Re-export types for backward compatibility
 export type { CitizenSectionId, CitizenDossier } from './types';
 
 const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string }> = {
-  dashboard: { title: 'Tổng quan công dân' },
+  dashboard: { title: 'Tổng quan' },
   procedures: { title: 'Tra cứu thủ tục' },
   dossiers_all: { title: 'Hồ sơ của tôi' },
   dossiers_draft: { title: 'Hồ sơ bản nháp' },
@@ -76,13 +76,13 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
     title: 'Tờ khai của tôi',
     subtitle: 'Các tờ khai bạn đã điền. Bạn có thể xem lại, sửa hoặc gắn vào hồ sơ.',
   },
-  notifications: { title: 'Thông báo & Cập nhật' },
+  notifications: { title: 'Thông báo', subtitle: 'Cập nhật về hồ sơ, tờ khai và giấy tờ của bạn.' },
   qr_code: {
-    title: 'Mã QR hồ sơ điện tử',
+    title: 'Mã QR hồ sơ',
     subtitle: 'Mã QR để tra cứu và đối chiếu hồ sơ nhanh tại Bộ phận Một cửa UBND.',
   },
-  feedback: { title: 'Đánh giá dịch vụ & Sự hài lòng' },
-  profile: { title: 'Hồ sơ cá nhân & Định danh' },
+  feedback: { title: 'Đánh giá dịch vụ', subtitle: 'Đánh giá hồ sơ đã có giấy tờ sẵn sàng để phường hỗ trợ tốt hơn.' },
+  profile: { title: 'Hồ sơ cá nhân' },
 };
 
 export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: { embedded?: boolean; initialSection?: CitizenSectionId } = {}) {
@@ -94,7 +94,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const requestedCaseCode = searchParams.get('caseCode');
   const queryClient = useQueryClient();
 
-  const { profile: userProfile, loading: profileLoading, refetch: refetchProfile } = useUserProfile();
+  const { profile: userProfile } = useUserProfile();
   const [activeSection, setActiveSection] = useState<CitizenSectionId>(() => embedded ? initialSection : urlSection || initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -134,6 +134,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     return detail && !listed.some(item => item.id === detail.id) ? [...listed, detail] : listed;
   }, [proceduresQuery.data, selectedProcedureQuery.data]);
   const consumedProcedure = useRef<string | null>(null);
+  // Bảng danh sách trong khu công dân tự chuyển thành thẻ có nhãn trên điện thoại (giống Admin).
+  const mainRef = useRef<HTMLElement>(null);
+  useAutoStackTables(mainRef);
   const availableCases = useMemo(
     () => selectedProcedureQuery.data?.contentPayload.cases || [],
     [selectedProcedureQuery.data],
@@ -356,10 +359,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         void handleOpenDossierDetail(found);
       }
     }
-  }, [urlSection, urlDossierCode, urlDossierId, dossiers]);
-
-  const unreadNotificationsCount = notificationHub.unreadCount;
-
+  }, [urlSection, urlDossierCode, urlDossierId, dossiers]);
   const meta = sectionTitles[activeSection] || { title: 'Cổng dịch vụ công dân' };
 
   function selectSection(id: CitizenSectionId) {
@@ -390,7 +390,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const isDossierSection = activeSection.startsWith('dossiers_');
   const citizenRole = ['REGISTERED_CITIZEN'];
   const citizenNavigation: WorkspaceNavGroup<CitizenSectionId>[] = [
-    { title: 'Tổng quan', items: [
+    { title: '', items: [
       { id: 'dashboard', label: 'Tổng quan', icon: House, permissions: ['document.submissions.'], fallbackRoles: citizenRole },
     ] },
     { title: 'Hồ sơ & Chuẩn bị', items: [
@@ -407,14 +407,13 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
       { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: citizenRole },
-      { id: 'qr_code', label: 'Mã QR hồ sơ', icon: QrCode, fallbackRoles: citizenRole },
-      { id: 'feedback', label: 'Đánh giá dịch vụ', icon: Star, fallbackRoles: citizenRole },
+      // Mã QR và Đánh giá dịch vụ không còn trên menu: mở từ nút trên dòng hồ sơ (danh sách, Tổng quan); section vẫn giữ.
       { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ] },
   ];
 
   return (
-    <div className={embedded ? "" : "admin-layout"}>
+    <div className={embedded ? "" : "admin-layout citizen-layout"}>
       {!embedded && <a href="#citizen-main" className="skip-link">
         Đến nội dung chính
       </a>}
@@ -446,41 +445,33 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
             <SidebarSimple size={21} />
           </button>
 
-          <div className="hidden md:flex items-center text-xs text-slate-500 gap-1.5 ml-2">
-            <span>Cổng công dân</span>
-            <CaretRight size={12} />
-            <span className="font-semibold text-slate-800">{meta.title}</span>
+          <div className="admin-breadcrumb">
+            <span>Công dân</span>
+            <span aria-hidden="true">/</span>
+            <strong>{meta.title}</strong>
           </div>
 
           <div className="admin-topbar-actions">
-            {/* Chuông thông báo */}
-            <button
-              type="button"
-              aria-label="Thông báo"
-              onClick={() => selectSection('notifications')}
-            >
-              <Bell size={21} />
-              {unreadNotificationsCount > 0 && <span>{unreadNotificationsCount}</span>}
-            </button>
+            {/* Chuông thông báo chung (hộp xem nhanh) như các phân hệ khác; "Xem tất cả thông báo" mở trang Thông báo */}
+            <NotificationBell />
 
             <UserDropdown />
           </div>
         </header>}
 
         {/* NỘI DUNG CHÍNH (MAIN) */}
-        <main id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
+        <main ref={mainRef} id={embedded ? undefined : "citizen-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {citizenAppsQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hồ sơ" onRetry={() => { void citizenAppsQuery.refetch(); void dossierListQuery.refetch(); }}>{workflowError(citizenAppsQuery.error)}</ErrorAlert>}
-          {/* Header Trang */}
-          <div className="admin-page-heading mb-6">
+          {/* Header Trang — Hồ sơ cá nhân tự có tiêu đề (như Admin/Manager) nên ẩn để trang chỉ có một <h1> */}
+          {activeSection !== 'profile' && <div className="admin-page-heading mb-6">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">{meta.title}</h1>
-              {meta.subtitle && (
-                <p className="mt-1 text-sm text-slate-500">{meta.subtitle}</p>
-              )}
+              <h1>{meta.title}</h1>
+              {meta.subtitle && <p>{meta.subtitle}</p>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {isDossierSection && (
+              {/* Nút chính cả ở Tổng quan (thay khối "Thao tác nhanh" đã bỏ) */}
+              {(isDossierSection || activeSection === 'dashboard') && (
                 <button
                   className="admin-primary-action"
                   type="button"
@@ -490,7 +481,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                 </button>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* RENDER VIEW THEO SECTION ĐANG CHỌN */}
           {activeSection === 'dashboard' && (
@@ -574,11 +565,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           )}
 
           {activeSection === 'profile' && (
-            <CitizenProfileView
-              initialProfile={userProfile}
-              loading={profileLoading}
-              onProfileUpdated={refetchProfile}
-            />
+            // Một giao diện Hồ sơ cá nhân cho mọi phân hệ; chế độ công dân có Quét CCCD, Email đăng ký, Xóa thông tin.
+            <UnifiedSelfProfileView variant="citizen" />
           )}
         </main>
       </div>

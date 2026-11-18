@@ -276,7 +276,7 @@ function ApprovedQr({
             Mã hồ sơ
           </span>
           <div className="flex items-center gap-2 mt-0.5">
-            <strong className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
+            <strong className="text-lg font-semibold tabular-nums tracking-wide text-slate-900">
               {dossier.code}
             </strong>
             <button

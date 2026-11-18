@@ -94,3 +94,6 @@ export function getStatusBadgeClass(status: CitizenDossier['status']): string {
       return 'is-warning';
   }
 }
+
+/** Trạng thái hồ sơ đã có mã QR (sinh sau khi cán bộ duyệt tiền kiểm) — dùng chung cho Tổng quan và danh sách hồ sơ. */
+export const QR_ELIGIBLE_STATUSES: CitizenDossier['status'][] = ['Giấy tờ sẵn sàng', 'Đã duyệt', 'Đã tiếp nhận tại quầy', 'Đã hoàn thành'];

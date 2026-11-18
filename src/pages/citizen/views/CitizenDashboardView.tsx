@@ -1,16 +1,6 @@
-import {
-  Clock,
-  WarningCircle,
-  CheckCircle,
-  SealCheck,
-  CaretRight,
-  FilePlus,
-  FileText,
-  QrCode,
-  ArrowRight,
-} from '@phosphor-icons/react';
+import { WarningCircle, ArrowRight } from '@phosphor-icons/react';
 import type { CitizenDossier, CitizenSectionId } from '../types';
-import { getStatusBadgeClass } from '../types';
+import { getStatusBadgeClass, QR_ELIGIBLE_STATUSES } from '../types';
 import { Skeleton, ListSkeleton } from '@/components/ui';
 
 interface CitizenDashboardViewProps {
@@ -20,8 +10,6 @@ interface CitizenDashboardViewProps {
   isLoading?: boolean;
 }
 
-// Mã QR chỉ được sinh sau khi cán bộ duyệt tiền kiểm → chỉ hiện nút "Xem QR" cho các trạng thái này
-const QR_ELIGIBLE_STATUSES: CitizenDossier['status'][] = ['Giấy tờ sẵn sàng', 'Đã duyệt', 'Đã tiếp nhận tại quầy', 'Đã hoàn thành'];
 
 // updatedAt có dạng "HH:mm dd/MM/yyyy"; trả về thời gian tương đối, nếu không đọc được thì giữ nguyên chuỗi gốc
 function formatRelative(value: string): string {
@@ -48,21 +36,16 @@ export function CitizenDashboardView({
   const approvedCount = dossiers.filter((d) => d.status === 'Giấy tờ sẵn sàng').length;
   const completedCount = dossiers.filter((d) => d.status === 'Đã hoàn thành').length;
 
-  const stats: { label: string; value: number; icon: typeof Clock; tone: string; section: CitizenSectionId }[] = [
-    { label: 'Hồ sơ đang xử lý', value: pendingCount + revisionCount, icon: Clock, tone: 'info', section: 'dossiers_pending' },
-    { label: 'Cần bổ sung gấp', value: revisionCount, icon: WarningCircle, tone: 'danger', section: 'dossiers_need_revision' },
-    { label: 'Giấy tờ sẵn sàng', value: approvedCount, icon: CheckCircle, tone: 'warning', section: 'dossiers_approved' },
-    { label: 'Đã hoàn tất thủ tục', value: completedCount, icon: SealCheck, tone: 'success', section: 'dossiers_all' },
-  ];
-
-  const quickActions: { label: string; hint: string; icon: typeof Clock; section: CitizenSectionId }[] = [
-    { label: 'Chuẩn bị hồ sơ mới', hint: 'Chọn thủ tục cần làm', icon: FilePlus, section: 'procedures' },
-    { label: 'Tờ khai của tôi', hint: 'Xem và tiếp tục điền', icon: FileText, section: 'submissions' },
-    { label: 'Mã QR hồ sơ', hint: 'Hồ sơ đã được duyệt tiền kiểm', icon: QrCode, section: 'qr_code' },
+  // Giữ nguyên cách đếm hiện có; chỉ thêm dòng giải thích dưới mỗi số.
+  const stats: { label: string; value: number; hint: string; section: CitizenSectionId }[] = [
+    { label: 'Hồ sơ đang xử lý', value: pendingCount + revisionCount, hint: 'Chờ tiền kiểm và cần chỉnh sửa', section: 'dossiers_pending' },
+    { label: 'Cần bổ sung', value: revisionCount, hint: 'Cán bộ yêu cầu chỉnh sửa', section: 'dossiers_need_revision' },
+    { label: 'Giấy tờ sẵn sàng', value: approvedCount, hint: 'Có thể đến nhận, đối chiếu', section: 'dossiers_approved' },
+    { label: 'Đã hoàn tất', value: completedCount, hint: 'Thủ tục đã xong', section: 'dossiers_all' },
   ];
 
   return (
-    <div className="mt-5 space-y-5">
+    <div className="space-y-5">
       {/* Banner nhắc việc: chỉ hiện khi có hồ sơ cán bộ yêu cầu chỉnh sửa */}
       {!isLoading && revisionCount > 0 && (
         <div role="status" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center">
@@ -81,30 +64,21 @@ export function CitizenDashboardView({
       )}
 
       {/* 4 Thẻ chỉ số — bấm để mở danh sách tương ứng */}
-      <section className="admin-stat-grid mt-0!" aria-label="Chỉ số hồ sơ của tôi">
-        {stats.map(({ label, value, icon: Icon, tone, section }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => onSelectSection(section)}
-            className={`admin-stat-card is-${tone} w-full text-left transition hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2`}
-          >
-            <div>
-              <span>
-                <Icon size={24} weight="duotone" aria-hidden />
-              </span>
-              <small>{label}</small>
+      {/* Dải chỉ số giống Admin; mỗi ô bấm được để mở danh sách tương ứng (nút phủ cả ô, giữ dl/dt/dd cho trình đọc màn hình). */}
+      <section className="admin-card kpi-strip" aria-label="Chỉ số hồ sơ của tôi">
+        <dl>
+          {stats.map(({ label, value, hint, section }) => (
+            <div key={label} className="is-link">
+              <dt>{label}</dt>
+              <dd className="kpi-value">{isLoading ? <Skeleton className="h-7 w-12 rounded" aria-label={`Đang tải số liệu ${label}`} /> : value}</dd>
+              <dd className="kpi-hint">{hint}</dd>
+              <button type="button" className="kpi-cover" onClick={() => onSelectSection(section)} aria-label={isLoading ? `Xem ${label.toLowerCase()}` : `Xem ${label.toLowerCase()}: ${value}`} />
             </div>
-            {isLoading ? (
-              <Skeleton className="mt-4 h-9 w-16 rounded-lg" aria-label={`Đang tải số liệu ${label}`} />
-            ) : (
-              <strong>{value}</strong>
-            )}
-          </button>
-        ))}
+          ))}
+        </dl>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <section>
         {/* Hồ sơ gần đây */}
         <article className="admin-card">
           <div className="admin-card-heading">
@@ -151,7 +125,7 @@ export function CitizenDashboardView({
                     {dossier.status === 'Cần chỉnh sửa' && (
                       <button
                         type="button"
-                        className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                        className="ws-row-btn is-attention"
                         onClick={() => onSelectSection('dossiers_need_revision')}
                       >
                         Bổ sung ngay
@@ -160,7 +134,7 @@ export function CitizenDashboardView({
                     {['Giấy tờ sẵn sàng', 'Đã tiếp nhận tại quầy'].includes(dossier.status) && (
                       <button
                         type="button"
-                        className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"
+                        className="ws-row-btn"
                         onClick={() => onOpenFeedback(dossier.procedureName, dossier.code)}
                       >
                         Đánh giá
@@ -169,7 +143,7 @@ export function CitizenDashboardView({
                     {QR_ELIGIBLE_STATUSES.includes(dossier.status) && (
                       <button
                         type="button"
-                        className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                        className="ws-row-btn"
                         onClick={() => onSelectSection('qr_code')}
                       >
                         Xem QR
@@ -181,34 +155,7 @@ export function CitizenDashboardView({
             </ul>
           )}
         </article>
-
-        {/* Thao tác nhanh */}
-        <article className="admin-card self-start">
-          <div className="admin-card-heading">
-            <div>
-              <h2>Thao tác nhanh</h2>
-            </div>
-          </div>
-          <div className="space-y-1 p-3">
-            {quickActions.map(({ label, hint, icon: Icon, section }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => onSelectSection(section)}
-                className="group flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
-              >
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800">
-                  <Icon size={20} weight="duotone" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-slate-900">{label}</span>
-                  <span className="block truncate text-xs text-slate-500">{hint}</span>
-                </span>
-                <CaretRight size={16} className="shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-red-700" aria-hidden />
-              </button>
-            ))}
-          </div>
-        </article>
+        {/* Khối "Thao tác nhanh" đã bỏ: Tờ khai và Mã QR có trên menu/dòng hồ sơ; "Nộp hồ sơ mới" là nút chính đầu trang. */}
       </section>
     </div>
   );
