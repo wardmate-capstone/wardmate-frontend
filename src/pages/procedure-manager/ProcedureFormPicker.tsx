@@ -1,12 +1,12 @@
 import { useContext, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Check, Plus, X, Sliders, CaretDown, UploadSimple, Warning } from '@phosphor-icons/react';
-import { Button, Input, Badge, ListSkeleton, Pagination, EmptyState, formSelectClass } from '@/components/ui';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, X, Sliders, CaretDown, UploadSimple, Books } from '@phosphor-icons/react';
+import { Button, Badge, formSelectClass } from '@/components/ui';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
-import { PROCEDURE_LIMITS, procedureApi, procedureError, type DocumentFormOption } from '@/lib/api/procedures';
-import { useAuthStore } from '@/stores/authStore';
+import { PROCEDURE_LIMITS, type DocumentFormOption } from '@/lib/api/procedures';
 import { ProcedureErrorsContext } from '@/lib/procedureValidation';
 import { DirectTemplateUploadModal } from './DirectTemplateUploadModal';
+import { FormLibraryModal } from './FormLibraryModal';
 
 type Row = Record<string, unknown>;
 export function ProcedureFormPicker({
@@ -16,7 +16,6 @@ export function ProcedureFormPicker({
   onEdit,
   cases = [],
   removedForms,
-  warnings,
   onTemplateCreated,
 }: {
   value: unknown;
@@ -25,13 +24,12 @@ export function ProcedureFormPicker({
   onEdit?: () => void;
   cases?: { code: string; name: string }[];
   removedForms: Record<string, Row>;
-  warnings?: string[];
   onTemplateCreated?: (newTemplate: { id: string; code: string; title: string }, updatedList: Row[]) => void | Promise<void>;
 }) {
   const list: Row[] = Array.isArray(value) ? value.map(row => row && typeof row === 'object' && !Array.isArray(row) ? row : {}) : [];
-  const user = useAuthStore(state => state.user);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+  // Kho biểu mẫu mở trong hộp thoại riêng để kho nhiều mẫu không làm dài bước này
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [uploadModalData, setUploadModalData] = useState<{
     open: boolean;
     rowIndex: number | null;
@@ -44,31 +42,12 @@ export function ProcedureFormPicker({
     initialName: '',
   });
 
-  const formWarnings = (warnings ?? []).filter(w =>
-    w.toLowerCase().includes('formdefinitions') ||
-    w.toLowerCase().includes('tệp mẫu') ||
-    (w.toLowerCase().includes('biểu mẫu') && !w.toLowerCase().includes('hợp lệ'))
-  );
-
   const errors = useContext(ProcedureErrorsContext);
-  const query = useQuery({
-    queryKey: ['procedure-document-forms', search.trim(), page],
-    queryFn: async ({ signal }) => {
-      if (search.trim()) await new Promise<void>((resolve, reject) => {
-        const timer = window.setTimeout(resolve, 300);
-        signal.addEventListener('abort', () => {
-          window.clearTimeout(timer);
-          reject(new DOMException('Aborted', 'AbortError'));
-        }, { once: true });
-      });
-      return procedureApi.documentForms(search.trim(), page, 20, signal);
-    },
-    enabled: Boolean(user && !disabled),
-  });
-  const toggle = (form: DocumentFormOption) => {
-    const selected = list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
-    if (selected) return;
-    change([...list, removedForms[form.id] ?? {
+  const isAttached = (form: DocumentFormOption) => list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
+  const addForms = (forms: DocumentFormOption[]) => {
+    const fresh = forms.filter(form => !isAttached(form));
+    if (!fresh.length) return;
+    change([...list, ...fresh.map(form => removedForms[form.id] ?? {
       formTemplateId: form.id,
       formCode: form.formCode,
       formName: form.formName,
@@ -76,7 +55,7 @@ export function ProcedureFormPicker({
       caseCode: null,
       quantity: 1,
       isMandatory: true,
-    }]);
+    })]);
   };
   const remove = (index: number) => {
     const row = list[index];
@@ -117,14 +96,12 @@ export function ProcedureFormPicker({
     if (onTemplateCreated) {
       await onTemplateCreated(created, nextList);
     }
-    await query.refetch();
+    // Kho vừa có phôi mới: tải lại khi mở hộp thoại kho lần sau
+    await queryClient.invalidateQueries({ queryKey: ['procedure-document-forms'] });
   };
 
-  const selectedForms = <section aria-label="Biểu mẫu đã gắn" className="min-w-0 rounded-xl border border-red-100 bg-red-50/30 p-4">
-    <div className="mb-3 flex items-center justify-between gap-2">
-      <h4 className="font-bold">Đã chọn cho thủ tục</h4><Badge variant="info">{list.length} mẫu</Badge>
-    </div>
-    {list.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm leading-6 text-slate-600">Thủ tục chưa được gắn biểu mẫu.{!disabled && ' Bấm “Chọn mẫu” trong kho bên cạnh để thêm.'}</p> : <div className="space-y-3">
+  const selectedForms = <section aria-label="Biểu mẫu đã gắn" className="min-w-0">
+    {list.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm leading-6 text-slate-600">Thủ tục chưa được gắn biểu mẫu.{!disabled && ' Bấm “Chọn từ kho” hoặc “Tạo phôi mới” để thêm.'}</p> : <div className="grid items-start gap-3 xl:grid-cols-2">
       {list.map((row, index) => (
         <article key={String(row.formTemplateId ?? row.formCode) + index} className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -290,82 +267,29 @@ export function ProcedureFormPicker({
   </section>;
 
   return <section className="space-y-4">
-    {formWarnings.length > 0 && (
-      <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-2xs">
-        <Warning size={22} className="mt-0.5 shrink-0 text-amber-600" weight="fill" />
-        <div className="space-y-1">
-          <p className="font-bold">Lưu ý đối soát biểu mẫu từ AI:</p>
-          {formWarnings.map((warn, i) => (
-            <p key={i} className="leading-relaxed">
-              {warn.replace(/^formDefinitions:\s*/i, '')}
-            </p>
-          ))}
-        </div>
-      </div>
-    )}
-
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h3 className="font-bold">Biểu mẫu <span className="text-sm font-normal text-slate-500">({list.length} đã gắn)</span></h3>
-      {disabled && onEdit && <Button size="small" variant="outline" onClick={onEdit}>{list.length ? 'Quản lý biểu mẫu' : 'Chọn biểu mẫu'}</Button>}
+      <h3 className="flex items-center gap-2 font-bold">Biểu mẫu <Badge variant="info" className="px-2 py-0.5 text-xs">{list.length}</Badge></h3>
+      {disabled
+        ? onEdit && <Button size="small" variant="outline" onClick={onEdit}>{list.length ? 'Quản lý biểu mẫu' : 'Chọn biểu mẫu'}</Button>
+        : <div className="flex flex-wrap items-center gap-2">
+          <Button size="small" variant="outline" className="gap-1.5" onClick={() => setLibraryOpen(true)}>
+            <Books size={16} aria-hidden="true" />
+            Chọn từ kho
+          </Button>
+          <Button
+            size="small"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => setUploadModalData({ open: true, rowIndex: null, initialCode: '', initialName: '' })}
+          >
+            <Plus size={14} weight="bold" aria-hidden="true" />
+            Tạo phôi mới
+          </Button>
+        </div>}
     </div>
-    {!disabled && <p className="text-sm text-slate-600">Chọn nhiều mẫu trong kho hoặc tạo phôi trực tiếp. Mẫu đã chọn sẽ được cung cấp cho công dân sau khi lưu thủ tục.</p>}
-    <div className={disabled ? '' : 'grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]'}>
-      {!disabled && <section aria-label="Kho biểu mẫu" className="min-w-0 rounded-xl border border-slate-200 bg-white">
-        <div className="space-y-3 border-b border-slate-200 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="font-bold">Chọn từ kho biểu mẫu</h4>
-            <Button
-              size="small"
-              variant="outline"
-              className="gap-1.5 text-xs text-slate-700 hover:text-red-900"
-              onClick={() => setUploadModalData({
-                open: true,
-                rowIndex: null,
-                initialCode: '',
-                initialName: '',
-              })}
-            >
-              <Plus size={14} weight="bold" aria-hidden="true" />
-              Tạo phôi mới
-            </Button>
-          </div>
-          <Input label="Tìm biểu mẫu theo mã" placeholder="Nhập mã đơn, ví dụ: DON_01" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} />
-          <p className="text-xs text-slate-500">Để trống để duyệt kho. Mẫu chưa có tệp Word chưa thể chọn.</p>
-        </div>
-        {query.isPending ? <div className="p-4"><ListSkeleton rows={3} /></div> : query.isError ? <div role="alert" className="space-y-3 p-4 text-sm text-red-800"><p>{procedureError(query.error)}</p><Button size="small" variant="outline" onClick={() => void query.refetch()}>Thử lại</Button></div> : <>
-          <div className="divide-y divide-slate-100">
-            {query.data.length === 0 && <EmptyState title="Không tìm thấy mẫu phù hợp." description="Hãy thử mã khác." />}
-            {query.data.map(form => {
-              const selected = list.some(row => row.formTemplateId === form.id || row.formCode === form.formCode);
-              return <article key={form.id} className={`space-y-2 p-3 ${selected ? 'bg-red-50/50' : ''}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-red-900 bg-red-50 border border-red-200 px-2 py-0.5 rounded">{form.formCode}</span>
-                      <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{form.formType === 'ONLINE_INTERACTIVE' ? 'Mẫu điện tử' : 'Phôi Word (DOCX)'}</span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-semibold leading-5 text-slate-900">{form.formName}</p>
-                  </div>
-                  <Button size="small" variant={selected ? 'primary' : 'outline'} className="shrink-0 px-3" disabled={selected} aria-label={`${form.formCode} · ${form.formName}`} aria-pressed={selected} onClick={() => toggle(form)}>{selected ? <Check size={16} aria-hidden /> : <Plus size={16} aria-hidden />}{selected ? 'Đã chọn' : 'Chọn mẫu'}</Button>
-                </div>
-                <FormTemplateActions templateId={form.id} name={form.formName} hasFile />
-              </article>;
-            })}
-          </div>
-          {/* Kho biểu mẫu không trả tổng số: còn trang sau khi trang hiện tại đủ 20 mẫu */}
-          <Pagination
-            className="border-t border-slate-200 p-3"
-            label="Phân trang kho biểu mẫu"
-            page={page}
-            pageSize={20}
-            hasNext={query.data.length >= 20}
-            onPageChange={setPage}
-          />
-        </>}
-      </section>}
-      {selectedForms}
-    </div>
+    {selectedForms}
 
+    {!disabled && <FormLibraryModal open={libraryOpen} onOpenChange={setLibraryOpen} isAttached={isAttached} onAdd={addForms} />}
     <DirectTemplateUploadModal
       open={uploadModalData.open}
       onOpenChange={(open) => setUploadModalData(prev => ({ ...prev, open }))}

@@ -13,7 +13,6 @@ import {
   ArrowSquareOut,
   CheckCircle,
   FilePdf,
-  Info,
   StopCircle,
   Trash,
   UploadSimple,
@@ -53,42 +52,6 @@ const fileSize = (bytes: number) =>
     ? `${Math.ceil(bytes / 1024)} KB`
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-function ExtractionWarningBanner({ warnings }: { warnings: string[] }) {
-  if (!warnings || warnings.length === 0) return null;
-
-  return (
-    <div className="space-y-2.5">
-      {warnings.map((text, i) => {
-        const isError = /429|502|503|504|401|403|quota|hạn mức|không thể|thất bại|lỗi/i.test(text);
-        const isNotice = /trang|kiểm tra|đối soát|ít chữ|trống/i.test(text);
-
-        return (
-          <div
-            key={i}
-            className={`flex items-start gap-3 rounded-xl border p-3.5 text-sm leading-6 ${
-              isError
-                ? "border-red-200 bg-red-50/90 text-red-900"
-                : isNotice
-                  ? "border-amber-200 bg-amber-50/90 text-amber-900"
-                  : "border-slate-200 bg-slate-50 text-slate-800"
-            }`}
-          >
-            {isError ? (
-              <Warning size={20} className="mt-0.5 shrink-0 text-red-600" weight="fill" />
-            ) : isNotice ? (
-              <Warning size={20} className="mt-0.5 shrink-0 text-amber-600" weight="fill" />
-            ) : (
-              <Info size={20} className="mt-0.5 shrink-0 text-slate-600" weight="fill" />
-            )}
-            <div className="min-w-0 flex-1">
-              <span className="font-medium">{text}</span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 export function PdfSource({
   id,
   draft = false,
@@ -385,7 +348,6 @@ export function ProcedureDraftWorkspace({
   const [dirty, setDirty] = useState(false);
   const [reload, setReload] = useState(0);
   const [fullscreenPreviewPdf, setFullscreenPreviewPdf] = useState(false);
-  const [showWarningsModal, setShowWarningsModal] = useState(false);
   const [deleting, setDeleting] = useState<{ id: string; name: string }>();
   // PROC-UNPUBLISH-01: hủy xuất bản ngay từ danh sách bản nháp
   const queryClient = useQueryClient();
@@ -604,17 +566,17 @@ export function ProcedureDraftWorkspace({
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {/* Nút xem cảnh báo AI (nếu có) */}
-                {(draft.warnings.length > 0 || draft.failureCode) && (
-                  <Button
-                    size="small"
-                    variant="outline"
-                    className="h-9 gap-1.5 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                    onClick={() => setShowWarningsModal(true)}
+                {/* Lưu ý AI đã bỏ (khó hiểu với người dùng); chỉ giữ báo lỗi khi AI không đọc được PDF.
+                    Thông tin bắt buộc còn thiếu vẫn bị chặn ở bước kiểm tra khi xuất bản. */}
+                {draft.failureCode && (
+                  <span
+                    role="status"
+                    title={`Mã lỗi: ${draft.failureCode}`}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-800"
                   >
-                    <Warning size={16} className="text-amber-600" weight="fill" />
-                    <span>{draft.warnings.length} lưu ý từ AI</span>
-                  </Button>
+                    <Warning size={16} className="text-red-600" weight="fill" />
+                    Không đọc được PDF, hãy nhập tay
+                  </span>
                 )}
 
                 {dirty && (
@@ -665,7 +627,6 @@ export function ProcedureDraftWorkspace({
                       }}
                       categories={categories}
                       disabled={!editable || busy}
-                      warnings={draft.warnings}
                       onTemplateCreated={async (newTemplate, updatedForms) => {
                         const updatedPayload = { ...payload, formDefinitions: updatedForms };
                         setPayload(updatedPayload);
@@ -821,30 +782,6 @@ export function ProcedureDraftWorkspace({
               </div>
             </div>
           </>
-        )}
-
-        {draft && (
-          <Modal
-            open={showWarningsModal}
-            onOpenChange={setShowWarningsModal}
-            title="Lưu ý đối soát từ AI"
-            description={`Tài liệu: ${draft.pdfFileName}`}
-          >
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              {draft.failureCode && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-900 flex items-start gap-2.5">
-                  <Warning size={18} className="shrink-0 text-red-600 mt-0.5" weight="fill" />
-                  <span>Không đọc được PDF ({draft.failureCode}). Bạn có thể nhập tay hoặc thử đọc lại.</span>
-                </div>
-              )}
-              <ExtractionWarningBanner warnings={draft.warnings} />
-              <div className="mt-4 flex justify-end">
-                <Button size="small" variant="outline" onClick={() => setShowWarningsModal(false)}>
-                  Đã hiểu và tiếp tục
-                </Button>
-              </div>
-            </div>
-          </Modal>
         )}
 
         {/* Modal xác nhận thoát về danh sách khi có thay đổi chưa lưu */}
@@ -1037,7 +974,6 @@ export function ProcedureDraftWorkspace({
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">Chưa lưu bản nháp</span>
                 </div>
                 <div className="space-y-4 p-4">
-                <ExtractionWarningBanner warnings={preview.warnings} />
                 <div className="inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold" role="tablist" aria-label="Nội dung xem trước PDF">
                   <button type="button" role="tab" aria-selected={previewMode === "pdf"} onClick={() => setPreviewMode("pdf")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "pdf" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>PDF gốc</button>
                   <button type="button" role="tab" aria-selected={previewMode === "text"} onClick={() => setPreviewMode("text")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "text" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>Văn bản nhận diện</button>
@@ -1089,7 +1025,6 @@ export function ProcedureDraftWorkspace({
                       onChange={(payload) => { setPreview({ ...preview, payload }); setPreviewConfirmed(false); }}
                       categories={categories}
                       disabled={!can("procedure.publish") || busy}
-                      warnings={preview.warnings}
                     />
                   </div>
                 </details>

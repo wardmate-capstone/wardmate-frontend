@@ -363,7 +363,6 @@ export function ProcedureApiEditor({
   onEditForms,
   onEditChecklist,
   validationError,
-  warnings,
   onTemplateCreated,
 }: {
   value: Row;
@@ -374,7 +373,6 @@ export function ProcedureApiEditor({
   onEditForms?: () => void;
   onEditChecklist?: () => void;
   validationError?: ProcedureValidationError | null;
-  warnings?: string[];
   onTemplateCreated?: (newTemplate: { id: string; code: string; title: string }, updatedList: Row[]) => void | Promise<void>;
 }) {
   // Gộp thêm danh mục vừa tạo nhanh bằng nút "Tạo danh mục"
@@ -448,9 +446,6 @@ export function ProcedureApiEditor({
               {index + 1}
             </span>
             <span>{label}</span>
-            {index === 4 && (warnings ?? []).some(w => /formDefinitions/i.test(w) || /tệp mẫu/i.test(w)) && (
-              <span className="flex size-2 rounded-full bg-amber-400 ring-2 ring-white" title="Có lưu ý từ AI về biểu mẫu" />
-            )}
             {issues.some(issue => issue.step === index) && <span className="rounded bg-red-100 px-1 text-red-800">Có lỗi</span>}
           </button>
         ))}
@@ -755,7 +750,6 @@ export function ProcedureApiEditor({
               cases={rows(content.cases).map(item => ({ code: String(item.caseCode ?? ""), name: String(item.caseName ?? "") }))}
               value={value.formDefinitions}
               disabled={disabled}
-              warnings={warnings}
               onTemplateCreated={onTemplateCreated}
               change={(next) =>
                 set(
