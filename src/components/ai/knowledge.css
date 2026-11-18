@@ -1,0 +1,72 @@
+/*
+ * Dữ liệu kiến thức AI (KnowledgeBaseView) — dùng ở Admin và Quản lý thủ tục.
+ * Thông số theo chuẩn workspace (styles/workspace-ui.css): tiêu đề thẻ 15px, nội dung 13px, phụ chú 12px,
+ * viền #e2e8f0/#f1f5f9, màu nhấn #991b1b. File tự đứng được vì Quản lý thủ tục không nạp workspace-ui.css.
+ */
+
+/* Tab gạch chân: mỗi tab một việc */
+.kb-tabs { display: flex; flex-wrap: wrap; gap: 4px 24px; border-bottom: 1px solid #e2e8f0; }
+.kb-tabs > [role="tab"] { position: relative; display: inline-flex; height: 44px; align-items: center; gap: 6px; padding: 0 0 2px; border: 0; background: none; color: #64748b; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.kb-tabs > [role="tab"]:hover { color: #0f172a; }
+.kb-tabs > [role="tab"][aria-selected="true"] { color: #991b1b; font-weight: 600; }
+.kb-tabs > [role="tab"][aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: #b91c1c; content: ''; }
+.kb-tabs > [role="tab"]:focus-visible { outline: 2px solid #b91c1c; outline-offset: 3px; }
+
+/* Dải tình trạng sẵn sàng */
+.kb-status { padding: 16px 20px; }
+.kb-status > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.kb-status h2 { color: #0f172a; font-size: 15px; font-weight: 600; }
+.kb-muted { margin-top: 12px; color: #64748b; font-size: 13px; }
+.kb-status-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); margin-top: 14px; border: 1px solid #f1f5f9; border-radius: 8px; }
+.kb-status-stats > div { min-width: 0; padding: 12px 16px; }
+.kb-status-stats > div + div { border-left: 1px solid #f1f5f9; }
+.kb-status-stats dt { color: #64748b; font-size: 12px; }
+.kb-status-stats dd { margin-top: 2px; color: #0f172a; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kb-status-stats .is-alert dd { color: #b91c1c; }
+.kb-capacity dd span { color: #64748b; font-size: 13px; font-weight: 400; }
+.kb-bar { height: 6px; margin-top: 8px; overflow: hidden; border-radius: 999px; background: #f1f5f9; }
+.kb-bar > span { display: block; height: 100%; border-radius: 999px; background: #64748b; }
+.kb-bar > span.is-high { background: #b91c1c; }
+.kb-guide { margin-top: 12px; color: #475569; font-size: 13px; }
+.kb-guide > summary { display: inline-flex; min-height: 32px; align-items: center; color: #991b1b; font-size: 12px; font-weight: 600; cursor: pointer; }
+.kb-guide ol { display: grid; gap: 4px; margin-top: 4px; padding-left: 20px; list-style: decimal; }
+.kb-guide p { margin-top: 6px; color: #64748b; font-size: 12px; }
+
+/* Bảng tài liệu nguồn */
+.kb-docs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+.kb-docs-head h2 { color: #0f172a; font-size: 15px; font-weight: 600; }
+.kb-docs-head p { margin-top: 2px; color: #64748b; font-size: 12px; }
+.kb-docs-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kb-sync { display: inline-flex; align-items: center; }
+.kb-sync > span { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; color: #475569; font-size: 12px; font-weight: 500; }
+.kb-sync > button:nth-of-type(1) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.kb-sync > button:nth-of-type(2) { margin-left: -1px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.kb-docs-filters { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+.kb-doc-title { color: #0f172a; font-weight: 600; text-align: left; }
+.kb-doc-title:hover { color: #991b1b; text-decoration: underline; }
+.kb-doc-source { display: block; margin-top: 2px; color: #64748b; font-size: 12px; }
+.kb-row-actions { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 4px; }
+/* "Khác": mở rộng ngay trong ô (thẻ bảng có overflow-hidden nên không dùng menu bật ra) */
+.kb-more { text-align: right; }
+.kb-more > summary { display: inline-flex; min-height: 40px; align-items: center; gap: 4px; padding: 0 12px; border-radius: 6px; color: #334155; font-size: 12px; font-weight: 600; list-style: none; cursor: pointer; }
+.kb-more > summary::-webkit-details-marker { display: none; }
+.kb-more > summary::after { content: '▾'; font-size: 10px; }
+.kb-more[open] > summary::after { content: '▴'; }
+.kb-more > summary:hover { background: #f1f5f9; }
+.kb-more > summary:focus-visible { outline: 2px solid #b91c1c; outline-offset: 2px; }
+.kb-more[open] > button { display: flex; margin-left: auto; }
+
+@media (max-width: 1023px) {
+  .kb-status-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kb-status-stats > div:nth-child(odd) { border-left: 0; }
+  .kb-status-stats > div:nth-child(n + 3) { border-top: 1px solid #f1f5f9; }
+  .kb-status-stats > .kb-capacity { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .kb-status, .kb-docs-head, .kb-docs-filters { padding: 14px 16px; }
+  .kb-docs-filters { grid-template-columns: minmax(0, 1fr); }
+  .kb-tabs { gap: 0 16px; overflow-x: auto; flex-wrap: nowrap; }
+  .kb-row-actions { justify-content: flex-start; }
+  .kb-more { text-align: left; }
+  .kb-more[open] > button { margin-left: 0; }
+}

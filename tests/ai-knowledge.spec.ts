@@ -99,6 +99,8 @@ test('sync all warns when the catalog list was incomplete', async ({ page }) => 
 
 test('search test runs only when requested', async ({ page }) => {
   const ai = await openKnowledge(page);
+  // Tìm thử có tính phí nên nằm ở tab riêng; mở trang không gọi tìm kiếm.
+  await page.getByRole('tab', { name: 'Tìm thử nguồn' }).click();
   await page.getByLabel('Câu hỏi thử').fill('khai sinh cần gì');
   await page.getByRole('button', { name: 'Tìm thử' }).click();
   await expect(page.getByRole('list', { name: 'Kết quả tìm thử' })).toContainText('Độ khớp 0.77');
