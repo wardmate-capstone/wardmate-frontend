@@ -499,9 +499,9 @@ export function DispatchView({
       <QueryState query={query} empty={!term && !query.data?.items.length} />
 
       {!query.isError && !query.isPending && !!query.data?.items.length && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+        <div className="admin-card overflow-hidden">
           <div className="admin-table-wrap">
-            <table className="min-w-[820px]">
+            <table className="mgr-stack min-w-[820px]">
               <caption className="sr-only">Danh sách hồ sơ điều phối</caption>
               <thead>
                 <tr>
@@ -539,7 +539,7 @@ export function DispatchView({
                       key={app.id}
                       className="border-b border-slate-100 align-middle transition-colors last:border-0 hover:bg-slate-50/70"
                     >
-                      <td className="max-w-md">
+                      <td className="max-w-md" data-label="">
                         <p className="truncate font-semibold text-slate-900">
                           {app.procedureTitle || "Thủ tục hành chính"}
                         </p>
@@ -548,10 +548,10 @@ export function DispatchView({
                             `HS-${app.id.slice(0, 8).toUpperCase()}`}
                         </p>
                       </td>
-                      <td className="whitespace-nowrap">
+                      <td className="whitespace-nowrap" data-label="Trạng thái">
                         {renderStatusBadge(app.status)}
                       </td>
-                      <td>
+                      <td data-label="Cán bộ phụ trách">
                         {app.assignedOfficerId ? (
                           <span className="inline-flex items-center gap-2 text-slate-800">
                             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500">
@@ -567,7 +567,7 @@ export function DispatchView({
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td className="mgr-stack-actions" data-label="">
                         <div className="flex items-center justify-end gap-1">
                           {canAssign && (
                             <Button

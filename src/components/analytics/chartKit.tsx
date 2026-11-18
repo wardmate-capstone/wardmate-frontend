@@ -8,6 +8,8 @@ import type { ReactNode } from 'react';
 export const chartColors = {
   series1: '#2a78d6',
   series2: '#eb6834',
+  // Ô 3 của bảng màu phân loại (aqua); tương phản 2,74:1 trên nền trắng nên luôn có chú thích + bảng dữ liệu.
+  series3: '#1baf7a',
   good: '#0ca30c',
   critical: '#d03b3b',
   neutral: '#a8a7a0',
@@ -93,11 +95,11 @@ export function StatTile({ label, value, hint, icon, tone = 'slate' }: {
     red: 'bg-red-50 text-red-800',
   }[tone];
   return (
-    <div className="admin-card flex min-w-0 items-start gap-3 p-4">
+    <div className="stat-tile admin-card flex min-w-0 items-start gap-3 p-4">
       {icon && <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneClass}`}>{icon}</span>}
       <div className="min-w-0">
         <dt className="text-xs font-medium text-slate-500">{label}</dt>
-        <dd className="mt-1 text-2xl font-bold leading-tight text-slate-950">{value}</dd>
+        <dd className="stat-tile-value mt-1 text-2xl font-bold leading-tight text-slate-950">{value}</dd>
         {hint && <dd className="mt-0.5 text-xs text-slate-500">{hint}</dd>}
       </div>
     </div>

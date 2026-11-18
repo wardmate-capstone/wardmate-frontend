@@ -21,14 +21,14 @@ const WORKLOAD_PREVIEW = 8;
 // Bỏ dấu tiếng Việt để tìm "huong" vẫn ra "Hương"
 const foldVietnamese = (text: string) =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
-const quickChip ='inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2';
+const quickChip = 'inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2';
 const TRANSFERABLE = ['UNDER_REVIEW', 'NEED_REVISION', 'DOCUMENTS_READY'];
 // Cùng nhóm trạng thái BE dùng để đếm activeCount trong assignment-summary.
 const ACTIVE_STATUSES = 'SUBMITTED,UNDER_REVIEW,NEED_REVISION,DOCUMENTS_READY';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
-  { value: ACTIVE_STATUSES, label: 'Đang xử lý (chưa xong)' },
+  { value: ACTIVE_STATUSES, label: 'Đang xử lý' },
   { value: 'SUBMITTED', label: 'Chờ tiền kiểm' },
   { value: 'UNDER_REVIEW', label: 'Đang kiểm tra' },
   { value: 'NEED_REVISION', label: 'Cần bổ sung' },
@@ -270,79 +270,79 @@ export function ManagerApplicationsView() {
       {/* overflow-visible: để danh sách của ô lọc nổi ra ngoài thẻ khi bảng ít dòng */}
       <section className="admin-card admin-table-card admin-content-card overflow-visible!">
         <div className="grid gap-3 border-b border-slate-100 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <form
-            role="search"
-            className="min-w-[220px] flex-1"
-            onSubmit={(event) => { event.preventDefault(); setCode(codeInput.trim()); resetPage(); }}
-          >
-            <label htmlFor="manager-app-code" className="sr-only">Tìm theo mã hồ sơ</label>
-            <SearchInput
-              id="manager-app-code"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              onClear={() => { setCodeInput(''); setCode(''); resetPage(); }}
-              placeholder="Tìm theo mã hồ sơ..."
-            />
-            <button type="submit" className="sr-only">Tìm kiếm</button>
-          </form>
-          {/* Ô lọc dạng ListSelect: danh sách lĩnh vực/cán bộ dài hơn 7 mục sẽ tự có ô tìm kiếm */}
-          <div className="w-full sm:w-44">
-            <ListSelect id="manager-filter-status" ariaLabel="Lọc theo trạng thái" floating className={filterTrigger}
-              value={status} onChange={(v) => { setStatus(v); resetPage(); }}
-              options={STATUS_OPTIONS} placeholder="Tất cả trạng thái" />
+          <div className="flex flex-wrap items-center gap-2">
+            <form
+              role="search"
+              className="min-w-[220px] flex-1"
+              onSubmit={(event) => { event.preventDefault(); setCode(codeInput.trim()); resetPage(); }}
+            >
+              <label htmlFor="manager-app-code" className="sr-only">Tìm theo mã hồ sơ</label>
+              <SearchInput
+                id="manager-app-code"
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value)}
+                onClear={() => { setCodeInput(''); setCode(''); resetPage(); }}
+                placeholder="Tìm theo mã hồ sơ..."
+              />
+              <button type="submit" className="sr-only">Tìm kiếm</button>
+            </form>
+            {/* Ô lọc dạng ListSelect: danh sách lĩnh vực/cán bộ dài hơn 7 mục sẽ tự có ô tìm kiếm */}
+            <div className="w-full sm:w-44">
+              <ListSelect id="manager-filter-status" ariaLabel="Lọc theo trạng thái" floating className={filterTrigger}
+                value={status} onChange={(v) => { setStatus(v); resetPage(); }}
+                options={STATUS_OPTIONS} placeholder="Tất cả trạng thái" />
+            </div>
+            <div className="w-full sm:w-52">
+              <ListSelect id="manager-filter-category" ariaLabel="Lọc theo lĩnh vực" floating className={filterTrigger}
+                value={categoryId ? String(categoryId) : ''} onChange={(v) => { setCategoryId(v ? Number(v) : null); resetPage(); }}
+                options={categoryOptions} searchable={categoryOptions.length > LIST_SEARCH_THRESHOLD}
+                searchPlaceholder="Tìm lĩnh vực…" placeholder="Tất cả lĩnh vực" loading={categories.isPending} />
+            </div>
+            <div className="w-full sm:w-52">
+              <ListSelect id="manager-filter-assignee" ariaLabel="Lọc theo cán bộ phụ trách" floating className={filterTrigger}
+                value={assignee} onChange={(v) => { setAssignee(v); resetPage(); }}
+                options={officerOptions} searchable={officerOptions.length > LIST_SEARCH_THRESHOLD}
+                searchPlaceholder="Tìm theo tên cán bộ…" placeholder="Mọi cán bộ" loading={officers.isPending} />
+            </div>
+            <RefreshButton loading={list.isFetching} onClick={() => void Promise.all([list.refetch(), officers.refetch(), summary.refetch()])} />
           </div>
-          <div className="w-full sm:w-52">
-            <ListSelect id="manager-filter-category" ariaLabel="Lọc theo lĩnh vực" floating className={filterTrigger}
-              value={categoryId ? String(categoryId) : ''} onChange={(v) => { setCategoryId(v ? Number(v) : null); resetPage(); }}
-              options={categoryOptions} searchable={categoryOptions.length > LIST_SEARCH_THRESHOLD}
-              searchPlaceholder="Tìm lĩnh vực…" placeholder="Tất cả lĩnh vực" loading={categories.isPending} />
-          </div>
-          <div className="w-full sm:w-52">
-            <ListSelect id="manager-filter-assignee" ariaLabel="Lọc theo cán bộ phụ trách" floating className={filterTrigger}
-              value={assignee} onChange={(v) => { setAssignee(v); resetPage(); }}
-              options={officerOptions} searchable={officerOptions.length > LIST_SEARCH_THRESHOLD}
-              searchPlaceholder="Tìm theo tên cán bộ…" placeholder="Mọi cán bộ" loading={officers.isPending} />
-          </div>
-          <RefreshButton loading={list.isFetching} onClick={() => void Promise.all([list.refetch(), officers.refetch(), summary.refetch()])} />
-        </div>
-        {/* Lọc nhanh thay cho 2 thẻ thống kê và ô tích "Chỉ quá hạn": bấm để bật/tắt, số đếm lấy từ assignment-summary */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">Lọc nhanh:</span>
-          <button
-            type="button"
-            aria-pressed={unassignedActive}
-            onClick={() => {
-              setStatus(unassignedActive ? '' : 'SUBMITTED');
-              setAssignee(unassignedActive ? '' : 'unassigned');
-              resetPage();
-            }}
-            className={`${quickChip} ${unassignedActive ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-          >
-            <Tray size={16} aria-hidden="true" />
-            <span>Chưa có người nhận</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{unassignedCount ?? '—'}</span>
-          </button>
-          <button
-            type="button"
-            aria-pressed={overdue}
-            onClick={() => { setOverdue(!overdue); resetPage(); }}
-            className={`${quickChip} ${overdue ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-          >
-            <WarningCircle size={16} aria-hidden="true" className={overdueCount ? 'text-red-700' : undefined} />
-            <span>Quá hạn tiền kiểm</span>
-            <span className={`rounded-full px-2 py-0.5 font-mono ${overdueCount ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'}`}>{overdueCount ?? '—'}</span>
-          </button>
-          {hasFilter && (
+          {/* Lọc nhanh thay cho 2 thẻ thống kê và ô tích "Chỉ quá hạn": bấm để bật/tắt, số đếm lấy từ assignment-summary */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Lọc nhanh:</span>
             <button
               type="button"
-              onClick={() => { setStatus(''); setCategoryId(null); setAssignee(''); setOverdue(false); setCodeInput(''); setCode(''); resetPage(); }}
-              className="inline-flex min-h-10 items-center px-2 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
+              aria-pressed={unassignedActive}
+              onClick={() => {
+                setStatus(unassignedActive ? '' : 'SUBMITTED');
+                setAssignee(unassignedActive ? '' : 'unassigned');
+                resetPage();
+              }}
+              className={`${quickChip} ${unassignedActive ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
             >
-              Xóa bộ lọc
+              <Tray size={16} aria-hidden="true" />
+              <span>Chưa có người nhận</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-700">{unassignedCount ?? '—'}</span>
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              aria-pressed={overdue}
+              onClick={() => { setOverdue(!overdue); resetPage(); }}
+              className={`${quickChip} ${overdue ? 'border-red-800 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+              <WarningCircle size={16} aria-hidden="true" className={overdueCount ? 'text-red-700' : undefined} />
+              <span>Quá hạn tiền kiểm</span>
+              <span className={`rounded-full px-2 py-0.5 font-mono ${overdueCount ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'}`}>{overdueCount ?? '—'}</span>
+            </button>
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={() => { setStatus(''); setCategoryId(null); setAssignee(''); setOverdue(false); setCodeInput(''); setCode(''); resetPage(); }}
+                className="inline-flex min-h-10 items-center px-2 text-xs font-semibold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
         </div>
 
         {list.isError && (
@@ -360,7 +360,7 @@ export function ManagerApplicationsView() {
         )}
 
         <div className="admin-table-wrap">
-          <table className="min-w-[900px]" aria-label="Bảng giám sát hồ sơ toàn phường">
+          <table className="mgr-stack min-w-[900px]" aria-label="Bảng giám sát hồ sơ toàn phường">
             <thead>
               <tr>
                 <th className="whitespace-nowrap">Mã hồ sơ</th>
@@ -388,44 +388,44 @@ export function ManagerApplicationsView() {
                 const canTransfer = TRANSFERABLE.includes(item.status || '') && Boolean(item.assignedOfficerId);
                 return (
                   <tr key={item.id}>
-                    <td className="whitespace-nowrap font-mono text-xs font-bold text-slate-900">{item.applicationCode || `HS-${item.id.slice(0, 8).toUpperCase()}`}</td>
-                    <td>
-                      <span className="block text-xs font-semibold text-slate-900">{item.procedureTitle || 'Thủ tục hành chính'}</span>
-                      <span className="block text-[11px] text-slate-500">{item.categoryName?.trim() || UNKNOWN_CATEGORY_LABEL}</span>
+                    <td className="whitespace-nowrap font-mono text-xs font-bold text-slate-900" data-label="Mã hồ sơ">{item.applicationCode || `HS-${item.id.slice(0, 8).toUpperCase()}`}</td>
+                    <td data-label="Thủ tục & lĩnh vực">
+                      <span className="block text-[13px] font-semibold text-slate-900">{item.procedureTitle || 'Thủ tục hành chính'}</span>
+                      <span className="block text-xs text-slate-500">{item.categoryName?.trim() || UNKNOWN_CATEGORY_LABEL}</span>
                     </td>
-                    <td className="whitespace-nowrap text-xs text-slate-600">
+                    <td className="whitespace-nowrap text-xs text-slate-600" data-label="Ngày gửi">
                       <div>{formatDate(item.submittedAt || item.createdAt)}</div>
-                      {isOverdue(item) && <span className="mt-1 inline-flex rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">Quá hạn</span>}
+                      {isOverdue(item) && <span className="mt-1 inline-flex rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-800">Quá hạn</span>}
                     </td>
-                    <td className="whitespace-nowrap"><ApplicationStatusBadge status={(item.status || '').toUpperCase() === 'SUBMITTED' && (item.resubmitCount ?? 0) > 0 ? 'RESUBMITTED' : item.status || ''} label={statusLabel(item)} /></td>
-                    <td className="text-xs">
+                    <td className="whitespace-nowrap" data-label="Trạng thái"><ApplicationStatusBadge status={(item.status || '').toUpperCase() === 'SUBMITTED' && (item.resubmitCount ?? 0) > 0 ? 'RESUBMITTED' : item.status || ''} label={statusLabel(item)} /></td>
+                    <td className="text-xs" data-label="Cán bộ phụ trách">
                       {item.assignedOfficerId
                         ? <span className="font-semibold text-slate-800">{officerName(item.assignedOfficerId, item.assignedOfficerName)}</span>
                         : <span className="italic text-slate-400">Chưa phân công</span>}
                     </td>
                     {/* Cột thao tác ghim phải; Lịch sử chỉ còn biểu tượng để dòng không bị chật */}
-                    <td className="sticky right-0 z-10 whitespace-nowrap bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
+                    <td className="mgr-stack-actions sticky right-0 z-10 whitespace-nowrap bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]" data-label="">
                       <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        className="min-h-10 min-w-10 px-2"
-                        onClick={() => setHistoryItem(item)}
-                        aria-label={`Xem lịch sử phân công hồ sơ ${item.applicationCode || item.id.slice(0, 8)}`}
-                        title="Lịch sử phân công"
-                      >
-                        <ClockCounterClockwise size={16} aria-hidden="true" />
-                      </Button>
-                      {canAssign && canDispatch && (
-                        <Button size="small" className="gap-1.5" onClick={() => openAssign(item)}>
-                          <UserPlus size={14} aria-hidden="true" /> Giao cán bộ
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          className="min-h-10 min-w-10 px-2"
+                          onClick={() => setHistoryItem(item)}
+                          aria-label={`Xem lịch sử phân công hồ sơ ${item.applicationCode || item.id.slice(0, 8)}`}
+                          title="Lịch sử phân công"
+                        >
+                          <ClockCounterClockwise size={16} aria-hidden="true" />
                         </Button>
-                      )}
-                      {canTransfer && canDispatch && (
-                        <Button size="small" variant="outline" className="gap-1.5" onClick={() => openAssign(item)}>
-                          <UserSwitch size={14} aria-hidden="true" /> Chuyển cán bộ
-                        </Button>
-                      )}
+                        {canAssign && canDispatch && (
+                          <Button size="small" className="gap-1.5" onClick={() => openAssign(item)}>
+                            <UserPlus size={14} aria-hidden="true" /> Giao cán bộ
+                          </Button>
+                        )}
+                        {canTransfer && canDispatch && (
+                          <Button size="small" variant="outline" className="gap-1.5" onClick={() => openAssign(item)}>
+                            <UserSwitch size={14} aria-hidden="true" /> Chuyển cán bộ
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

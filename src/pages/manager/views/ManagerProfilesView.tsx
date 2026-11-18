@@ -138,7 +138,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
       {/* Toolbar */}
       <div className="admin-toolbar flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
         <form
-          className="relative flex-1 min-w-[280px]"
+          className="relative w-full min-w-0 flex-1 sm:w-auto sm:min-w-[280px]"
           onSubmit={(event) => {
             event.preventDefault();
             onSearchChange(query.trim());
@@ -220,7 +220,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
       {/* Table */}
       {wards.isError && <p role="alert" className="flex flex-wrap items-center gap-2 text-sm text-amber-800">Chưa tải được danh mục tên phường. <button type="button" className="underline" onClick={() => void wards.refetch()}>Thử tải lại tên phường</button></p>}
       <div className="admin-table-wrap">
-        <table className="min-w-[720px]">
+        <table className="mgr-stack min-w-[720px]">
           <thead>
             <tr>
               <th className="min-w-[210px] whitespace-nowrap">Cán bộ</th>
@@ -246,24 +246,25 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                         .split(' ')
                         .slice(-2)
                         .map((part) => part[0])
-                        .join('')}
+                        .join('')
+                        .toLocaleUpperCase('vi')}
                     </span>
                     <p>
-                      <strong className="block text-xs font-bold text-slate-900">{item.fullName}</strong>
-                      <span className="block text-[11px] text-slate-500">{item.email || `@${item.username}`}</span>
-                      {item.identityNumber && <span className="block font-mono text-[11px] text-slate-500">CCCD: {formatCCCD(item.identityNumber)}</span>}
+                      <strong className="block text-[13px] font-semibold text-slate-900">{item.fullName}</strong>
+                      <span className="block text-xs text-slate-500">{item.email || `@${item.username}`}</span>
+                      {item.identityNumber && <span className="block font-mono text-xs text-slate-500">CCCD: {formatCCCD(item.identityNumber)}</span>}
                     </p>
                   </div>
                 </td>
-                <td>
-                  <strong className="block text-xs text-slate-800">{!item.wardCode ? 'Chưa gán phường' : wards.data?.find(ward => ward.code.toLowerCase() === item.wardCode?.toLowerCase())?.name || (wards.isPending ? 'Đang tải tên phường…' : 'Chưa lấy được tên phường')}</strong>
-                  <span className="mt-1 block text-[11px] text-slate-500">
+                <td data-label="Đơn vị & lĩnh vực">
+                  <strong className="block text-[13px] font-medium text-slate-800">{!item.wardCode ? 'Chưa gán phường' : wards.data?.find(ward => ward.code.toLowerCase() === item.wardCode?.toLowerCase())?.name || (wards.isPending ? 'Đang tải tên phường…' : 'Chưa lấy được tên phường')}</strong>
+                  <span className="mt-1 block text-xs text-slate-500">
                     {item.assignedCategories?.length
                       ? item.assignedCategories.map((id) => categories.find((category) => category.id === id)?.categoryName || `#${id}`).join(', ')
                       : 'Chưa phân công lĩnh vực'}
                   </span>
                 </td>
-                <td>
+                <td data-label="Trạng thái">
                   <span
                     className={`admin-status-badge ${
                       item.isActive !== false ? 'is-success' : 'is-warning'
@@ -272,7 +273,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     {item.isActive !== false ? 'Hoạt động' : 'Tạm khóa'}
                   </span>
                 </td>
-                <td className="text-right">
+                <td className="mgr-stack-actions text-right" data-label="">
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       type="button"

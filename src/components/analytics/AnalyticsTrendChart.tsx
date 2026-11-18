@@ -3,21 +3,25 @@ import type { z } from 'zod';
 import type { trendsSchema } from '@/lib/api/analytics';
 import { ChartDataTable, ChartTooltip, LegendKeys, axisTick, chartColors, compactVi } from './chartKit';
 
-const series = [
+const baseSeries = [
   { key: 'received', label: 'Lượt gửi tiền kiểm', color: chartColors.series1 },
   { key: 'ready', label: 'Giấy tờ sẵn sàng', color: chartColors.series2 },
 ] as const;
+const revisionSeries = { key: 'revision', label: 'Yêu cầu bổ sung', color: chartColors.series3 } as const;
 
 const dayMonth = (value: string) => `${value.slice(8, 10)}/${value.slice(5, 7)}`;
 const fullDate = (value: string) => `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`;
 
-export function AnalyticsTrendChart({ data }: { data: z.infer<typeof trendsSchema> }) {
+/** withRevision: thêm đường "Yêu cầu bổ sung" (màn Thống kê hồ sơ); Tổng quan giữ 2 đường. */
+export function AnalyticsTrendChart({ data, withRevision = false }: { data: z.infer<typeof trendsSchema>; withRevision?: boolean }) {
+  const series = withRevision ? [...baseSeries, revisionSeries] : baseSeries;
   const missing = new Set(data.coverage.missingDates);
   // Ngày thiếu dữ liệu để null: đường bị ngắt thay vì vẽ như 0.
   const points = data.items.map(row => ({
     date: row.date,
     received: missing.has(row.date) ? null : row.totals.receivedCount,
     ready: missing.has(row.date) ? null : row.totals.readyCount,
+    revision: missing.has(row.date) ? null : row.totals.revisionRequestedCount,
   }));
 
   return <div className="space-y-3">
@@ -59,8 +63,8 @@ export function AnalyticsTrendChart({ data }: { data: z.infer<typeof trendsSchem
     </div>
     <ChartDataTable
       caption="Dữ liệu tiền kiểm theo ngày"
-      columns={['Ngày', 'Lượt gửi tiền kiểm', 'Giấy tờ sẵn sàng']}
-      rows={points.map(row => [fullDate(row.date), row.received ?? 'Thiếu dữ liệu', row.ready ?? 'Thiếu dữ liệu'])}
+      columns={['Ngày', ...series.map(item => item.label)]}
+      rows={points.map(row => [fullDate(row.date), ...series.map(item => row[item.key] ?? 'Thiếu dữ liệu')])}
     />
   </div>;
 }

@@ -46,7 +46,7 @@ async function setup(page: Page, items: object[]) {
   });
   await page.goto('/manager');
   if ((page.viewportSize()?.width ?? 1440) < 1024) await page.getByRole('button', { name: 'Mở menu điều hướng', exact: true }).click();
-  await page.locator('aside').getByRole('button', { name: 'Tham vấn chuyên môn', exact: true }).click();
+  await page.locator('#manager-sidebar').getByRole('button', { name: 'Tham vấn chuyên môn', exact: true }).click();
   await expect(page.locator('.staff-workspace')).toBeVisible();
   return { posts, inboxQueries };
 }

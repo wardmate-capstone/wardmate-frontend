@@ -3,7 +3,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { useQuery } from '@tanstack/react-query';
 import { Star } from '@phosphor-icons/react';
 import { RefreshButton, EmptyState } from '@/components/ui';
-import { AnalyticsTrendChart } from './AnalyticsTrendChart';
+import { DossierStatsView } from './DossierStatsView';
 import { OverviewCountChart } from './OverviewCountChart';
 import { StatTile, chartColors, numberVi } from './chartKit';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -17,29 +17,24 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
-const labels = { receivedCount: 'Lượt gửi tiền kiểm', readyCount: 'Giấy tờ sẵn sàng', revisionRequestedCount: 'Lượt yêu cầu bổ sung', resubmittedCount: 'Lượt gửi lại', cancelledCount: 'Hồ sơ đã hủy' } as const;
 function metric(value: number | null | undefined, suffix = '') { return value == null ? 'Chưa đủ dữ liệu' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + suffix; }
 
-function Deadlines({ value, backlog = false }: { value?: z.infer<typeof deadlinesSchema> | null; backlog?: boolean }) {
+function Deadlines({ value }: { value?: z.infer<typeof deadlinesSchema> | null }) {
   if (!value) return <EmptyState title="Chưa có dữ liệu hạn tiền kiểm." />;
   // Ô số không chứa câu chữ: thiếu dữ liệu hiện "—" (lý do ở title).
   const rate = (v: number | null) => v == null ? '—' : metric(v, '%');
-  const items: [string, ReactNode, string?][] = backlog ? [
-    ['Đang tồn quá hạn', numberVi(value.openOverdue), value.openOverdue > 0 ? chartColors.critical : undefined],
-    ['Đang tạm dừng tính hạn', numberVi(value.openPaused)],
-    ['Đang tồn chưa có hạn', numberVi(value.openMissingDeadline)],
-  ] : [
+  const items: [string, ReactNode, string?][] = [
     ['Đúng hạn', rate(value.onTimeRate), chartColors.good],
     ['Quá hạn', rate(value.lateRate), chartColors.critical],
     ['Đang tồn quá hạn', numberVi(value.openOverdue), value.openOverdue > 0 ? chartColors.critical : undefined],
     ['Đang tạm dừng tính hạn', numberVi(value.openPaused)],
   ];
-  return <dl className={`grid gap-3 sm:grid-cols-2 ${backlog ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>{items.map(([label, val, color]) => (
-    <div key={label} className="rounded-xl border border-slate-200 bg-white p-3" title={val === '—' ? 'Chưa đủ dữ liệu' : undefined}>
+  return <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{items.map(([label, val, color]) => (
+    <div key={label} className="stat-tile rounded-xl border border-slate-200 bg-white p-3" title={val === '—' ? 'Chưa đủ dữ liệu' : undefined}>
       <dt className="flex items-center gap-1.5 text-xs text-slate-500">
         {color && <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: color }} />}{label}
       </dt>
-      <dd className="mt-1 text-lg font-bold tabular-nums text-slate-900">{val}</dd>
+      <dd className="stat-tile-value mt-1 text-lg font-bold tabular-nums text-slate-900">{val}</dd>
     </div>
   ))}</dl>;
 }
@@ -140,14 +135,13 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
   return <section className="admin-card min-w-0 overflow-hidden">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
       <h2 className="font-bold text-slate-900">Phản hồi người dân</h2>
-      <p className="text-sm text-slate-500">
+      <p className="text-[13px] text-slate-500">
         <span className="font-semibold text-slate-900">{numberVi(total)}</span> phản hồi
         {average != null && <> · Trung bình trang này <span className="font-semibold text-slate-900">{average.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span> <Star size={13} weight="fill" className="inline -translate-y-px text-amber-500" aria-hidden="true" /></>}
       </p>
     </div>
     {rows.length === 0 && <EmptyState title="Chưa có phản hồi nào trong kỳ đã chọn." description="Thử chọn khoảng ngày rộng hơn." />}
-    {rows.length > 0 && <p className="px-5 py-2 text-xs text-slate-500 sm:hidden">Vuốt ngang bảng để xem hồ sơ, đánh giá và góp ý.</p>}
-    {rows.length > 0 && <div className="admin-table-wrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="min-w-[900px]">
+    {rows.length > 0 && <div className="admin-table-wrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" tabIndex={0} role="region" aria-label="Bảng phản hồi người dân"><table className="mgr-stack min-w-[900px]">
       <caption className="sr-only">Danh sách phản hồi người dân</caption>
       <thead><tr>
         <th scope="col" className="w-36">Thời gian</th>
@@ -157,11 +151,11 @@ function FeedbackTable({ rows, total }: { rows: z.infer<typeof feedbackSchema>[]
         <th scope="col">Góp ý</th>
       </tr></thead>
       <tbody>{rows.map(row => <tr key={row.id} className="border-b border-slate-100 align-top last:border-0 hover:bg-slate-50/70">
-        <td className="whitespace-nowrap text-slate-600">{feedbackTime(row.createdAtUtc)}</td>
-        <td><FeedbackCitizen row={row} /></td>
-        <td className="max-w-72"><FeedbackApplication row={row} /></td>
-        <td><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
-        <td className="min-w-48">{row.comment
+        <td className="whitespace-nowrap text-slate-600" data-label="Thời gian">{feedbackTime(row.createdAtUtc)}</td>
+        <td data-label="Người dân"><FeedbackCitizen row={row} /></td>
+        <td className="max-w-72" data-label="Hồ sơ"><FeedbackApplication row={row} /></td>
+        <td data-label="Đánh giá"><Stars rating={row.rating} /><span className="mt-1 block text-xs text-slate-500">{RATING_LABELS[row.rating - 1]}</span></td>
+        <td className="min-w-48 text-left" data-label="Góp ý">{row.comment
           ? row.comment.length > 160
             ? <div className="space-y-2"><p className="line-clamp-2 break-words text-slate-700">{row.comment.slice(0, 120)}…</p><Button size="small" variant="outline" onClick={() => setReading(row)}>Xem đầy đủ góp ý</Button></div>
             : <p className="whitespace-pre-wrap break-words text-slate-800">{row.comment}</p>
@@ -194,19 +188,13 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
   const refreshing = current.isFetching || (section === 'stats-dossiers' && trends.isFetching);
 
   return <div className="space-y-5">
-    <AnalyticsFilters value={filters} onChange={setFilters} actions={
+    <div className="mgr-period-filter"><AnalyticsFilters value={filters} onChange={setFilters} actions={
       <RefreshButton label="Làm mới dữ liệu" loading={refreshing} onClick={() => { void current.refetch(); if (section === 'stats-dossiers') void trends.refetch(); }} />
-    } />
+    } /></div>
     <AnalyticsStatus pending={current.isPending} error={current.error} retry={() => void current.refetch()} />
 
     {!current.isError && current.data && <>
-      {overviewEnabled && overview.data && <Card title="Kết quả tiền kiểm trong kỳ">
-        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {Object.entries(labels).map(([key, label]) => <StatTile key={key} label={label} value={numberVi(overview.data!.totals[key as keyof typeof labels])} />)}
-        </dl>
-        <Deadlines value={overview.data.deadlines} />
-        <CoverageNotice data={overview.data.coverage} />
-      </Card>}
+      {overviewEnabled && overview.data && <DossierStatsView overview={overview.data} trends={trends} />}
 
       {procedures && procedureRows.data && <Card title="Thống kê theo thủ tục">
         <div className="admin-table-wrap"><table>
@@ -268,14 +256,5 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
 
       {pageData && <>{pageData.items.length === 0 && !feedback && <p role="status" className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">Không có dữ liệu trong kỳ đã chọn.</p>}<AnalyticsPagination page={pageData.page} size={pageData.pageSize} total={pageData.totalCount} onChange={page => setFilters(previous => ({ ...previous, page }))} /></>}
     </>}
-
-    {section === 'stats-dossiers' && <Card title="Xu hướng tiền kiểm theo ngày">
-      <AnalyticsStatus pending={trends.isPending} error={trends.error} retry={() => void trends.refetch()} />
-      {!trends.isError && trends.data && <>
-        <AnalyticsTrendChart data={trends.data} />
-        <h3 className="font-semibold text-slate-800">Hồ sơ còn tồn tại thời điểm thống kê</h3>
-        <Deadlines value={trends.data.currentBacklog} backlog />
-      </>}
-    </Card>}
   </div>;
 }

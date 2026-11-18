@@ -15,13 +15,13 @@ export const managerSectionTitles: Record<ManagerSectionId, { title: string; sub
   consultations: { title: 'Tham vấn chuyên môn' },
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
   applications: { title: 'Giám sát hồ sơ', subtitle: 'Theo dõi hồ sơ toàn phường, giao và chuyển cán bộ phụ trách' },
-  'stats-dossiers': { title: 'Thống kê Hồ sơ Hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
-  'stats-procedures': { title: 'Thống kê Thủ tục Hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
-  profiles: { title: 'Quản lý Cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
-  'perf-officers': { title: 'Đánh giá Hiệu suất Cán bộ', subtitle: 'Số giấy tờ sẵn sàng, yêu cầu bổ sung và thời hạn tiền kiểm theo cán bộ' },
-  'feedback-reports': { title: 'Báo cáo Phản hồi Người dân', subtitle: 'Theo dõi đánh giá hỗ trợ tiền kiểm của người dân trong phường' },
-  'satisfaction-level': { title: 'Đánh giá Mức độ Hài lòng', subtitle: 'Kết quả khảo sát chất lượng dịch vụ hành chính công của phường' },
-  profile: { title: 'Hồ sơ Cá nhân', subtitle: 'Thông tin tài khoản quản trị và thiết lập bảo mật cá nhân' },
+  'stats-dossiers': { title: 'Thống kê hồ sơ hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
+  'stats-procedures': { title: 'Thống kê thủ tục hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
+  profiles: { title: 'Quản lý cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
+  'perf-officers': { title: 'Hiệu suất cán bộ', subtitle: 'Số giấy tờ sẵn sàng, yêu cầu bổ sung và thời hạn tiền kiểm theo cán bộ' },
+  'feedback-reports': { title: 'Báo cáo phản hồi người dân', subtitle: 'Theo dõi đánh giá hỗ trợ tiền kiểm của người dân trong phường' },
+  'satisfaction-level': { title: 'Mức độ hài lòng', subtitle: 'Kết quả khảo sát chất lượng dịch vụ hành chính công của phường' },
+  profile: { title: 'Hồ sơ cá nhân', subtitle: 'Thông tin tài khoản quản trị và thiết lập bảo mật cá nhân' },
 };
 
 interface ManagerHeaderProps {

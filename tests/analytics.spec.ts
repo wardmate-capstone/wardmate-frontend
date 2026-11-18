@@ -3,6 +3,36 @@ import { mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog } from './fixtures/procedures';
 import { mockAnalytics } from './fixtures/analytics';
 
+test('Manager tổng quan: bố cục desktop/mobile và lối vào công việc điều hành', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['MANAGER'], ['workflow.dispatch.read', 'workflow.staffing.read', 'workflow.consultation.read']);
+  await mockCatalog(page); await mockAnalytics(page);
+  await page.goto('/manager');
+  const dashboard = page.locator('.manager-overview');
+  await expect(dashboard.getByRole('heading', { name: 'Cần theo dõi', exact: true })).toBeVisible();
+  await expect(dashboard.locator('.manager-overview-watch .is-overdue')).toContainText('2');
+  const work = dashboard.getByRole('region', { name: 'Công việc điều hành' });
+  await expect(work.getByRole('button')).toHaveCount(4);
+  for (const width of [1440, 1024, 768, 390, 360]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(dashboard.getByRole('button', { name: 'Làm mới dữ liệu' })).toBeVisible();
+    await page.screenshot({ path: `test-results/manager-overview-${width}.png`, fullPage: true });
+  }
+  await work.getByRole('button', { name: /Duyệt nghỉ phép/ }).click();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Duyệt nghỉ phép', exact: true }).first()).toBeVisible();
+});
+
+test('Manager tổng quan: giữ trạng thái rỗng và ẩn lối tắt khi không có quyền', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['MANAGER'], []);
+  await mockCatalog(page); const state = await mockAnalytics(page); state.empty = true;
+  await page.goto('/manager');
+  const dashboard = page.locator('.manager-overview');
+  await expect(dashboard.getByText('Chưa có đánh giá trong kỳ đã chọn.')).toBeVisible();
+  await expect(dashboard.getByRole('region', { name: 'Công việc điều hành' })).toHaveCount(0);
+  await expect(dashboard.getByRole('img', { name: 'Biểu đồ lượt hoạt động tiền kiểm', exact: true })).toHaveCount(0);
+  await expect(dashboard.locator('.manager-overview-metric').first()).toContainText('0');
+});
+
 test('Manager đọc tên từ API phản hồi, không tra hồ sơ thừa và mở được góp ý dài', async ({ page }) => {
   await mockWorkspaceAuth(page, ['MANAGER']); await mockCatalog(page);
   const state = await mockAnalytics(page); state.enrichedFeedback = true;
@@ -32,7 +62,7 @@ test('Manager: đủ sáu GET, phân trang và dữ liệu thiếu/null', async 
   await page.locator('aside').getByRole('button', { name: 'Thống kê thủ tục', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Thống kê theo thủ tục' })).toBeVisible();
   await page.getByRole('button', { name: 'Trang sau' }).click();
-  await expect(page.getByText('Trang 2 · 21 kết quả')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Phân trang thống kê' })).toContainText(/Trang\s*2\s*\/2\s*·\s*21\s*kết quả/);
   await page.locator('aside').getByRole('button', { name: 'Hiệu suất cán bộ', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Hiệu suất tiền kiểm theo cán bộ' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Hồ sơ chưa phân công cán bộ' })).toBeVisible();
@@ -98,9 +128,9 @@ test('Schema: ngày biên, năm nhuận, rating, comment, page và giờ Việt 
 test('Manager: đổi kỳ đưa trang về 1, từ chối khoảng ngày đảo ngược', async ({ page }) => {
   await mockWorkspaceAuth(page, ['MANAGER']); await mockCatalog(page); const state = await mockAnalytics(page);
   await page.goto('/manager'); await page.locator('aside').getByRole('button', { name: 'Thống kê thủ tục', exact: true }).click();
-  await page.getByRole('button', { name: 'Trang sau' }).click(); await expect(page.getByText('Trang 2 · 21 kết quả')).toBeVisible();
+  await page.getByRole('button', { name: 'Trang sau' }).click(); await expect(page.getByRole('navigation', { name: 'Phân trang thống kê' })).toContainText(/Trang\s*2\s*\/2\s*·\s*21\s*kết quả/);
   await page.getByLabel('Từ ngày', { exact: true }).fill('2024-01-01'); await page.getByLabel('Đến ngày', { exact: true }).fill('2024-12-31'); await page.getByRole('button', { name: 'Áp dụng' }).click();
-  await expect(page.getByText('Trang 1 · 21 kết quả')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Phân trang thống kê' })).toContainText(/Trang\s*1\s*\/2\s*·\s*21\s*kết quả/);
   expect(state.requests.some(item => item.query.get('from') === '2024-01-01' && item.query.get('to') === '2024-12-31' && item.query.get('page') === '1')).toBe(true);
   const before = state.requests.length;
   await page.getByLabel('Từ ngày', { exact: true }).fill('2025-01-01'); await page.getByRole('button', { name: 'Áp dụng' }).click();

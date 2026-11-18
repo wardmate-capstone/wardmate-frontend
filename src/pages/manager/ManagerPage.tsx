@@ -1,4 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
+import './manager-ui.css';
 import { formatDate } from '@/lib/dateFormat';
 import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';
@@ -306,12 +307,10 @@ export const ManagerPage: React.FC = () => {
           {!selectedProfile && currentSection !== 'profile' && (
             <div className="admin-page-heading mb-6">
               <div>
-                <h1 className="text-xl font-bold text-slate-900">{currentMeta.title}</h1>
-                {currentSection === 'overview' && (
-                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                    {getGreeting()}, {managerName}
-                  </p>
-                )}
+                <h1>{currentMeta.title}</h1>
+                {currentSection === 'overview' ? (
+                  <p>{getGreeting()}, {managerName}</p>
+                ) : currentMeta.subtitle && <p>{currentMeta.subtitle}</p>}
               </div>
             </div>
           )}

@@ -14,7 +14,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
 
     await expect(page.getByRole('img', { name: 'Biểu đồ lượt hoạt động tiền kiểm', exact: true })).toBeVisible();
     await expect(page.getByRole('img', { name: 'Biểu đồ tình trạng hạn tiền kiểm', exact: true })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'Biểu đồ phân bố đánh giá', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Phân bố đánh giá', { exact: true })).toBeVisible();
     // Kiểm tra không tràn ngang trên mobile
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('manager-overview-mobile.png'), fullPage: true });
@@ -27,7 +27,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     // Chuyển sang Cán bộ Một cửa
     await page.locator('aside').getByRole('button', { name: /Cán bộ Một cửa/ }).click();
 
-    await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quản lý cán bộ Một cửa', exact: true })).toBeVisible();
     await expect(page.getByText('Nguyễn Văn An')).toBeVisible();
     await expect(page.getByText('Trần Thị Mai Hương')).toBeVisible();
     await expect(page.getByText('Phường A').first()).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
 
     // Quay lại danh sách
     await page.getByRole('button', { name: /Quay lại danh sách/ }).click();
-    await expect(page.getByRole('heading', { name: 'Quản lý Cán bộ Một cửa', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quản lý cán bộ Một cửa', exact: true })).toBeVisible();
   });
 
   test('Thống kê hệ thống: Chuyển đổi mượt mà giữa các mục thống kê', async ({ page }) => {
@@ -55,11 +55,11 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
 
     // 1. Thống kê hồ sơ
     await page.locator('aside').getByRole('button', { name: 'Thống kê hồ sơ' }).click();
-    await expect(page.getByRole('heading', { name: 'Thống kê Hồ sơ Hành chính', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Thống kê hồ sơ hành chính', exact: true })).toBeVisible();
 
     // 2. Thống kê thủ tục
     await page.locator('aside').getByRole('button', { name: 'Thống kê thủ tục' }).click();
-    await expect(page.getByRole('heading', { name: 'Thống kê Thủ tục Hành chính', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Thống kê thủ tục hành chính', exact: true })).toBeVisible();
     await expect(page.getByText('Thống kê theo thủ tục', { exact: false })).toBeVisible();
   });
 
@@ -69,17 +69,17 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
 
     // Hiệu suất cán bộ
     await page.locator('aside').getByRole('button', { name: 'Hiệu suất cán bộ' }).click();
-    await expect(page.getByRole('heading', { name: 'Đánh giá Hiệu suất Cán bộ', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hiệu suất cán bộ', exact: true })).toBeVisible();
     await expect(page.getByText('Hiệu suất tiền kiểm theo cán bộ', { exact: false })).toBeVisible();
 
     // Báo cáo phản hồi người dân
     await page.locator('aside').getByRole('button', { name: /Báo cáo phản hồi/ }).click();
-    await expect(page.getByRole('heading', { name: 'Báo cáo Phản hồi Người dân', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Báo cáo phản hồi người dân', exact: true })).toBeVisible();
     await expect(page.getByText('Hỗ trợ tận tình', { exact: false })).toBeVisible();
 
     // Mức độ hài lòng
     await page.locator('aside').getByRole('button', { name: 'Mức độ hài lòng' }).click();
-    await expect(page.getByRole('heading', { name: 'Đánh giá Mức độ Hài lòng', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Mức độ hài lòng', exact: true })).toBeVisible();
     await expect(page.getByText('Hài lòng (4–5 sao): 100%', { exact: false })).toBeVisible();
 
     await expect(page.locator('aside').getByRole('button', { name: 'Báo cáo tổng hợp' })).toHaveCount(0);
@@ -94,13 +94,13 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
   await expect(page.getByRole('table', { name: 'Dữ liệu lượt hoạt động tiền kiểm', includeHidden: true }).getByText('12', { exact: true })).toHaveText('12');
   await expect(page.getByText('Cần theo dõi:', { exact: false })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Biểu đồ tình trạng hạn tiền kiểm', exact: true })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Biểu đồ phân bố đánh giá', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Phân bố đánh giá', { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('manager-overview-desktop.png'), fullPage: true });
   await page.getByRole('button', { name: 'Chi tiết hồ sơ', exact: false }).click();
-  await expect(page.getByRole('heading', { name: 'Thống kê Hồ sơ Hành chính', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Thống kê hồ sơ hành chính', exact: true })).toBeVisible();
   await page.locator('aside').getByRole('button', { name: 'Tổng quan', exact: true }).click();
   await page.getByRole('button', { name: 'Xem phản hồi', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Báo cáo Phản hồi Người dân', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Báo cáo phản hồi người dân', exact: true })).toBeVisible();
  });
 
  test('Tổng quan giữ các khối độc lập khi API hài lòng lỗi và dùng chung kỳ lọc', async ({ page }) => {
@@ -125,6 +125,6 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
   await expect(page.getByText('Chưa có hồ sơ sẵn sàng trong kỳ để phân tích hạn.', { exact: true })).toBeVisible();
   await expect(page.getByText('Chưa có đánh giá trong kỳ đã chọn.', { exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Biểu đồ tình trạng hạn tiền kiểm', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('img', { name: 'Biểu đồ phân bố đánh giá', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Phân bố đánh giá', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Hài lòng (4–5 sao): Chưa đủ dữ liệu', { exact: true })).toBeVisible();
  });
