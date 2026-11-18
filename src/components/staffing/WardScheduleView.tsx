@@ -36,14 +36,11 @@ export function WardScheduleView() {
   if (!allowed) return <p role="alert">Bạn cần quyền quản lý lịch để xem lịch toàn phường.</p>;
 
   const shifts = (query.data ?? []).filter(s => showCancelled || !s.cancelledAtUtc);
-  const known = new Map((directory.data ?? []).map(o => [o.id, o]));
-  // Roster = active Frontdesk officers (same rule as "Sắp xếp lịch tháng"). Inactive, re-roled or
-  // directory-missing people appear only when they hold a shift this month, so history stays visible.
+  // Roster = active Frontdesk officers, same rule as "Sắp xếp lịch tháng" and the officer list.
   const officers = new Map((directory.data ?? []).filter(o => o.isActive && o.roles.includes('FRONT_DESK_OFFICER') && !o.roles.includes('MANAGER')).map(o => [o.id, { id: o.id, name: o.fullName || o.username, active: true }]));
-  for (const s of shifts) if (!officers.has(s.officerId)) {
-    const o = known.get(s.officerId);
-    officers.set(s.officerId, { id: s.officerId, name: o ? o.fullName || o.username : `Cán bộ ${s.officerId}`, active: o?.isActive ?? true });
-  }
+  // Shifts left behind by accounts that were deleted, locked, re-roled or moved ward are hidden.
+  // Only when the directory failed to load do we fall back to rows keyed by officer id.
+  if (!directory.isSuccess) for (const s of shifts) if (!officers.has(s.officerId)) officers.set(s.officerId, { id: s.officerId, name: `Cán bộ ${s.officerId}`, active: true });
   const rows = [...officers.values()].filter(o => `${o.name} ${o.id}`.toLocaleLowerCase('vi').includes(search.trim().toLocaleLowerCase('vi'))).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   const changeMonth = (value: string) => { setMonth(value); setWeek(0); };
   const ready = query.isSuccess;

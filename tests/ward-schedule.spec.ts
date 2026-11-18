@@ -10,7 +10,7 @@ const shift = (id: string, officerId: string, startsAtUtc: string, endsAtUtc: st
 });
 const morning = shift('33333333-3333-4333-8333-333333333333', officer, '2026-11-01T00:30:00Z', '2026-11-01T04:30:00Z');
 const cancelled = shift('44444444-4444-4444-8444-444444444444', officer, '2026-11-02T06:00:00Z', '2026-11-02T10:00:00Z', true);
-const overnight = shift('55555555-5555-4555-8555-555555555555', missing, '2026-10-31T16:00:00Z', '2026-10-31T19:00:00Z');
+const overnight = shift('55555555-5555-4555-8555-555555555555', officer, '2026-10-31T16:00:00Z', '2026-10-31T19:00:00Z');
 
 async function setup(page: Page, manage = true) {
   await page.clock.setFixedTime(new Date('2026-11-01T02:00:00Z'));
@@ -23,7 +23,7 @@ async function setup(page: Page, manage = true) {
   await page.route('**/api/v1/staffing/ward-shifts?*', route => {
     const url = new URL(route.request().url());
     requests.push(url.search);
-    return authReply(route, { json: url.searchParams.get('month') === '10' ? [{ officerId: missing, shifts: [overnight] }] : [{ officerId: officer, shifts: [morning, cancelled] }] });
+    return authReply(route, { json: url.searchParams.get('month') === '10' ? [{ officerId: officer, shifts: [overnight] }] : [{ officerId: officer, shifts: [morning, cancelled] }] });
   });
   return requests;
 }
@@ -124,7 +124,7 @@ test('Manager chuyển chế độ lịch, giữ rõ lựa chọn và hướng d
   await expect(page.getByRole('region', { name: 'Lịch làm việc toàn phường', exact: true })).toBeVisible();
 });
 
-test('Lịch toàn phường: bỏ cán bộ ngừng hoạt động không có ca, giữ người có ca kèm tên', async ({ page }) => {
+test('Lịch toàn phường: chỉ cán bộ Frontdesk đang hoạt động, ẩn ca của tài khoản cũ', async ({ page }) => {
   await setup(page);
   const inactiveWithShift = '77777777-7777-4777-8777-777777777777';
   const fd = (id: string, fullName: string, isActive: boolean) => ({ id, username: id.slice(0, 8), email: `${id.slice(0, 8)}@example.test`, fullName, isActive, roles: ['FRONT_DESK_OFFICER'], wardCode: 'P01', assignedCategories: [] });
@@ -133,15 +133,20 @@ test('Lịch toàn phường: bỏ cán bộ ngừng hoạt động không có c
     fd('88888888-8888-4888-8888-888888888888', 'Lê Văn Cường', false),
     fd(inactiveWithShift, 'Phạm Thị Dung', false),
   ], page: 1, pageSize: 100, total: 3 } }));
+  const orphanShift = shift('99999999-9999-4999-8999-999999999999', inactiveWithShift, '2026-11-01T06:00:00Z', '2026-11-01T10:00:00Z');
   await page.route('**/api/v1/staffing/ward-shifts?*', route => authReply(route, { json: new URL(route.request().url()).searchParams.get('month') === '10' ? [] : [
     { officerId: officer, shifts: [morning] },
-    { officerId: inactiveWithShift, shifts: [shift('99999999-9999-4999-8999-999999999999', inactiveWithShift, '2026-11-01T06:00:00Z', '2026-11-01T10:00:00Z')] },
+    { officerId: inactiveWithShift, shifts: [orphanShift] },
+    { officerId: missing, shifts: [shift('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', missing, '2026-11-05T01:00:00Z', '2026-11-05T12:00:00Z')] },
   ] }));
   await page.goto('/manager?section=shifts');
   const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
-  await expect(table).toContainText('Phạm Thị Dung');
+  await expect(table).toContainText('Nguyễn Văn An');
+  await expect(table.getByRole('rowheader')).toHaveCount(1);
+  await expect(table).not.toContainText('Phạm Thị Dung');
   await expect(table).not.toContainText('Lê Văn Cường');
-  await expect(table).not.toContainText(`Cán bộ ${inactiveWithShift}`);
-  await expect(table.getByRole('rowheader').filter({ hasText: 'Phạm Thị Dung' })).toContainText('Ngừng hoạt động');
-  await expect(page.getByText('2 cán bộ · Tháng 11/2026')).toBeVisible();
+  await expect(table).not.toContainText(missing);
+  await expect(page.getByText('1 cán bộ · Tháng 11/2026')).toBeVisible();
+  await expect(page.locator('.ward-roster-orphans')).toHaveCount(0);
+  await expect(page.getByText('mã 22222222')).toHaveCount(0);
 });
