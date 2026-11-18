@@ -1,5 +1,12 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-VERCEL-PROXY-1118 — Proxy `/api` trên Vercel — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Lỗi: bản production trên `wardmate-frontend.vercel.app` gọi API tương đối `/api/...` (bundle không chứa origin Azure nào), nhưng `vercel.json` chỉ rewrite mọi đường dẫn về `index.html` → `POST /api/v1/auth/login` 405, `GET /api/v1/procedures` trả HTML. Web chỉ dùng được khi chạy local qua proxy Vite.
+- Sửa `vercel.json`: thêm 22 rewrite `/api/...` → 4 origin Azure (IAM, gateway, procedure-catalog, application-workflow), cùng thứ tự ưu tiên với proxy trong `vite.config.ts`; SPA fallback `/((?!api/).*)` → `/index.html`. Khi đổi route proxy ở `vite.config.ts` phải sửa cả `vercel.json`.
+- Hub thông báo: rewrite Vercel không chuyển WebSocket, SignalR tự rơi xuống SSE/long polling.
+- Kiểm tra: mô phỏng khớp route bằng `path-to-regexp@6` (11 đường dẫn mẫu đúng service); CORS IAM đã cho phép origin Vercel.
+
 ## FE-FILEVER-1118 — Nối API tệp theo lần gửi (DOC-FILEVER-01) — 18/11/2026 (Asia/Saigon, UTC+07:00)
 
 - BE đã làm và deploy đề nghị `BE_REQUEST_2026-11-17_VERSION_FILE_COMPARE.md` (bàn giao BE `docs/fe-handoff-2026-11-17.md`, DEPLOY-1118a). Đã kiểm qua Gateway Azure không token: `file-versions`, `file-versions/diff`, `file-versions/{id}/download`, `contents` đều 401 (route có, cần đăng nhập); DocumentForm `/health/ready` 200.
