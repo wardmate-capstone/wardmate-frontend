@@ -64,7 +64,7 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
   const sidebar = <aside id={sidebarId} className={`admin-sidebar workspace-sidebar workspace-sidebar-${workspace} ${isOpen ? 'is-open' : ''} ${isCompact ? 'is-compact' : ''}`} aria-label={`Thanh điều hướng ${subtitle}`}>
       <div className="admin-brand"><BrandMark className="admin-brand-mark" size={42} /><div><BrandWordmark subtitle={subtitle} compact /></div><button type="button" onClick={onClose} aria-label="Đóng menu"><X size={21} /></button></div>
       <nav className="admin-nav">
-        {visibleGroups.map(group => <div className="admin-nav-section" key={group.title}><p>{group.title}</p>{group.items.map(({ id, label, icon: Icon, children }) => {
+        {visibleGroups.map(group => <div className="admin-nav-section" key={group.title || 'root'}>{group.title && <p>{group.title}</p>}{group.items.map(({ id, label, icon: Icon, children }) => {
           const childActive = children?.some(child => child.id === activeSection) ?? false;
           const expanded = expandedItems[String(id)] ?? true;
           if (children?.length) return <div className="workspace-nav-tree" key={id}>
