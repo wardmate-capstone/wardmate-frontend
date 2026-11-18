@@ -9,12 +9,12 @@ test('business audit filters on server, uses Vietnam UTC boundaries and resets p
   await page.locator('aside').getByRole('button', { name: 'Nhật ký hoạt động' }).click();
   await expect(page.getByRole('tab', { name: 'Nghiệp vụ toàn hệ thống' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Trang sau' }).click();
-  await expect(page.getByText('Trang 2 / 2')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Phân trang nhật ký' })).toContainText('Trang 2/2');
   await page.getByLabel('Nguồn phát sinh').selectOption('workflow');
   await page.getByLabel('Loại dữ liệu', { exact: true }).fill(' applications ');
   await page.getByLabel('Từ ngày').fill('2026-11-03');
   await page.getByLabel('Đến ngày').fill('2026-11-03');
-  await page.getByText('Lọc theo người thực hiện và mã tra cứu').click();
+  await page.getByText('Lọc nâng cao: người thực hiện, mã tra cứu').click();
   await page.getByLabel('Mã tài khoản người thực hiện').fill(actorId);
   await page.getByLabel('Mã tra cứu', { exact: true }).fill(' trace-audit-test ');
   await page.getByRole('button', { name: 'Áp dụng' }).click();
@@ -55,7 +55,7 @@ test('audit rejects reversed dates and invalid actor without sending filters', a
   await page.getByRole('button', { name: 'Áp dụng' }).click();
   await expect(page.getByText('Ngày kết thúc phải từ ngày bắt đầu trở đi.')).toBeVisible();
   await page.getByLabel('Đến ngày').fill('2026-11-03');
-  await page.getByText('Lọc theo người thực hiện và mã tra cứu').click();
+  await page.getByText('Lọc nâng cao: người thực hiện, mã tra cứu').click();
   await page.getByLabel('Mã tài khoản người thực hiện').fill('not-a-guid');
   await page.getByRole('button', { name: 'Áp dụng' }).click();
   await expect(page.getByText('Nhập mã định danh GUID hợp lệ.')).toBeVisible();

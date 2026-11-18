@@ -5,7 +5,7 @@ import { contentFromApi } from '../src/lib/procedureContent';
 
 test('mapping API preserves methods, common checklist, cases and literal legal text', () => {
   const result = contentFromApi(sampleProcedure);
-  expect(result.methods[0]).toMatchObject({ method: 'Trực tiếp', processingTime: '1 ngày', notes: 'Áp dụng theo điều kiện nguồn' });
+  expect(result.methods[0]).toMatchObject({ method: 'Trực tiếp', processingTime: '1 ngày làm việc', notes: 'Áp dụng theo điều kiện nguồn' });
   expect(result.checklist).toHaveLength(3);
   expect(result.cases).toHaveLength(2);
   expect(result.legalBases[0].url).toBe('');
@@ -189,8 +189,11 @@ test('procedure editor selects a real DocumentForm option instead of a manual id
   await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Biểu mẫu/ }).click();
-  await expect(page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' })).toBeVisible();
-  await page.getByRole('button', { name: 'BM-01 · Tờ khai điện tử' }).click();
+  // Bước Biểu mẫu chọn mẫu qua hộp thoại "Chọn biểu mẫu từ kho" (FormLibraryModal), không nhập mã tay.
+  await page.getByRole('button', { name: 'Chọn từ kho' }).click();
+  const library = page.getByRole('dialog', { name: 'Chọn biểu mẫu từ kho' });
+  await library.getByRole('checkbox', { name: /BM-01/ }).check();
+  await library.getByRole('button', { name: 'Thêm 1 mẫu', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Biểu mẫu đã gắn' }).getByText('Tờ khai điện tử', { exact: true })).toBeVisible();
   expect(formRead).toBe(true);
 });
@@ -203,7 +206,7 @@ test('manager create sends full reviewed form without invented defaults', async 
   for (const [label, value] of [['Mã thủ tục', 'TEST-NEW'], ['Tên thủ tục', 'Thủ tục mới từ API'], ['Cấp thực hiện', 'Cấp Xã'], ['Đối tượng thực hiện', 'Công dân'], ['Tóm tắt lệ phí', 'Theo quy định'], ['Tóm tắt thời hạn', 'Theo quy định']]) await dialog.getByLabel(label, { exact: true }).fill(value);
   await dialog.getByLabel('Danh mục', { exact: true }).selectOption('1');
   await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Tạo thủ tục' }).click();
+  await dialog.getByRole('button', { name: 'Tạo và công khai' }).click();
   await expect(dialog).toHaveCount(0);
   const request = state.requests.find(r => r.method === 'POST');
   expect(request?.path).toBe('/api/v1/procedure-manager/procedures');
@@ -341,7 +344,7 @@ test('dashboard retains actual metrics and recent procedures without empty place
   const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
   await expect(page.getByRole('button', { name: 'Thêm thủ tục', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(2);
+  await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(4);
   await expect(page.getByRole('heading', { name: 'Hạng mục cần chú ý hoàn thiện' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Biểu mẫu cập nhật gần đây' })).toHaveCount(0);
   await expect(page.getByRole('table')).toHaveCount(0);

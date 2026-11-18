@@ -132,6 +132,12 @@ export async function mockWorkspaceAuth(page: Page, roles: string[], grantedPerm
     if (path === '/api/v1/rbac/audit-logs') return authReply(route, { json: { items: [{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', actorUserId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', action: 'role.assigned', targetUserId: '11111111-1111-1111-1111-111111111111', roleId: 4, permissionId: null, details: '{}', createdAt: '2026-10-08T01:00:00Z' }], page: 1, pageSize: 20, total: 1 } });
     if (path.endsWith('/roles') && path.includes('/api/v1/rbac/users/')) return authReply(route, { json: [rbacRoles[1]] });
     if (path.includes('/api/v1/rbac/users/') && /\/roles\/\d+$/.test(path) && ['PUT', 'DELETE'].includes(method)) return authReply(route, { status: 204 });
+    // Đổi vai trò duy nhất của người dùng (hộp thoại Phân vai trò): trả lại vai trò đã chọn.
+    if (/^\/api\/v1\/rbac\/users\/[^/]+\/role$/.test(path) && method === 'PUT') {
+      const roleId = (route.request().postDataJSON() as { roleId: number }).roleId;
+      const role = rbacRoles.find(item => item.id === roleId) ?? { id: roleId, roleName: 'CUSTOM_ROLE', description: 'Vai trò tùy chỉnh', isSystem: false, permissions: [] };
+      return authReply(route, { json: role });
+    }
     if (path === '/api/v1/users') return authReply(route, { json: { items: [{ id: '11111111-1111-1111-1111-111111111111', username: 'nguyenvanan', email: 'an@example.com', isActive: true, wardId: null, wardName: null, profile: { fullName: 'Nguyễn Văn An' }, roles: [{ id: 4, roleName: 'PROCEDURE_MANAGER' }] }], page: 1, pageSize: 20, total: 1 } });
     if (path === '/api/v1/accounts/wards') return authReply(route, { json: [] });
     if (path === '/api/v1/wards') return authReply(route, { json: [{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', code: 'WARD_A', name: 'Phường A' }] });

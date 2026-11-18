@@ -10,7 +10,7 @@ for (const roles of [['IT_ADMIN'], ['IT_ADMIN', 'PROCEDURE_MANAGER']]) {
     const catalog = await mockCatalog(page);
     await page.goto('/admin');
     await page.locator('aside').getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
-    await expect(page.getByText('Chỉ xem danh sách thủ tục.', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Chế độ chỉ xem/)).toBeVisible();
     await expect(page.getByText(sampleProcedure.title, { exact: true })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Thao tác', exact: true })).toHaveCount(0);
     for (const name of ['Thêm thủ tục', 'Chi tiết', 'Chỉnh sửa', 'Khôi phục phiên bản này']) {
@@ -30,7 +30,8 @@ for (const roles of [['IT_ADMIN'], ['IT_ADMIN', 'PROCEDURE_MANAGER']]) {
     await expect(page.getByRole('button', { name: 'Trước', exact: true })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Sau', exact: true })).toBeDisabled();
     expect(catalog.requests.every(request => request.method === 'GET' && [
-      '/api/v1/procedures/categories', '/api/v1/procedure-manager/procedures',
+      // /api/v1/procedures: trang Tổng quan Admin (mở đầu tiên) đếm số thủ tục đang áp dụng — chỉ đọc.
+      '/api/v1/procedures', '/api/v1/procedures/categories', '/api/v1/procedure-manager/procedures',
     ].includes(request.path))).toBe(true);
     expect(pageErrors).toEqual([]);
   });

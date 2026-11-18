@@ -38,8 +38,11 @@ test('admin creates a custom role and assigns a role to a user', async ({ page }
 
   await page.locator('aside').getByRole('button', { name: 'Người dùng hệ thống' }).click();
   await page.getByRole('button', { name: 'Phân vai trò' }).click();
-  await page.getByRole('checkbox', { name: /Quản trị hệ thống IT_ADMIN/ }).click();
-  await expect.poll(() => state.requests.some(request => request.method === 'PUT' && request.path.endsWith('/roles/5'))).toBe(true);
+  // Hộp thoại phân vai trò chọn một vai trò (radio) và chỉ gửi khi bấm Lưu.
+  const roleDialog = page.getByRole('dialog', { name: /Vai trò của nguyenvanan/ });
+  await roleDialog.getByRole('radio', { name: /CUSTOM_REVIEWER/ }).check();
+  await roleDialog.getByRole('button', { name: 'Lưu vai trò' }).click();
+  await expect.poll(() => state.requests.some(request => request.method === 'PUT' && /\/rbac\/users\/[^/]+\/role$/.test(request.path) && (request.body as { roleId?: number } | null)?.roleId === 6)).toBe(true);
 });
 
 test('admin audit uses IAM data and does not invent IP addresses', async ({ page }) => {
