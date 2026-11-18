@@ -11,6 +11,20 @@ import { calendarClosuresApi, closureInputSchema, closureReasonSchema, type Cale
 import { staffingError } from '@/lib/api/staffingError';
 import { addCalendarDays, calendarDateText, canCancelClosure, validClosureRange, vietnamToday } from '@/lib/calendarRules';
 import { StaffHeading, dateText, fieldClass, QueryState, useStaffAccess } from './shared';
+import { getPublicWards } from '@/lib/api';
+
+/**
+ * Nhãn phạm vi của ngày nghỉ. Bản ghi tạo trước 08/11/2026 không có tên phường (snapshot WardName = null),
+ * nên tra tên từ danh mục phường công khai; chỉ khi không tra được mới hiện mã phường.
+ */
+function useScopeLabel() {
+  const wards = useQuery({ queryKey: ['public-wards'], queryFn: getPublicWards, staleTime: 3_600_000, retry: false });
+  return (item: CalendarClosure) => {
+    if (item.wardCode === null) return 'Toàn quốc';
+    const code = item.wardCode.toLowerCase();
+    return item.wardName || wards.data?.find(ward => ward.code.toLowerCase() === code)?.name || `Phường ${item.wardCode}`;
+  };
+}
 
 function useVietnamToday() {
   const [today, setToday] = useState(vietnamToday);
@@ -27,6 +41,7 @@ function ClosureForm({ item, national, canSubmit, onClose, onSaved }: { item?: C
   const today = useVietnamToday();
   const client = useQueryClient();
   const formId = useId();
+  const scopeLabel = useScopeLabel();
   const [error, setError] = useState('');
   const [reviewRequired, setReviewRequired] = useState(false);
   const lock = useRef(false);
@@ -84,7 +99,7 @@ function ClosureForm({ item, national, canSubmit, onClose, onSaved }: { item?: C
     } finally { lock.current = false; }
   });
   return <Modal open title={item ? 'Hủy ngày nghỉ' : national ? 'Thêm ngày lễ toàn quốc' : 'Thêm ngày nghỉ phường'}
-    description={item ? `Ngày ${calendarDateText(item.date)} · ${item.wardCode === null ? 'Toàn quốc' : item.wardName || `Phường ${item.wardCode}`}` : national ? 'Ngày lễ áp dụng toàn quốc và có thể cập nhật hạn tiền kiểm của nhiều phường.' : 'Ngày đóng cửa áp dụng cho phường bạn quản lý.'}
+    description={item ? `Ngày ${calendarDateText(item.date)} · ${scopeLabel(item)}` : national ? 'Ngày lễ áp dụng toàn quốc và có thể cập nhật hạn tiền kiểm của nhiều phường.' : 'Ngày đóng cửa áp dụng cho phường bạn quản lý.'}
     onOpenChange={open => { if (!open && !busy) onClose(); }}
     footer={<><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" form={formId} loading={busy} disabled={reviewRequired || !canSubmit}>{item ? 'Xác nhận hủy' : 'Thêm ngày nghỉ'}</Button></>}>
     {item && <p className="mb-4 whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-sm">Lý do đã khai báo: {item.reason}</p>}
@@ -108,6 +123,7 @@ function ClosureForm({ item, national, canSubmit, onClose, onSaved }: { item?: C
 export function CalendarClosuresView() {
   const { user, manager, officer, can } = useStaffAccess();
   const today = useVietnamToday();
+  const scopeLabel = useScopeLabel();
   // The backend prioritizes national scope for a user with calendar.manage, including multi-role accounts.
   const national = Boolean(user?.roles.includes('IT_ADMIN') && can('workflow.calendar.manage'));
   const allowed = national || ((manager || officer) && can('workflow.staffing.read'));
@@ -147,7 +163,7 @@ export function CalendarClosuresView() {
     {!valid ? <p role="alert" className="text-red-800">Chọn khoảng ngày hợp lệ, tối đa 400 ngày gồm cả hai đầu.</p> : <>
       <QueryState query={query} empty={!rows.length} />
       {!query.isError && !query.isPending && <div className="staff-grid">{rows.map(item => <article key={item.id} className="staff-card closure-card space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold"><time dateTime={item.date}>{calendarDateText(item.date)}</time></h3><div className="flex flex-wrap gap-2"><Badge variant={item.wardCode === null ? 'info' : 'neutral'}>{item.wardCode === null ? 'Toàn quốc' : item.wardName || `Phường ${item.wardCode}`}</Badge><Badge variant={item.cancelled || item.date < today ? 'neutral' : item.date === today ? 'success' : 'warning'}>{item.cancelled ? 'Đã hủy' : item.date < today ? 'Đã qua' : item.date === today ? 'Hôm nay' : 'Sắp tới'}</Badge></div></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold"><time dateTime={item.date}>{calendarDateText(item.date)}</time></h3><div className="flex flex-wrap gap-2"><Badge variant={item.wardCode === null ? 'info' : 'neutral'}>{scopeLabel(item)}</Badge><Badge variant={item.cancelled || item.date < today ? 'neutral' : item.date === today ? 'success' : 'warning'}>{item.cancelled ? 'Đã hủy' : item.date < today ? 'Đã qua' : item.date === today ? 'Hôm nay' : 'Sắp tới'}</Badge></div></div>
         <p className="whitespace-pre-wrap break-words text-sm">{item.reason}</p>
         <details className="text-sm text-slate-600"><summary className="cursor-pointer py-1 font-medium">Chi tiết khai báo{item.cancelled ? ' và hủy' : ''}</summary><dl className="mt-2 grid gap-2 break-words">
           <div><dt>Hiệu lực từ</dt><dd>{dateText(item.effectiveFromUtc)}</dd></div><div><dt>Khai báo lúc</dt><dd>{dateText(item.createdAtUtc)}</dd></div><div><dt>Người khai báo</dt><dd className="break-all">{personName(item.createdBy, item.createdByName)}</dd></div>
