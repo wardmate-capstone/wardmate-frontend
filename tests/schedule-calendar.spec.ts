@@ -251,9 +251,11 @@ for (const width of [1440, 390, 360]) test(`Bảng đủ ngày, công bố nằm
   const publish = await page.getByRole('region', { name: 'Công bố lịch', exact: true }).boundingBox();
   expect(publish!.y).toBeGreaterThan(grid!.y + grid!.height);
   await page.screenshot({ path: info.outputPath(`calendar-${width}.png`), fullPage: true });
-  await page.getByRole('combobox', { name: 'Năm làm việc', exact: true }).selectOption('2028');
+  await page.getByRole('combobox', { name: 'Năm làm việc', exact: true }).selectOption(String(new Date().getFullYear() + 1));
   await page.getByRole('combobox', { name: 'Tháng làm việc', exact: true }).selectOption('02');
-  await expect(page.getByRole('button', { name: /^Ngày \d/ })).toHaveCount(29);
+  await expect(page.getByRole('button', { name: /^Ngày \d/ })).toHaveCount(new Date(Date.UTC(new Date().getFullYear() + 1, 2, 0)).getUTCDate());
+  // Ô năm chỉ có năm trước, năm nay, năm sau (không sổ 100 năm).
+  await expect(page.getByRole('combobox', { name: 'Năm làm việc', exact: true }).locator('option')).toHaveCount(3);
   await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

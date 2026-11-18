@@ -18,6 +18,9 @@ import { defaultStaffSchedule, defaultWorkingHours } from '@/lib/defaultStaffSch
 type MonthData = Awaited<ReturnType<typeof workScheduleApi.month>> & { carry?: ScheduleSlot[] };
 const weekdays = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'];
 const currentMonth = () => vietnamLocal(new Date().toISOString()).slice(0, 7);
+// Lịch ca chỉ cần năm trước, năm nay và năm sau (không sổ 100 năm). Tháng đầu/cuối cho nút ‹ ›.
+const scheduleYears = () => { const y = Number(currentMonth().slice(0, 4)); return [y - 1, y, y + 1]; };
+const firstMonth = () => `${scheduleYears()[0]}-01`, lastMonth = () => `${scheduleYears()[2]}-12`;
 const nextDate = (day: string) => new Date(Date.parse(day + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
 
 export function MonthlyScheduleView({ onRequestChange }: { onRequestChange: (slot: ScheduleSlot) => void }) {
@@ -33,12 +36,12 @@ export function MonthlyScheduleView({ onRequestChange }: { onRequestChange: (slo
   const change = (action: () => void) => guard.requestClose(() => { setDirty(false); action(); });
   const move = (delta: number) => {
     const value = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1 + delta, 1)).toISOString().slice(0, 7);
-    if (value >= '2000-01' && value <= '2099-12') change(() => setMonth(value));
+    if (value >= firstMonth() && value <= lastMonth()) change(() => setMonth(value));
   };
   return <div className="space-y-5">
     <div className="schedule-controls">
       {manager && <label className="staff-field">1. Chọn cán bộ<select className={fieldClass} value={officerId} disabled={busy || directory.isPending || directory.isError} onChange={e => change(() => setOfficer(e.target.value))}><option value="">Chọn cán bộ cần xếp lịch</option>{officers.map(o => <option key={o.id} value={o.id}>{o.fullName || o.username}</option>)}</select></label>}
-      <div className="staff-field"><span>{manager ? '2. Chọn tháng' : 'Tháng làm việc'}</span><div className="flex gap-2"><select aria-label="Tháng làm việc" className={fieldClass} value={month.slice(5, 7)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(month.slice(0, 5) + value)); }}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>Tháng {i + 1}</option>)}</select><select aria-label="Năm làm việc" className={fieldClass} value={month.slice(0, 4)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(value + month.slice(4))); }}>{Array.from({ length: 100 }, (_, i) => <option key={i} value={2000 + i}>{2000 + i}</option>)}</select></div></div>
+      <div className="staff-field"><span>{manager ? '2. Chọn tháng' : 'Tháng làm việc'}</span><div className="flex gap-2"><select aria-label="Tháng làm việc" className={fieldClass} value={month.slice(5, 7)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(month.slice(0, 5) + value)); }}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>Tháng {i + 1}</option>)}</select><select aria-label="Năm làm việc" className={fieldClass} value={month.slice(0, 4)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(value + month.slice(4))); }}>{[...new Set([...scheduleYears(), Number(month.slice(0, 4))])].sort((a, b) => a - b).map(y => <option key={y} value={y}>{y}</option>)}</select></div></div>
       <Button variant="outline" disabled={!officerId || busy} onClick={() => change(() => setGeneration(g => g + 1))}>Lấy lịch mới</Button>
     </div>
     {manager && <QueryState query={directory} />}
@@ -180,7 +183,7 @@ function CalendarBoard({ initial, officerId, officerIds, month, name, onDirty, o
         {defaultNotice && <p role="status" className="text-sm font-medium text-blue-900">{defaultNotice}</p>}</section>
     )}
     <div className="schedule-board">
-      <div className="schedule-month-heading"><Button variant="outline" aria-label="Tháng trước" disabled={operation.busy || month === '2000-01-01'} onClick={() => move(-1)}>‹</Button><div><h3>Tháng {Number(month.slice(5, 7))} / {month.slice(0, 4)}</h3><p>{name(officerId)}</p></div><Button variant="outline" aria-label="Tháng sau" disabled={operation.busy || month === '2099-12-01'} onClick={() => move(1)}>›</Button></div>
+      <div className="schedule-month-heading"><Button variant="outline" aria-label="Tháng trước" disabled={operation.busy || month.slice(0, 7) <= firstMonth()} onClick={() => move(-1)}>‹</Button><div><h3>Tháng {Number(month.slice(5, 7))} / {month.slice(0, 4)}</h3><p>{name(officerId)}</p></div><Button variant="outline" aria-label="Tháng sau" disabled={operation.busy || month.slice(0, 7) >= lastMonth()} onClick={() => move(1)}>›</Button></div>
       <p className="px-4 py-3 text-sm text-slate-600">{manager ? 'Bấm ngày để đặt hoặc bỏ ca. Chỉ thay đổi ca chưa bắt đầu.' : 'Bấm ngày để xem giờ làm.'} Giờ Việt Nam, định dạng 24 giờ.</p>
       <div className="schedule-weekdays">{weekdays.map((day, i) => <div key={day}><span className="hidden sm:inline">{day}</span><span className="sm:hidden">{i === 6 ? 'CN' : `T${i + 2}`}</span></div>)}</div>
       <div className="schedule-grid" aria-label="Bảng lịch tháng">
