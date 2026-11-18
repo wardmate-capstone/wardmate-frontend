@@ -1,3 +1,6 @@
+import '@/styles/workspace-ui.css';
+import { AdminSystemStatus } from './AdminSystemStatus';
+import { useAutoStackTables } from '@/hooks/useAutoStackTables';
 import { UserDropdown } from '@/components/layout/UserDropdown';
 import { formatTime, formatDate } from '@/lib/dateFormat';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -11,7 +14,6 @@ import {
   Books,
   Broadcast,
   Buildings,
-  CaretDown,
   ClipboardText,
   Database,
   House,
@@ -19,9 +21,11 @@ import {
   List,
   Plus,
   ClockCounterClockwise,
+  CalendarX,
+  GearSix,
+  Heartbeat,
   ShieldCheck,
   SidebarSimple,
-  Stack,
   UserCircle,
   Users,
 } from "@phosphor-icons/react";
@@ -81,7 +85,7 @@ type SectionId =
 
 const navigation: WorkspaceNavGroup<SectionId>[] = [
   {
-    title: "Tổng quan",
+    title: "",
     items: [{ id: "overview", label: "Tổng quan", icon: House, fallbackRoles: ['IT_ADMIN'] }],
   },
   {
@@ -116,13 +120,16 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
     items: [
       { id: "analytics-jobs", label: "Cập nhật thống kê", icon: ArrowsClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "notification-deliveries", label: "Phát thông báo", icon: Broadcast, permissions: ['notifications.deliveries.read'], fallbackRoles: ['IT_ADMIN'] },
-      { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: ClockCounterClockwise, permissions: ['workflow.calendar.manage'] },
-      { id: "integrations", label: "Giám sát dịch vụ", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
-      { id: "system-settings", label: "Cấu hình hệ thống", icon: Stack, fallbackRoles: ['IT_ADMIN'] },
+      { id: "closures", label: "Lịch ngày lễ toàn quốc", icon: CalendarX, permissions: ['workflow.calendar.manage'] },
+      { id: "integrations", label: "Giám sát dịch vụ", icon: Heartbeat, fallbackRoles: ['IT_ADMIN'] },
+      { id: "system-settings", label: "Cấu hình hệ thống", icon: GearSix, fallbackRoles: ['IT_ADMIN'] },
       { id: "audit", label: "Nhật ký hoạt động", icon: ClockCounterClockwise, fallbackRoles: ['IT_ADMIN'] },
       { id: "backup", label: "Sao lưu dữ liệu", icon: Database, fallbackRoles: ['IT_ADMIN'] },
-      { id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ],
+  },
+  {
+    title: "Tài khoản",
+    items: [{ id: "profile", label: "Hồ sơ cá nhân", icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] }],
   },
 ];
 
@@ -167,6 +174,9 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [wards, setWards] = useState<WardDto[]>([]);
   const wardsRef = useRef<WardDto[]>([]);
+  // Bảng danh sách trong trang Admin tự chuyển thành thẻ có nhãn trên điện thoại.
+  const mainRef = useRef<HTMLElement>(null);
+  useAutoStackTables(mainRef);
   // Lọc vai trò phía server (`role` của /admin/users); trạng thái BE chưa hỗ trợ nên lọc trong trang.
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [createStaffOpen, setCreateStaffOpen] = useState(false);
@@ -458,7 +468,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
 
 
   return (
-    <div className={embedded ? "" : "admin-layout"}>
+    <div className={embedded ? "" : "admin-layout it-admin-layout"}>
       {!embedded && <a href="#admin-main" className="skip-link">
         Đến nội dung chính
       </a>}
@@ -491,19 +501,24 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           >
             <SidebarSimple size={21} />
           </button>
+          <div className="admin-breadcrumb">
+            <span>Quản trị</span>
+            <span aria-hidden="true">/</span>
+            <strong>{activeSection === "users" && selectedUser ? "Chi tiết người dùng" : meta.title}</strong>
+          </div>
           <div className="admin-topbar-actions">
             <NotificationBell />
             <UserDropdown />
           </div>
         </header>}
 
-        <main id={embedded ? undefined : "admin-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
+        <main ref={mainRef} id={embedded ? undefined : "admin-main"} className={embedded ? "space-y-5" : "admin-main"} tabIndex={-1}>
           {!(activeSection === "users" && selectedUser) && activeSection !== "profile" && activeSection !== "procedures" && (
             <div className="admin-page-heading mb-6">
               <div>
                 <h1>{meta.title}</h1>
                 {activeSection === "overview" && (
-                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+                  <p>
                     {getGreeting()}, Quản trị viên {adminName}
                   </p>
                 )}
@@ -804,72 +819,36 @@ function Overview({ onSelect, wardsCount }: { onSelect: (id: SectionId) => void;
     }
   }, [loadAuditLogs, wardsCount]);
 
+  // Ô số kèm một dòng giải thích; thiếu dữ liệu thì nói rõ thay vì chỉ hiện "—".
   const stats = [
     {
       label: 'Thủ tục đang áp dụng',
-      value: procedureCount !== undefined ? procedureCount.toLocaleString('vi-VN') : (proceduresQuery.isLoading ? '...' : '—'),
-      icon: ClipboardText,
-      tone: 'info',
+      value: procedureCount !== undefined ? procedureCount.toLocaleString('vi-VN') : (proceduresQuery.isLoading ? '…' : '—'),
+      hint: procedureCount !== undefined ? 'Đang công khai trên cổng dịch vụ' : proceduresQuery.isLoading ? 'Đang tải' : 'Chưa tải được danh mục thủ tục',
     },
     {
       label: 'Tài khoản nội bộ',
       value: userCount !== undefined ? userCount.toLocaleString('vi-VN') : '—',
-      icon: Users,
-      tone: 'success',
+      hint: userCount !== undefined ? 'Cán bộ, quản lý và quản trị viên' : 'Chưa tải được danh sách tài khoản',
     },
     {
       label: 'Đơn vị Phường / Xã',
       value: wardTotal !== undefined ? wardTotal.toLocaleString('vi-VN') : '—',
-      icon: Buildings,
-      tone: 'warning',
+      hint: wardTotal !== undefined ? 'Đơn vị đã khai báo trong hệ thống' : 'Chưa tải được danh sách đơn vị',
     },
-  ];
-
-  const shortcuts: Array<{ id: SectionId; title: string; icon: typeof House }> = [
-    { id: 'procedures', title: 'Danh sách thủ tục', icon: ClipboardText },
-    { id: 'knowledge', title: 'Dữ liệu kiến thức AI', icon: Books },
-    { id: 'accounts', title: 'Tài khoản đăng nhập', icon: Key },
-    { id: 'users', title: 'Người dùng hệ thống', icon: Users },
-    { id: 'wards', title: 'Đơn vị Phường / Xã', icon: Buildings },
-    { id: 'roles', title: 'Vai trò & quyền hạn', icon: ShieldCheck },
   ];
 
   return (
     <>
-      <section className="admin-stat-grid xl:grid-cols-3!" aria-label="Chỉ số tổng quan">
-        {stats.map(({ label, value, icon: Icon, tone }) => (
-          <article key={label} className={`admin-stat-card is-${tone}`}>
-            <div>
-              <span>
-                <Icon size={24} weight="duotone" />
-              </span>
-              <small>{label}</small>
-            </div>
-            <strong>{value}</strong>
-          </article>
-        ))}
+      <section className="admin-card kpi-strip is-3" aria-label="Chỉ số tổng quan">
+        <dl>{stats.map(({ label, value, hint }) => <div key={label}>
+          <dt>{label}</dt>
+          <dd className="kpi-value">{value}</dd>
+          <dd className="kpi-hint">{hint}</dd>
+        </div>)}</dl>
       </section>
 
-      <section className="admin-card admin-module-card">
-        <div className="admin-card-heading">
-          <div>
-            <h2>Phân hệ quản trị</h2>
-          </div>
-        </div>
-        <div className="admin-module-grid">
-          {shortcuts.map(({ id, title, icon: Icon }) => (
-            <button key={id} type="button" onClick={() => onSelect(id)}>
-              <span>
-                <Icon size={22} weight="duotone" />
-              </span>
-              <div>
-                <strong>{title}</strong>
-              </div>
-              <CaretDown size={16} />
-            </button>
-          ))}
-        </div>
-      </section>
+      <div className="mt-4"><AdminSystemStatus onSelect={onSelect} /></div>
 
       <section className="mt-4">
         <article className="admin-card">
@@ -1138,7 +1117,7 @@ function AccountsView({
 
                   return (
                     <tr key={account.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="font-bold text-slate-900 font-mono">
+                      <td className="font-semibold text-slate-900">
                         @{account.username}
                       </td>
                       <td className="text-slate-700">{account.email}</td>
@@ -1149,18 +1128,16 @@ function AccountsView({
                           <span className="text-slate-400 italic">— Chưa gán —</span>
                         )}
                       </td>
-                      <td className="text-slate-600 font-mono">
+                      <td className="text-slate-600 tabular-nums">
                         {formatDate(account.createdAt)}
                       </td>
                       <td>
                         {account.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                          <span className="admin-status-badge is-success">
                             Hoạt động
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
-                            <span className="size-1.5 rounded-full bg-rose-500" />
+                          <span className="admin-status-badge is-warning">
                             Tạm khóa
                           </span>
                         )}
@@ -1170,10 +1147,10 @@ function AccountsView({
                           type="button"
                           disabled={isToggling}
                           onClick={() => onToggleStatus(account)}
-                          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                          className={`inline-flex min-h-9 items-center rounded-md border bg-white px-3 text-xs font-semibold transition-colors disabled:opacity-50 ${
                             account.isActive
-                              ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
-                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                              ? 'border-slate-200 text-slate-700 hover:border-red-300 hover:text-red-800'
+                              : 'border-emerald-200 text-emerald-800 hover:bg-emerald-50'
                           }`}
                         >
                           {isToggling ? 'Đang lưu...' : account.isActive ? 'Khóa tài khoản' : 'Mở khóa'}
@@ -1367,11 +1344,11 @@ function UsersView({
                               <p>
                                 <strong>{displayName}</strong>
                               </p>
-                              <small className="text-slate-500 font-mono text-[11px]">@{item.username}</small>
+                              <small className="text-xs text-slate-500">@{item.username}</small>
                             </>
                           ) : (
                             <p>
-                              <strong className="font-mono text-slate-800">@{item.username}</strong>
+                              <strong className="text-slate-800">@{item.username}</strong>
                             </p>
                           )}
                         </div>
