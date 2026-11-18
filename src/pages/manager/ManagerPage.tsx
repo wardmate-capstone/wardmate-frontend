@@ -1,5 +1,5 @@
 import { StaffingView } from '@/components/staffing/StaffingView';
-import './manager-ui.css';
+import '@/styles/workspace-ui.css';
 import { formatDate } from '@/lib/dateFormat';
 import { CalendarClosuresView } from '@/components/staffing/CalendarClosuresView';
 import { ConsultationsView } from '@/components/staffing/ConsultationsView';

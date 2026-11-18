@@ -16,16 +16,16 @@ const percent = (value: number | null | undefined) => value == null ? '—' : `$
 
 /** Một dòng trong thẻ hạn: chấm màu (kèm nhãn chữ, không dùng màu đơn lẻ), số lượng, tỷ lệ nếu có. */
 function Row({ label, value, share, color }: { label: string; value: number; share?: string; color?: string }) {
-  return <div className="dossier-row">
-    <dt>{color ? <span aria-hidden="true" className="dossier-dot" style={{ backgroundColor: color }} /> : <span aria-hidden="true" className="dossier-dot is-empty" />}{label}</dt>
-    <dd><strong>{numberVi(value)}</strong>{share !== undefined && <span aria-hidden={share === '' || undefined}>{share}</span>}</dd>
+  return <div className="ws-row">
+    <dt>{color ? <span aria-hidden="true" className="ws-dot" style={{ backgroundColor: color }} /> : <span aria-hidden="true" className="ws-dot is-empty" />}{label}</dt>
+    <dd><strong>{numberVi(value)}</strong>{share !== undefined && <span className="ws-share" aria-hidden={share === '' || undefined}>{share}</span>}</dd>
   </div>;
 }
 
 function Panel({ title, subtitle, children, footer }: { title: string; subtitle: ReactNode; children: ReactNode; footer?: ReactNode }) {
-  return <section className="admin-card dossier-panel">
+  return <section className="admin-card ws-panel">
     <header><h2>{title}</h2><p>{subtitle}</p></header>
-    <div className="dossier-panel-body">{children}</div>
+    <div className="ws-panel-body">{children}</div>
     {footer && <footer>{footer}</footer>}
   </section>;
 }
@@ -54,23 +54,23 @@ export function DossierStatsView({ overview, trends }: { overview: z.infer<typeo
   return <div className="dossier-stats">
     <CoverageNotice data={overview.coverage} />
 
-    <section className="admin-card dossier-kpis" aria-label="Chỉ số chính trong kỳ">
+    <section className="admin-card kpi-strip" aria-label="Chỉ số chính trong kỳ">
       <dl>{kpis.map(item => <div key={item.label}>
         <dt>{item.label}</dt>
-        <dd className="dossier-kpi-value">{item.value}</dd>
-        {item.hint && <dd className="dossier-kpi-hint">{item.hint}</dd>}
+        <dd className="kpi-value">{item.value}</dd>
+        {item.hint && <dd className="kpi-hint">{item.hint}</dd>}
       </div>)}</dl>
     </section>
 
-    <section className="admin-card dossier-panel">
+    <section className="admin-card ws-panel">
       <header><h2>Xu hướng tiền kiểm theo ngày</h2><p>Lượt gửi, giấy tờ sẵn sàng và yêu cầu bổ sung trong kỳ đã chọn</p></header>
-      <div className="dossier-panel-body">
+      <div className="ws-panel-body">
         <AnalyticsStatus pending={trends.isPending} error={trends.error} retry={() => void trends.refetch()} />
         {!trends.isError && trends.data && <AnalyticsTrendChart data={trends.data} withRevision />}
       </div>
     </section>
 
-    <div className="dossier-panels">
+    <div className="ws-panels">
       <Panel title="Hạn xử lý của hồ sơ đã hoàn tất" subtitle="Hồ sơ được xác nhận giấy tờ sẵn sàng trong kỳ">
         {deadlines ? <dl>
           <Row label="Đúng hạn" value={deadlines.completedOnTime} share={percent(deadlines.onTimeRate)} color={chartColors.good} />
@@ -83,7 +83,7 @@ export function DossierStatsView({ overview, trends }: { overview: z.infer<typeo
       <Panel
         title="Hồ sơ đang tồn"
         subtitle={backlog ? `Tại thời điểm tổng hợp ${formatDateTime(backlog.asOfUtc)} (giờ VN)` : 'Chưa có lần tổng hợp'}
-        footer={<button type="button" className="dossier-link" onClick={() => navigate('/manager?section=applications')}>Giám sát hồ sơ <ArrowRight size={14} aria-hidden="true" /></button>}
+        footer={<button type="button" className="ws-link" onClick={() => navigate('/manager?section=applications')}>Giám sát hồ sơ <ArrowRight size={14} aria-hidden="true" /></button>}
       >
         {backlog ? <dl>
           <Row label="Quá hạn" value={backlog.openOverdue} color={backlog.openOverdue > 0 ? chartColors.critical : undefined} />
