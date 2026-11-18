@@ -17,16 +17,16 @@ export function AuditFilterForm({ business = false, onApply }: { business?: bool
   const sourceId = useId();
   const form = useForm<AuditFilters>({ resolver: zodResolver(auditFilterSchema), defaultValues: emptyAuditFilters });
   const { errors } = form.formState;
-  return <form noValidate onSubmit={form.handleSubmit(onApply)} className="space-y-4 border-b border-slate-200 pb-5">
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {business && <><div className="grid content-start gap-2"><label htmlFor={sourceId} className="text-sm font-semibold">Nguồn phát sinh</label><select id={sourceId} {...form.register('source')} className={formSelectClass}><option value="">Tất cả nguồn</option>{Object.entries(auditSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
-        <Input label="Loại dữ liệu" hint="Nhập đúng tên loại dữ liệu cần tra cứu" {...form.register('entity')} error={errors.entity?.message} /></>}
+  return <form noValidate onSubmit={form.handleSubmit(onApply)} className="ops-filter">
+    <div className="ops-filter-row">
+      {business && <><div className="grid content-start gap-2"><label htmlFor={sourceId}>Nguồn phát sinh</label><select id={sourceId} {...form.register('source')} className={formSelectClass}><option value="">Tất cả nguồn</option>{Object.entries(auditSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
+        <Input label="Loại dữ liệu" placeholder="Tất cả loại dữ liệu" {...form.register('entity')} error={errors.entity?.message} /></>}
       <Input label="Từ ngày" type="date" {...form.register('from')} error={errors.from?.message} />
       <Input label="Đến ngày" type="date" {...form.register('to')} error={errors.to?.message} />
+      <div className="ops-filter-actions"><Button type="submit">Áp dụng</Button><Button variant="outline" onClick={() => { form.reset(emptyAuditFilters); onApply({ ...emptyAuditFilters }); }}>Xóa bộ lọc</Button></div>
     </div>
-    {business && <details className="rounded-xl border border-slate-200 p-3" open={!!errors.actorId || !!errors.traceId}><summary className="cursor-pointer text-sm font-semibold">Lọc theo người thực hiện và mã tra cứu</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><Input label="Mã tài khoản người thực hiện" hint="Sao chép mã tài khoản từ trang Người dùng hệ thống." {...form.register('actorId')} error={errors.actorId?.message} /><Input label="Mã tra cứu" hint="Mã yêu cầu cần đối chiếu; khớp chính xác." {...form.register('traceId')} error={errors.traceId?.message} /></div></details>}
-    <div className="flex flex-wrap gap-3"><Button type="submit">Áp dụng</Button><Button variant="outline" onClick={() => { form.reset(emptyAuditFilters); onApply({ ...emptyAuditFilters }); }}>Xóa bộ lọc</Button></div>
-    <p className="text-sm text-slate-600">Khoảng ngày tính theo giờ Việt Nam. Bỏ trống để tra cứu mọi thời điểm.</p>
+    {business && <details className="ops-filter-more" open={!!errors.actorId || !!errors.traceId}><summary>Lọc nâng cao: người thực hiện, mã tra cứu</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><Input label="Mã tài khoản người thực hiện" hint="Sao chép mã tài khoản từ trang Người dùng hệ thống." {...form.register('actorId')} error={errors.actorId?.message} /><Input label="Mã tra cứu" hint="Mã yêu cầu cần đối chiếu; khớp chính xác." {...form.register('traceId')} error={errors.traceId?.message} /></div></details>}
+    <p className="ops-filter-note">Ngày theo giờ Việt Nam. Bỏ trống để tra cứu mọi thời điểm.</p>
   </form>;
 }
 export function AuditPagination({ page, pageSize, total, busy, onPage, onSize }: { page: number; pageSize: number; total: number; busy: boolean; onPage: (page: number) => void; onSize: (size: number) => void }) {

@@ -52,7 +52,7 @@ export function AnalyticsJobsView() {
       setConfirm(null);
     } finally { lock.current = false; }
   }
-  return <section className="admin-card max-w-4xl space-y-5 p-5 sm:p-6" aria-labelledby="analytics-update-title">
+  return <section className="admin-card space-y-5 p-5 sm:p-6" aria-labelledby="analytics-update-title">
       <div className="space-y-2"><h2 id="analytics-update-title" className="text-lg font-bold">Cập nhật báo cáo theo khoảng ngày</h2><p className="text-sm leading-relaxed text-slate-600">Dùng khi báo cáo thiếu hoặc chưa có số liệu mới nhất từ hồ sơ tiền kiểm.</p></div>
       <form onSubmit={handleSubmit(setConfirm)} className="space-y-3">
         <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
