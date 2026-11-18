@@ -6,7 +6,7 @@ import { staffingApi, type Consultation, type ConsultationDecision, type Dispatc
 import { officerBlockers } from '@/lib/api/staffingError';
 import { documentFormApi } from '@/lib/api/documentForms';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
-import { ActionForm, StaffHeading, StaffStatus, dateText, fieldClass, Pager, QueryState, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
+import { ActionForm, ShiftCheckTestNotice, StaffHeading, StaffStatus, dateText, fieldClass, Pager, QueryState, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
 
 function ConsultationDocuments({ applicationId }: { applicationId: string }) {
   const { user } = useStaffAccess();
@@ -55,16 +55,18 @@ async function latestOf(item: Consultation) {
 function DispatchDialog({ item, onClose }: { item: Consultation; onClose: () => void }) {
   const candidates = useStaffQuery(['specialist-candidates', item.applicationId], signal => staffingApi.specialistCandidates(item.applicationId, signal));
   const ready = !candidates.isFetching && !candidates.isError && !!candidates.data;
-  const options = [...(candidates.data ?? [])].sort((a, b) => Number(b.eligible) - Number(a.eligible)).map(c => ({
+  const shiftCheckSkipped = Boolean(candidates.data?.shiftCheckSkipped);
+  const options = [...(candidates.data?.items ?? [])].sort((a, b) => Number(b.eligible) - Number(a.eligible)).map(c => ({
     value: c.officerId, label: c.fullName || 'Cán bộ chưa cập nhật tên', disabled: !c.eligible,
     group: c.eligible ? 'Có thể tư vấn' : 'Chưa đủ điều kiện',
-    description: c.eligible ? 'Đủ quyền, đúng lĩnh vực và đang trong ca' : c.blockingReasons.map(r => officerBlockers[r] || r).join(' · ') || 'Chưa đủ điều kiện',
+    description: c.eligible ? (shiftCheckSkipped ? 'Đủ quyền, đúng lĩnh vực' : 'Đủ quyền, đúng lĩnh vực và đang trong ca') : c.blockingReasons.map(r => officerBlockers[r] || r).join(' · ') || 'Chưa đủ điều kiện',
   }));
   return <ActionForm title="Chọn cán bộ tư vấn" description={`Hồ sơ ${item.applicationCode || item.applicationId}. Người được chọn chỉ góp ý; cán bộ đang phụ trách không thay đổi.`} onClose={onClose}
     fields={[{ name: 'specialistId', label: 'Cán bộ tư vấn', type: 'listbox', placeholder: 'Chọn cán bộ', options: ready ? options : [] }]}
     validate={() => !ready ? 'Danh sách cán bộ chưa tải xong. Vui lòng thử lại.' : undefined}
     submit={async v => staffingApi.dispatchConsultation(await latestOf(item), v.specialistId)}>
     <QueryState query={candidates} empty={ready && !options.length} />
+    {shiftCheckSkipped && <ShiftCheckTestNotice />}
     {ready && options.length > 0 && !options.some(o => !o.disabled) && <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">Hiện chưa có cán bộ đủ điều kiện. Kiểm tra ca làm, lĩnh vực và quyền của cán bộ, hoặc từ chối yêu cầu kèm lý do.</p>}
   </ActionForm>;
 }

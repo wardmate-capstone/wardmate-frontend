@@ -11,6 +11,7 @@ import {
   dateText,
   Pager,
   QueryState,
+  ShiftCheckTestNotice,
   useStaffAccess,
   useStaffQuery,
 } from "./shared";
@@ -54,7 +55,8 @@ export function AssignDialog({
   );
   const ready =
     !candidates.isFetching && !candidates.isError && !!candidates.data;
-  const list = candidates.data ?? [];
+  const list = candidates.data?.items ?? [];
+  const shiftCheckSkipped = Boolean(candidates.data?.shiftCheckSkipped);
   const noneEligible =
     ready && list.length > 0 && !list.some((c) => c.eligible);
   // Chia cán bộ thành 3 nhóm: chọn được → đang phụ trách → chưa đủ điều kiện.
@@ -98,7 +100,7 @@ export function AssignDialog({
           ? "Chuyển cán bộ phụ trách"
           : "Phân công cán bộ"
       }
-      description={`Hồ sơ ${application.applicationCode || application.id}. Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu.`}
+      description={`Hồ sơ ${application.applicationCode || application.id}. ${shiftCheckSkipped ? 'Hệ thống kiểm tra điều kiện của cán bộ khi lưu (đang bỏ qua ca trực).' : 'Hệ thống sẽ kiểm tra ca trực và điều kiện của cán bộ khi lưu.'}`}
       onClose={onClose}
       fields={[
         {
@@ -126,7 +128,7 @@ export function AssignDialog({
       validate={(v) =>
         candidates.isFetching ||
         candidates.isError ||
-        !candidates.data?.some(
+        !list.some(
           (c) =>
             c.officerId === v.officerId &&
             c.eligible &&
@@ -158,8 +160,9 @@ export function AssignDialog({
         </p>
       )}
       {!candidates.isFetching && (
-        <QueryState query={candidates} empty={candidates.data?.length === 0} />
+        <QueryState query={candidates} empty={ready && list.length === 0} />
       )}
+      {shiftCheckSkipped && <ShiftCheckTestNotice />}
       {/* Không còn cán bộ nào chọn được: một dòng gợi ý ngắn, lý do chi tiết xem trong ô chọn */}
       {noneEligible && (
         <div

@@ -21,6 +21,13 @@ const consult = (applicationId: string) => `/api/v1/applications/${applicationId
 async function get<T extends z.ZodType>(path: string, schema: T, params?: Record<string, unknown>, signal?: AbortSignal): Promise<z.infer<T>> {
   return schema.parse((await api.get(servicePath(serviceUrls.workflow, path), { params, signal })).data);
 }
+// STAFFING-TEST-01: BE bật Staffing__SkipShiftCheck thì trả header này ở danh sách ứng viên (bỏ kiểm tra ca làm hiện tại).
+export type CandidateList<T> = { items: T[]; shiftCheckSkipped: boolean };
+async function getCandidates<T extends z.ZodType>(path: string, schema: T, signal?: AbortSignal): Promise<CandidateList<z.infer<T>>> {
+  const response = await api.get(servicePath(serviceUrls.workflow, path), { signal });
+  const header = response.headers?.['x-staffing-shift-check'];
+  return { items: z.array(schema).parse(response.data), shiftCheckSkipped: String(header ?? '').toLowerCase() === 'skipped' };
+}
 async function post<T extends z.ZodType>(path: string, schema: T, input: unknown): Promise<z.infer<T>> {
   return schema.parse((await api.post(servicePath(serviceUrls.workflow, path), input)).data);
 }
@@ -45,7 +52,7 @@ export const staffingApi = {
     sort: query.sort ?? 'createdAt_desc',
     status: query.status || undefined,
   }, signal),
-  candidates: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignment-candidates`, z.array(candidateSchema), undefined, signal),
+  candidates: (app: string, signal?: AbortSignal) => getCandidates(`${manager}/${app}/assignment-candidates`, candidateSchema, signal),
   assign: (app: string, input: AssignmentInput) => post(`${manager}/${app}/assignments`, assignmentSchema, input),
   assignments: (app: string, signal?: AbortSignal) => get(`${manager}/${app}/assignments`, z.array(assignmentSchema), undefined, signal),
   shifts: (from: string, to: string, signal?: AbortSignal) => get(`${root}/shifts`, z.array(shiftSchema), { from, to }, signal),
@@ -62,7 +69,7 @@ export const staffingApi = {
   createConsultation: (app: string, input: { specialistId: string; expectedAssignmentVersion: number; question: string }) => post(consult(app), consultationSchema, input),
   // Cán bộ đang phụ trách hồ sơ gửi yêu cầu tham vấn; Manager chọn người tư vấn sau
   requestConsultation: (app: string, input: { expectedAssignmentVersion: number; question: string }) => post(`${consult(app)}/requests`, consultationSchema, input),
-  specialistCandidates: (app: string, signal?: AbortSignal) => get(`${consult(app)}/specialist-candidates`, z.array(specialistCandidateSchema), undefined, signal),
+  specialistCandidates: (app: string, signal?: AbortSignal) => getCandidates(`${consult(app)}/specialist-candidates`, specialistCandidateSchema, signal),
   dispatchConsultation: (item: Consultation, specialistId: string) => post(`${consult(item.applicationId)}/${item.id}/dispatch`, consultationSchema, { expectedVersion: item.version, specialistId }),
   answer: (item: Consultation, text: string, willingToTakeOver = false) => post(`${consult(item.applicationId)}/${item.id}/answer`, consultationSchema, { expectedVersion: item.version, text, willingToTakeOver }),
   // decision bỏ trống = đóng tham vấn đang mở (luồng cũ); TRANSFER_TO_SPECIALIST cần assignmentVersion hiện tại của hồ sơ

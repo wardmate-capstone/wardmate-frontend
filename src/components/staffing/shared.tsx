@@ -17,6 +17,15 @@ export { validatePeriod, vietnamIso } from '@/lib/staffingValidation';
 export const fieldClass = 'w-full min-w-0 min-h-12 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 aria-[invalid=true]:border-red-700';
 export const dateText = (value: string) => formatDateTime(value);
 export const statusText = (value: string) => ({ PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', CANCELLED: 'Đã hủy', OPEN: 'Chờ trả lời', PENDING_DISPATCH: 'Chờ điều phối', ANSWERED: 'Đã trả lời', CLOSED: 'Đã đóng', SUBMITTED: 'Chờ tiền kiểm', UNDER_REVIEW: 'Đang kiểm tra', NEED_REVISION: 'Cần bổ sung', DOCUMENTS_READY: 'Giấy tờ sẵn sàng' }[value] || value);
+/** STAFFING-TEST-01: BE đang bật chế độ thử nghiệm, bỏ qua kiểm tra ca làm hiện tại (vẫn chặn nghỉ phép đã duyệt). */
+export function ShiftCheckTestNotice() {
+  return (
+    <p role="note" className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+      <span className="font-semibold">Chế độ thử nghiệm:</span> không kiểm tra ca làm, cán bộ ngoài giờ trực vẫn chọn được. Nghỉ phép đã duyệt vẫn bị chặn.
+    </p>
+  );
+}
+
 export function StaffStatus({ value, label }: { value: string; label?: string }) {
   const variant = ['APPROVED', 'ANSWERED', 'ACTIVE'].includes(value) ? 'success' : ['PENDING', 'OPEN', 'PENDING_DISPATCH'].includes(value) ? 'warning' : value === 'REJECTED' ? 'danger' : 'neutral';
   return <Badge variant={variant}>{label || statusText(value)}</Badge>;
