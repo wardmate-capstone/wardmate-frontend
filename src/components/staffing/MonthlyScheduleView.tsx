@@ -168,7 +168,7 @@ function CalendarBoard({ initial, officerId, officerIds, month, name, onDirty, o
     {!manager && <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600"><strong className="text-slate-900">Khung giờ mặc định: </strong>{defaultWorkingHours} Lịch bên dưới là các ca đã được công bố.</p>}
     {stale && <div role="alert" className="staff-note"><p>Bản đang soạn trên hệ thống dựa trên lịch cũ. Bạn đang xem lịch chính thức; cần lập lại bản soạn trước khi sửa.</p><Button variant="outline" onClick={() => setResetDraft(true)}>Bắt đầu lại từ lịch chính thức</Button></div>}
     {manager && can('workflow.staffing.manage') && (
-        <section aria-label="Lịch mặc định cho tất cả cán bộ" className="space-y-3 rounded-xl border border-red-100 bg-red-50/40 p-4">
+        <section aria-label="Lịch mặc định cho tất cả cán bộ" className="schedule-default-tools space-y-3 rounded-xl border border-red-100 bg-red-50/40 p-4">
           <h4 className="font-semibold">Lịch mặc định cho tất cả cán bộ</h4>
           <p className="text-sm text-slate-700">{defaultWorkingHours}</p>
           <p className="text-sm text-slate-600">Áp dụng cho {officerIds.length} cán bộ trong tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)}. Giữ ngày đã có ca hoặc đã chỉnh; bỏ qua Chủ nhật, ngày lễ và buổi có nghỉ phép được duyệt. Chỉ thêm ca chưa bắt đầu.</p>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { CalendarBlank, CalendarDots, ListBullets, ArrowsLeftRight, Clock } from '@phosphor-icons/react';
 import type { ScheduleSlot } from '@/lib/api/workSchedules';
 import { StaffHeading, useStaffAccess } from './shared';
 import { ScheduleListView } from './ScheduleListView';
@@ -13,11 +14,12 @@ function ScheduleWorkspace({ initialTab }: { initialTab: 'ward' | 'list' | 'mont
   const { manager } = useStaffAccess();
   const [tab, setTab] = useState<'ward' | 'list' | 'month' | 'changes'>((initialTab === 'list' || initialTab === 'ward') && !manager ? 'month' : initialTab);
   const [change, setChange] = useState<ScheduleSlot>();
-  return <section className="staff-workspace"><StaffHeading title={manager ? 'Lịch ca làm của phường' : 'Lịch ca làm của tôi'} description={manager ? "Xem lịch toàn bộ cán bộ Frontdesk theo tuần và tháng. Chuyển sang Sắp xếp lịch tháng để đặt giờ và công bố lịch. Thời gian theo giờ Việt Nam." : "Chọn tháng và bấm ngày để xem giờ làm. Bạn có thể xác nhận đã xem lịch hoặc đề nghị đổi giờ ca."} />
-    <div className="staff-tabs" aria-label="Chế độ lịch làm việc">{([['ward', 'Lịch toàn phường'], ['month', manager ? 'Sắp xếp lịch tháng' : 'Lịch tháng'], ['list', 'Danh sách ca'], ['changes', 'Yêu cầu đổi ca']] as const).filter(([value]) => manager || (value !== 'list' && value !== 'ward')).map(([value, label]) => <Button key={value} variant={tab === value ? 'primary' : 'outline'} aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</Button>)}</div>
+  return <section className={`staff-workspace ${manager ? 'manager-schedule-workspace' : ''}`}>
+    {manager ? <p className="manager-schedule-intro">Theo dõi ca trực toàn phường, sắp xếp lịch và xử lý yêu cầu đổi ca.</p> : <StaffHeading title="Lịch ca làm của tôi" description="Chọn tháng và bấm ngày để xem giờ làm. Bạn có thể xác nhận đã xem lịch hoặc đề nghị đổi giờ ca." />}
+    <div className={manager ? 'manager-schedule-navigation' : undefined}><div className="staff-tabs" role="group" aria-label="Chế độ lịch làm việc">{([['ward', 'Lịch toàn phường', CalendarBlank], ['month', manager ? 'Sắp xếp lịch tháng' : 'Lịch tháng', CalendarDots], ['list', 'Danh sách ca', ListBullets], ['changes', 'Yêu cầu đổi ca', ArrowsLeftRight]] as const).filter(([value]) => manager || (value !== 'list' && value !== 'ward')).map(([value, label, Icon]) => <Button key={value} variant={tab === value ? 'primary' : 'outline'} aria-pressed={tab === value} onClick={() => setTab(value)}>{manager && <Icon size={18} aria-hidden="true" />}{label}</Button>)}</div>{manager && <span className="manager-schedule-timezone"><Clock size={15} aria-hidden="true" />Giờ Việt Nam · 24 giờ</span>}</div>
     {manager && tab === 'ward' && <WardScheduleView />}
     {manager && tab === 'list' && <ScheduleListView />}
-    <div hidden={tab !== 'month'}><MonthlyScheduleView onRequestChange={setChange} /></div>
+    <div hidden={tab !== 'month'} className={manager ? 'manager-schedule-month' : undefined}><MonthlyScheduleView onRequestChange={setChange} /></div>
     {tab === 'changes' && <ShiftChangesView />}{change && <RequestShiftChange slot={change} onClose={() => setChange(undefined)} />}
   </section>;
 }

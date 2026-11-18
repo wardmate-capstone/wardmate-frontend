@@ -128,3 +128,108 @@
   .schedule-month-heading { padding: .6rem; gap: .25rem; }
   .schedule-month-heading h3 { font-size: 1rem; }
 }
+
+/* Manager schedule: presentation only; shared Frontdesk screens retain their styles. */
+.manager-schedule-workspace { --schedule-border: #e2e8f0; }
+.manager-schedule-intro { margin-top: -12px; color: #64748b; font-size: 13px; line-height: 1.7; }
+.manager-schedule-navigation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; border-bottom: 1px solid var(--schedule-border); }
+.manager-schedule-workspace .staff-tabs { gap: 24px; padding: 0; border: 0; }
+.manager-schedule-workspace .staff-tabs > button { position: relative; gap: 8px; min-height: 52px; padding: 0 0 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: #64748b; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.manager-schedule-workspace .staff-tabs > button:hover { color: #0f172a; }
+.manager-schedule-workspace .staff-tabs > button[aria-pressed="true"] { color: #991b1b; font-weight: 600; }
+.manager-schedule-workspace .staff-tabs > button[aria-pressed="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: #b91c1c; content: ''; }
+.manager-schedule-timezone { display: inline-flex; align-items: center; gap: 6px; padding-bottom: 12px; color: #64748b; font-size: 11px; }
+.manager-schedule-workspace .staff-filter, .manager-schedule-workspace .staff-card, .manager-schedule-workspace .staff-state, .manager-schedule-workspace .schedule-board { border-radius: 8px; box-shadow: none; }
+.manager-schedule-workspace .staff-field { gap: 6px; color: #475569; font-size: 12px; font-weight: 500; }
+.manager-schedule-workspace .staff-field input, .manager-schedule-workspace .staff-field select { min-width: 0; height: 42px; border-color: #cbd5e1; border-radius: 6px; color: #334155; font-size: 13px; font-weight: 400; }
+.manager-schedule-workspace button:focus-visible { outline: 2px solid #b91c1c; outline-offset: 3px; }
+.manager-schedule-workspace .ward-schedule-filter { padding: 16px 20px 0; }
+.manager-schedule-workspace .ward-schedule-filter .schedule-controls { display: grid; grid-template-columns: 180px 140px minmax(180px, 1fr) auto; gap: 16px; }
+.manager-schedule-workspace .ward-schedule-filter .staff-field { max-width: none; }
+.ward-schedule-search > span { position: relative; display: block; min-width: 0; }
+.ward-schedule-search > span > svg { position: absolute; top: 13px; left: 12px; color: #94a3b8; pointer-events: none; }
+.ward-schedule-search input { padding-left: 36px; }
+.ward-schedule-filter-note { display: flex; align-items: center; justify-content: space-between; gap: 8px 20px; margin-top: 14px; border-top: 1px solid #f1f5f9; color: #64748b; font-size: 12px; }
+.ward-schedule-filter-note strong { color: #475569; font-weight: 500; }
+.ward-schedule-filter-note label { flex-shrink: 0; font-size: 12px; }
+.ward-schedule-filter-note input { width: 15px; height: 15px; accent-color: #991b1b; }
+.manager-schedule-workspace .ward-roster { border-radius: 8px; padding: 0; background: #fff; }
+.manager-schedule-workspace .ward-roster-toolbar { gap: 12px; min-height: 88px; padding: 16px 20px; }
+.manager-schedule-workspace .ward-roster-toolbar h3 { font-size: 15px; font-weight: 600; color: #0f172a; }
+.manager-schedule-workspace .ward-roster-toolbar p { font-size: 12px; }
+.ward-roster-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ward-roster-navigation > button { width: 44px; padding: 0; border-color: #e2e8f0; border-radius: 6px; color: #475569; }
+.manager-schedule-workspace .ward-roster-period { justify-content: center; color: #475569; font-size: 12px; }
+.manager-schedule-workspace .ward-roster-scroll { border-top: 1px solid var(--schedule-border); border-bottom: 1px solid var(--schedule-border); border-radius: 0; }
+.manager-schedule-workspace .ward-roster-table { min-width: 1060px; }
+.manager-schedule-workspace .ward-roster-table thead th { height: 84px; padding: 12px 8px; background: #f8fafc; border-bottom-color: var(--schedule-border); font-size: 11px; }
+.manager-schedule-workspace .ward-roster-table thead th strong { margin-top: 5px; color: #334155; font-size: 14px; font-weight: 600; }
+.manager-schedule-workspace .ward-roster-table th:first-child { width: 220px; padding: 16px; }
+.manager-schedule-workspace .ward-roster-table thead th:first-child { background: #f8fafc; color: #475569; font-size: 12px; }
+.manager-schedule-workspace .ward-roster-table thead .ward-roster-today-heading { background: #fff7f7; color: #991b1b; }
+.manager-schedule-workspace .ward-roster-today-heading strong { color: #991b1b; }
+.ward-roster-today-heading small { display: block; margin-top: 4px; color: #991b1b; font-size: 10px; }
+.manager-schedule-workspace .ward-roster-table td { height: 112px; padding: 8px; }
+.manager-schedule-workspace .ward-roster-table tbody tr:last-child > * { border-bottom: 0; }
+.manager-schedule-workspace .ward-roster-person strong { color: #334155; font-size: 13px; }
+.manager-schedule-workspace .ward-roster-avatar { width: 32px; height: 32px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 600; }
+.manager-schedule-workspace .ward-shift { gap: 6px; padding: 10px 7px; border-left-width: 2px; border-radius: 4px; }
+.manager-schedule-workspace .ward-shift strong { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.manager-schedule-workspace .ward-shift span, .manager-schedule-workspace .ward-shift small { font-size: 10px; line-height: 1.6; }
+.manager-schedule-workspace .ward-roster-today { background: #fffbfb; }
+.ward-roster-empty { display: block; padding: 12px 0; color: #cbd5e1; font-size: 14px; text-align: center; }
+.manager-schedule-workspace .ward-roster-legend { gap: 12px 24px; padding: 16px 20px; font-size: 11px; }
+.manager-schedule-workspace .staff-hint { margin-top: 12px; font-size: 12px; }
+.manager-schedule-month > div > .schedule-controls { padding: 20px; border: 1px solid var(--schedule-border); border-radius: 8px; background: #fff; }
+.manager-schedule-month .schedule-default-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 24px; padding: 16px 20px; border-color: var(--schedule-border); border-radius: 8px; background: #fff; }
+.manager-schedule-month .schedule-default-tools > * { margin-top: 0; }
+.manager-schedule-month .schedule-default-tools > h4 { font-size: 13px; }
+.manager-schedule-month .schedule-default-tools > p { grid-column: 1; font-size: 12px; line-height: 1.7; }
+.manager-schedule-month .schedule-default-tools > button { grid-column: 2; grid-row: 1 / span 3; align-self: center; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-size: 12px; box-shadow: none; }
+.manager-schedule-month .schedule-default-tools > button:hover:not(:disabled) { border-color: #991b1b; background: #fff7f7; color: #991b1b; }
+.manager-schedule-month .schedule-month-heading { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #fff; }
+.manager-schedule-month .schedule-month-heading h3 { font-size: 18px; font-weight: 600; color: #0f172a; }
+.manager-schedule-month .schedule-month-heading p { color: #64748b; font-size: 12px; }
+.manager-schedule-month .schedule-month-heading > button { border-color: #e2e8f0; color: #475569; }
+.manager-schedule-month .schedule-board > p { font-size: 12px; }
+.manager-schedule-month .schedule-weekdays { border-top-color: var(--schedule-border); color: #64748b; font-size: 12px; }
+.manager-schedule-month .schedule-cell { min-height: 126px; }
+.manager-schedule-month .schedule-cell.is-work-day { background: #fff; }
+.manager-schedule-month .schedule-cell.is-rest-day { background: #fff8f8; }
+.manager-schedule-month .schedule-date { padding: 8px; gap: 6px; }
+.manager-schedule-month .schedule-number { min-width: 28px; min-height: 28px; font-size: 14px; font-weight: 500; }
+.manager-schedule-month .schedule-hours { gap: 4px; width: 100%; font-size: 11px; }
+.manager-schedule-month .schedule-range { gap: 2px; padding: 5px; border-left: 2px solid #0d9488; border-radius: 3px; background: #f0fdfa; color: #115e59; }
+.manager-schedule-month .schedule-label, .manager-schedule-month .schedule-past { font-size: 10px; color: #64748b; }
+.manager-schedule-month .schedule-publish { border-color: var(--schedule-border); border-radius: 8px; background: #fff; }
+.manager-schedule-month .schedule-publish > div { flex: 1 1 300px; }
+.manager-schedule-month .schedule-publish h3 { font-size: 14px; }
+.manager-schedule-month .schedule-publish p { color: #64748b; font-size: 12px; }
+@media (max-width: 1279px) {
+  .manager-schedule-workspace .ward-schedule-filter .schedule-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manager-schedule-timezone { padding-bottom: 8px; }
+  .manager-schedule-month .schedule-default-tools { grid-template-columns: minmax(0, 1fr); }
+  .manager-schedule-month .schedule-default-tools > button { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 6px; }
+}
+@media (max-width: 767px) {
+  .manager-schedule-workspace .staff-tabs { gap: 0; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manager-schedule-workspace .staff-tabs > button { justify-content: flex-start; padding: 12px 4px; font-size: 12px; white-space: normal; text-align: left; }
+  .manager-schedule-timezone { display: none; }
+  .manager-schedule-workspace .ward-schedule-filter { padding: 16px 16px 0; }
+  .manager-schedule-workspace .ward-schedule-filter .schedule-controls { gap: 12px; }
+  .manager-schedule-workspace .ward-schedule-search { grid-column: 1 / -1; }
+  .manager-schedule-workspace .ward-schedule-filter .schedule-controls > button { grid-column: 1 / -1; }
+  .ward-schedule-filter-note { flex-wrap: wrap; padding-top: 12px; }
+  .manager-schedule-workspace .ward-roster-toolbar { padding: 16px; }
+  .ward-roster-navigation { width: 100%; justify-content: space-between; }
+  .manager-schedule-workspace .ward-roster-table th:first-child { width: 160px; padding: 12px; }
+  .manager-schedule-workspace .ward-roster-table { min-width: 1000px; }
+  .manager-schedule-workspace .ward-roster-legend { gap: 12px; padding: 16px; }
+  .manager-schedule-month > div > .schedule-controls { padding: 16px; }
+  .manager-schedule-month .schedule-default-tools { padding: 16px; }
+  .manager-schedule-month .schedule-cell { min-height: 100px; }
+  .manager-schedule-month .schedule-date { padding: 4px 2px; }
+  .manager-schedule-month .schedule-range { padding: 3px 2px; gap: 0; }
+  .manager-schedule-month .schedule-month-heading { padding: 12px; }
+  .manager-schedule-month .schedule-month-heading h3 { font-size: 16px; }
+}

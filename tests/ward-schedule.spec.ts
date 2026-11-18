@@ -29,6 +29,7 @@ async function setup(page: Page, manage = true) {
 }
 
 test('Lịch toàn phường: mọi cán bộ, ca qua tháng UTC, ca hủy và tìm kiếm', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const requests = await setup(page);
   await page.goto('/manager?section=shifts');
   const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
@@ -93,5 +94,54 @@ test('Bảng lịch trên mobile cuộn bên trong, giữ cột cán bộ', asyn
   await page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' }).scrollIntoViewIfNeeded();
   await scroll.evaluate(el => { el.scrollLeft = 350; });
   await expect(page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' })).toBeInViewport();
+  await scroll.evaluate(el => { el.scrollLeft = 0; });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath('ward-schedule-mobile.png'), fullPage: true });
+  for (const width of [768, 360]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' }).scrollIntoViewIfNeeded();
+    await scroll.evaluate(el => { el.scrollLeft = 350; });
+    await expect(page.getByRole('rowheader').filter({ hasText: 'Nguyễn Văn An' })).toBeInViewport();
+    await scroll.evaluate(el => { el.scrollLeft = 0; });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: testInfo.outputPath(`ward-schedule-${width}.png`), fullPage: true });
+  }
+});
+
+test('Manager chuyển chế độ lịch, giữ rõ lựa chọn và hướng dẫn xếp lịch', async ({ page }) => {
+  await setup(page);
+  await page.goto('/manager?section=shifts');
+  const modes = page.getByRole('group', { name: 'Chế độ lịch làm việc' });
+  await expect(modes.getByRole('button')).toHaveCount(4);
+  await expect(modes.getByRole('button', { name: 'Lịch toàn phường', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await modes.getByRole('button', { name: 'Sắp xếp lịch tháng', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: '1. Chọn cán bộ', exact: true })).toBeVisible();
+  await expect(page.getByText('Chọn cán bộ để xem và xếp lịch tháng.', { exact: true })).toBeVisible();
+  await modes.getByRole('button', { name: 'Danh sách ca', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Cán bộ xem lịch', exact: true })).toBeVisible();
+  await modes.getByRole('button', { name: 'Lịch toàn phường', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Lịch làm việc toàn phường', exact: true })).toBeVisible();
+});
+
+test('Lịch toàn phường: bỏ cán bộ ngừng hoạt động không có ca, giữ người có ca kèm tên', async ({ page }) => {
+  await setup(page);
+  const inactiveWithShift = '77777777-7777-4777-8777-777777777777';
+  const fd = (id: string, fullName: string, isActive: boolean) => ({ id, username: id.slice(0, 8), email: `${id.slice(0, 8)}@example.test`, fullName, isActive, roles: ['FRONT_DESK_OFFICER'], wardCode: 'P01', assignedCategories: [] });
+  await page.route('**/api/v1/manager/officers?*', route => authReply(route, { json: { items: [
+    fd(officer, 'Nguyễn Văn An', true),
+    fd('88888888-8888-4888-8888-888888888888', 'Lê Văn Cường', false),
+    fd(inactiveWithShift, 'Phạm Thị Dung', false),
+  ], page: 1, pageSize: 100, total: 3 } }));
+  await page.route('**/api/v1/staffing/ward-shifts?*', route => authReply(route, { json: new URL(route.request().url()).searchParams.get('month') === '10' ? [] : [
+    { officerId: officer, shifts: [morning] },
+    { officerId: inactiveWithShift, shifts: [shift('99999999-9999-4999-8999-999999999999', inactiveWithShift, '2026-11-01T06:00:00Z', '2026-11-01T10:00:00Z')] },
+  ] }));
+  await page.goto('/manager?section=shifts');
+  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
+  await expect(table).toContainText('Phạm Thị Dung');
+  await expect(table).not.toContainText('Lê Văn Cường');
+  await expect(table).not.toContainText(`Cán bộ ${inactiveWithShift}`);
+  await expect(table.getByRole('rowheader').filter({ hasText: 'Phạm Thị Dung' })).toContainText('Ngừng hoạt động');
+  await expect(page.getByText('2 cán bộ · Tháng 11/2026')).toBeVisible();
 });

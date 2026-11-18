@@ -34,7 +34,7 @@ async function setup(page: Page) {
 
 async function navigate(page: Page, name: string) {
   if ((page.viewportSize()?.width ?? 1440) < 1024) await page.getByRole('button', { name: 'Mở menu điều hướng', exact: true }).click();
-  await page.locator('aside').getByRole('button', { name, exact: true }).click();
+  await page.locator('#manager-sidebar').getByRole('button', { name, exact: true }).click();
   await expect(page.locator('.staff-workspace')).toBeVisible();
   if (name === 'Lịch ca làm') { await page.getByRole('button', { name: 'Danh sách ca', exact: true }).click(); await page.getByRole('combobox', { name: 'Cán bộ xem lịch', exact: true }).selectOption(officerId); }
 }
