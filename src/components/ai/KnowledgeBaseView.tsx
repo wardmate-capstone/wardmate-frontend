@@ -179,7 +179,7 @@ export function KnowledgeBaseView() {
     { id: 'feedback', label: 'Đánh giá chatbot', icon: ChatCircleText },
   ] as const;
   const tabBar = (
-    <div role="tablist" aria-label="Dữ liệu kiến thức AI" className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1">
+    <div role="tablist" aria-label="Dữ liệu kiến thức AI" className="kb-tabs flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1">
       {tabs.map(({ id, label, icon: Icon }) => (
         <button
           key={id}

@@ -277,12 +277,12 @@ export function AdminRolesView() {
                       </td>
                       <td>
                         <div className="min-w-32">
-                          <strong className="mb-1 block text-xs text-red-700">
+                          <strong className="mb-1 block text-xs font-semibold text-slate-700">
                             {role.permissions.length}/{permissions.length} quyền
                           </strong>
                           <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                             <span
-                              className="block h-full rounded-full bg-red-600"
+                              className="block h-full rounded-full bg-slate-500"
                               style={{ width: `${percent}%` }}
                             />
                           </div>

@@ -9,8 +9,10 @@ export function AdminProceduresView() {
   return (
     <div className="space-y-5">
       <div className="admin-page-heading">
-        <h1>Danh sách Thủ tục Hành chính</h1>
-        <p className="mt-2 text-sm text-slate-600">Chỉ xem danh sách thủ tục.</p>
+        <div>
+          <h1>Danh sách thủ tục hành chính</h1>
+          <p>Danh mục thủ tục đang có trên hệ thống. Chế độ chỉ xem; chỉnh sửa tại phân hệ Quản lý thủ tục.</p>
+        </div>
       </div>
       <ProcedureFeedback
         error={categories.error ? procedureError(categories.error) : undefined}
