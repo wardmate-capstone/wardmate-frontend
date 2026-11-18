@@ -14,13 +14,17 @@ import {
   Buildings,
   Key,
   Lock,
+  Scan,
+  Trash,
 } from '@phosphor-icons/react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
-import { updateMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
+import { updateMyProfile, deleteMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
-import { Skeleton, formSelectClass, textareaClass } from '@/components/ui';
+import { Button, Input, Modal, Skeleton, formSelectClass, textareaClass } from '@/components/ui';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
+import { CccdOcrScanModal } from '@/components/citizen/CccdOcrScanModal';
+import type { CccdExtractionDto } from '@/lib/api/aiOcr';
 
 function formatDate(value?: string | null): string {
   if (!value) return 'Chưa được cập nhật';
@@ -32,9 +36,17 @@ function formatDate(value?: string | null): string {
   return value;
 }
 
-export const UnifiedSelfProfileView: React.FC = () => {
+/**
+ * Hồ sơ cá nhân dùng chung cho mọi phân hệ. `variant="citizen"` (cổng công dân) dùng nhãn công dân,
+ * thêm Quét CCCD tự động, ô Email đăng ký và Xóa thông tin cá nhân; ẩn mục chỉ dành cho cán bộ/quản trị.
+ */
+export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }> = ({ variant = 'staff' }) => {
+  const citizen = variant === 'citizen';
   const { profile, loading, initials, refetch } = useUserProfile();
   const user = useAuthStore((state) => state.user);
+  const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isStaffRole = useMemo(() => {
     if (!user?.roles) return false;
@@ -140,7 +152,49 @@ export const UnifiedSelfProfileView: React.FC = () => {
     }
   };
 
-  const displayName = profile?.fullName || user?.username || 'Cán bộ';
+  // Quét CCCD: điền vào biểu mẫu đang sửa (mở chế độ sửa nếu chưa mở), chỉ ghi đè trường đọc được.
+  const handleApplyExtractedCccd = (data: CccdExtractionDto) => {
+    setErrors({});
+    setFormData((prev) => {
+      const base = isEditing ? prev : {
+        fullName: profile?.fullName || '',
+        phoneNumber: profile?.phoneNumber || '',
+        identityNumber: profile?.identityNumber || '',
+        dateOfBirth: profile?.dateOfBirth || '',
+        gender: profile?.gender || '',
+        permanentAddress: profile?.permanentAddress || '',
+        temporaryAddress: profile?.temporaryAddress || '',
+      };
+      return {
+        ...base,
+        fullName: data.fullName || base.fullName,
+        identityNumber: data.citizenId || base.identityNumber,
+        dateOfBirth: data.dateOfBirth || base.dateOfBirth,
+        gender: data.gender || base.gender,
+        permanentAddress: data.placeOfResidence || base.permanentAddress,
+      };
+    });
+    setIsEditing(true);
+  };
+
+  const handleDeleteProfile = async () => {
+    setDeleting(true);
+    try {
+      await deleteMyProfile();
+      toast.success('Đã xóa thông tin cá nhân thành công.');
+      setIsDeleteModalOpen(false);
+      setFormData({ fullName: '', phoneNumber: '', identityNumber: '', dateOfBirth: '', gender: '', permanentAddress: '', temporaryAddress: '' });
+      setErrors({});
+      setIsEditing(true);
+      await refetch();
+    } catch (error) {
+      toast.error(authErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const displayName = profile?.fullName || user?.username || (citizen ? 'Công dân' : 'Cán bộ');
 
   return (
     <div className="space-y-6">
@@ -154,7 +208,17 @@ export const UnifiedSelfProfileView: React.FC = () => {
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {citizen && activeTab === 'personal' && (
+            <button
+              type="button"
+              disabled={isSaving}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              onClick={() => setIsOcrModalOpen(true)}
+            >
+              <Scan size={16} aria-hidden="true" /> Quét CCCD tự động
+            </button>
+          )}
           {activeTab === 'personal' ? (
             !isEditing ? (
               <>
@@ -201,7 +265,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
       <div className="admin-card p-6 border-l-4 border-l-red-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <AvatarEditor initials={initials || 'CB'} />
+            <AvatarEditor initials={initials || (citizen ? 'CD' : 'CB')} />
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl font-bold text-slate-900">
@@ -252,7 +316,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
           }`}
         >
           <IdentificationCard size={18} weight={activeTab === 'personal' ? 'bold' : 'regular'} />
-          <span>Thông tin cán bộ</span>
+          <span>{citizen ? 'Thông tin cá nhân' : 'Thông tin cán bộ'}</span>
         </button>
         <button
           type="button"
@@ -273,23 +337,12 @@ export const UnifiedSelfProfileView: React.FC = () => {
         <>
           {/* Banner thông báo trạng thái chỉnh sửa */}
       {isEditing && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-900 via-red-800 to-amber-700 p-4 text-white shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs text-amber-200 shrink-0">
-              <PencilSimple size={20} weight="duotone" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                Chế độ chỉnh sửa thông tin cá nhân
-                <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-400 text-red-950">
-                  Đang mở
-                </span>
-              </h4>
-              <p className="text-xs text-red-100/90 mt-0.5">
-                Cập nhật trực tiếp các trường bên dưới. Thay đổi chỉ được áp dụng khi bấm <strong>Lưu thay đổi</strong> ở thanh thao tác phía trên.
-              </p>
-            </div>
-          </div>
+        // Dòng nhắc phẳng thay cho dải gradient: đủ để biết đang ở chế độ chỉnh sửa, không lấn át nội dung.
+        <div role="status" className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+          <PencilSimple size={18} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+          <p className="text-sm">
+            <strong className="font-semibold">Đang chỉnh sửa thông tin cá nhân.</strong> Thay đổi chỉ được lưu khi bấm <strong className="font-semibold">Lưu thay đổi</strong> ở thanh thao tác phía trên.
+          </p>
         </div>
       )}
 
@@ -314,7 +367,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
           </div>
 
           {/* Thẻ CCCD gắn chip */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-red-50/90 via-amber-50/40 to-white border border-red-200/90 shadow-2xs space-y-2">
+          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-red-700" weight="fill" />
@@ -341,7 +394,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 ) : loading ? (
                   <Skeleton className="h-7 w-48 rounded-lg" />
                 ) : profile?.identityNumber && profile.identityNumber !== 'Chưa cập nhật' && profile.identityNumber !== 'Chưa được cập nhật' ? (
-                  <span className="font-mono text-xl font-black text-red-950 tracking-wider">
+                  <span className="text-lg font-semibold tabular-nums tracking-wider text-slate-900">
                     {profile.identityNumber}
                   </span>
                 ) : (
@@ -436,6 +489,15 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Email đăng ký (công dân): chỉ đọc, lấy từ tài khoản; không gửi vào API hồ sơ */}
+            {citizen && (
+              <div>
+                <label htmlFor="profile-account-email" className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Email đăng ký</label>
+                <Input id="profile-account-email" type="email" value={user?.email ?? ''} readOnly aria-describedby="profile-email-help" placeholder="Tài khoản chưa có email" className="min-w-0 bg-slate-50 text-sm" />
+                <p id="profile-email-help" className="mt-2 text-xs leading-5 text-slate-500">Dùng để nhận mã xác thực khi khôi phục tài khoản.</p>
+              </div>
+            )}
 
             {/* SĐT */}
             <div>
@@ -552,7 +614,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
                 @{user?.username}
               </strong>
             </div>
-            <div>
+            {/* Công dân đã có ô Email đăng ký ở trên; không có đơn vị/phạm vi quản trị nên ẩn hai mục này */}
+            {!citizen && <div>
               <span className="text-slate-400 block text-[11px] mb-1">Email liên hệ:</span>
               {user?.email ? (
                 <strong className="text-slate-900 font-mono text-xs block py-1">
@@ -561,8 +624,8 @@ export const UnifiedSelfProfileView: React.FC = () => {
               ) : (
                 <span className="text-slate-400 italic text-xs block py-1">Chưa được cập nhật</span>
               )}
-            </div>
-            <div>
+            </div>}
+            {!citizen && <div>
               <span className="text-slate-400 block text-[11px] mb-1">
                 {isStaffRole ? 'Đơn vị Phường công tác:' : 'Phạm vi quản trị:'}
               </span>
@@ -580,7 +643,7 @@ export const UnifiedSelfProfileView: React.FC = () => {
                   Toàn hệ thống (Không áp dụng)
                 </span>
               )}
-            </div>
+            </div>}
             <div>
               <span className="text-slate-400 block text-[11px] mb-1">Vai trò tài khoản:</span>
               <div className="flex flex-wrap gap-1 mt-0.5">
@@ -600,6 +663,22 @@ export const UnifiedSelfProfileView: React.FC = () => {
             </div>
           </div>
         </section>
+
+        {/* Công dân: xóa thông tin kê khai khỏi tài khoản (giữ từ cổng công dân cũ) */}
+        {citizen && profile && !isEditing && (
+          <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50/40 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-red-950">Xóa dữ liệu thông tin cá nhân</h3>
+                <p className="mt-1 text-xs text-slate-600">Xóa các thông tin kê khai cá nhân khỏi tài khoản này.</p>
+              </div>
+              <Button variant="dangerOutline" size="small" onClick={() => setIsDeleteModalOpen(true)}>
+                <Trash size={16} aria-hidden="true" />
+                <span>Xóa thông tin cá nhân</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )}
@@ -609,6 +688,26 @@ export const UnifiedSelfProfileView: React.FC = () => {
     <AccountSecuritySection />
   )}
 
+      {citizen && <CccdOcrScanModal open={isOcrModalOpen} onOpenChange={setIsOcrModalOpen} onApplyExtractedData={handleApplyExtractedCccd} />}
+
+      {citizen && (
+        <Modal
+          open={isDeleteModalOpen}
+          onOpenChange={open => { if (!deleting) setIsDeleteModalOpen(open); }}
+          title="Xác nhận xóa thông tin cá nhân"
+          description="Hành động này sẽ xóa các thông tin cá nhân đã lưu trong tài khoản của bạn."
+        >
+          <div className="space-y-4 text-sm">
+            <p className="leading-relaxed text-slate-600">
+              Bạn có chắc chắn muốn xóa toàn bộ thông tin cá nhân đã kê khai không? Sau khi xóa, tài khoản trở về trạng thái chưa thiết lập hồ sơ và bạn có thể tạo lại bất cứ lúc nào.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
+              <Button variant="outline" size="small" disabled={deleting} onClick={() => setIsDeleteModalOpen(false)}>Hủy</Button>
+              <Button variant="danger" size="small" loading={deleting} onClick={() => void handleDeleteProfile()}>Xác nhận xóa</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
