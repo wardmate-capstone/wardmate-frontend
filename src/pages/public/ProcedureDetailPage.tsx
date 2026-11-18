@@ -636,7 +636,6 @@ function FormCell({ formsOfItem }: { formsOfItem: { formCode: string; formName: 
       {formsOfItem.map((form, idx) => (
         <ProcedureFormLink key={`${form.formCode}-${idx}`} templateId={form.formTemplateId} name={form.formName || form.formCode} />
       ))}
-      {formsOfItem.length > 1 && <p className="text-[11px] text-slate-500">Chỉ cần dùng một trong các mẫu trên.</p>}
     </div>
   );
 }

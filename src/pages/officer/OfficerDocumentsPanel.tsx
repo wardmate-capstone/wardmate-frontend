@@ -297,7 +297,7 @@ export function OfficerDocumentsPanel({
                   {group.note && <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-600">{group.note}</p>}
                   {(group.forms?.length ?? 0) > 0 && (
                     <p className="mt-1 text-xs text-slate-600">
-                      <span className="font-semibold text-slate-700">{group.forms!.length > 1 ? 'Mẫu đơn (điền một trong các mẫu): ' : 'Mẫu đơn: '}</span>
+                      <span className="font-semibold text-slate-700">Mẫu đơn:</span>
                       {group.forms!.join('; ')}
                     </p>
                   )}

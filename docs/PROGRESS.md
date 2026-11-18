@@ -1,5 +1,26 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-PROC-AI-WARNINGS-1118 — Bỏ lưu ý AI trên màn đối soát bản nháp thủ tục — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Theo người dùng: lưu ý AI hiện đường dẫn kỹ thuật (`formDefinitions.0.formCode`, `payload.issuingAuthority`…), trùng lặp và khó hiểu, nên bỏ hẳn thay vì dịch lại.
+- Đã bỏ: nút "n lưu ý từ AI" + hộp thoại (`ProcedureDraftWorkspace`), khung lưu ý ở màn xem trước kết quả AI, khung vàng "Lưu ý đối soát biểu mẫu từ AI" ở bước Biểu mẫu (`ProcedureFormPicker`), chấm vàng trên bước 5 (`ProcedureApiEditor`); bỏ prop `warnings` không còn dùng. Dữ liệu `warnings` vẫn có trong API, chỉ không hiển thị.
+- Giữ: khi AI không đọc được PDF (`failureCode`) hiện nhãn đỏ "Không đọc được PDF, hãy nhập tay" (mã lỗi ở tooltip). Thông tin bắt buộc còn thiếu vẫn bị chặn ở bước kiểm tra khi xuất bản (`procedureValidation`).
+- Cùng đợt: bỏ dòng "Chỉ cần dùng một trong các mẫu trên." ở trang chi tiết thủ tục công khai và "(điền một trong các mẫu)" ở tab Tờ khai & giấy tờ của cán bộ.
+- Kiểm tra: `npm run typecheck`, eslint 3 file procedure-manager đạt. Chưa xem trên trình duyệt.
+- Kho biểu mẫu (bước 5): bước chỉ còn danh sách mẫu đã gắn (lưới 2 cột từ xl) + nút "Chọn từ kho" / "Tạo phôi mới". Mới `FormLibraryModal.tsx`: hộp thoại bảng gọn mỗi mẫu một dòng (ô tích, mã, tên cắt gọn có tooltip, loại, nút Xem), tìm theo mã (API chỉ hỗ trợ mã), lọc Phôi Word/Mẫu điện tử trên trang hiện tại, chọn nhiều giữ qua các trang rồi "Thêm n mẫu"; mẫu đã gắn hiện "Đã gắn" và khóa; danh sách cuộn trong hộp thoại, phân trang + nút cố định ở chân. `FormTemplateActions` thêm `previewOnly` (ẩn nút Tải, tải vẫn có trong hộp thoại xem). Tạo phôi mới thì invalidate `procedure-document-forms`.
+- Chưa sửa test: `tests/form-templates.spec.ts` (khoảng dòng 309–315, 341–356) còn dùng nhãn "Tìm biểu mẫu theo mã", nút "Chọn mẫu"/"Đã chọn", "(n đã gắn)" và phân trang trong bước 5 → cần cập nhật sang hộp thoại "Chọn biểu mẫu từ kho" khi được phép chạy Playwright.
+
+## FE-SHIFT-TEST-MODE-1118 — Nối chế độ thử nghiệm bỏ kiểm tra ca làm — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- BE xong STAFFING-TEST-01 (nhánh `kha`, image `workflow-20261118-02`): `Staffing__SkipShiftCheck=true` bỏ `NO_ACTIVE_SHIFT` ở giao hồ sơ, tham vấn, đóng tham vấn có chuyển hồ sơ; giữ `APPROVED_LEAVE`; header `X-Staffing-Shift-Check: skipped` ở `assignment-candidates`/`specialist-candidates`, expose qua CORS.
+- FE: `staffingApi.candidates` và `specialistCandidates` trả `{ items, shiftCheckSkipped }` (đọc header; không gắn thuộc tính vào mảng vì React Query sao chép mảng khi so dữ liệu). `AssignDialog` (DispatchView) và `DispatchDialog` (ConsultationsView) dùng `items`; khi bật hiện `ShiftCheckTestNotice` (shared.tsx) và đổi câu mô tả không nhắc ca trực.
+- Kiểm tra: `npm run typecheck`, eslint đạt. Chưa kiểm trên Azure: máy không có Azure CLI, chưa xác nhận biến môi trường đã đặt `true`; nếu chưa đặt, header không xuất hiện và mọi thứ chạy như cũ.
+
+## BE-REQ-SHIFT-TEST-1118 — Đề nghị BE chế độ thử nghiệm bỏ kiểm tra ca làm — 18/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Giao hồ sơ (Điều phối/Giám sát), tham vấn chuyên môn và đóng tham vấn có chuyển hồ sơ đều chặn cán bộ không có ca làm **tại thời điểm thao tác** (`StaffingLocks.Availability` → `NO_ACTIVE_SHIFT`), nên khó thử ngoài giờ ca; tạo ca phải bắt đầu trong tương lai, tối đa 24 giờ.
+- Người dùng chọn gửi yêu cầu cho BE, không sửa BE: `docs/BE_REQUEST_2026-11-18_STAFFING_SHIFT_CHECK_TEST_MODE.md` (cờ `Staffing__SkipShiftCheck`, mặc định tắt, chỉ bỏ `NO_ACTIVE_SHIFT`, vẫn chặn nghỉ phép đã duyệt; tùy chọn báo FE để hiện cảnh báo). FE chưa sửa gì.
+
 ## FE-VERCEL-PROXY-1118 — Proxy `/api` trên Vercel — 18/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Lỗi: bản production trên `wardmate-frontend.vercel.app` gọi API tương đối `/api/...` (bundle không chứa origin Azure nào), nhưng `vercel.json` chỉ rewrite mọi đường dẫn về `index.html` → `POST /api/v1/auth/login` 405, `GET /api/v1/procedures` trả HTML. Web chỉ dùng được khi chạy local qua proxy Vite.
