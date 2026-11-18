@@ -1,5 +1,16 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-ADMIN-UI-SYSTEM-1119 — Đồng bộ giao diện toàn bộ trang Admin theo Manager — 19/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Chuẩn chung chuyển từ `src/pages/manager/manager-ui.css` sang `src/styles/workspace-ui.css`, áp cho `:is(.manager-layout, .it-admin-layout)`; AdminPage thêm lớp `it-admin-layout`, nạp CSS. Tiêu đề trang 20px, thẻ 15px, nội dung 13px, ô nhập 42px, viền nhạt bo 8px, Badge 11px — giống Manager.
+- Người dùng duyệt: (1) Tổng quan bỏ lưới "Phân hệ quản trị" trùng menu, thay bằng `AdminSystemStatus.tsx` (Tình trạng dịch vụ từ `health/services`, Sao lưu gần nhất từ `backups?page=1&pageSize=1`) + dải 3 chỉ số có dòng giải thích; (2) giữ 2 trang Tài khoản đăng nhập / Người dùng hệ thống, chỉ đồng bộ giao diện; (3) menu: Tổng quan không tiêu đề nhóm (WorkspaceSidebar chỉ in tiêu đề khi có), Hồ sơ cá nhân sang nhóm "Tài khoản", biểu tượng riêng (Heartbeat, GearSix, CalendarX).
+- Thanh đầu trang Admin có đường dẫn "Quản trị / Tên trang" như Manager. Tiêu đề "Danh sách thủ tục hành chính" viết hoa đầu câu, có mô tả.
+- Bộ lọc vận hành (`OperationsFilter`, `AuditFilterForm`): trường và nút Áp dụng/Xóa bộ lọc một hàng, gợi ý chuyển vào placeholder, ghi chú 12px; "Lọc nâng cao: người thực hiện, mã tra cứu". Tab Nhật ký và tab Dữ liệu kiến thức AI (chỉ trong Admin, lớp `kb-tabs`) đổi sang gạch chân. Tiêu đề thẻ trùng trang đổi: "Trạng thái dịch vụ", "Yêu cầu sao lưu". Cập nhật thống kê bỏ giới hạn rộng `max-w-4xl`.
+- Bảng: tên đăng nhập/ngày bỏ font mono; nhãn trạng thái dùng `admin-status-badge`; nút Khóa tài khoản viền nhẹ; thanh số quyền của Vai trò màu xám. Điện thoại: `useAutoStackTables` (src/hooks) tự gắn `mgr-stack` + `data-label` theo tiêu đề cột cho mọi bảng trong Admin (bỏ qua bằng lớp `no-stack`); thanh lọc không ép ô tìm kiếm; ô ngày không tràn.
+- Sửa 8 test lỗi sẵn theo giao diện/luồng hiện tại (không đổi code sản phẩm): admin-procedures-readonly ×2 (cho phép GET /api/v1/procedures của Tổng quan), admin-rbac:28 (phân vai trò dạng radio + PUT /rbac/users/{id}/role; thêm mock trong fixtures/auth.ts), admin-system-audit:5 (định dạng "Trang 2/2"), procedure-manager:6 ("1 ngày làm việc"), :173 (chọn mẫu qua "Chọn biểu mẫu từ kho"), :198 (nút "Tạo và công khai"), :339 (4 thẻ chỉ số).
+- Tên phường ở Lịch ngày nghỉ (người dùng chọn sửa phía FE): `CalendarClosuresView` tra tên từ `GET /api/v1/wards` khi bản ghi thiếu snapshot `wardName` (tạo trước 08/11/2026); không tra được mới hiện "Phường <mã>". Test mới `tests/calendar-closures.spec.ts`. DB không đổi.
+- Kiểm tra cuối: `npm run build` đạt; Playwright 11 file admin/manager/analytics/procedure-manager/lịch/ngày nghỉ: 150 đạt, 0 lỗi (mock). Chưa thử API thật. Chia 10 commit theo hạng mục.
+
 ## FE-MANAGER-UI-SYSTEM-1119 — Đồng bộ giao diện toàn bộ trang Manager — 19/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Chuẩn lấy theo "Lịch ca làm toàn phường": tiêu đề trang 20px, mô tả 13px, tiêu đề thẻ 15px, nội dung 13px, nhãn trường 12px, tiêu đề cột 11px in hoa; ô nhập 42px/13px bo 6px (16px trên điện thoại để iOS không phóng to); thẻ viền #e2e8f0 bo 8px, không bóng. Tham khảo: Polaris (typescale), Vaadin (cỡ chữ tối thiểu), Chrome/Sizzy (bảng responsive).
