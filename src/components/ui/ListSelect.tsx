@@ -200,7 +200,7 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
         onClick={() => (open ? close() : openList())}
         onKeyDown={(event) => onKeyDown(event)}
         className={cn(
-          'flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-left text-sm transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50',
+          'ui-listselect-trigger flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-left text-sm transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50',
           invalid ? 'border-red-500 focus:border-red-600 focus:ring-red-100' : 'border-slate-300 hover:border-slate-400 focus:border-red-600 focus:ring-red-100',
           open && !invalid && 'border-red-600 ring-4 ring-red-100',
           className,
@@ -269,13 +269,13 @@ export function ListSelect({ id, value, onChange, onBlur, options, placeholder, 
                   onMouseEnter={() => !option.disabled && setActive(index)}
                   onClick={() => choose(index)}
                   className={cn(
-                    'flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm leading-5 break-words',
+                    'ui-listselect-option flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm leading-5 break-words',
                     option.disabled ? 'cursor-not-allowed text-slate-400' : 'cursor-pointer text-slate-800',
                     !option.disabled && index === active && 'bg-red-50 text-red-900',
                   )}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className={cn('block', isSelected ? 'font-semibold' : 'font-medium')}>{option.label}</span>
+                    <span className={cn('ui-listselect-label block', isSelected ? 'font-semibold' : 'font-medium')} title={option.label}>{option.label}</span>
                     {option.description && (
                       <span className={cn('mt-0.5 block text-xs leading-5', option.disabled ? 'text-slate-400' : 'text-slate-500')}>{option.description}</span>
                     )}
