@@ -4,7 +4,7 @@ import {
   Funnel,
   Eye,
 } from '@phosphor-icons/react';
-import { Button, ListSelect, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
+import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
 import { ApplicationStatusBadge } from '@/components/workflow/ApplicationStatusBadge';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
 
@@ -53,6 +53,15 @@ const QUEUE_TABS: { id: QueueTab; label: string }[] = [
 function submittedTime(app: OfficerApplication): number {
   const time = app.submittedAtUtc ? Date.parse(app.submittedAtUtc) : Number.NaN;
   return Number.isNaN(time) ? 0 : time;
+}
+
+/** Rút gọn chữ hiển thị trong ô chọn chuẩn (tối đa ~60 ký tự, cắt ở ranh giới từ) để danh sách không tràn màn hình. */
+const OPTION_MAX = 60;
+function shortOptionLabel(text: string): string {
+  if (text.length <= OPTION_MAX) return text;
+  const cut = text.slice(0, OPTION_MAX);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > OPTION_MAX * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
 
 export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProps> = ({
@@ -176,7 +185,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
       {/* Phạm vi hàng đợi (ưu tiên mềm theo lĩnh vực) */}
       {queueTab && onQueueTabChange && (
         <div className="space-y-2">
-          <div role="tablist" aria-label="Phạm vi hồ sơ" className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
+          <div role="tablist" aria-label="Phạm vi hồ sơ" className="workspace-tabs">
             {QUEUE_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -184,119 +193,39 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 role="tab"
                 aria-selected={queueTab === tab.id}
                 onClick={() => onQueueTabChange(tab.id)}
-                className={`min-h-10 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${
-                  queueTab === tab.id ? 'bg-red-800 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
+                className="workspace-tab"
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          {queueTab === 'my-categories' && (
+          {queueTab === 'my-categories' && myCategoryIds.length === 0 && (
             <p className="text-xs text-slate-500">
-              {myCategoryIds.length > 0
-                ? `Đang hiển thị hồ sơ thuộc ${myCategoryIds.length} lĩnh vực bạn được phân công. Hồ sơ lĩnh vực khác xem ở tab Toàn phường.`
-                : 'Bạn chưa được gán lĩnh vực nên phụ trách mọi lĩnh vực trong phường.'}
+              Bạn chưa được gán lĩnh vực nên phụ trách mọi lĩnh vực trong phường.
             </p>
           )}
         </div>
       )}
 
-      {/* Filter Toolbar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
-          {/* Search Box */}
-          <div className="sm:col-span-2 xl:col-span-4">
-            <label htmlFor="search-app-input" className="sr-only">
-              Tìm kiếm hồ sơ
-            </label>
+      {/* Filter Toolbar — mọi ô có nhãn 12px (nhãn ngắn hiển thị, tên đầy đủ cho trình đọc màn hình qua aria-label),
+          hai hàng thẳng; chân thanh lọc gồm số kết quả, Xóa bộ lọc và Làm mới. */}
+      <div className="admin-card list-filter">
+        <div className="list-filter-grid">
+          <div className="f-search min-w-0">
+            <label htmlFor="search-app-input" className="f-label">Tìm kiếm hồ sơ</label>
             <SearchInput
               id="search-app-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
-              placeholder="Tìm mã hồ sơ, họ tên người dân..."
+              placeholder="Mã hồ sơ, họ tên người dân..."
             />
           </div>
 
-          {/* Procedure Filter */}
-          <div className="min-w-0 xl:col-span-3">
-            <label htmlFor="filter-proc-select" className="sr-only">
-              Lọc theo thủ tục
-            </label>
-            <ListSelect id="filter-proc-select" value={selectedProcedure}
-              onChange={setSelectedProcedure} searchable placeholder="Chọn thủ tục"
-              options={[{ value: 'ALL', label: `Tất cả thủ tục (${procedureOptions.length})` }, ...procedureOptions.map(proc => ({ value: proc, label: proc }))]} />
-          </div>
-
-          {/* Officer in charge */}
-          <div className="min-w-0 xl:col-span-3">
-            <label htmlFor="filter-officer-select" className="sr-only">
-              Cán bộ phụ trách
-            </label>
-            <div className="relative">
-              <Select
-                id="filter-officer-select"
-                value={selectedOfficer}
-                onChange={(e) => setSelectedOfficer(e.target.value)}
-              >
-                <option value="ALL">Mọi cán bộ</option>
-                {officerOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-                <option value="Chưa phân công">Chưa phân công</option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Sort order */}
-          <div className="min-w-0 xl:col-span-2">
-            <label htmlFor="filter-sort-select" className="sr-only">
-              Sắp xếp
-            </label>
-            <div className="relative">
-              <Select
-                id="filter-sort-select"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-              >
-                <option value="newest">Mới nhất trước</option>
-                <option value="oldest">Cũ nhất trước</option>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Lĩnh vực & ngày gửi */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3 items-start">
-          <div className="min-w-0 xl:col-span-4">
-            <label htmlFor="filter-category-select" className="sr-only">
-              Lọc theo lĩnh vực
-            </label>
-            <div className="relative">
-              <Select
-                id="filter-category-select"
-                value={categoryId ?? ''}
-                disabled={!onCategoryChange}
-                onChange={(e) => onCategoryChange?.(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">Tất cả lĩnh vực</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.categoryName}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          {onSubmittedRangeChange && (
-            <fieldset className="min-w-0 sm:col-span-2 xl:col-span-5 grid gap-1">
-              <legend className="sr-only">Lọc theo ngày gửi</legend>
-              <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-              <label htmlFor="filter-submitted-from" className="grid min-w-0 gap-1 text-xs font-semibold text-slate-600">Gửi từ
+          {onSubmittedRangeChange && <fieldset className="f-dates min-w-0">
+            <legend className="sr-only">Lọc theo ngày gửi</legend>
+            <div className="min-w-0">
+              <label htmlFor="filter-submitted-from" className="f-label">Gửi từ</label>
               <input
                 id="filter-submitted-from"
                 type="date"
@@ -305,10 +234,11 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
-              </label>
-              <label htmlFor="filter-submitted-to" className="grid min-w-0 gap-1 text-xs font-semibold text-slate-600">Đến ngày
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="filter-submitted-to" className="f-label">Đến ngày</label>
               <input
                 id="filter-submitted-to"
                 type="date"
@@ -317,42 +247,109 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
-              </label>
-              </div>
-              {invalidRange && (
-                <p id="filter-submitted-error" role="alert" className="w-full text-xs font-medium text-red-700">
-                  Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
-                </p>
-              )}
-            </fieldset>
-          )}
+            </div>
+          </fieldset>}
+
+          <div className="f-sort min-w-0">
+            <label htmlFor="filter-sort-select" className="f-label">Sắp xếp</label>
+            <Select
+              id="filter-sort-select"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+            >
+              <option value="newest">Mới nhất trước</option>
+              <option value="oldest">Cũ nhất trước</option>
+            </Select>
+          </div>
 
           {onOverdueChange && (
-            <label className="min-w-0 xl:col-span-3 inline-flex min-h-10 items-center gap-2 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700">
-              <input
-                type="checkbox"
-                checked={overdueOnly}
-                onChange={(e) => onOverdueChange(e.target.checked)}
-                className="size-4 rounded border-slate-300 accent-red-700"
-              />
-              Chỉ hồ sơ quá hạn
-            </label>
+            <div className="f-overdue min-w-0">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={overdueOnly}
+                  onChange={(e) => onOverdueChange(e.target.checked)}
+                  className="size-4 rounded border-slate-300 accent-red-700"
+                />
+                Chỉ hồ sơ quá hạn
+              </label>
+            </div>
           )}
+
+          {invalidRange && (
+            <p id="filter-submitted-error" role="alert" className="f-error">
+              Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
+            </p>
+          )}
+
+          {/* Cùng loại ô chọn với Lĩnh vực (danh sách nổi của trình duyệt, không xô lệch bố cục khi mở) */}
+          <div className="f-proc min-w-0">
+            <label htmlFor="filter-proc-select" className="f-label">Thủ tục</label>
+            <Select
+              id="filter-proc-select"
+              aria-label="Lọc theo thủ tục"
+              value={selectedProcedure}
+              onChange={(e) => setSelectedProcedure(e.target.value)}
+            >
+              <option value="ALL">Tất cả thủ tục ({procedureOptions.length})</option>
+              {/* Danh sách của ô chọn chuẩn rộng theo tên dài nhất; tên thủ tục có thể > 150 ký tự nên rút gọn chữ hiển thị
+                  (giá trị lọc vẫn là tên đầy đủ, rê chuột xem đủ qua title). */}
+              {procedureOptions.map((proc) => (
+                <option key={proc} value={proc} title={proc}>
+                  {shortOptionLabel(proc)}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="f-cat min-w-0">
+            <span className="f-label" aria-hidden="true">Lĩnh vực</span>
+            <Select
+              id="filter-category-select"
+              aria-label="Lọc theo lĩnh vực"
+              value={categoryId ?? ''}
+              disabled={!onCategoryChange}
+              onChange={(e) => onCategoryChange?.(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Tất cả lĩnh vực</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.categoryName}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="f-officer min-w-0">
+            <label htmlFor="filter-officer-select" className="f-label">Cán bộ phụ trách</label>
+            <Select
+              id="filter-officer-select"
+              value={selectedOfficer}
+              onChange={(e) => setSelectedOfficer(e.target.value)}
+            >
+              <option value="ALL">Mọi cán bộ</option>
+              {officerOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              <option value="Chưa phân công">Chưa phân công</option>
+            </Select>
+          </div>
         </div>
 
-        {/* Results summary, clear & refresh */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 pt-1">
+        <div className="list-filter-foot">
           <div className="flex items-center gap-3">
             <span>
-              Tìm thấy <strong className="font-bold text-slate-900">{filteredApps.length}</strong> hồ sơ phù hợp
+              Tìm thấy <strong>{filteredApps.length}</strong> hồ sơ phù hợp
             </span>
             {hasFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-red-700 font-semibold hover:underline"
+                className="font-semibold text-red-700 hover:underline"
               >
                 Xóa bộ lọc
               </button>
@@ -365,8 +362,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         </div>
       </div>
 
-      {/* Semantic Application Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+{/* Semantic Application Table */}
+      <div className="admin-card overflow-hidden">
         <div className="admin-table-wrap">
           <table className="min-w-[900px]" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
@@ -497,7 +494,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                         <button
                           type="button"
                           onClick={() => onQuickPreview(app)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                          className="ws-row-btn gap-1"
                           title="Xem trước thông tin tóm tắt"
                         >
                           <Eye size={14} aria-hidden="true" />
@@ -509,7 +506,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                           <button
                             type="button"
                             onClick={() => onTakeApplication(app.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-800 font-bold text-white hover:bg-red-900 shadow-2xs transition-colors"
+                            className="ws-row-btn is-primary"
                           >
                             <span>Nhận xử lý</span>
                           </button>
@@ -519,7 +516,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                           <button
                             type="button"
                             onClick={() => onOpenReviewWorkspace(app)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-700 font-bold text-white hover:bg-blue-800 shadow-2xs transition-colors"
+                            className="ws-row-btn is-primary"
                           >
                             <span>Tiếp tục</span>
                           </button>
@@ -530,12 +527,12 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                             <button
                               type="button"
                               onClick={() => onTakeApplication(app.id)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-700 font-bold text-white hover:bg-purple-800 shadow-2xs transition-colors"
+                              className="ws-row-btn is-primary"
                             >
                               <span>Xem lại</span>
                             </button>
                           ) : (
-                            <span className="text-[11px] text-slate-500">Chờ cán bộ phụ trách</span>
+                            <span className="text-xs text-slate-500">Chờ cán bộ phụ trách</span>
                           )
                         )}
 
@@ -543,7 +540,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                           <button
                             type="button"
                             onClick={() => onOpenReviewWorkspace(app)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+                            className="ws-row-btn"
                           >
                             <span>Chi tiết</span>
                           </button>

@@ -49,9 +49,15 @@ test('bộ chọn tên thủ tục dài xuống dòng và không tràn ngang ở
   await page.goto('/officer?tab=all');
   await page.getByRole('button', { name: 'Mở menu điều hướng cán bộ', exact: true }).click();
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Lọc theo thủ tục' }).click();
-  await expect(page.getByRole('listbox')).toBeVisible();
-  await expect(page.getByRole('option', { name: title, exact: true })).toBeVisible();
+  // Ô Thủ tục là ô chọn chuẩn (giống Lĩnh vực): danh sách do trình duyệt vẽ nổi, không xô lệch bố cục.
+  const procedure = page.getByRole('combobox', { name: 'Lọc theo thủ tục' });
+  // Tên dài được rút gọn khi hiển thị để danh sách không tràn; tên đầy đủ ở title và vẫn là giá trị lọc.
+  const option = procedure.locator(`option[value="${title}"]`);
+  await expect(option).toHaveCount(1);
+  await expect(option).toHaveAttribute('title', title);
+  expect((await option.textContent())!.length).toBeLessThanOrEqual(61);
+  await procedure.selectOption(title);
+  await expect(procedure).toHaveValue(title);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
