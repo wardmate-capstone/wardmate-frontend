@@ -31,11 +31,12 @@ export function StaffStatus({ value, label }: { value: string; label?: string })
   return <Badge variant={variant}>{label || statusText(value)}</Badge>;
 }
 // title bỏ trống khi trang đã có tiêu đề chính trùng nội dung (tránh lặp tiêu đề)
+/**
+ * Mô tả đầu màn điều hành. Mọi khu vực dùng các màn này (Manager, Frontdesk, Admin) đều có tiêu đề trang <h1>,
+ * nên `title` chỉ dùng làm nhãn vùng cho trình đọc màn hình, không vẽ thành tiêu đề phụ lặp lại.
+ */
 export function StaffHeading({ title, description, children }: { title?: string; description: string; children?: ReactNode }) {
-  // Trong khu vực Manager, trang đã có tiêu đề <h1>; tiêu đề phụ lặp lại nên chỉ giữ mô tả.
-  const { manager } = useStaffAccess();
-  const heading = manager ? undefined : title;
-  return <div className="staff-heading"><div>{heading && <h2>{heading}</h2>}<p className={heading ? undefined : '!mt-0'}>{description}</p></div>{children && <div className="staff-actions">{children}</div>}</div>;
+  return <div className="staff-heading" role={title ? 'group' : undefined} aria-label={title}><div><p className="!mt-0">{description}</p></div>{children && <div className="staff-actions">{children}</div>}</div>;
 }
 export function StaffPeriod({ start, end }: { start: string; end: string }) {
   const format = (value: string, time: boolean) => !Number.isFinite(Date.parse(value)) ? 'Không có thông tin' : new Intl.DateTimeFormat('vi-VN', time

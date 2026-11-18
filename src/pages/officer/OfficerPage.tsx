@@ -14,7 +14,9 @@ import type {
 } from '@/types/officer';
 
 import { UnifiedOfficerSidebar as OfficerSidebar } from '@/components/layout/RoleWorkspaceSidebars';
-import { OfficerHeader } from './OfficerHeader';
+import { OfficerHeader, SECTION_TITLES } from './OfficerHeader';
+import { getGreeting } from '@/lib/utils';
+import '@/styles/workspace-ui.css';
 import { OfficerDashboardView } from './OfficerDashboardView';
 import { OfficerApplicationListView } from './OfficerApplicationListView';
 import { OfficerReviewWorkspaceView } from './OfficerReviewWorkspaceView';
@@ -353,7 +355,7 @@ export const OfficerPage: React.FC = () => {
   }, [reviewingApp]);
 
   return (
-    <div className="officer-workspace min-h-screen bg-slate-50 text-slate-900 flex">
+    <div className="officer-workspace officer-layout min-h-screen bg-slate-50 text-slate-900 flex">
       {/* Semantic Sidebar */}
       <OfficerSidebar
         activeSection={activeSection}
@@ -388,8 +390,19 @@ export const OfficerPage: React.FC = () => {
         />
 
         {/* Semantic Main Content */}
-        <main id="officer-main" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto" tabIndex={-1}>
+        <main id="officer-main" className="admin-main flex-1" tabIndex={-1}>
           {activeQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
+          {/* Tiêu đề trang chung (như Admin/Manager/Công dân); màn kiểm tra hồ sơ và Hồ sơ cá nhân tự có tiêu đề */}
+          {!reviewingApp && activeSection !== 'profile' && (
+            <div className="admin-page-heading mb-6">
+              <div>
+                <h1>{(SECTION_TITLES[activeSection] ?? SECTION_TITLES.dashboard).title}</h1>
+                {activeSection === 'dashboard'
+                  ? <p>{getGreeting()}, {officerName}</p>
+                  : SECTION_TITLES[activeSection]?.subtitle && <p>{SECTION_TITLES[activeSection].subtitle}</p>}
+              </div>
+            </div>
+          )}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView

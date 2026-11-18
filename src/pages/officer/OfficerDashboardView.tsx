@@ -1,7 +1,5 @@
 import React from 'react';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
-import { getGreeting } from '@/lib/utils';
 import { ListSkeleton, Skeleton, EmptyState } from '@/components/ui';
 import {
   ArrowsClockwise,
@@ -10,9 +8,6 @@ import {
   ChatsCircle,
   CheckCircle,
   Clock,
-  HourglassMedium,
-  MagnifyingGlass,
-  SealCheck,
   WarningCircle,
 } from '@phosphor-icons/react';
 import type { OfficerApplication, OfficerSection } from '@/types/officer';
@@ -66,18 +61,16 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   onQuickPreview,
   isLoading = false,
 }) => {
-  const { profile } = useUserProfile();
   const user = useAuthStore((state) => state.user);
-  const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
   const myId = user?.id?.toLowerCase();
   const isMine = (app: OfficerApplication) => Boolean(myId && app.assignedOfficerId?.toLowerCase() === myId);
 
   const count = (status: OfficerApplication['status']) => applications.filter((a) => a.status === status).length;
-  const stats: { label: string; value: number; icon: typeof Clock; tone: string; section: OfficerSection }[] = [
-    { label: 'Chờ tiền kiểm', value: count('SUBMITTED_FOR_REVIEW'), icon: HourglassMedium, tone: 'info', section: 'apps-pending' },
-    { label: 'Đang kiểm tra', value: count('UNDER_REVIEW'), icon: MagnifyingGlass, tone: 'warning', section: 'apps-reviewing' },
-    { label: 'Công dân đã gửi lại', value: count('RESUBMITTED'), icon: ArrowsClockwise, tone: 'danger', section: 'apps-resubmitted' },
-    { label: 'Giấy tờ sẵn sàng', value: count('DOCUMENTS_READY'), icon: SealCheck, tone: 'success', section: 'apps-approved' },
+  const stats: { label: string; value: number; hint: string; section: OfficerSection }[] = [
+    { label: 'Chờ tiền kiểm', value: count('SUBMITTED_FOR_REVIEW'), hint: 'Công dân đã gửi, chưa kiểm tra', section: 'apps-pending' },
+    { label: 'Đang kiểm tra', value: count('UNDER_REVIEW'), hint: 'Đã nhận xử lý', section: 'apps-reviewing' },
+    { label: 'Công dân đã gửi lại', value: count('RESUBMITTED'), hint: 'Sau khi được yêu cầu bổ sung', section: 'apps-resubmitted' },
+    { label: 'Giấy tờ sẵn sàng', value: count('DOCUMENTS_READY'), hint: 'Đã xác nhận đủ giấy tờ', section: 'apps-approved' },
   ];
 
   // Việc cần làm ngay: quá hạn → công dân gửi lại (hồ sơ mình phụ trách) → sắp đến hạn trong 24 giờ
@@ -108,35 +101,18 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Lời chào */}
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            {getGreeting()}, {officerName}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">Bộ phận Một cửa · Hỗ trợ tiền kiểm hồ sơ</p>
-        </div>
-        <p className="text-sm font-medium capitalize text-slate-500">
-          {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* 4 thẻ chỉ số — bấm để mở danh sách tương ứng */}
-      <section className="admin-stat-grid mt-0!" aria-label="Chỉ số hồ sơ">
-        {stats.map(({ label, value, icon: Icon, tone, section }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => onSelectSection(section)}
-            className={`admin-stat-card is-${tone} text-left transition hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2`}
-          >
-            <div>
-              <span><Icon size={24} weight="duotone" aria-hidden /></span>
-              <small>{label}</small>
+      {/* Lời chào đã chuyển lên tiêu đề trang (OfficerPage). Dải chỉ số giống Admin; mỗi ô bấm được để mở danh sách. */}
+      <section className="admin-card kpi-strip" aria-label="Chỉ số hồ sơ">
+        <dl>
+          {stats.map(({ label, value, hint, section }) => (
+            <div key={label} className="is-link">
+              <dt>{label}</dt>
+              <dd className="kpi-value">{isLoading ? <Skeleton className="h-7 w-12 rounded" aria-label={`Đang tải số liệu ${label}`} /> : value}</dd>
+              <dd className="kpi-hint">{hint}</dd>
+              <button type="button" className="kpi-cover" onClick={() => onSelectSection(section)} aria-label={isLoading ? `Xem ${label.toLowerCase()}` : `Xem ${label.toLowerCase()}: ${value}`} />
             </div>
-            {isLoading ? <Skeleton className="mt-4 h-9 w-16 rounded-lg" aria-label={`Đang tải số liệu ${label}`} /> : <strong>{value}</strong>}
-          </button>
-        ))}
+          ))}
+        </dl>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -179,14 +155,14 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onQuickPreview(app)}
-                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        className="ws-row-btn"
                       >
                         Xem nhanh
                       </button>
                       <button
                         type="button"
                         onClick={() => onOpenApplicationReview(app)}
-                        className="h-9 rounded-lg bg-red-800 px-3.5 text-xs font-bold text-white shadow-2xs hover:bg-red-900"
+                        className="ws-row-btn is-primary"
                       >
                         Xử lý
                       </button>

@@ -8,7 +8,9 @@ test('Cổng cán bộ: Dashboard giữ luồng hồ sơ thực, bỏ khối ch�
   await page.goto('/officer');
 
   // Check header / title
-  await expect(page.getByRole('heading', { name: /^Chào buổi (sáng|chiều|tối), .+$/ })).toBeVisible();
+  // Tiêu đề trang chung "Tổng quan"; lời chào là dòng mô tả dưới tiêu đề (như Admin/Manager).
+  await expect(page.getByRole('heading', { level: 1, name: 'Tổng quan', exact: true })).toBeVisible();
+  await expect(page.getByText(/^Chào buổi (sáng|chiều|tối), .+$/)).toBeVisible();
 
   // Check dashboard content rather than labels in the closed mobile sidebar.
   await expect(page.getByRole('region', { name: 'Tiến độ xử lý hồ sơ trong ca trực' })).toHaveCount(0);

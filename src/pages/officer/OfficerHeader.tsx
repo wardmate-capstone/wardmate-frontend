@@ -17,19 +17,19 @@ interface OfficerHeaderProps {
   breadcrumbs?: Array<{ label: string; onClick?: () => void }>;
 }
 
-const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string }> = {
+export const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: string }> = {
   shifts: { title: 'Lịch ca làm của tôi' },
   closures: { title: 'Lịch ngày nghỉ' },
   leaves: { title: 'Nghỉ phép của tôi' },
   consultations: { title: 'Tham vấn chuyên môn' },
-  dashboard: { title: 'Tổng quan công việc Cán bộ Một cửa' },
+  dashboard: { title: 'Tổng quan' },
   'apps-all': { title: 'Tất cả hồ sơ' },
   'apps-pending': { title: 'Hồ sơ chờ tiền kiểm' },
   'apps-reviewing': { title: 'Hồ sơ đang kiểm tra' },
   'apps-need-revision': { title: 'Hồ sơ cần bổ sung' },
   'apps-resubmitted': { title: 'Hồ sơ đã gửi lại' },
   'apps-approved': { title: 'Hồ sơ có giấy tờ sẵn sàng' },
-  'audit-log': { title: 'Lịch sử xử lý của cán bộ' },
+  'audit-log': { title: 'Lịch sử xử lý', subtitle: 'Các thao tác tiền kiểm bạn đã thực hiện trên hồ sơ.' },
   notifications: { title: 'Thông báo' },
   profile: { title: 'Hồ sơ cá nhân' },
 };
