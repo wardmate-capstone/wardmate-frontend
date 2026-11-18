@@ -39,7 +39,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(state => state.user);
-  const destination = user ? getManagementHome(user.roles, user.permissions) ?? '/citizen?section=dossiers_all' : '/dang-nhap?returnTo=%2Fcitizen%3Fsection%3Ddossiers_all';
+  // Người không có phân hệ quản lý (công dân) xem đầy đủ ở trang Thông báo của cổng công dân.
+  const managementHome = user ? getManagementHome(user.roles, user.permissions) : null;
+  const destination = user ? managementHome ?? '/citizen?section=notifications' : '/dang-nhap?returnTo=%2Fcitizen%3Fsection%3Dnotifications';
 
   // Map NotificationDto từ store sang định dạng CitizenNotification hiển thị
   const notifications: CitizenNotification[] = useMemo(() => {
@@ -236,7 +238,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-1 font-medium text-red-800 hover:text-red-950 hover:underline"
             >
-              <span>{user ? 'Mở phân hệ của tôi' : 'Đăng nhập để xem hồ sơ'}</span>
+              <span>{!user ? 'Đăng nhập để xem thông báo' : managementHome ? 'Mở phân hệ của tôi' : 'Xem tất cả thông báo'}</span>
               <ArrowSquareOut size={14} aria-hidden="true" />
             </Link>
           </div>

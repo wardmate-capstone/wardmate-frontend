@@ -16,7 +16,7 @@ test('không trình bày thông báo mẫu cũ trong storage như dữ liệu ng
   await expect(panel.getByText('Chưa kết nối thông báo.')).toBeVisible();
   await expect(panel.getByText('Thông báo riêng cũ')).toHaveCount(0);
   await expect(panel.getByRole('button', { name: 'Dữ liệu mẫu' })).toHaveCount(0);
-  await expect(panel.getByRole('link', { name: 'Đăng nhập để xem hồ sơ' })).toHaveAttribute('href', /dang-nhap\?returnTo=/);
+  await expect(panel.getByRole('link', { name: 'Đăng nhập để xem thông báo' })).toHaveAttribute('href', /dang-nhap\?returnTo=%2Fcitizen%3Fsection%3Dnotifications/);
 });
 
 test('bảng thông báo vừa màn hình 320/390px và Escape trả focus', async ({ page }) => {
@@ -36,11 +36,12 @@ test('bảng thông báo vừa màn hình 320/390px và Escape trả focus', asy
   }
 });
 
-test('liên kết hồ sơ trong thông báo đi tới route hợp lệ của công dân', async ({ page }) => {
+test('công dân bấm Xem tất cả thông báo đi tới trang Thông báo của cổng công dân', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
   await page.goto('/');
   await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
-  await page.getByRole('link', { name: 'Mở phân hệ của tôi' }).click();
-  await expect(page).toHaveURL(/\/citizen\?section=dossiers_all$/);
+  // Công dân không có phân hệ quản lý: liên kết cuối hộp thông báo mở trang Thông báo đầy đủ.
+  await page.getByRole('link', { name: 'Xem tất cả thông báo' }).click();
+  await expect(page).toHaveURL(/\/citizen\?section=notifications$/);
   await expect(page.getByRole('heading', { name: 'Không tìm thấy trang bạn cần' })).toHaveCount(0);
 });
