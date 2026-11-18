@@ -1,8 +1,21 @@
 import { useCallback, useRef, useState } from "react";
-import { formatDateTime } from '@/lib/dateFormat';
-import { z } from 'zod';
-import { ArrowArcLeft, ArrowLeft, Eye, EyeSlash, Info, PencilSimple } from "@phosphor-icons/react";
-import { Badge, Button, ConfirmDeleteModal, Input, Modal } from "@/components/ui";
+import { formatDateTime } from "@/lib/dateFormat";
+import { z } from "zod";
+import {
+  ArrowArcLeft,
+  ArrowLeft,
+  Eye,
+  EyeSlash,
+  Info,
+  PencilSimple,
+} from "@phosphor-icons/react";
+import {
+  Badge,
+  Button,
+  ConfirmDeleteModal,
+  Input,
+  Modal,
+} from "@/components/ui";
 import { ProcedureFeedback } from "@/components/ui/ProcedureFeedback";
 import { useProcedureQuery } from "@/hooks/useProcedureQuery";
 import {
@@ -17,11 +30,16 @@ import { PdfSource } from "./ProcedureDraftWorkspace";
 import { ProcedureChecklistModal } from "./ProcedureChecklistModal";
 import { toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
-import { ProcedureValidationError, procedureIssue } from '@/lib/procedureValidation';
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import {
+  ProcedureValidationError,
+  procedureIssue,
+} from "@/lib/procedureValidation";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
-const effectiveDateSchema = z.string().min(1, 'Vui lòng nhập ngày hiệu lực của thay đổi.')
-  .pipe(z.iso.date('Ngày hiệu lực không hợp lệ. Vui lòng chọn ngày đầy đủ.'));
+const effectiveDateSchema = z
+  .string()
+  .min(1, "Vui lòng nhập ngày hiệu lực của thay đổi.")
+  .pipe(z.iso.date("Ngày hiệu lực không hợp lệ. Vui lòng chọn ngày đầy đủ."));
 
 export function ProcedureApiDetail({
   row,
@@ -40,7 +58,9 @@ export function ProcedureApiDetail({
   readOnly?: boolean;
 }) {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const can = (permission: string) => permissions.includes(permission) && (!readOnly || permission === 'procedure.versions.read');
+  const can = (permission: string) =>
+    permissions.includes(permission) &&
+    (!readOnly || permission === "procedure.versions.read");
   const detail = useProcedureQuery(
     useCallback(
       (signal: AbortSignal) => procedureApi.managerDetail(row.id, signal),
@@ -49,7 +69,10 @@ export function ProcedureApiDetail({
   );
   const versions = useProcedureQuery(
     useCallback(
-      (signal: AbortSignal) => can("procedure.versions.read") ? procedureApi.versions(row.id, signal) : Promise.resolve([]),
+      (signal: AbortSignal) =>
+        can("procedure.versions.read")
+          ? procedureApi.versions(row.id, signal)
+          : Promise.resolve([]),
       [row.id, permissions, readOnly],
     ),
   );
@@ -67,14 +90,21 @@ export function ProcedureApiDetail({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const [validationError, setValidationError] = useState<ProcedureValidationError | null>(null);
-  const [dateError, setDateError] = useState('');
+  const [validationError, setValidationError] =
+    useState<ProcedureValidationError | null>(null);
+  const [dateError, setDateError] = useState("");
   const dateInput = useRef<HTMLInputElement>(null);
   const active = detail.data?.isActive ?? row.isActive;
   // PROC-UNPUBLISH-01: chỉ thủ tục chưa từng công khai và đang ẩn mới hủy xuất bản được
   const neverPublic = !!detail.data && !detail.data.firstPublishedAt;
   const canUnpublish = neverPublic && !detail.data?.isActive;
-  const guard = useUnsavedChanges(Boolean(editing && (date || JSON.stringify(editing) !== JSON.stringify(detail.data))), busy);
+  const guard = useUnsavedChanges(
+    Boolean(
+      editing &&
+      (date || JSON.stringify(editing) !== JSON.stringify(detail.data)),
+    ),
+    busy,
+  );
   async function run(action: () => Promise<void>) {
     if (readOnly || lock.current) return;
     lock.current = true;
@@ -108,64 +138,109 @@ export function ProcedureApiDetail({
             {detail.data?.title ?? row.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
-            <span className="min-w-0 break-words">Mã thủ tục: <strong className="font-semibold text-slate-800">{row.procedureCode}</strong></span>
-            <span className="min-w-0 break-words">Lĩnh vực: <span className="font-medium text-slate-800">{row.categoryName}</span></span>
-            <Badge variant={active ? "success" : "neutral"} className="max-w-full">
-              {active ? <Eye size={16} className="shrink-0" aria-hidden="true" /> : <EyeSlash size={16} className="shrink-0" aria-hidden="true" />}
-              {active ? "Đang công khai" : canUnpublish ? "Đã xuất bản, chưa công khai" : "Đang ẩn"}
+            <span className="min-w-0 break-words">
+              Mã thủ tục:{" "}
+              <strong className="font-semibold text-slate-800">
+                {row.procedureCode}
+              </strong>
+            </span>
+            <span className="min-w-0 break-words">
+              Lĩnh vực:{" "}
+              <span className="font-medium text-slate-800">
+                {row.categoryName}
+              </span>
+            </span>
+            <Badge
+              variant={active ? "success" : "neutral"}
+              className="max-w-full"
+            >
+              {active ? (
+                <Eye size={16} className="shrink-0" aria-hidden="true" />
+              ) : (
+                <EyeSlash size={16} className="shrink-0" aria-hidden="true" />
+              )}
+              {active
+                ? "Đang công khai"
+                : canUnpublish
+                  ? "Đã xuất bản, chưa công khai"
+                  : "Đang ẩn"}
             </Badge>
           </div>
         </div>
-        {(can("procedure.update") || can("procedure.status") || (canUnpublish && can("procedure.publish"))) && <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row xl:shrink-0 xl:border-t-0 xl:pt-0">
-          {can("procedure.update") && <Button
-            disabled={!detail.data}
-            onClick={() => {
-              setEditingStep(0);
-              setValidationError(null); setDateError('');
-              setEditing(structuredClone(detail.data!));
-              setDate("");
-              setError("");
-            }}
-          >
-            <PencilSimple size={18} aria-hidden="true" />
-            Chỉnh sửa
-          </Button>}
-          {can("procedure.update") && <Button
-            variant="outline"
-            disabled={!detail.data}
-            onClick={() => setChecklistOpen(true)}
-          >
-            Cập nhật giấy tờ (Checklist)
-          </Button>}
-          {can("procedure.status") && <Button
-            variant="outline"
-            onClick={() => {
-              setStatusOpen(true);
-              setError("");
-            }}
-          >
-            {active ? <EyeSlash size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-            {active ? "Ngừng công khai" : "Mở công khai"}
-          </Button>}
-          {canUnpublish && can("procedure.publish") && <Button
-            variant="dangerOutline"
-            onClick={() => {
-              setUnpublishOpen(true);
-              setError("");
-            }}
-          >
-            <ArrowArcLeft size={18} aria-hidden="true" />
-            Hủy xuất bản
-          </Button>}
-        </div>}
+        {(can("procedure.update") ||
+          can("procedure.status") ||
+          (canUnpublish && can("procedure.publish"))) && (
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row xl:shrink-0 xl:border-t-0 xl:pt-0">
+            {can("procedure.update") && (
+              <Button
+                disabled={!detail.data}
+                onClick={() => {
+                  setEditingStep(0);
+                  setValidationError(null);
+                  setDateError("");
+                  setEditing(structuredClone(detail.data!));
+                  setDate("");
+                  setError("");
+                }}
+              >
+                <PencilSimple size={18} aria-hidden="true" />
+                Chỉnh sửa
+              </Button>
+            )}
+            {can("procedure.update") && (
+              <Button
+                variant="outline"
+                disabled={!detail.data}
+                onClick={() => setChecklistOpen(true)}
+              >
+                Cập nhật giấy tờ
+              </Button>
+            )}
+            {can("procedure.status") && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusOpen(true);
+                  setError("");
+                }}
+              >
+                {active ? (
+                  <EyeSlash size={18} aria-hidden="true" />
+                ) : (
+                  <Eye size={18} aria-hidden="true" />
+                )}
+                {active ? "Ngừng công khai" : "Mở công khai"}
+              </Button>
+            )}
+            {canUnpublish && can("procedure.publish") && (
+              <Button
+                variant="dangerOutline"
+                onClick={() => {
+                  setUnpublishOpen(true);
+                  setError("");
+                }}
+              >
+                <ArrowArcLeft size={18} aria-hidden="true" />
+                Hủy xuất bản
+              </Button>
+            )}
+          </div>
+        )}
       </header>
-      {canUnpublish && !readOnly && <div role="note" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        <Info size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <p>
-          Thủ tục đã xuất bản nhưng <strong>chưa công khai</strong>, người dân chưa thấy.
-          Bấm <strong>"Mở công khai"</strong> khi đã sẵn sàng. Nếu xuất bản nhầm, bấm <strong>"Hủy xuất bản"</strong> để xóa thủ tục và đưa bản nháp về chờ đối soát.
-        </p>
-      </div>}
+      {canUnpublish && !readOnly && (
+        <div
+          role="note"
+          className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+        >
+          <Info size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <p>
+            Thủ tục đã xuất bản nhưng <strong>chưa công khai</strong>, người dân
+            chưa thấy. Bấm <strong>"Mở công khai"</strong> khi đã sẵn sàng. Nếu
+            xuất bản nhầm, bấm <strong>"Hủy xuất bản"</strong> để xóa thủ tục và
+            đưa bản nháp về chờ đối soát.
+          </p>
+        </div>
+      )}
       <ProcedureFeedback
         loading={detail.loading}
         error={detail.error}
@@ -178,77 +253,98 @@ export function ProcedureApiDetail({
             onChange={() => {}}
             categories={categories}
             disabled
-            onEditForms={can('procedure.update') ? () => {
-              setEditingStep(4);
-              setValidationError(null); setDateError('');
-              setEditing(structuredClone(detail.data!));
-              setDate('');
-              setError('');
-            } : undefined}
-            onEditChecklist={can('procedure.update') ? () => {
-              setChecklistOpen(true);
-            } : undefined}
+            onEditForms={
+              can("procedure.update")
+                ? () => {
+                    setEditingStep(4);
+                    setValidationError(null);
+                    setDateError("");
+                    setEditing(structuredClone(detail.data!));
+                    setDate("");
+                    setError("");
+                  }
+                : undefined
+            }
+            onEditChecklist={
+              can("procedure.update")
+                ? () => {
+                    setChecklistOpen(true);
+                  }
+                : undefined
+            }
           />
           <PdfSource
             id={row.id}
             manager
-            uploadable={can('procedure.update')}
-            onUploaded={() => { detail.refresh(); versions.refresh(); }}
+            uploadable={can("procedure.update")}
+            onUploaded={() => {
+              detail.refresh();
+              versions.refresh();
+            }}
           />
         </div>
       )}
-      {can("procedure.versions.read") && <section className="admin-card space-y-4 p-5">
-        <h2 className="text-xl font-bold">Lịch sử phiên bản</h2>
-        <ProcedureFeedback
-          loading={versions.loading}
-          error={versions.error}
-          retry={versions.refresh}
-        />
-        {versions.data?.length === 0 && <p>Chưa có bản lưu.</p>}
-        {versions.data?.map((version) => (
-          <details key={version.id} className="rounded-xl border p-4">
-            <summary className="cursor-pointer font-semibold">
-              Bản lưu {version.versionNumber} ·{" "}
-              {version.decisionNumber || "Chưa có số quyết định"} ·{" "}
-              {version.effectiveDate}
-            </summary>
-            <p className="my-3 text-sm text-slate-600">
-              Ngày lưu: {formatDateTime(version.createdAt)}.
-              Đây là nội dung đã lưu ở phiên bản này.
-            </p>
-            <ProcedureApiEditor
-              value={version.snapshotData}
-              categories={categories}
-              onChange={() => {}}
-              disabled
-            />
-            {version.pdfFileName && (
-              <div className="mt-3"><p className="mb-2 text-sm">PDF lịch sử: {version.pdfFileName}</p><PdfSource id={row.id} versionId={version.id} /></div>
-            )}
-            <div className="mt-3 pt-3 border-t border-slate-100">
-              {can("procedure.rollback") && <Button
-                size="small"
-                variant="outline"
-                onClick={() => {
-                  setRollback(version);
-                  setRollbackReason('');
-                  setRollbackDecision('');
-                  setRollbackDate('');
-                  setError('');
-                }}
-              >
-                Khôi phục phiên bản này
-              </Button>}
-            </div>
-          </details>
-        ))}
-      </section>}
+      {can("procedure.versions.read") && (
+        <section className="admin-card space-y-4 p-5">
+          <h2 className="text-xl font-bold">Lịch sử phiên bản</h2>
+          <ProcedureFeedback
+            loading={versions.loading}
+            error={versions.error}
+            retry={versions.refresh}
+          />
+          {versions.data?.length === 0 && <p>Chưa có bản lưu.</p>}
+          {versions.data?.map((version) => (
+            <details key={version.id} className="rounded-xl border p-4">
+              <summary className="cursor-pointer font-semibold">
+                Bản lưu {version.versionNumber} ·{" "}
+                {version.decisionNumber || "Chưa có số quyết định"} ·{" "}
+                {version.effectiveDate}
+              </summary>
+              <p className="my-3 text-sm text-slate-600">
+                Ngày lưu: {formatDateTime(version.createdAt)}. Đây là nội dung
+                đã lưu ở phiên bản này.
+              </p>
+              <ProcedureApiEditor
+                value={version.snapshotData}
+                categories={categories}
+                onChange={() => {}}
+                disabled
+              />
+              {version.pdfFileName && (
+                <div className="mt-3">
+                  <p className="mb-2 text-sm">
+                    PDF lịch sử: {version.pdfFileName}
+                  </p>
+                  <PdfSource id={row.id} versionId={version.id} />
+                </div>
+              )}
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                {can("procedure.rollback") && (
+                  <Button
+                    size="small"
+                    variant="outline"
+                    onClick={() => {
+                      setRollback(version);
+                      setRollbackReason("");
+                      setRollbackDecision("");
+                      setRollbackDate("");
+                      setError("");
+                    }}
+                  >
+                    Khôi phục phiên bản này
+                  </Button>
+                )}
+              </div>
+            </details>
+          ))}
+        </section>
+      )}
       <Modal
         open={!readOnly && !!rollback}
         onOpenChange={(open) => {
           if (!open && !busy) setRollback(undefined);
         }}
-        title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ''}`}
+        title={`Khôi phục phiên bản ${rollback?.versionNumber ?? ""}`}
         description="Nội dung của phiên bản này sẽ được khôi phục thành bản mới. Các phiên bản cũ vẫn được giữ lại."
         footer={
           <>
@@ -264,8 +360,14 @@ export function ProcedureApiDetail({
               onClick={() =>
                 void run(async () => {
                   if (!rollback) return;
-                  if (!rollbackReason.trim() || !rollbackDecision.trim() || !rollbackDate) {
-                    throw new Error('Nhập đủ lý do, số quyết định và ngày hiệu lực.');
+                  if (
+                    !rollbackReason.trim() ||
+                    !rollbackDecision.trim() ||
+                    !rollbackDate
+                  ) {
+                    throw new Error(
+                      "Nhập đủ lý do, số quyết định và ngày hiệu lực.",
+                    );
                   }
                   await procedureApi.rollback(row.id, rollback.versionNumber, {
                     reason: rollbackReason.trim(),
@@ -276,7 +378,7 @@ export function ProcedureApiDetail({
                   detail.refresh();
                   versions.refresh();
                   onChange(!!row.isActive);
-                  toast.success('Đã khôi phục nội dung và tạo phiên bản mới.');
+                  toast.success("Đã khôi phục nội dung và tạo phiên bản mới.");
                 })
               }
             >
@@ -323,13 +425,23 @@ export function ProcedureApiDetail({
               if (!checkedDate.success) {
                 setDateError(checkedDate.error.issues[0].message);
                 dateInput.current?.focus();
-                dateInput.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                dateInput.current?.scrollIntoView({
+                  block: "center",
+                  behavior: "smooth",
+                });
                 return;
               }
               void run(async () => {
                 const input = validateProcedure(editing!);
-                const decisionNumber = input.contentPayload.decisionNumber?.trim() ?? '';
-                if (!decisionNumber) throw new ProcedureValidationError([procedureIssue('contentPayload.decisionNumber', 'Vui lòng nhập số quyết định trước khi lưu.')]);
+                const decisionNumber =
+                  input.contentPayload.decisionNumber?.trim() ?? "";
+                if (!decisionNumber)
+                  throw new ProcedureValidationError([
+                    procedureIssue(
+                      "contentPayload.decisionNumber",
+                      "Vui lòng nhập số quyết định trước khi lưu.",
+                    ),
+                  ]);
                 // input giữ nguyên originalPdfUrl/pdfFileName của thủ tục để không mất liên kết PDF gốc
                 await procedureApi.update(
                   row.id,
@@ -364,13 +476,18 @@ export function ProcedureApiDetail({
           label="Ngày hiệu lực của thay đổi"
           required
           hint="Bắt buộc nhập ngày hiệu lực trước khi lưu thay đổi."
-          ref={dateInput} error={dateError} disabled={busy}
+          ref={dateInput}
+          error={dateError}
+          disabled={busy}
           type="date"
           value={date}
-          onChange={(e) => { setDate(e.target.value); setDateError(''); }}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setDateError("");
+          }}
           onBlur={() => {
             const result = effectiveDateSchema.safeParse(date);
-            setDateError(result.success ? '' : result.error.issues[0].message);
+            setDateError(result.success ? "" : result.error.issues[0].message);
           }}
         />
       </Modal>
@@ -379,9 +496,7 @@ export function ProcedureApiDetail({
         onOpenChange={(open) => {
           if (!busy) setStatusOpen(open);
         }}
-        title={
-          active ? "Ngừng công khai thủ tục" : "Mở công khai thủ tục"
-        }
+        title={active ? "Ngừng công khai thủ tục" : "Mở công khai thủ tục"}
         description={
           active
             ? "Người dân sẽ không thấy thủ tục này nữa. Có thể mở công khai lại bất cứ lúc nào."
@@ -399,7 +514,11 @@ export function ProcedureApiDetail({
                 onChange(!active);
                 // Tải lại để cập nhật firstPublishedAt (ẩn nút "Hủy xuất bản" sau lần công khai đầu)
                 detail.refresh();
-                toast.success(active ? "Đã ngừng công khai thủ tục." : "Đã công khai thủ tục.");
+                toast.success(
+                  active
+                    ? "Đã ngừng công khai thủ tục."
+                    : "Đã công khai thủ tục.",
+                );
               })
             }
           >
@@ -416,7 +535,9 @@ export function ProcedureApiDetail({
       </Modal>
       <ConfirmDeleteModal
         open={!readOnly && unpublishOpen}
-        onOpenChange={(open) => { if (!busy) setUnpublishOpen(open); }}
+        onOpenChange={(open) => {
+          if (!busy) setUnpublishOpen(open);
+        }}
         title="Hủy xuất bản thủ tục"
         itemName={detail.data?.title ?? row.title}
         description="Thủ tục và lịch sử phiên bản của nó sẽ bị xóa hẳn. Bản nháp PDF tạo ra thủ tục này quay về trạng thái chờ đối soát để bạn sửa, xuất bản lại hoặc xóa."
@@ -433,8 +554,11 @@ export function ProcedureApiDetail({
               throw e;
             }
             setUnpublishOpen(false);
-            toast.success("Đã hủy xuất bản. Bản nháp đã quay về trạng thái chờ đối soát.");
-            if (onUnpublished) onUnpublished(); else onBack();
+            toast.success(
+              "Đã hủy xuất bản. Bản nháp đã quay về trạng thái chờ đối soát.",
+            );
+            if (onUnpublished) onUnpublished();
+            else onBack();
           })
         }
       >
