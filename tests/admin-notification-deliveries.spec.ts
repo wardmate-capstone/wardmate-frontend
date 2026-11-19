@@ -42,7 +42,7 @@ test('delivery detail uses GET detail, fresh data and paginated audit', async ({
 
 test('delivery replay enforces reason and acknowledgment, uses fresh revision and accepts 202', async ({ page }) => {
   const state = await setup(page);
-  await page.getByRole('button', { name: 'Replay', exact: true }).click();
+  await page.getByRole('button', { name: 'Gửi lại', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Xác nhận gửi lại' })).toBeEnabled();
   await dialog.getByLabel('Lý do gửi lại').fill('abc');
@@ -60,7 +60,7 @@ test('delivery replay enforces reason and acknowledgment, uses fresh revision an
 
 test('delivery conflict preserves reason, locks send until explicit reload and does not retry', async ({ page }) => {
   const state = await setup(page); state.conflict = true;
-  await page.getByRole('button', { name: 'Replay', exact: true }).click();
+  await page.getByRole('button', { name: 'Gửi lại', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Lý do gửi lại').fill('Nội dung cần giữ lại'); await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Xác nhận gửi lại' }).click();
@@ -97,7 +97,7 @@ test('delivery errors never display old detail as fresh data or fake empty audit
 test('read-only notification permission hides replay; missing read never calls API', async ({ page }) => {
   await setup(page, false);
   await expect(page.getByRole('cell', { name: 'Ngừng thử', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Replay', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gửi lại', exact: true })).toHaveCount(0);
   const state = await setup(page, false, false);
   await expect(page.getByRole('alert')).toContainText('quyền đọc lịch sử');
   expect(state.requests).toHaveLength(0);

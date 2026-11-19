@@ -3,7 +3,7 @@ import { Plus } from '@phosphor-icons/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input, Modal, toast, RefreshButton } from '@/components/ui';
+import { Button, Input, Modal, toast, RefreshButton, formSelectClass } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useSystemAdministration } from '@/hooks/useSystemAdministration';
 import { createBackupSchema, emptyOperationsFilters, systemOperationsApi as api, type CreateBackup, type OperationsFilters } from '@/lib/api/systemOperations';
@@ -18,6 +18,9 @@ function CreateBackupDialog({ onClose, onCreated, services }: { onClose: () => v
   const form = useForm<CreateBackup>({ resolver: zodResolver(createBackupSchema), defaultValues: { serviceName: '', reason: '' } });
   const mutation = useMutation({ mutationFn: api.create, retry: false });
   const lock = useRef(false);
+  // Chọn dịch vụ từ danh sách thay vì gõ mã (L26); "Mã khác…" vẫn cho nhập mã do bộ phận vận hành cung cấp.
+  const [choice, setChoice] = useState('');
+  const known = [...new Set([...services, ...BACKUP_SERVICES])];
   async function create(input: CreateBackup) {
     if (lock.current) return;
     lock.current = true;
@@ -28,7 +31,7 @@ function CreateBackupDialog({ onClose, onCreated, services }: { onClose: () => v
     } catch { /* Keep entered data and show server error. */ }
     finally { lock.current = false; }
   }
-  return <Modal open onOpenChange={open => { if (!open && !mutation.isPending) onClose(); }} title="Tạo bản sao lưu" description="Yêu cầu được xử lý nền cho dịch vụ đã được cấu hình sao lưu."><form noValidate onSubmit={form.handleSubmit(create)} className="space-y-4"><fieldset disabled={mutation.isPending} className="space-y-4"><div><Input id="backup-service" label="Dịch vụ cần sao lưu" required list="backup-service-options" placeholder="Chọn gợi ý hoặc nhập mã dịch vụ" {...form.register('serviceName')} error={form.formState.errors.serviceName?.message} hint="Gợi ý không phải danh sách đã bật sao lưu. Bạn có thể nhập mã khác do bộ phận vận hành cung cấp; máy chủ sẽ kiểm tra cấu hình." /><datalist id="backup-service-options">{[...new Set([...services, ...BACKUP_SERVICES])].map(name => <option key={name} value={name}>{serviceLabel(name)}</option>)}</datalist></div><Input label="Lý do sao lưu" required {...form.register('reason')} error={form.formState.errors.reason?.message} hint="Từ 3 đến 500 ký tự sau khi bỏ khoảng trắng đầu và cuối." /></fieldset>{mutation.error && <p role="alert" className="text-sm text-red-800">{systemError(mutation.error)} Nếu kết nối bị gián đoạn, hãy kiểm tra danh sách trước khi chủ động gửi lại.</p>}<div className="flex flex-wrap justify-end gap-3"><Button variant="outline" disabled={mutation.isPending} onClick={onClose}>Hủy</Button><Button type="submit" loading={mutation.isPending}>Xếp hàng sao lưu</Button></div></form></Modal>;
+  return <Modal open onOpenChange={open => { if (!open && !mutation.isPending) onClose(); }} title="Tạo bản sao lưu" description="Yêu cầu được xử lý nền cho dịch vụ đã được cấu hình sao lưu."><form noValidate onSubmit={form.handleSubmit(create)} className="space-y-4"><fieldset disabled={mutation.isPending} className="space-y-4"><div className="grid gap-2"><label htmlFor="backup-service" className="text-sm font-semibold text-slate-800">Dịch vụ cần sao lưu <span className="text-red-700" aria-hidden="true">*</span></label><select id="backup-service" className={formSelectClass} value={choice} required onChange={e => { const value = e.target.value; setChoice(value); form.setValue('serviceName', value === '__other' ? '' : value, { shouldValidate: form.formState.isSubmitted }); }}><option value="">Chọn dịch vụ</option>{known.map(name => <option key={name} value={name}>{serviceLabel(name)}</option>)}<option value="__other">Mã khác…</option></select>{choice === '__other' ? <Input id="backup-service-code" label="Mã dịch vụ khác" required {...form.register('serviceName')} error={form.formState.errors.serviceName?.message} hint="Mã do bộ phận vận hành cung cấp; máy chủ sẽ kiểm tra cấu hình sao lưu." /> : form.formState.errors.serviceName && <p role="alert" className="text-sm text-red-800">{form.formState.errors.serviceName.message}</p>}<p className="text-xs text-slate-500">Danh sách gồm các dịch vụ đang được giám sát; máy chủ sẽ kiểm tra dịch vụ đã bật sao lưu hay chưa.</p></div><Input label="Lý do sao lưu" required {...form.register('reason')} error={form.formState.errors.reason?.message} hint="Từ 3 đến 500 ký tự sau khi bỏ khoảng trắng đầu và cuối." /></fieldset>{mutation.error && <p role="alert" className="text-sm text-red-800">{systemError(mutation.error)} Nếu kết nối bị gián đoạn, hãy kiểm tra danh sách trước khi chủ động gửi lại.</p>}<div className="flex flex-wrap justify-end gap-3"><Button variant="outline" disabled={mutation.isPending} onClick={onClose}>Hủy</Button><Button type="submit" loading={mutation.isPending}>Xếp hàng sao lưu</Button></div></form></Modal>;
 }
 
 function BackupDetail({ id, onClose }: { id: string; onClose: () => void }) {

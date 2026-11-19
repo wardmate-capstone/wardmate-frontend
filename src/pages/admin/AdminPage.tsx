@@ -8,7 +8,7 @@ import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/Wo
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { getGreeting } from "@/lib/utils";
+import { getGreeting, matchesSearch } from "@/lib/utils";
 import {
   ArrowRight,
   ArrowsClockwise,
@@ -141,7 +141,7 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   'system-settings': { title: 'Cấu hình hệ thống' },
   closures: { title: 'Lịch ngày lễ toàn quốc' },
   'analytics-jobs': { title: 'Cập nhật số liệu thống kê' },
-  'notification-deliveries': { title: 'Quản trị phát thông báo' },
+  'notification-deliveries': { title: 'Lịch sử phát thông báo' },
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
   knowledge: { title: "Dữ liệu kiến thức AI" },
@@ -527,7 +527,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
           )}
 
           {activeSection === "overview" && (
-            <Overview onSelect={id => { if (id === 'audit') setAuditTab('iam'); selectSection(id); }} wardsCount={wards.length} />
+            <Overview onSelect={id => { if (id === 'audit') setAuditTab('iam'); selectSection(id); }} wardsCount={wards.length || undefined} />
           )}
           {activeSection === "procedures" && (
             <AdminProceduresView />
@@ -997,13 +997,7 @@ function AccountsView({
     return accounts.filter((acc) => {
       if (statusFilter === 'ACTIVE' && !acc.isActive) return false;
       if (statusFilter === 'LOCKED' && acc.isActive) return false;
-      if (query.trim()) {
-        const q = query.toLowerCase().trim();
-        const matchUsername = acc.username.toLowerCase().includes(q);
-        const matchEmail = acc.email?.toLowerCase().includes(q);
-        return matchUsername || matchEmail;
-      }
-      return true;
+      return matchesSearch(query, acc.username, acc.email);
     });
   }, [accounts, statusFilter, query]);
 
@@ -1483,9 +1477,8 @@ function WardsView({
   }, [wards]);
 
   const filteredWards = useMemo(() => {
-    const q = query.toLowerCase();
     return wards.filter(
-      (w) => w.name.toLowerCase().includes(q) || w.code.toLowerCase().includes(q)
+      (w) => matchesSearch(query, w.name, w.code)
     );
   }, [wards, query]);
 

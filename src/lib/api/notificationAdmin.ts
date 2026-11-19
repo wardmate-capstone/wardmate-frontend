@@ -139,3 +139,32 @@ export function notificationAdminError(error: unknown): string {
   return error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi xử lý thông báo.';
 }
 
+
+/** Nhãn tiếng Việt cho mã lỗi phát thông báo; mã kỹ thuật vẫn xem được ở Chi tiết (L26). */
+const deliveryErrorLabels: Record<string, string> = {
+  'notification.delivery_failed': 'Gửi không thành công',
+  'notification.channel_not_configured': 'Kênh gửi chưa được cấu hình',
+  'notification.context_invalid': 'Dữ liệu thông báo không hợp lệ',
+  'notification.event_invalid': 'Sự kiện không hợp lệ',
+  'notification.event_missing': 'Thiếu sự kiện gốc',
+  'notification.resolve_failed': 'Không xác định được người nhận',
+  'notification.smtp_failed': 'Máy chủ email từ chối gửi',
+  'notification.smtp_timeout': 'Máy chủ email phản hồi quá lâu',
+  'notification.workflow_key_missing': 'Thiếu mã hồ sơ liên quan',
+  'push.auth_failed': 'Dịch vụ thông báo đẩy từ chối xác thực',
+  'push.bad_request': 'Yêu cầu thông báo đẩy không hợp lệ',
+  'push.invalid_platform': 'Thiết bị không được hỗ trợ',
+  'push.invalid_token': 'Thiết bị đã hết hạn đăng ký nhận thông báo',
+  'push.invalid_version': 'Phiên bản ứng dụng không hợp lệ',
+  'push.provider_unavailable': 'Dịch vụ thông báo đẩy tạm ngừng',
+  'sms.removed': 'Kênh SMS đã ngừng sử dụng',
+  channel_disabled: 'Kênh gửi đang tắt',
+  channel_removed: 'Kênh gửi đã bị gỡ',
+};
+
+export function deliveryErrorLabel(code?: string | null): string {
+  if (!code) return 'Không có';
+  // Một số bản ghi cũ dùng dấu gạch dưới thay dấu chấm (notification_delivery_failed).
+  const normalized = code.replace(/^(notification|push|sms)_/, '$1.');
+  return deliveryErrorLabels[code] ?? deliveryErrorLabels[normalized] ?? 'Lỗi khác (xem chi tiết)';
+}

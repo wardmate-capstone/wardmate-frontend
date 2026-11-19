@@ -213,7 +213,7 @@ test('Quản trị thông báo: IT Admin xem danh sách delivery và mở modal 
   await expect(page.getByRole('cell', { name: 'Ngừng thử', exact: true })).toBeVisible();
 
   // Open Replay modal
-  const replayBtn = page.getByRole('button', { name: 'Replay' });
+  const replayBtn = page.getByRole('button', { name: 'Gửi lại', exact: true });
   await expect(replayBtn).toBeVisible();
   await replayBtn.click();
 
