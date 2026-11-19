@@ -147,7 +147,7 @@ test('đổi mật khẩu khi đăng nhập bằng OTP email gửi kèm Bearer v
 
   await page.goto('/admin');
   await page.locator('aside').getByRole('button', { name: 'Hồ sơ cá nhân' }).click();
-  await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
+  await page.getByRole('tab', { name: 'Đổi mật khẩu', exact: true }).click();
   await page.getByRole('radio', { name: 'Xác thực qua email' }).click();
   await page.getByRole('button', { name: 'Gửi mã xác thực qua email' }).click();
   await expect(page.getByRole('status')).toContainText('mã OTP đã được gửi');
@@ -163,7 +163,7 @@ test('đổi mật khẩu khi đăng nhập bằng OTP email gửi kèm Bearer v
   await expect(page.getByText('Mật khẩu xác nhận chưa trùng khớp')).toBeVisible();
   await page.getByLabel('Xác nhận mật khẩu mới *').fill('MatKhau@2026');
   await expect(page.getByText('Mật khẩu xác nhận trùng khớp')).toBeVisible();
-  await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
   await expect(page).toHaveURL(/\/dang-nhap/);
   expect(requests.at(-1)).toEqual({
     path: '/api/v1/auth/password-otp/verify-and-change',

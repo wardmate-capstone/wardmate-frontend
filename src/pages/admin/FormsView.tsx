@@ -115,8 +115,8 @@ export function FormsView() {
                   list.data.items.map((item) => (
                     <tr key={item.id} className="border-b border-slate-100">
             <td className="min-w-44"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
-            <td><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
-            <td>{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
+            <td className="whitespace-nowrap"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
+            <td className="whitespace-nowrap">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
             <td className="w-[380px] min-w-[350px]">
               <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
                 {item.fileDocxUrl ? <ArrowsClockwise size={16} aria-hidden /> : <UploadSimple size={16} aria-hidden />}

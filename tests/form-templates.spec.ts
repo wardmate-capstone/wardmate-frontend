@@ -243,7 +243,8 @@ test('dual-role user uploads an empty template in procedure-manager workspace', 
   await page.goto('/procedure-manager?section=procedures');
   await page.getByRole('complementary').getByRole('button', { name: 'Danh sách biểu mẫu', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'Tờ khai kiểm thử' });
-  await expect(row.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true })).toBeDisabled();
+  // Mẫu chưa có tệp: không hiện nút Xem mẫu (L25).
+  await expect(row.getByRole('button', { name: 'Xem mẫu Tờ khai kiểm thử', exact: true })).toHaveCount(0);
   await expect(row.getByRole('button', { name: 'Tải mẫu Tờ khai kiểm thử', exact: true })).toHaveCount(0);
   await expect(row.getByRole('button', { name: 'Tải lên', exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Tải lên', exact: true }).click();

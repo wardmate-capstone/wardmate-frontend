@@ -305,9 +305,11 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
       </div>
 
       {/* Tab chuyển đổi phân hệ hồ sơ */}
-      <div className="flex items-center gap-6 border-b border-slate-200">
+      <div role="tablist" aria-label="Hồ sơ cá nhân" className="flex items-center gap-6 border-b border-slate-200">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'personal'}
           onClick={() => setActiveTab('personal')}
           className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'personal'
@@ -315,11 +317,13 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
           }`}
         >
-          <IdentificationCard size={18} weight={activeTab === 'personal' ? 'bold' : 'regular'} />
+          <IdentificationCard size={18} weight={activeTab === 'personal' ? 'bold' : 'regular'} aria-hidden="true" />
           <span>{citizen ? 'Thông tin cá nhân' : 'Thông tin cán bộ'}</span>
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'security'}
           onClick={() => setActiveTab('security')}
           className={`inline-flex items-center gap-2 py-3 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'security'
@@ -327,7 +331,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
           }`}
         >
-          <Lock size={18} weight={activeTab === 'security' ? 'bold' : 'regular'} />
+          <Lock size={18} weight={activeTab === 'security' ? 'bold' : 'regular'} aria-hidden="true" />
           <span>Đổi mật khẩu</span>
         </button>
       </div>
@@ -347,7 +351,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
       )}
 
       {/* Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-6 ${citizen ? 'md:grid-cols-2' : ''}`}>
         {/* Khối 1: Định danh & Nhân thân */}
         <section
           className={`admin-card p-6 space-y-5 transition-all duration-200 ${
@@ -366,6 +370,8 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
             )}
           </div>
 
+          {/* Thẻ CCCD tự kê khai chỉ dành cho công dân (L28) */}
+          {citizen && (<>
           {/* Thẻ CCCD gắn chip */}
           <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
@@ -415,6 +421,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               )}
             </div>
           </div>
+          </>)}
 
           <div className="space-y-4 pt-1">
             {/* Họ tên */}
@@ -525,6 +532,8 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
           </div>
         </section>
 
+        {/* Cán bộ/quản trị: không hiện địa chỉ cư trú (thông tin của công dân) — L28 */}
+        {citizen && (<>
         {/* Khối 2: Địa chỉ & Cư trú */}
         <section
           className={`admin-card p-6 space-y-5 transition-all duration-200 ${
@@ -597,6 +606,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
             </div>
           </div>
         </section>
+        </>)}
 
         {/* Khối 3: Thông tin Tài khoản & Quyền truy cập */}
         <section className="admin-card p-5 space-y-4 md:col-span-2">
