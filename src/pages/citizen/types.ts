@@ -50,6 +50,10 @@ export interface CitizenDossier {
   formData?: Record<string, unknown>;
   dueAtUtc?: string | null;
   deadlineStatus?: string | null;
+  /** Hạn tiền kiểm đang tạm dừng (chờ người dân bổ sung). */
+  deadlinePausedAtUtc?: string | null;
+  /** Đã có cán bộ nhận hồ sơ hay chưa (để không ghi "đang được cán bộ kiểm tra" khi chưa ai nhận). */
+  assigned?: boolean;
 }
 
 

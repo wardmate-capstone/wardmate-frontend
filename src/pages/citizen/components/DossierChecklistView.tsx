@@ -39,7 +39,9 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   const [editing, setEditing] = useState<{ item: ChecklistItem; submissionId?: string; readOnly: boolean }>();
   useEffect(() => { onBusyChange?.(busy || Boolean(editing)); }, [busy, editing, onBusyChange]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [upload, setUpload] = useState<{ item: ChecklistItem; file: File }>();
+  // Hàng đợi tệp chờ khai số bản: chọn nhiều tệp (hoặc chọn tiếp khi hộp đang mở) không làm mất tệp trước (L15).
+  const [uploads, setUploads] = useState<{ item: ChecklistItem; file: File }[]>([]);
+  const upload = uploads[0];
   const [removing, setRemoving] = useState<{ id: string; name: string; item: ChecklistItem }>();
   const [preview, setPreview] = useState<{ id: string; name: string; form: boolean }>();
   // Giấy tờ có nhiều mẫu thay thế (cột "Mẫu đơn, tờ khai" của Cổng DVC): người dân chọn một mẫu để điền
@@ -124,14 +126,25 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
             disabled={busy}
             type="file"
             accept={item.formTemplateId ? '.docx' : '.pdf,.jpg,.jpeg,.png,.heic,.heif,.webp,.doc,.docx'}
+            multiple={!item.formTemplateId}
             onChange={e => {
-              const file = e.target.files?.[0];
+              const files = Array.from(e.target.files ?? []);
               e.target.value = '';
-              if (!file) return;
-              const error = validateDocumentFile(file, Boolean(item.formTemplateId));
-              if (error) { setErrors(prev => ({ ...prev, [item.checklistId]: error })); return; }
-              if (item.formTemplateId) void saveForm(item, file);
-              else { quantityForm.reset({ quantity: 1 }); setUpload({ item, file }); }
+              if (!files.length) return;
+              if (item.formTemplateId) {
+                const error = validateDocumentFile(files[0], true);
+                if (error) { setErrors(prev => ({ ...prev, [item.checklistId]: error })); return; }
+                void saveForm(item, files[0]);
+                return;
+              }
+              const invalid = files.map(file => validateDocumentFile(file, false)).find(Boolean);
+              if (invalid) setErrors(prev => ({ ...prev, [item.checklistId]: invalid }));
+              const valid = files.filter(file => !validateDocumentFile(file, false));
+              if (!valid.length) return;
+              setUploads(queue => {
+                if (!queue.length) quantityForm.reset({ quantity: 1 });
+                return [...queue, ...valid.map(file => ({ item, file }))];
+              });
             }}
           />
         </label>
@@ -347,13 +360,13 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     })}
     {!editable && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Tài liệu đang được khóa chỉnh sửa theo trạng thái hồ sơ.</p>}
     {current.some(item => item.submissionType === 'XUAT_TRINH') && <p className="text-xs leading-relaxed text-slate-500">Hồ sơ “{procedureName}” có giấy tờ cần xuất trình. Hãy mang bản giấy khi đến Bộ phận Một cửa.</p>}
-    <Modal open={Boolean(upload)} onOpenChange={open => { if (!open && !busy) setUpload(undefined); }} title="Khai số bản trong tệp" description="Nhập số bản giấy tờ thực tế được thể hiện trong tệp, không phải số trang.">
+    <Modal open={Boolean(upload)} onOpenChange={open => { if (!open && !busy) { setUploads(queue => queue.slice(1)); quantityForm.reset({ quantity: 1 }); } }} title={uploads.length > 1 ? `Khai số bản trong tệp (còn ${uploads.length} tệp)` : 'Khai số bản trong tệp'} description="Nhập số bản giấy tờ thực tế được thể hiện trong tệp, không phải số trang.">
       <form className="space-y-4" onSubmit={quantityForm.handleSubmit(async ({ quantity }) => {
         if (!upload || !applicationId) return;
         const selected = upload;
         await perform(selected.item, async () => {
           await mutations.uploadSupporting.mutateAsync({ applicationId, checklistId: selected.item.checklistId, submissionType: selected.item.submissionType, documentCopyType: selected.item.documentCopyType, quantity, file: selected.file });
-          setUpload(undefined); await syncChecklist(selected.item); toast.success('Đã lưu giấy tờ vào hồ sơ.');
+          setUploads(queue => queue.slice(1)); quantityForm.reset({ quantity: 1 }); await syncChecklist(selected.item); toast.success('Đã lưu giấy tờ vào hồ sơ.');
         });
       })} noValidate><p className="break-all text-sm">{upload?.file.name}</p><Input label="Số bản thực tế" type="number" min={1} max={2147483647} required disabled={busy} {...quantityForm.register('quantity')} error={quantityForm.formState.errors.quantity?.message} />{upload && errors[upload.item.checklistId] && <p role="alert" className="text-sm text-red-800">{errors[upload.item.checklistId]}</p>}<Button type="submit" loading={busy}>Lưu giấy tờ</Button></form>
     </Modal>

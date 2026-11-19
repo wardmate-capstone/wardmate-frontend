@@ -94,6 +94,8 @@ export const applicationDtoSchema = z.object({
   wardCode: z.string().nullish(),
   dueAtUtc: z.string().nullish(),
   deadlineStatus: z.string().nullish(),
+  // Hạn đang tạm dừng (chờ người dân bổ sung) khi có giá trị.
+  deadlinePausedAtUtc: z.string().nullish(),
   receiptNumber: z.string().nullish(),
   receivedAt: z.string().nullish(),
   appointmentDate: z.string().nullish(),
@@ -121,6 +123,8 @@ export const applicationSummaryDtoSchema = z.object({
   citizenId: z.string().nullish(),
   dueAtUtc: z.string().nullish(),
   deadlineStatus: z.string().nullish(),
+  // Hạn đang tạm dừng (chờ người dân bổ sung) khi có giá trị.
+  deadlinePausedAtUtc: z.string().nullish(),
   receiptNumber: z.string().nullish(),
   receivedAt: z.string().nullish(),
   appointmentDate: z.string().nullish(),

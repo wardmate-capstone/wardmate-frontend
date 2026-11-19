@@ -265,7 +265,8 @@ export function mapSummaryDtoToOfficerApplication(
       citizenId: summary.citizenId?.trim() || '—',
       phoneNumber: '—',
       email: '—',
-      address: summary.wardCode ? `Phường/Xã: ${summary.wardCode}` : '—',
+      // Danh sách không có địa chỉ người dân; không hiện mã phường nội bộ như địa chỉ (L12).
+      address: '—',
       permanentAddress: '—',
       gender: 'Nam',
     },
@@ -313,7 +314,7 @@ export function mapApplicationDtoToOfficerApplication(
     citizenId: citizenInfo.citizenId,
     phoneNumber: citizenInfo.phoneNumber || String(formData.phoneNumber || formData.phone || '—'),
     email: citizenInfo.email || String(formData.email || '—'),
-    address: String(formData.address || formData.currentAddress || (dto.wardCode ? `Phường: ${dto.wardCode}` : '—')),
+    address: String(formData.address || formData.currentAddress || '—'),
     permanentAddress: String(formData.permanentAddress || formData.address || '—'),
     dateOfBirth: String(formData.dateOfBirth || formData.dob || '—'),
     gender: (formData.gender === 'Nữ' ? 'Nữ' : 'Nam') as 'Nam' | 'Nữ' | 'Khác',
@@ -434,6 +435,8 @@ export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): C
     wardCode: summary.wardCode || undefined,
     dueAtUtc: summary.dueAtUtc,
     deadlineStatus: summary.deadlineStatus,
+    deadlinePausedAtUtc: summary.deadlinePausedAtUtc,
+    assigned: Boolean(summary.assignedOfficerId),
   };
 }
 
@@ -499,6 +502,8 @@ export function mapApplicationDtoToCitizenDossier(
     checklist,
     dueAtUtc: dto.dueAtUtc,
     deadlineStatus: dto.deadlineStatus,
+    deadlinePausedAtUtc: dto.deadlinePausedAtUtc,
+    assigned: Boolean(dto.assignedOfficerId),
   };
 }
 

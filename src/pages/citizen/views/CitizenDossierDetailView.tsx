@@ -207,10 +207,20 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             <h3 className="mt-1 text-base font-bold text-slate-900">{preparing ? 'Hoàn thiện hồ sơ' : statusLabel}</h3>
             {dossier.dueAtUtc && dossier.status !== 'Giấy tờ sẵn sàng' && dossier.status !== 'Đã tiếp nhận tại quầy' && (
               <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs">
-                <span className="block text-[11px] font-semibold text-slate-500">Thời hạn phản hồi (trong 45 giờ làm việc):</span>
-                <strong className="text-slate-900 block mt-0.5">
-                  {formatDateTime(dossier.dueAtUtc)}
-                </strong>
+                {dossier.deadlinePausedAtUtc || dossier.status === 'Cần chỉnh sửa' ? (
+                  // Chờ người dân bổ sung: hạn 45 giờ tạm dừng, tính tiếp khi gửi lại (L16).
+                  <>
+                    <span className="block text-[12px] font-semibold text-amber-800">Thời hạn phản hồi đang tạm dừng</span>
+                    <span className="mt-0.5 block text-slate-600">Hạn 45 giờ làm việc tạm dừng trong lúc chờ bạn bổ sung và được tính tiếp khi bạn gửi lại hồ sơ.</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="block text-[12px] font-semibold text-slate-500">Thời hạn phản hồi (trong 45 giờ làm việc):</span>
+                    <strong className="text-slate-900 block mt-0.5">
+                      {formatDateTime(dossier.dueAtUtc)}
+                    </strong>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -268,7 +278,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   </p>
                 ) : (
                   <p className="text-xs leading-relaxed text-slate-600">
-                    {approved ? 'Vui lòng chuẩn bị giấy tờ bản giấy khi đến nộp tại Bộ phận Một cửa.' : dossier.status === 'Đã từ chối' ? 'Xem lý do cán bộ từ chối để thực hiện lại.' : 'Hồ sơ đang được cán bộ kiểm tra; giấy tờ đã khóa chỉnh sửa.'}
+                    {approved ? 'Vui lòng chuẩn bị giấy tờ bản giấy khi đến nộp tại Bộ phận Một cửa.' : dossier.status === 'Đã từ chối' ? 'Xem lý do cán bộ từ chối để thực hiện lại.' : dossier.assigned === false ? 'Hồ sơ đã gửi và đang chờ cán bộ tiếp nhận; giấy tờ đã khóa chỉnh sửa.' : 'Hồ sơ đang được cán bộ kiểm tra; giấy tờ đã khóa chỉnh sửa.'}
                   </p>
                 )}
               </>

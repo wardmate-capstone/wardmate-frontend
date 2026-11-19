@@ -119,3 +119,19 @@ test('cán bộ mở queue không tự nhận xử lý và quyết định lỗi
   await expect(page.getByRole('heading', { name: 'Bản PDF sau tiền kiểm', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tạo PDF: to-khai.docx', exact: true })).toBeEnabled();
 });
+
+test('đính kèm 2 tệp liên tiếp: khai số bản lần lượt, không mất tệp đầu (L15)', async ({ page }) => {
+  const state = await mockDocumentWorkflow(page);
+  await detail(page);
+  const evidence = page.locator(`#checklist-${documentIds.evidence}`);
+  const second = { ...pdf, name: 'giay-to-2.pdf' };
+  await evidence.getByLabel('Đính kèm giấy tờ').setInputFiles([pdf, second]);
+  const upload = page.getByRole('dialog', { name: /Khai số bản trong tệp/ });
+  await expect(upload).toContainText('giay-to.pdf');
+  await expect(upload).toContainText('còn 2 tệp');
+  await upload.getByRole('button', { name: 'Lưu giấy tờ' }).click();
+  await expect(upload).toContainText('giay-to-2.pdf');
+  await upload.getByRole('button', { name: 'Lưu giấy tờ' }).click();
+  await expect(upload).toHaveCount(0);
+  expect(state.writes.filter(x => x.path.endsWith('/supporting-documents'))).toHaveLength(2);
+});
