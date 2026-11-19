@@ -32,7 +32,7 @@ test('Lịch toàn phường: mọi cán bộ, ca qua tháng UTC, ca hủy và t
   await page.setViewportSize({ width: 1440, height: 1000 });
   const requests = await setup(page);
   await page.goto('/manager?section=shifts');
-  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
+  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Một cửa' });
   await expect(table).toContainText('Nguyễn Văn An');
   await expect(table).toContainText('Trần Thị Bình');
   await expect(table).toContainText('07:30–11:30');
@@ -64,8 +64,10 @@ test('Lịch toàn phường: đổi tháng/năm, lỗi API và thử lại', as
   await page.getByRole('combobox', { name: 'Tháng lịch toàn phường' }).selectOption('12');
   await next;
   await expect(page.getByText('01/12/2026 – 07/12/2026')).toBeVisible();
-  const year = page.waitForRequest(r => r.url().includes('ward-shifts?year=2100&month=12'));
-  await page.getByRole('combobox', { name: 'Năm lịch toàn phường' }).selectOption('2100');
+  // Ô năm chỉ có năm trước, năm nay, năm sau (không sổ 100 năm).
+  await expect(page.getByRole('combobox', { name: 'Năm lịch toàn phường' }).locator('option')).toHaveCount(3);
+  const year = page.waitForRequest(r => r.url().includes('ward-shifts?year=2027&month=12'));
+  await page.getByRole('combobox', { name: 'Năm lịch toàn phường' }).selectOption('2027');
   await year;
 });
 
@@ -140,7 +142,7 @@ test('Lịch toàn phường: chỉ cán bộ Frontdesk đang hoạt động, �
     { officerId: missing, shifts: [shift('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', missing, '2026-11-05T01:00:00Z', '2026-11-05T12:00:00Z')] },
   ] }));
   await page.goto('/manager?section=shifts');
-  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Frontdesk' });
+  const table = page.getByRole('table').filter({ hasText: 'Cán bộ Một cửa' });
   await expect(table).toContainText('Nguyễn Văn An');
   await expect(table.getByRole('rowheader')).toHaveCount(1);
   await expect(table).not.toContainText('Phạm Thị Dung');

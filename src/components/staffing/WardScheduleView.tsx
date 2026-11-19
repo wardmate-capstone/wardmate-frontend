@@ -9,6 +9,12 @@ import { fieldClass, QueryState, useStaffAccess, useStaffDirectory, useStaffQuer
 const dayStart = (day: string) => Date.parse(day + 'T00:00:00+07:00');
 const weekday = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'Asia/Ho_Chi_Minh' });
 
+/** Năm trước, năm nay, năm sau (không sổ 100 năm); giữ năm đang chọn nếu nằm ngoài khoảng. */
+function scheduleYears(month: string): number[] {
+  const y = Number(vietnamLocal(new Date().toISOString()).slice(0, 4));
+  return [...new Set([y - 1, y, y + 1, Number(month.slice(0, 4))])].sort((a, b) => a - b);
+}
+
 export function WardScheduleView() {
   const { manager, can } = useStaffAccess();
   const allowed = manager && can('workflow.staffing.manage');
@@ -48,7 +54,7 @@ export function WardScheduleView() {
   return <div className="ward-schedule space-y-4">
     <div className="staff-filter ward-schedule-filter"><div className="schedule-controls">
       <label className="staff-field">Tháng lịch toàn phường<select className={fieldClass} value={month.slice(5, 7)} onChange={e => changeMonth(month.slice(0, 5) + e.target.value)}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>Tháng {i + 1}</option>)}</select></label>
-      <label className="staff-field">Năm lịch toàn phường<select className={fieldClass} value={month.slice(0, 4)} onChange={e => changeMonth(e.target.value + month.slice(4))}>{Array.from({ length: 101 }, (_, i) => <option key={i} value={2000 + i}>{2000 + i}</option>)}</select></label>
+      <label className="staff-field">Năm lịch toàn phường<select className={fieldClass} value={month.slice(0, 4)} onChange={e => changeMonth(e.target.value + month.slice(4))}>{scheduleYears(month).map(y => <option key={y} value={y}>{y}</option>)}</select></label>
       <label className="staff-field ward-schedule-search">Tìm cán bộ<span><MagnifyingGlass size={17} aria-hidden="true" /><input type="search" className={fieldClass} value={search} onChange={e => setSearch(e.target.value)} placeholder="Tên hoặc mã cán bộ" /></span></label>
       <RefreshButton label="Làm mới lịch toàn phường" loading={query.isFetching || directory.isFetching} onClick={() => { void query.refetch(); void directory.refetch(); }} />
     </div><div className="ward-schedule-filter-note"><p>Lịch chính thức · Xếp hoặc sửa ca tại <strong>Sắp xếp lịch tháng</strong>.</p><label className="inline-flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />Hiện ca đã hủy</label></div>
@@ -56,14 +62,14 @@ export function WardScheduleView() {
     <QueryState query={directory} /><QueryState query={query} />
     {directory.isError && <p className="text-sm text-amber-800">Chưa tải được tên cán bộ. Lịch vẫn hiển thị theo mã cán bộ có ca.</p>}
     {ready && <section className="ward-roster" aria-label="Lịch làm việc toàn phường">
-      <div className="ward-roster-toolbar"><div><h3>Lịch làm việc Frontdesk</h3><p>{rows.length} cán bộ · Tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)} · Tuần {week + 1}/{Math.ceil(days.length / 7)}</p></div><div className="ward-roster-navigation">
+      <div className="ward-roster-toolbar"><div><h3>Lịch làm việc cán bộ Một cửa</h3><p>{rows.length} cán bộ · Tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)} · Tuần {week + 1}/{Math.ceil(days.length / 7)}</p></div><div className="ward-roster-navigation">
         <Button variant="outline" aria-label="Tuần trước" disabled={week === 0} onClick={() => setWeek(w => w - 1)}><CaretLeft aria-hidden="true" /></Button>
         <span className="ward-roster-period" aria-live="polite"><CalendarBlank size={18} aria-hidden="true" />{calendarDate(visibleDays[0])} – {calendarDate(visibleDays.at(-1)!)}</span>
         <Button variant="outline" aria-label="Tuần sau" disabled={(week + 1) * 7 >= days.length} onClick={() => setWeek(w => w + 1)}><CaretRight aria-hidden="true" /></Button>
       </div></div>
       <div className="ward-roster-scroll" role="region" aria-label="Bảng lịch cán bộ, cuộn ngang để xem các ngày" tabIndex={0}><table className="ward-roster-table">
         <caption className="sr-only">Ca làm chính thức của cán bộ từ {calendarDate(visibleDays[0])} đến {calendarDate(visibleDays.at(-1)!)}, giờ Việt Nam</caption>
-        <thead><tr><th scope="col">Cán bộ Frontdesk</th>{visibleDays.map(day => <th scope="col" key={day} className={day === scheduleDay(new Date().toISOString()) ? 'ward-roster-today-heading' : undefined}><span>{weekday.format(new Date(dayStart(day)))}</span><strong>{day.slice(8)}/{day.slice(5, 7)}</strong>{day === scheduleDay(new Date().toISOString()) && <small>Hôm nay</small>}</th>)}</tr></thead>
+        <thead><tr><th scope="col">Cán bộ Một cửa</th>{visibleDays.map(day => <th scope="col" key={day} className={day === scheduleDay(new Date().toISOString()) ? 'ward-roster-today-heading' : undefined}><span>{weekday.format(new Date(dayStart(day)))}</span><strong>{day.slice(8)}/{day.slice(5, 7)}</strong>{day === scheduleDay(new Date().toISOString()) && <small>Hôm nay</small>}</th>)}</tr></thead>
         <tbody>{rows.map(o => {
           const visible = shifts.filter(s => s.officerId === o.id && Date.parse(s.startsAtUtc) < dayStart(visibleDays.at(-1)!) + 86400000 && Date.parse(s.endsAtUtc) > dayStart(visibleDays[0]));
           return <tr key={o.id}><th scope="row"><div className="ward-roster-person"><span className="ward-roster-avatar" aria-hidden="true">{o.name.split(' ').filter(Boolean).slice(-2).map(n => n[0]).join('').toLocaleUpperCase('vi')}</span><div><strong>{o.name}</strong><span>{visible.filter(s => !s.cancelledAtUtc).length} ca trong tuần{o.active ? '' : ' · Ngừng hoạt động'}</span></div></div></th>{visibleDays.map(day => <td key={day} className={day === scheduleDay(new Date().toISOString()) ? 'ward-roster-today' : undefined}>{visible.filter(s => Date.parse(s.startsAtUtc) < dayStart(day) + 86400000 && Date.parse(s.endsAtUtc) > dayStart(day)).map(s => <div key={s.id} className={`ward-shift ${s.cancelledAtUtc ? 'ward-shift-cancelled' : Number(scheduleTime(s.startsAtUtc).slice(0, 2)) < 12 ? 'ward-shift-morning' : 'ward-shift-afternoon'}`}>

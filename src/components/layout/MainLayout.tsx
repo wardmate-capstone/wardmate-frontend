@@ -57,7 +57,7 @@ export function MainLayout() {
           <div className="hidden items-center gap-5 md:flex">
             <span className="flex items-center gap-1.5 text-red-200/75">
               <Clock size={13} aria-hidden="true" />
-              <span>Thứ 2 - Thứ 6: 07:30 - 17:00</span>
+              <span>Thứ 2 - Thứ 6: 07:30 - 16:30</span>
             </span>
             <span className="text-red-800/80" aria-hidden="true">|</span>
             <Link to="/hoi-dap" className="utility-link transition-colors hover:text-amber-300">

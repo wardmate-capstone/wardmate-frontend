@@ -41,8 +41,8 @@ test('Lịch mặc định đúng giờ cho mọi cán bộ, giữ sửa tay và
   await page.getByRole('button', { name: 'Điền lịch mặc định cho tất cả cán bộ', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('ca mặc định');
   await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('07:30');
-  await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('13:00');
-  await expect(page.getByRole('button', { name: /^Ngày 14\/11\/2026/ })).toContainText('07:30');
+  await expect(page.getByRole('button', { name: /^Ngày 09\/11\/2026/ })).toContainText('16:30');
+  await expect(page.getByRole('button', { name: /^Ngày 14\/11\/2026/ })).not.toContainText('07:30');
   expect(state.requests.some(r => r.method === 'PUT' || r.path.endsWith('/publish'))).toBe(false);
   const defaults = page.getByRole('region', { name: 'Lịch mặc định cho tất cả cán bộ', exact: true });
   await defaults.screenshot({ path: 'test-results/default-schedule-desktop.png' });
@@ -54,15 +54,15 @@ test('Lịch mặc định đúng giờ cho mọi cán bộ, giữ sửa tay và
   for (const officerId of [ids.officer, ids.officer2]) {
     const monday = state.slots.filter(s => s.officerId === officerId && s.startsAt.startsWith('2026-11-09'));
     expect(monday.map(s => [s.startsAt, s.endsAt])).toEqual([
-      ['2026-11-09T00:30:00.000Z', '2026-11-09T04:30:00.000Z'],
-      ['2026-11-09T06:00:00.000Z', '2026-11-09T10:00:00.000Z'],
+      ['2026-11-09T00:30:00.000Z', '2026-11-09T09:30:00.000Z'],
     ]);
-    expect(state.slots.filter(s => s.officerId === officerId && s.startsAt.startsWith('2026-11-14'))).toHaveLength(1);
+    // Thứ Bảy không có ca mặc định (giờ làm T2–T6 07:30–16:30 theo quy tắc tính hạn).
+    expect(state.slots.filter(s => s.officerId === officerId && s.startsAt.startsWith('2026-11-14'))).toHaveLength(0);
     expect(state.slots.some(s => s.officerId === officerId && (s.startsAt.startsWith('2026-11-11') || s.startsAt.startsWith('2026-11-15')))).toBe(false);
   }
   expect(state.slots.some(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-07'))).toBe(false);
   expect(state.slots.filter(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-10')).map(s => s.startsAt)).toEqual(['2026-11-10T02:00:00.000Z']);
-  expect(state.slots.filter(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-12')).map(s => s.startsAt)).toEqual(['2026-11-12T06:00:00.000Z']);
+  expect(state.slots.filter(s => s.officerId === ids.officer && s.startsAt.startsWith('2026-11-12')).map(s => [s.startsAt, s.endsAt])).toEqual([['2026-11-12T04:30:00.000Z', '2026-11-12T09:30:00.000Z']]);
 });
 
 test('Chọn cán bộ trước tháng; sửa giờ và công bố giữ đủ lịch người khác', async ({ page }) => {
