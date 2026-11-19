@@ -191,11 +191,12 @@ export function CoverageNotice({ data }: { data?: z.infer<typeof coverageSchema>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-emerald-700">
-          <CheckCircle size={14} weight="fill" /> Dữ liệu tổng hợp đầy đủ
+          {/* Số liệu là bản tổng hợp định kỳ, không phải thời gian thực (L19). */}
+          <CheckCircle size={14} weight="fill" /> Đủ các ngày trong kỳ, tính đến lần tổng hợp gần nhất
         </span>
       )}
       <span>
-        Cập nhật: {data.latestRefreshAtUtc ? formatDateTime(data.latestRefreshAtUtc) : 'Chưa có lần tổng hợp'} (Giờ VN)
+        {data.latestRefreshAtUtc ? `Tổng hợp lúc ${formatDateTime(data.latestRefreshAtUtc)} (giờ VN); hồ sơ phát sinh sau đó có ở lần tổng hợp kế tiếp.` : 'Chưa có lần tổng hợp'}
       </span>
     </div>
   );

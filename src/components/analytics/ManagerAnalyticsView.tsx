@@ -18,6 +18,13 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
 function metric(value: number | null | undefined, suffix = '') { return value == null ? 'Chưa đủ dữ liệu' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + suffix; }
+/** Ô số trong bảng/ô chỉ số: thiếu dữ liệu hiện "—" (lý do ở title, trình đọc màn hình đọc đủ), không in câu chữ vào chỗ số (L27). */
+function cell(value: number | null | undefined, suffix = '') {
+  return value == null ? <abbr className="text-slate-400 no-underline" title="Chưa đủ dữ liệu">—</abbr> : metric(value, suffix);
+}
+function EmptyRow({ columns }: { columns: number }) {
+  return <tr><td colSpan={columns} className="py-8 text-center text-[13px] text-slate-500">Không có dữ liệu trong kỳ đã chọn.</td></tr>;
+}
 
 function Deadlines({ value }: { value?: z.infer<typeof deadlinesSchema> | null }) {
   if (!value) return <EmptyState title="Chưa có dữ liệu hạn tiền kiểm." />;
@@ -201,18 +208,18 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
           <thead><tr>
             <Th label="Thủ tục" />
             <Th label="Lượt gửi" hint="Số lượt công dân gửi tiền kiểm trong kỳ" />
-            <Th label="Hồ sơ đã hoàn tất" hint="Số hồ sơ được cán bộ xác nhận giấy tờ sẵn sàng trong kỳ" />
+            <Th label="Giấy tờ sẵn sàng" hint="Số hồ sơ được cán bộ xác nhận giấy tờ sẵn sàng trong kỳ" />
             <Th label="Yêu cầu bổ sung" hint="Số lượt yêu cầu công dân bổ sung trong kỳ" />
             <Th label="Đúng hạn" hint="Tỷ lệ hồ sơ hoàn tất trước hạn, trên các hồ sơ có hạn xác định" />
             <Th className="text-right" label="Đang tồn quá hạn" hint="Hồ sơ chưa hoàn tất và đã quá hạn" />
           </tr></thead>
-          <tbody>{procedureRows.data.items.map(row => <tr key={row.procedureId}>
+          <tbody>{procedureRows.data.items.length === 0 && <EmptyRow columns={6} />}{procedureRows.data.items.map(row => <tr key={row.procedureId}>
             <td><ProcedureName id={row.procedureId} /></td>
             <td className="tabular-nums">{numberVi(row.totals.receivedCount)}</td>
             <td className="tabular-nums">{numberVi(row.totals.readyCount)}</td>
             <td className="tabular-nums">{numberVi(row.totals.revisionRequestedCount)}</td>
-            <td className="tabular-nums">{metric(row.deadlines?.onTimeRate, '%')}</td>
-            <td className="tabular-nums">{metric(row.deadlines?.openOverdue)}</td>
+            <td className="tabular-nums">{cell(row.deadlines?.onTimeRate, '%')}</td>
+            <td className="tabular-nums">{cell(row.deadlines?.openOverdue)}</td>
           </tr>)}</tbody>
         </table></div>
         <CoverageNotice data={procedureRows.data.coverage} />
@@ -222,19 +229,19 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
         <div className="admin-table-wrap"><table>
           <thead><tr>
             <Th label="Cán bộ" />
-            <Th label="Hồ sơ đã hoàn tất" hint="Số hồ sơ cán bộ đã xác nhận giấy tờ sẵn sàng trong kỳ (mỗi hồ sơ tính một lần)" />
+            <Th label="Giấy tờ sẵn sàng" hint="Số hồ sơ cán bộ đã xác nhận giấy tờ sẵn sàng trong kỳ (mỗi hồ sơ tính một lần)" />
             <Th label="Yêu cầu bổ sung" hint="Số hồ sơ cán bộ đã yêu cầu công dân bổ sung trong kỳ" />
             <Th label="Thời gian xử lý TB" hint="Trung bình từ lúc công dân nộp lần đầu đến khi cán bộ xác nhận giấy tờ sẵn sàng" />
             <Th label="Đúng hạn" hint="Tỷ lệ hồ sơ hoàn tất trước hạn, trên các hồ sơ có hạn xác định" />
             <Th className="text-right" label="Đang tồn quá hạn" hint="Hồ sơ cán bộ đang phụ trách, chưa hoàn tất và đã quá hạn" />
           </tr></thead>
-          <tbody>{officerRows.data.items.map(row => <tr key={row.officerId}>
+          <tbody>{officerRows.data.items.length === 0 && <EmptyRow columns={6} />}{officerRows.data.items.map(row => <tr key={row.officerId}>
             <td><OfficerName id={row.officerId} /></td>
             <td className="tabular-nums font-semibold text-slate-900">{numberVi(row.readyCount)}</td>
             <td className="tabular-nums">{numberVi(row.revisionRequestedCount)}</td>
             <td className="tabular-nums" title={row.averageElapsedMinutes == null ? undefined : `${metric(row.averageElapsedMinutes)} phút`}>{duration(row.averageElapsedMinutes)}</td>
-            <td className="tabular-nums">{metric(row.deadlines?.onTimeRate, '%')}</td>
-            <td className="tabular-nums">{metric(row.deadlines?.openOverdue)}</td>
+            <td className="tabular-nums">{cell(row.deadlines?.onTimeRate, '%')}</td>
+            <td className="tabular-nums">{cell(row.deadlines?.openOverdue)}</td>
           </tr>)}</tbody>
         </table></div>
         <h3 className="font-semibold text-slate-800">Hồ sơ chưa phân công cán bộ</h3>
@@ -247,14 +254,13 @@ export function ManagerAnalyticsView({ section }: { section: string }) {
       {summary && feedbackSummary.data && <Card title="Mức độ hài lòng">
         <dl className="grid gap-3 sm:grid-cols-3">
           <StatTile label="Tổng số đánh giá" value={numberVi(feedbackSummary.data.totalCount)} />
-          <StatTile label="Điểm trung bình" value={metric(feedbackSummary.data.averageRating, '/5')} />
-          <StatTile label="Tỷ lệ hài lòng" value={metric(feedbackSummary.data.satisfactionRate, '%')} hint="Đánh giá 4–5 sao" />
+          <StatTile label="Điểm trung bình" value={cell(feedbackSummary.data.averageRating, '/5')} hint={feedbackSummary.data.averageRating == null ? 'Chưa có đánh giá trong kỳ' : 'Thang điểm 1–5 sao'} />
+          <StatTile label="Tỷ lệ hài lòng" value={cell(feedbackSummary.data.satisfactionRate, '%')} hint={feedbackSummary.data.satisfactionRate == null ? 'Chưa có đánh giá trong kỳ' : 'Đánh giá 4–5 sao'} />
         </dl>
-        <p className="text-sm text-slate-600">Hài lòng (4–5 sao): {metric(feedbackSummary.data.satisfactionRate, '%')}</p>
         <OverviewCountChart title="Phân bố đánh giá" points={Object.entries(feedbackSummary.data.ratingCounts).reverse().map(([star, value]) => ({ name: `${star} sao`, value }))} emptyMessage="Chưa có đánh giá trong kỳ đã chọn." />
       </Card>}
 
-      {pageData && <>{pageData.items.length === 0 && !feedback && <p role="status" className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">Không có dữ liệu trong kỳ đã chọn.</p>}<AnalyticsPagination page={pageData.page} size={pageData.pageSize} total={pageData.totalCount} onChange={page => setFilters(previous => ({ ...previous, page }))} /></>}
+      {pageData && <><AnalyticsPagination page={pageData.page} size={pageData.pageSize} total={pageData.totalCount} onChange={page => setFilters(previous => ({ ...previous, page }))} /></>}
     </>}
   </div>;
 }

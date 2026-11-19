@@ -80,7 +80,10 @@ test.describe('Phân hệ Quản lý Điều hành (Manager Workspace)', () => {
     // Mức độ hài lòng
     await page.locator('aside').getByRole('button', { name: 'Mức độ hài lòng' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Mức độ hài lòng', exact: true })).toBeVisible();
-    await expect(page.getByText('Hài lòng (4–5 sao): 100%', { exact: false })).toBeVisible();
+    // Dòng "Hài lòng (4–5 sao): …" trùng ô Tỷ lệ hài lòng nên đã bỏ (L27).
+    const rate = page.locator('.stat-tile').filter({ hasText: 'Tỷ lệ hài lòng' });
+    await expect(rate).toContainText('100%');
+    await expect(rate).toContainText('Đánh giá 4–5 sao');
 
     await expect(page.locator('aside').getByRole('button', { name: 'Báo cáo tổng hợp' })).toHaveCount(0);
     await expect(page.locator('aside').getByRole('button', { name: 'Cài đặt quyền' })).toHaveCount(0);

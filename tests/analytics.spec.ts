@@ -69,7 +69,8 @@ test('Manager: đủ sáu GET, phân trang và dữ liệu thiếu/null', async 
   await page.locator('aside').getByRole('button', { name: 'Báo cáo phản hồi', exact: true }).click();
   await expect(page.getByText('Hỗ trợ tận tình')).toBeVisible();
   await page.locator('aside').getByRole('button', { name: 'Mức độ hài lòng', exact: true }).click();
-  await expect(page.getByText(/Hài lòng \(4–5 sao\): 100%/)).toBeVisible();
+  // Dòng "Hài lòng (4–5 sao): …" trùng ô Tỷ lệ hài lòng nên đã bỏ (L27).
+  await expect(page.locator('.stat-tile').filter({ hasText: 'Tỷ lệ hài lòng' })).toContainText('100%');
   for (const route of ['overview', 'trends', 'procedures', 'officers', 'feedback', 'feedback/summary']) expect(state.requests.some(item => item.path.endsWith('/analytics/' + route))).toBe(true);
 });
 

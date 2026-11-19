@@ -76,7 +76,7 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
   const metrics = [
     { label: 'Lượt gửi tiền kiểm', value: data ? numberVi(data.totals.receivedCount) : '—', hint: data ? `${numberVi(data.totals.resubmittedCount)} lượt gửi lại` : 'Chưa có số liệu', icon: PaperPlaneTilt },
     { label: 'Giấy tờ sẵn sàng', value: data ? numberVi(data.totals.readyCount) : '—', hint: data ? `${numberVi(data.totals.revisionRequestedCount)} lượt yêu cầu bổ sung` : 'Chưa có số liệu', icon: CheckCircle },
-    { label: 'Tỷ lệ đúng hạn', value: bigMetric(data?.onTimeRate, '%'), hint: data?.onTimeRate == null ? 'Chưa đủ dữ liệu' : 'Hồ sơ đã hoàn tất tiền kiểm', icon: ClockCountdown },
+    { label: 'Tỷ lệ đúng hạn', value: bigMetric(data?.onTimeRate, '%'), hint: data?.onTimeRate == null ? 'Chưa đủ dữ liệu' : 'Tính trên hồ sơ đã xác nhận giấy tờ sẵn sàng', icon: ClockCountdown },
     { label: 'Hài lòng (4–5 sao)', value: bigMetric(feedback?.satisfactionRate, '%'), hint: feedback ? `${numberVi(feedback.totalCount)} đánh giá của người dân` : 'Chưa có số liệu', icon: Smiley },
   ];
 
@@ -132,7 +132,7 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
         </>}
       </ChartCard>
 
-      <ChartCard id="overview-deadlines" title="Hạn xử lý hồ sơ đã sẵn sàng" subtitle="Hồ sơ đã hoàn tất tiền kiểm"
+      <ChartCard id="overview-deadlines" title="Hạn xử lý hồ sơ đã sẵn sàng" subtitle="Hồ sơ đã xác nhận giấy tờ sẵn sàng (chưa phải phê duyệt)"
         action={<LinkButton onClick={() => onSelectSection('perf-officers')}>Hiệu suất cán bộ</LinkButton>}>
         {data && (deadlines ? <>
           <OverviewCountChart title="Tình trạng hạn tiền kiểm" variant="donut" points={completed}
