@@ -56,7 +56,7 @@ export function ScheduleListView() {
         <label className="schedule-list-toggle"><input type="checkbox" checked={hideEmpty} onChange={e => setHideEmpty(e.target.checked)} />Ẩn ngày chưa có ca</label>
       </header>
       <dl className="schedule-list-stats">{stats.map(s => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}</dl>
-      <div className="schedule-list-scroll"><table className="schedule-list-table">
+      <div className="schedule-list-scroll"><table className="schedule-list-table no-stack">
         <caption className="sr-only">Ca làm từng ngày trong tháng {Number(month.slice(5, 7))}/{month.slice(0, 4)}</caption>
         <thead><tr><th scope="col">Ngày</th><th scope="col">Thứ</th><th scope="col">Trạng thái</th><th scope="col">Ca làm</th></tr></thead>
         <tbody>{visibleDays.map(({ day, slots, off, status }) => <tr key={day} className={[off && 'is-off', day === today && 'is-today', new Date(day + 'T00:00:00Z').getUTCDay() === 0 && 'is-sunday'].filter(Boolean).join(' ') || undefined}>

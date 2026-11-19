@@ -270,7 +270,7 @@ export function OfficerDocumentsPanel({
         return (
           <div key={group.id} id={`comment-target-${group.id}`} className={`scroll-mt-24 overflow-hidden rounded-2xl border bg-white ${openCount ? 'border-amber-300' : 'border-slate-200'}`}>
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex min-w-0 flex-1 basis-full items-start gap-3 sm:basis-0">
                 {/* Số thứ tự mục; màu xanh khi công dân đã hoàn tất mục */}
                 <span
                   title={group.completed ? 'Công dân đã chuẩn bị' : 'Chưa hoàn tất'}

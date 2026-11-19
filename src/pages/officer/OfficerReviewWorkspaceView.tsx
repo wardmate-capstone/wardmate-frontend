@@ -427,7 +427,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
   }
 
   return (
-    <article aria-label="Không gian làm việc tiền kiểm hồ sơ" className="space-y-6 pb-16">
+    <article aria-label="Không gian làm việc tiền kiểm hồ sơ" className="space-y-6 pb-16 max-sm:pb-28">
       {/* 1. Header Banner & Actions */}
       <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-2.5">
@@ -486,7 +486,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <Button
                 variant="outline"
-                className="gap-2 border-amber-300 bg-amber-50/50 text-amber-900 hover:bg-amber-100/70"
+                className="gap-2 border-amber-300 bg-amber-50/50 text-amber-900 hover:bg-amber-100/70 max-sm:hidden"
                 disabled={!editable || busy || !comments.isSuccess || !submissions.isSuccess}
                 onClick={() => openDecision('revision')}
               >
@@ -495,13 +495,36 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               </Button>
               <Button
                 variant="primary"
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 max-sm:hidden"
                 disabled={!editable || busy || !comments.isSuccess || !submissions.isSuccess}
                 onClick={() => openDecision('ready')}
               >
                 <CheckCircle className="h-4 w-4" />
                 Xác nhận giấy tờ sẵn sàng
               </Button>
+              {/* Điện thoại: hai nút quyết định nằm ở thanh cố định cuối màn hình để không phải cuộn lên đầu trang (L23). */}
+              {editable && (
+                <div className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-slate-200 bg-white p-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] sm:hidden">
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-1.5 border-amber-300 bg-amber-50/50 px-2 text-amber-900"
+                    disabled={busy || !comments.isSuccess || !submissions.isSuccess}
+                    onClick={() => openDecision('revision')}
+                  >
+                    <Warning className="h-4 w-4 text-amber-600" />
+                    Yêu cầu bổ sung
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1 gap-1.5 bg-emerald-600 px-2 hover:bg-emerald-700"
+                    disabled={busy || !comments.isSuccess || !submissions.isSuccess}
+                    onClick={() => openDecision('ready')}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Xác nhận giấy tờ sẵn sàng
+                  </Button>
+                </div>
+              )}
               {canRelease && (
                 <Button
                   variant="ghost"
@@ -957,7 +980,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               )}
 
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button type="submit" loading={addComment.isPending} disabled={!editable}>
+                <Button type="submit" loading={addComment.isPending} disabled={!editable || !commentForm.watch('commentText')?.trim() || !selectedTargetId}>
                   Lưu nhận xét vào hồ sơ
                 </Button>
                 {commentForm.formState.isDirty && (
@@ -982,7 +1005,10 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         {tab === 'versions' && (
           <div className="space-y-5">
             {versions.isError && <p role="alert" className="text-sm text-red-700">{workflowError(versions.error)}</p>}
-            <SubmissionReviewCompare
+            {/* Mới gửi một lần: thông tin bình thường, không phải cảnh báo lỗi. */}
+            {version < 2 ? (
+              <p className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-[13px] text-slate-600">Hồ sơ mới gửi một lần nên chưa có lần gửi lại để so sánh. Khi công dân gửi lại sau yêu cầu bổ sung, thay đổi sẽ hiện ở đây.</p>
+            ) : <SubmissionReviewCompare
               applicationId={application.id}
               fromVersion={from}
               toVersion={to}
@@ -1006,7 +1032,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   onWithdraw={startWithdraw}
                 />
               )}
-            />
+            />}
           </div>
         )}
 

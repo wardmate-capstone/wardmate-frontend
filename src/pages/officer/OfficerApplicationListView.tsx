@@ -7,6 +7,7 @@ import {
 import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
 import { ApplicationStatusBadge } from '@/components/workflow/ApplicationStatusBadge';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
+import { matchesSearch } from '@/lib/utils';
 
 export interface PaginationConfig {
   currentPage: number;
@@ -140,12 +141,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           return false;
         }
         // Tìm theo mã hồ sơ và họ tên. Danh sách không chứa CCCD/SĐT (BE chỉ trả trong chi tiết hồ sơ).
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          const matchCode = app.applicationNumber.toLowerCase().includes(q);
-          const matchName = app.citizen.fullName.toLowerCase().includes(q);
-          if (!matchCode && !matchName) return false;
-        }
+        if (!matchesSearch(searchQuery, app.applicationNumber, app.citizen.fullName)) return false;
         // Procedure filter
         if (selectedProcedure !== 'ALL' && app.procedureName !== selectedProcedure) {
           return false;
@@ -201,7 +197,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           </div>
           {queueTab === 'my-categories' && myCategoryIds.length === 0 && (
             <p className="text-xs text-slate-500">
-              Bạn chưa được gán lĩnh vực nên phụ trách mọi lĩnh vực trong phường.
+              Bạn chưa được gán lĩnh vực. Bạn vẫn tự nhận được hồ sơ, nhưng Quản lý chỉ phân công được hồ sơ thuộc lĩnh vực đã gán cho bạn; hãy đề nghị Quản lý gán lĩnh vực.
             </p>
           )}
         </div>
@@ -234,7 +230,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-2 py-2 text-[13px] text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
             <div className="min-w-0">
@@ -247,7 +243,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
                 aria-invalid={invalidRange}
                 aria-describedby={invalidRange ? 'filter-submitted-error' : undefined}
-                className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-2 py-2 text-[13px] text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
               />
             </div>
           </fieldset>}
@@ -368,12 +364,13 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
           <table className="min-w-[900px]" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
               <tr>
-                <th scope="col">Mã hồ sơ</th>
-                <th scope="col">Người dân</th>
+                {/* Màn 1366px: mã hồ sơ, tên, ngày và trạng thái không xuống dòng (L24). */}
+                <th scope="col" className="whitespace-nowrap">Mã hồ sơ</th>
+                <th scope="col" className="whitespace-nowrap">Người dân</th>
                 <th scope="col">Thủ tục</th>
-                <th scope="col">Ngày gửi</th>
-                <th scope="col">Cán bộ</th>
-                <th scope="col">Trạng thái</th>
+                <th scope="col" className="whitespace-nowrap">Ngày gửi</th>
+                <th scope="col" className="whitespace-nowrap">Cán bộ</th>
+                <th scope="col" className="whitespace-nowrap">Trạng thái</th>
                 <th scope="col" className="sticky right-0 z-10 bg-slate-50 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">Thao tác</th>
               </tr>
             </thead>
@@ -420,11 +417,11 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     className="hover:bg-slate-50/80 transition-colors group"
                   >
                     {/* Mã HS */}
-                    <td className="font-mono font-bold text-slate-950">
+                    <td className="whitespace-nowrap font-mono text-xs font-semibold text-slate-950">
                       <div className="flex items-center gap-1.5">
                         <span>{app.applicationNumber}</span>
                         {app.currentVersion > 1 && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800">
+                          <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-purple-100 text-purple-800">
                             V{app.currentVersion}
                           </span>
                         )}
@@ -432,8 +429,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Người dân */}
-                    <td>
-                      <strong className="block font-bold text-slate-900">{app.citizen.fullName}</strong>
+                    <td className="min-w-32">
+                      <strong className="block font-semibold text-slate-900">{app.citizen.fullName}</strong>
                       {app.citizen.citizenId !== '—' && (
                         <span className="block text-[11px] text-slate-500 font-mono">{app.citizen.citizenId}</span>
                       )}
@@ -456,15 +453,17 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
                     {/* Ngày gửi */}
                     <td className="text-slate-600 whitespace-nowrap">
-                      <div>{app.submittedAt}</div>
+                      {/* Ngày và giờ hai dòng để bảng vừa màn 1366px, nhãn trạng thái không bị cột Thao tác che (L24). */}
+                      <div>{app.submittedAt.split(' ')[0]}</div>
+                      {app.submittedAt.includes(' ') && <div className="text-xs text-slate-500">{app.submittedAt.split(' ').slice(1).join(' ')}</div>}
                       {app.dueAtUtc && app.status !== 'DOCUMENTS_READY' && app.status !== 'OFFICIALLY_RECEIVED' && app.status !== 'REJECTED' && app.status !== 'CANCELLED' && (
                         <div className="mt-1">
                           {app.urgency === 'overdue' ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800 border border-red-200">
                               Quá hạn
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                               Hạn: {formatDate(app.dueAtUtc)}
                             </span>
                           )}
@@ -473,7 +472,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Cán bộ */}
-                    <td className="text-slate-600 whitespace-nowrap">
+                    <td className="min-w-28 text-slate-600">
                       {app.assignedOfficer === 'Chưa phân công' ? (
                         <span className="text-slate-400 italic">—</span>
                       ) : (

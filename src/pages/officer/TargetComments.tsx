@@ -107,7 +107,7 @@ export function TargetComments({
           />
           {error && <p id={`${textId}-error`} role="alert" className="text-xs text-red-700">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="small" loading={saving} onClick={() => void save()}>Lưu nhận xét</Button>
+            <Button size="small" loading={saving} disabled={!text.trim()} onClick={() => void save()}>Lưu nhận xét</Button>
             <Button size="small" variant="ghost" disabled={saving} onClick={() => { setText(''); setError(''); onCloseComposer(); }}>Hủy</Button>
             <span className="ml-auto text-[11px] text-slate-400">{text.length}/4.000 ký tự</span>
           </div>
