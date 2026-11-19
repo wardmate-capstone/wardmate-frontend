@@ -1,5 +1,31 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-UIREVIEW-1118 — Sửa phần FE của báo cáo rà soát UI/UX 18/11/2026 — 19/11/2026 (Asia/Saigon, UTC+07:00)
+
+Chỉ sửa FE (theo chủ dự án: không sửa BE, không ghi dữ liệu production). Mã lỗi theo báo cáo `ui-review-2026-11-18.pdf`.
+- L04 (FE): dòng chữ tab "Lĩnh vực của tôi" nói rõ Quản lý chỉ phân công được hồ sơ thuộc lĩnh vực đã gán; lý do `CATEGORY_MISMATCH` thành "Chưa được gán lĩnh vực của hồ sơ (gán tại Cán bộ Một cửa)". Quy tắc BE (tự nhận không xét lĩnh vực, phân công có xét) chưa đổi.
+- L05: `CitizenPage` chọn thủ tục mặc định bằng cập nhật dạng hàm — không ghi đè `procedureId` trên URL khi danh sách thủ tục đã có trong cache (test mới trong `citizen-application-wizard.spec.ts`).
+- L08: Tổng quan Admin tự tải số phường khi danh sách phường chưa tải (trước hiện 0).
+- L11: giờ mặc định T2–T6 07:30–16:30 (khớp quy tắc 45 giờ), bỏ Thứ Bảy; nghỉ phép nửa buổi chỉ cắt phần trùng. Ô năm (Lịch ca cá nhân/Manager và Lịch toàn phường) chỉ còn năm trước/nay/sau.
+- L12: `OfficerQuickPreview` tải chi tiết hồ sơ: danh mục giấy tờ Đã nộp/Chưa nộp, CCCD/SĐT/địa chỉ từ tờ khai, tên phường qua `useWardName` (không hiện mã TEST_A). L13: "Mở hồ sơ" với hồ sơ chưa ai nhận mở chế độ chỉ xem thay vì toast.
+- L15: hàng đợi tệp chờ khai số bản (chọn nhiều tệp/chọn liên tiếp không mất tệp đầu). L16: "Thời hạn phản hồi đang tạm dừng" khi chờ bổ sung (`deadlinePausedAtUtc`), "đang chờ cán bộ tiếp nhận" khi chưa ai nhận.
+- L19: bỏ "Dữ liệu tổng hợp đầy đủ", ghi giờ tổng hợp; "Hồ sơ đã hoàn tất" → "Giấy tờ sẵn sàng". L20: form thủ tục chế độ xem có nền xám + dòng nhắc; "Phần trước ()" không còn trống; trạng thái thống nhất "Đang ẩn".
+- L21: `matchesSearch`/`foldText` (bỏ dấu) cho tìm kiếm FE ở hồ sơ công dân, QR, danh sách/lịch sử cán bộ, tài khoản, phường.
+- L22–L24: trang cán bộ dùng `useAutoStackTables` (bảng thành thẻ trên điện thoại; `schedule-list-table` giữ cuộn ngang bằng `no-stack`); bảng hồ sơ 1366px không xuống dòng mã/tên, ngày–giờ hai dòng, nhãn trạng thái không bị cột Thao tác che; tên giấy tờ không bị ép cột trên điện thoại; thanh nút Yêu cầu bổ sung/Xác nhận cố định cuối màn hình điện thoại.
+- L25: mẫu chưa có tệp không có nút Xem mẫu; "Hoạt động" không xuống dòng.
+- L26: menu giữ "Phát thông báo", tiêu đề "Lịch sử phát thông báo"; nút "Gửi lại" (bỏ "Replay"); mã lỗi phát dịch sang tiếng Việt (`deliveryErrorLabel`), mã kỹ thuật ở Chi tiết; cấu hình hiện tên người cập nhật thay GUID; Sao lưu/Giám sát chọn dịch vụ từ danh sách ("Mã khác…" vẫn nhập tay được).
+- L27: ô số thiếu dữ liệu hiện "—" (lý do ở title) thay chữ "Chưa đủ dữ liệu"; bảng thủ tục/cán bộ rỗng có dòng "Không có dữ liệu" trong bảng; bỏ dòng "Hài lòng (4–5 sao)" trùng ô.
+- L28: hồ sơ cá nhân cán bộ/quản trị ẩn thẻ CCCD tự kê khai và khối địa chỉ cư trú (chỉ công dân); hai tab có `role="tab"`/`aria-selected`.
+- Mục 3: "Cán bộ Frontdesk" → "Cán bộ Một cửa"; "Lưu nhận xét" tắt khi trống; tab So sánh khi mới gửi 1 lần hiện thông tin thường.
+- Không làm (BE/OPS/DATA hoặc cần quyết định): L01 (QR trỏ endpoint BE), L02 (bật lại Tiếp nhận tại quầy — chờ duyệt), L03, L06, L07, L09, L10, L17 (nội dung do BE), L18, dữ liệu test; L14 đã có từ `6a3bdc2`. Tuần Lịch toàn phường bắt đầu Chủ nhật: chờ chọn cách hiển thị.
+- Kiểm tra: typecheck, eslint đạt. Test chạy trên cổng 4318 (phiên khác giữ 4317); so với HEAD (git worktree) không có lỗi mới.
+
+## FE-PROCEDURE-UI-1119 — Đồng bộ giao diện khu Quản lý thủ tục — 19/11/2026 (Asia/Saigon, UTC+07:00)
+
+- `workspace-ui.css` thêm `.procedure-manager-layout` vào mọi phạm vi (thang chữ 20/15/13/12/11px, thẻ 8px, không bóng; khối chuẩn hóa công dân/Frontdesk áp cả khu này). `ProcedureManagerPage`: `admin-page-heading`, `useAutoStackTables` (bảng thành thẻ trên điện thoại), breadcrumb "Quản lý thủ tục / …" trên topbar; tiêu đề viết hoa đầu câu, trùng tên mục menu ("Tổng quan", "Danh sách thủ tục", "PDF và bản nháp", "Danh sách biểu mẫu", "Dữ liệu kiến thức AI", "Hồ sơ cá nhân").
+- Tổng quan: thẻ chỉ số có biểu tượng → `kpi-strip` bấm được (vẫn 4 chỉ số), thủ tục gần đây dạng dòng (5 dòng), "Thao tác nhanh" → "Lối tắt" dạng liên kết. Danh sách thủ tục: nhãn bộ lọc 12px, ô "Cấp thực hiện" cùng kiểu ô chọn, mã thủ tục không tô đỏ, nút Chi tiết `ws-row-btn`, nút biểu tượng có tên trợ năng. Danh mục: bỏ ô "#id" và biểu tượng thư mục, mô tả trống "—", nút sửa/xóa có tên danh mục. PDF và bản nháp: tiêu đề chung + mô tả, bỏ nền gradient, nhãn "Khuyến nghị" thường. Chi tiết: tiêu đề 20px, "Lịch sử phiên bản" 15px; chế độ xem ẩn nút thêm/xóa dòng và dòng "Chỉ nhập thông tin đã kiểm tra".
+- Kiểm tra: typecheck, eslint đạt. procedure-manager/admin-procedures-readonly/checklist/form-linking/draft-direct-docx: 4 lỗi còn lại trùng HEAD (form-linking ×2, draft-direct-docx ×2).
+
 ## FE-OFFICER-UI-1119 — Đồng bộ giao diện khu Frontdesk + đề xuất công dân 2–5 — 19/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Công dân (người dùng duyệt 2, 3, 4, 5): bỏ "Mã QR hồ sơ" và "Đánh giá dịch vụ" khỏi menu (section giữ, mở từ nút trên dòng; nút Mã QR ở danh sách dùng cùng `QR_ELIGIBLE_STATUSES` với Tổng quan, chuyển sang `types.ts`); bỏ khối "Thao tác nhanh", nút chính "Nộp hồ sơ mới" hiện cả ở Tổng quan; gộp Hồ sơ cá nhân vào `UnifiedSelfProfileView` (`variant="citizen"`: Quét CCCD tự động, Email đăng ký chỉ đọc, Xóa thông tin cá nhân + modal, ẩn email/phạm vi quản trị trùng; xóa `CitizenProfileView.tsx`; trang công dân ẩn tiêu đề ở màn này như Admin/Manager); chuông thông báo dùng `NotificationBell` chung — người không có phân hệ quản lý: "Xem tất cả thông báo" → `/citizen?section=notifications`, chưa đăng nhập "Đăng nhập để xem thông báo". `UnifiedSelfProfileView` cũng bỏ banner gradient/thẻ CCCD gradient cho mọi vai trò.
