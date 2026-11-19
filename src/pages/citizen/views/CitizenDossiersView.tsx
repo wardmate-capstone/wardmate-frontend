@@ -8,6 +8,7 @@ import {
 import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass, QR_ELIGIBLE_STATUSES } from '../types';
 import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
+import { matchesSearch } from '@/lib/utils';
 
 export interface CitizenInfiniteListProps {
   totalItems: number;
@@ -84,10 +85,8 @@ export function CitizenDossiersView({
     return dossiers.filter((d) => {
       const matchStatus = targetStatus === 'ALL' || d.status === targetStatus;
       const matchField = selectedField === 'all' || d.field === selectedField;
-      const matchSearch =
-        d.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.procedureName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.field.toLowerCase().includes(searchTerm.toLowerCase());
+      // Không phân biệt dấu: "khai tu" khớp "Khai tử".
+      const matchSearch = matchesSearch(searchTerm, d.code, d.procedureName, d.field);
       return matchStatus && matchField && matchSearch;
     });
   }, [dossiers, targetStatus, selectedField, searchTerm]);

@@ -6,6 +6,7 @@ import {
 import { RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState, ErrorAlert } from '@/components/ui';
 import { useOfficerActivity } from '@/hooks/useWorkflow';
 import { workflowError, type OfficerActivityAction, type OfficerActivityDto } from '@/lib/api/workflow';
+import { matchesSearch } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
 
@@ -62,13 +63,9 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
   // Tìm nhanh trong trang đang xem; lọc hành động và phân trang do server xử lý.
   const rows = useMemo(() => {
     const items = activity.data?.items ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return items;
+    if (!searchQuery.trim()) return items;
     return items.filter((item) =>
-      applicationNumber(item).toLowerCase().includes(q) ||
-      (item.applicantName ?? '').toLowerCase().includes(q) ||
-      (item.procedureTitle ?? '').toLowerCase().includes(q) ||
-      (item.reason ?? '').toLowerCase().includes(q)
+      matchesSearch(searchQuery, applicationNumber(item), item.applicantName, item.procedureTitle, item.reason)
     );
   }, [activity.data, searchQuery]);
 

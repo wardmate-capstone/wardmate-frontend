@@ -22,6 +22,7 @@ import {
 } from '@/lib/api/documentForms';
 import { copyToClipboard } from '@/lib/clipboard';
 import type { CitizenDossier, CitizenSectionId } from '../types';
+import { matchesSearch } from '@/lib/utils';
 
 interface CitizenQrCodeViewProps {
   dossiers: CitizenDossier[];
@@ -68,13 +69,7 @@ export function CitizenQrCodeView({
   // Lọc danh sách hồ sơ sẵn sàng khi người dùng tìm kiếm (khi có nhiều hồ sơ)
   const filteredEligible = useMemo(() => {
     if (!searchQuery.trim()) return eligible;
-    const q = searchQuery.toLowerCase().trim();
-    return eligible.filter(
-      (d) =>
-        d.code.toLowerCase().includes(q) ||
-        d.procedureName.toLowerCase().includes(q) ||
-        (d.field && d.field.toLowerCase().includes(q))
-    );
+    return eligible.filter((d) => matchesSearch(searchQuery, d.code, d.procedureName, d.field));
   }, [eligible, searchQuery]);
 
   return (
