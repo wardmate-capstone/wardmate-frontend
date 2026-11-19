@@ -17,13 +17,14 @@ import { UnifiedOfficerSidebar as OfficerSidebar } from '@/components/layout/Rol
 import { OfficerHeader, SECTION_TITLES } from './OfficerHeader';
 import { getGreeting } from '@/lib/utils';
 import '@/styles/workspace-ui.css';
+import { useAutoStackTables } from '@/hooks/useAutoStackTables';
 import { OfficerDashboardView } from './OfficerDashboardView';
 import { OfficerApplicationListView } from './OfficerApplicationListView';
 import { OfficerReviewWorkspaceView } from './OfficerReviewWorkspaceView';
 import { OfficerAuditLogView } from './OfficerAuditLogView';
 import { OfficerNotificationView } from './OfficerNotificationView';
 import { UnifiedSelfProfileView } from '@/components/profile/UnifiedSelfProfileView';
-import { X, Eye, ArrowRight } from '@phosphor-icons/react';
+import { OfficerQuickPreview } from './OfficerQuickPreview';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import {
@@ -70,6 +71,9 @@ export const OfficerPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
   const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
   const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
+  // Bảng danh sách thành thẻ có nhãn trên điện thoại (L22), giống Admin/Công dân.
+  const mainRef = useRef<HTMLElement>(null);
+  useAutoStackTables(mainRef);
   const [searchParams] = useSearchParams();
   const location = useLocation();
   useEffect(() => {
@@ -286,10 +290,7 @@ export const OfficerPage: React.FC = () => {
       else toast.info(`Hồ sơ đang do ${app.assignedOfficer} phụ trách.`);
       return;
     }
-    if (app.status === 'SUBMITTED_FOR_REVIEW') {
-      toast.info('Bấm Nhận xử lý để nhận thụ lý trước khi mở hồ sơ.');
-      return;
-    }
+    // Hồ sơ chưa có người nhận: mở ở chế độ chỉ xem (workspace chỉ cho sửa khi cán bộ đang thụ lý), không còn là ngõ cụt (L13).
 
     try {
       const fullDto = await workflowApi.getOfficerApplication(app.id);
@@ -390,7 +391,7 @@ export const OfficerPage: React.FC = () => {
         />
 
         {/* Semantic Main Content */}
-        <main id="officer-main" className="admin-main flex-1" tabIndex={-1}>
+        <main ref={mainRef} id="officer-main" className="admin-main flex-1" tabIndex={-1}>
           {activeQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
           {/* Tiêu đề trang chung (như Admin/Manager/Công dân); màn kiểm tra hồ sơ và Hồ sơ cá nhân tự có tiêu đề */}
           {!reviewingApp && activeSection !== 'profile' && (
@@ -494,104 +495,15 @@ export const OfficerPage: React.FC = () => {
         </main>
       </div>
 
-      {/* QUICK PREVIEW DIALOG MODAL */}
+      {/* Xem nhanh: tự tải chi tiết hồ sơ để có giấy tờ, CCCD, SĐT và tên phường (L12). */}
       {quickPreviewApp && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="quick-preview-title"
-        >
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Eye size={22} className="text-red-800" />
-                <h4 id="quick-preview-title" className="text-base font-bold text-slate-950">
-                  Xem nhanh hồ sơ: {quickPreviewApp.applicationNumber}
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQuickPreviewApp(null)}
-                className="text-slate-400 hover:text-slate-700"
-                aria-label="Đóng xem nhanh"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="block font-bold uppercase text-[10px] text-slate-400">Thông tin người gửi</span>
-                <p><strong>Họ tên:</strong> {quickPreviewApp.citizen.fullName}</p>
-                <p><strong>CCCD:</strong> <span className="font-mono">{quickPreviewApp.citizen.citizenId}</span></p>
-                <p><strong>SĐT:</strong> {quickPreviewApp.citizen.phoneNumber}</p>
-                <p><strong>Địa chỉ:</strong> {quickPreviewApp.citizen.address}</p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="block font-bold uppercase text-[10px] text-slate-400">Thông tin thủ tục</span>
-                <p><strong>Thủ tục:</strong> {quickPreviewApp.procedureName}</p>
-                <p><strong>Lĩnh vực:</strong> {quickPreviewApp.procedureCategory}</p>
-                <p><strong>Thời gian gửi:</strong> {quickPreviewApp.submittedAt}</p>
-                <p><strong>Lần gửi:</strong> {quickPreviewApp.currentVersion}</p>
-              </div>
-            </div>
-
-            {/* Checklist summary */}
-            <div className="space-y-1.5">
-              <span className="block text-xs font-bold text-slate-800">Giấy tờ đã gửi:</span>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                {quickPreviewApp.documents.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="truncate max-w-[200px]">{d.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">{d.fileType}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setQuickPreviewApp(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Đóng
-              </button>
-
-              <div className="flex items-center gap-2">
-                {(quickPreviewApp.status === 'SUBMITTED_FOR_REVIEW' || (quickPreviewApp.status === 'RESUBMITTED' && isMine(quickPreviewApp))) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const id = quickPreviewApp.id;
-                      setQuickPreviewApp(null);
-                      requestTakeApplication(id);
-                    }}
-                    className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-red-800 text-xs font-bold text-white hover:bg-red-900 shadow-2xs"
-                  >
-                    <span>Nhận xử lý ngay</span>
-                    <ArrowRight size={14} />
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const app = quickPreviewApp;
-                    setQuickPreviewApp(null);
-                    handleOpenReview(app);
-                  }}
-                  className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 shadow-2xs"
-                >
-                  <span>Mở hồ sơ đầy đủ</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OfficerQuickPreview
+          app={quickPreviewApp}
+          canTake={quickPreviewApp.status === 'SUBMITTED_FOR_REVIEW' || (quickPreviewApp.status === 'RESUBMITTED' && isMine(quickPreviewApp))}
+          onClose={() => setQuickPreviewApp(null)}
+          onTake={() => { const id = quickPreviewApp.id; setQuickPreviewApp(null); requestTakeApplication(id); }}
+          onOpen={() => { const app = quickPreviewApp; setQuickPreviewApp(null); void handleOpenReview(app); }}
+        />
       )}
 
       <Modal

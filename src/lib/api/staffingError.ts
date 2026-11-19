@@ -43,7 +43,7 @@ const messages: Record<string, string> = {
 };
 
 // Lý do cán bộ chưa đủ điều kiện (danh sách ứng viên phân công/tham vấn)
-export const officerBlockers: Record<string, string> = { NO_ACTIVE_SHIFT: 'Không có ca làm hiện tại', APPROVED_LEAVE: 'Đang nghỉ phép', CATEGORY_MISMATCH: 'Không phụ trách lĩnh vực', WARD_MISMATCH: 'Khác phường', ROLE_MISMATCH: 'Sai vai trò', ACCOUNT_INACTIVE: 'Tài khoản bị khóa', ASSIGN_PERMISSION_MISSING: 'Thiếu quyền nhận hồ sơ', RESPOND_PERMISSION_MISSING: 'Thiếu quyền trả lời tham vấn', APPLICATION_OWNER: 'Là chủ hồ sơ', CURRENT_ASSIGNEE: 'Đang phụ trách hồ sơ' };
+export const officerBlockers: Record<string, string> = { NO_ACTIVE_SHIFT: 'Không có ca làm hiện tại', APPROVED_LEAVE: 'Đang nghỉ phép', CATEGORY_MISMATCH: 'Chưa được gán lĩnh vực của hồ sơ (gán tại Cán bộ Một cửa)', WARD_MISMATCH: 'Khác phường', ROLE_MISMATCH: 'Sai vai trò', ACCOUNT_INACTIVE: 'Tài khoản bị khóa', ASSIGN_PERMISSION_MISSING: 'Thiếu quyền nhận hồ sơ', RESPOND_PERMISSION_MISSING: 'Thiếu quyền trả lời tham vấn', APPLICATION_OWNER: 'Là chủ hồ sơ', CURRENT_ASSIGNEE: 'Đang phụ trách hồ sơ' };
 
 export function staffingError(error: unknown): string {
   if (axios.isAxiosError(error)) {
