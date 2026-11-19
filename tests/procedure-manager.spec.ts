@@ -343,8 +343,13 @@ test('dashboard retains actual metrics and recent procedures without empty place
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
   const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
-  await expect(page.getByRole('button', { name: 'Thêm thủ tục', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Các chỉ số tổng quan' }).getByRole('button')).toHaveCount(4);
+  // Nút chính "Thêm thủ tục" ở tiêu đề trang; không còn khối lối tắt trùng menu.
+  await expect(page.getByRole('button', { name: 'Thêm thủ tục', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lối tắt' })).toHaveCount(0);
+  // 5 chỉ số: tổng, công khai, ẩn, lĩnh vực, bản nháp chờ đối soát (fixture có 1 bản NeedsReview).
+  const kpis = page.getByRole('region', { name: 'Các chỉ số tổng quan' });
+  await expect(kpis.getByRole('button')).toHaveCount(5);
+  await expect(kpis.getByRole('button', { name: 'Xem bản nháp chờ đối soát: 1' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Hạng mục cần chú ý hoàn thiện' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Biểu mẫu cập nhật gần đây' })).toHaveCount(0);
   await expect(page.getByRole('table')).toHaveCount(0);

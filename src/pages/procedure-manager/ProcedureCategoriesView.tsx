@@ -88,7 +88,7 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
           onClear={() => setSearch('')}
           placeholder="Tìm theo tên hoặc mô tả..."
         />
-        <p className="text-sm text-slate-500" aria-live="polite">
+        <p className="text-[13px] text-slate-500" aria-live="polite">
           {search.trim()
             ? <><span className="font-semibold text-slate-900">{visibleCategories.length}</span> / {categories.length} danh mục</>
             : <><span className="font-semibold text-slate-900">{categories.length}</span> danh mục</>}
@@ -115,26 +115,21 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
               {visibleCategories.map((cat) => (
                 <tr key={cat.id} className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/70">
                   <td>
-                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-500">#{cat.id}</span>
+                    <span className="font-mono text-xs text-slate-500">{cat.id}</span>
                   </td>
                   <td>
-                    <div className="flex items-center gap-2.5">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-red-50 text-red-800">
-                        <FolderSimple size={17} weight="duotone" aria-hidden />
-                      </span>
-                      <span className="font-semibold text-slate-900">{cat.categoryName}</span>
-                    </div>
+                    <span className="font-semibold text-slate-900">{cat.categoryName}</span>
                   </td>
                   <td className="max-w-md">
                     {cat.description
                       ? <p className="line-clamp-2 text-slate-600">{cat.description}</p>
-                      : <p className="italic text-slate-400">Chưa có mô tả</p>}
+                      : <p className="text-slate-400">—<span className="sr-only">Chưa có mô tả</span></p>}
                   </td>
                   {canManage && <td>
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        aria-label="Chỉnh sửa"
+                        aria-label={`Chỉnh sửa danh mục ${cat.categoryName}`}
                         title="Chỉnh sửa"
                         className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                         onClick={() => open(cat)}
@@ -143,7 +138,7 @@ export function ProcedureCategoriesView({ categories, onChange }: ProcedureCateg
                       </button>
                       <button
                         type="button"
-                        aria-label="Xóa"
+                        aria-label={`Xóa danh mục ${cat.categoryName}`}
                         title="Xóa"
                         className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
                         onClick={() => {

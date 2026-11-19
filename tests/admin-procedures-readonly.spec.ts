@@ -18,14 +18,15 @@ for (const roles of [['IT_ADMIN'], ['IT_ADMIN', 'PROCEDURE_MANAGER']]) {
     }
     await expect(page.getByTitle('Xem lịch sử phiên bản')).toHaveCount(0);
     await expect(page.getByTitle('Xem trang công khai của công dân')).toHaveCount(0);
+    // Bộ lọc luôn hiện và lọc ngay khi gõ/chọn (không còn nút Tìm kiếm / Bộ lọc).
     await page.getByPlaceholder('Tìm kiếm theo tên hoặc mã thủ tục...').fill('khai sinh');
-    await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
     await expect.poll(() => catalog.requests.some(request => request.query.get('keyword') === 'khai sinh')).toBe(true);
     await expect(page.getByText(sampleProcedure.title, { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Bộ lọc', exact: true }).click();
-    await page.getByRole('combobox').nth(1).selectOption('false');
+    await page.getByLabel('Trạng thái', { exact: true }).selectOption('false');
     await expect.poll(() => catalog.requests.some(request => request.query.get('isActive') === 'false')).toBe(true);
-    await page.getByRole('button', { name: 'Xóa tất cả bộ lọc', exact: true }).click();
+    await page.getByLabel('Cấp thực hiện', { exact: true }).selectOption('Cấp Xã');
+    await expect.poll(() => catalog.requests.some(request => request.query.get('levelOfImplementation') === 'Cấp Xã')).toBe(true);
+    await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click();
     await expect(page.getByText(sampleProcedure.title, { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Trước', exact: true })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Sau', exact: true })).toBeDisabled();

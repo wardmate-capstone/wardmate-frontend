@@ -863,24 +863,26 @@ export function ProcedureDraftWorkspace({
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">PDF và bản nháp thủ tục</h1>
+      <div className="admin-page-heading">
+        <div>
+          <h1>PDF và bản nháp</h1>
+          <p>Tải PDF quyết định công bố để tạo bản nháp thủ tục, đối soát với PDF rồi xuất bản.</p>
+        </div>
+      </div>
       <ProcedureFeedback error={error} />
         <>
           <section className="admin-card overflow-hidden">
-            <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
+            <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
               <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-800 ring-1 ring-red-100">
-                  <FilePdf size={20} weight="duotone" />
-                </span>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-950">Tạo bản nháp từ PDF</h2>
+                  <h2 className="text-[15px] font-semibold text-slate-950">Tạo bản nháp từ PDF</h2>
                 </div>
               </div>
             </div>
             <div className="space-y-3 p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Cách xử lý PDF">
                 <button type="button" role="radio" aria-checked={uploadMode === "draft"} onClick={() => { setUploadMode("draft"); setPreview(undefined); setPreviewConfirmed(false); }} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${uploadMode === "draft" ? "border-red-300 bg-red-50 ring-1 ring-red-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                  <span className="flex items-center justify-between gap-2"><strong className="text-sm text-slate-950">Tạo bản nháp có PDF gốc</strong><span className="rounded-full bg-red-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Khuyến nghị</span></span>
+                  <span className="flex items-center justify-between gap-2"><strong className="text-sm text-slate-950">Tạo bản nháp có PDF gốc</strong><span className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-800">Khuyến nghị</span></span>
                   <span className="mt-1.5 block text-xs leading-5 text-slate-600">Lưu tệp để kiểm tra, chỉnh sửa và công khai sau.</span>
                 </button>
                 <button type="button" role="radio" aria-checked={uploadMode === "preview"} onClick={() => setUploadMode("preview")} className={`min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2 ${uploadMode === "preview" ? "border-amber-300 bg-amber-50 ring-1 ring-amber-200" : "border-slate-200 bg-white hover:border-slate-300"}`}>
@@ -970,7 +972,7 @@ export function ProcedureDraftWorkspace({
             {preview && (
               <section className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/30">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3">
-                  <div className="flex items-center gap-2"><CheckCircle size={20} className="text-amber-800" weight="fill" /><h2 className="font-bold text-slate-950">Kết quả nhận diện AI</h2></div>
+                  <div className="flex items-center gap-2"><CheckCircle size={20} className="text-amber-800" weight="fill" /><h2 className="text-[15px] font-semibold text-slate-950">Kết quả nhận diện AI</h2></div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">Chưa lưu bản nháp</span>
                 </div>
                 <div className="space-y-4 p-4">
@@ -1052,7 +1054,7 @@ export function ProcedureDraftWorkspace({
           />
           <div className="admin-card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
-              <h2 className="font-bold text-slate-950">Bản nháp gần đây</h2>
+              <h2 className="text-[15px] font-semibold text-slate-950">Bản nháp gần đây</h2>
               {!list.loading && !!list.data?.length && <span className="text-xs text-slate-500">Trang {page} · {list.data.length} bản nháp</span>}
             </div>
             <div className="admin-table-wrap">
@@ -1153,7 +1155,7 @@ export function ProcedureDraftWorkspace({
             )}
             </div>
           </div>
-          {!list.loading && <div className="flex items-center gap-3">
+          {!list.loading && <div className="flex items-center gap-3 text-[13px] text-slate-600">
             <Button
               variant="outline"
               disabled={page === 1 || list.loading}

@@ -212,6 +212,7 @@ function RowEditor({
           <Button
             size="small"
             variant="ghost"
+            className="pm-edit-only"
             onClick={() => change(list.filter((_, i) => i !== index))}
           >
             Xóa dòng {index + 1}
@@ -221,6 +222,7 @@ function RowEditor({
       <Button
         variant="outline"
         size="small"
+        className="pm-edit-only"
         onClick={() =>
           change([
             ...list,
@@ -479,7 +481,7 @@ export function ProcedureApiEditor({
         </div>
       )}
       {/* Biểu mẫu tự ẩn điều khiển sửa khi disabled; vẫn cho phép xem/tải phôi. */}
-      <fieldset disabled={disabled && step !== 4} className="min-w-0 space-y-5">
+      <fieldset disabled={disabled && step !== 4} className="procedure-fields min-w-0 space-y-5">
         {step === 0 && (
           <div className="space-y-5">
             {/* Nhóm 1: Định danh & Phân loại */}
@@ -810,7 +812,7 @@ export function ProcedureApiEditor({
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
-          ← Phần trước ({tabItems[step - 1] ?? ''})
+          {step > 0 ? `← Phần trước (${tabItems[step - 1]})` : '← Phần trước'}
         </Button>
         <span className="text-xs font-semibold text-slate-500">
           Phần {step + 1} / {tabItems.length}: {tabItems[step]}
@@ -822,10 +824,10 @@ export function ProcedureApiEditor({
           disabled={step === tabItems.length - 1}
           onClick={() => setStep((s) => Math.min(tabItems.length - 1, s + 1))}
         >
-          Phần tiếp theo ({tabItems[step + 1] ?? ''}) →
+          {step < tabItems.length - 1 ? `Phần tiếp theo (${tabItems[step + 1]}) →` : 'Phần tiếp theo →'}
         </Button>
       </div>
-      <p className="text-sm text-slate-500">Chỉ nhập thông tin đã kiểm tra.</p>
+      {!disabled && <p className="text-[13px] text-slate-500">Chỉ nhập thông tin đã kiểm tra.</p>}
     </div></ProcedureErrorsContext.Provider>
   );
 }

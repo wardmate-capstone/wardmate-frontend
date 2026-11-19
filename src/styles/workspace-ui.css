@@ -3,10 +3,10 @@
  * Thông số lấy theo màn "Lịch ca làm toàn phường" (staffing.css → .manager-schedule-workspace):
  * tiêu đề trang 20px, tiêu đề thẻ 15px, nội dung 13px, phụ chú 12px, tiêu đề cột 11px in hoa,
  * viền #e2e8f0, bo góc thẻ 8px / ô nhập 6px, không đổ bóng, màu nhấn đỏ #991b1b.
- * Chỉ áp trong .manager-layout / .it-admin-layout / .citizen-layout / .officer-layout nên Procedure Manager và trang công khai không đổi.
+ * Chỉ áp trong .manager-layout / .it-admin-layout / .citizen-layout / .officer-layout / .procedure-manager-layout nên trang công khai không đổi.
  * Chữ tối thiểu 11px cho nhãn in hoa, 12px cho chữ thường (tham khảo Vaadin, Polaris).
  */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) {
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) {
   --mgr-border: #e2e8f0;
   --mgr-border-soft: #f1f5f9;
   --mgr-heading: #0f172a;
@@ -18,103 +18,103 @@
 }
 
 /* ── Tiêu đề trang ─────────────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-page-heading { margin-bottom: 20px !important; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-page-heading h1 { color: var(--mgr-heading); font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.4; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-page-heading p { margin-top: 4px; color: var(--mgr-muted); font-size: 13px; font-weight: 400; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-page-heading { margin-bottom: 20px !important; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-page-heading h1 { color: var(--mgr-heading); font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.4; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-page-heading p { margin-top: 4px; color: var(--mgr-muted); font-size: 13px; font-weight: 400; line-height: 1.6; }
 /* Mô tả của các màn điều hành dùng chung (staffing) đóng vai trò dòng giới thiệu ngay dưới tiêu đề trang */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-heading { margin-top: -12px; align-items: center; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-heading p { margin-top: 0 !important; max-width: none; color: var(--mgr-muted); font-size: 13px; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-heading { margin-top: -12px; align-items: center; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-heading p { margin-top: 0 !important; max-width: none; color: var(--mgr-muted); font-size: 13px; line-height: 1.6; }
 
 /* ── Thẻ và vùng nội dung ──────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-filter,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-state { border-color: var(--mgr-border); border-radius: 8px; box-shadow: none; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card h2,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card-heading h2,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card h3,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card h3 { color: var(--mgr-heading); font-size: 15px; font-weight: 600; line-height: 1.5; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card-heading { min-height: 0; padding: 16px 20px; border-bottom-color: var(--mgr-border-soft); }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-meta { color: var(--mgr-muted); font-size: 12px; font-weight: 400; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-note { color: var(--mgr-body); font-size: 13px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-hint { color: var(--mgr-muted); font-size: 12px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-state { color: var(--mgr-muted); font-size: 13px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-period { border-color: var(--mgr-border-soft); border-radius: 6px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-period time span:first-child { font-size: 16px; font-weight: 600; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-period time span:last-child { font-size: 12px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-consult-meta { border-radius: 6px; font-size: 13px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-consult-meta dt { font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-filter,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-state { border-color: var(--mgr-border); border-radius: 8px; box-shadow: none; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card h2,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card-heading h2,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card h3,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card h3 { color: var(--mgr-heading); font-size: 15px; font-weight: 600; line-height: 1.5; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card-heading { min-height: 0; padding: 16px 20px; border-bottom-color: var(--mgr-border-soft); }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-meta { color: var(--mgr-muted); font-size: 12px; font-weight: 400; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-note { color: var(--mgr-body); font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-hint { color: var(--mgr-muted); font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-state { color: var(--mgr-muted); font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-period { border-color: var(--mgr-border-soft); border-radius: 6px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-period time span:first-child { font-size: 16px; font-weight: 600; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-period time span:last-child { font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-consult-meta { border-radius: 6px; font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-consult-meta dt { font-size: 12px; }
 
 /* ── Nội dung trong thẻ ───────────────────────────────────── */
 /* Nhãn (Badge) dùng chung: 11px như nhãn trạng thái của lịch */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .ui-badge { padding: 2px 10px; font-size: 11px; font-weight: 500; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .ui-badge { padding: 2px 10px; font-size: 11px; font-weight: 500; line-height: 1.6; }
 /* Đoạn văn, chi tiết mở rộng và lưu ý trong thẻ */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card p { color: var(--mgr-body); font-size: 13px; line-height: 1.6; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card details { color: var(--mgr-muted); font-size: 12px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card details > summary { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card details dt { color: var(--mgr-muted); font-size: 11px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-card details dd { color: var(--mgr-body); font-size: 13px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-notice,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-workspace > p[role="alert"] { padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.6; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .closure-card { display: flex; flex-direction: column; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .closure-card > button { align-self: flex-start; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card p { color: var(--mgr-body); font-size: 13px; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card details { color: var(--mgr-muted); font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card details > summary { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card details dt { color: var(--mgr-muted); font-size: 11px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-card details dd { color: var(--mgr-body); font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-notice,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-workspace > p[role="alert"] { padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .closure-card { display: flex; flex-direction: column; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .closure-card > button { align-self: flex-start; }
 /* Ô số liệu thống kê: cùng thông số ở mọi hàng (trước đây hàng trên 24px, hàng dưới 18px) */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .stat-tile { padding: 14px 16px; border-color: var(--mgr-border); border-radius: 8px; box-shadow: none; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .stat-tile dt { color: var(--mgr-muted); font-size: 12px; font-weight: 400; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .stat-tile-value { margin-top: 4px; color: var(--mgr-heading); font-size: 20px; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .stat-tile { padding: 14px 16px; border-color: var(--mgr-border); border-radius: 8px; box-shadow: none; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .stat-tile dt { color: var(--mgr-muted); font-size: 12px; font-weight: 400; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .stat-tile-value { margin-top: 4px; color: var(--mgr-heading); font-size: 20px; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
 
 /* ── Trường nhập liệu ──────────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-field,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-filter-fields > label { gap: 6px; color: var(--mgr-label); font-size: 12px; font-weight: 500; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main label.block.text-xs,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card form label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main select {
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-field,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-filter-fields > label { gap: 6px; color: var(--mgr-label); font-size: 12px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main label.block.text-xs,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card form label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main select {
   min-height: 42px; height: 42px; border-color: #cbd5e1; border-radius: 6px; color: var(--mgr-body); font-size: 13px; font-weight: 400;
 }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main textarea { border-color: #cbd5e1; border-radius: 6px; color: var(--mgr-body); font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main textarea { border-color: #cbd5e1; border-radius: 6px; color: var(--mgr-body); font-size: 13px; }
 /* Ô nhập nằm trong khung gộp (ví dụ ô tìm thủ tục) không tự vẽ viền */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .rounded-lg.border > div > input,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .rounded-lg.border > select { height: 40px; min-height: 40px; border: 0; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main input[type="checkbox"],
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main input[type="radio"] { accent-color: var(--mgr-accent); }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .rounded-lg.border > div > input,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .rounded-lg.border > select { height: 40px; min-height: 40px; border: 0; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main input[type="checkbox"],
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main input[type="radio"] { accent-color: var(--mgr-accent); }
 
 /* Nhãn trường trong bộ lọc và nhóm thao tác của các màn điều hành */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-filter label,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-actions label,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-heading label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-filter label:has(> input[type="checkbox"]) { color: var(--mgr-body); font-size: 13px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-filter label,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-actions label,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-heading label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-filter label:has(> input[type="checkbox"]) { color: var(--mgr-body); font-size: 13px; }
 
 /* ── Nút ───────────────────────────────────────────────────── */
 /* Nút mặc định của bộ UI (min-h-12, rounded-xl) và các nút hành động chính/phụ */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.min-h-12,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.h-11,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-primary-action { min-height: 42px; height: auto; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: none; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.min-h-12:hover,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.h-11:hover { transform: none; box-shadow: none; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.min-h-10 { border-radius: 6px; font-size: 12px; font-weight: 600; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.min-h-12,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.h-11,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-primary-action { min-height: 42px; height: auto; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: none; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.min-h-12:hover,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.h-11:hover { transform: none; box-shadow: none; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.min-h-10 { border-radius: 6px; font-size: 12px; font-weight: 600; }
 
 /* ── Bảng (bảng lịch đã có thông số riêng trong staffing.css nên được loại trừ) ──────────────────────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-table-wrap th,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) th {
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-table-wrap th,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) th {
   padding: 10px 20px; border-bottom: 1px solid var(--mgr-border); background: #f8fafc; color: var(--mgr-muted);
   font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
 }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-table-wrap td,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td { padding: 12px 20px; border-bottom-color: var(--mgr-border-soft); color: var(--mgr-body); font-size: 13px; vertical-align: middle; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td .text-xs,
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td small { font-size: 12px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table) tbody tr:hover { background: #f8fafc; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-table-wrap td,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td { padding: 12px 20px; border-bottom-color: var(--mgr-border-soft); color: var(--mgr-body); font-size: 13px; vertical-align: middle; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td .text-xs,
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td small { font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table) tbody tr:hover { background: #f8fafc; }
 
 /* Nút thao tác trong dòng bảng: cùng chiều cao và cỡ chữ */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main td.mgr-stack-actions button:not([aria-label]) { min-height: 36px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main td.mgr-stack-actions button[aria-label] { min-height: 36px; min-width: 36px; border-radius: 6px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main td.mgr-stack-actions button:not([aria-label]) { min-height: 36px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main td.mgr-stack-actions button[aria-label] { min-height: 36px; min-width: 36px; border-radius: 6px; }
 
 /* ── Nhãn trạng thái ───────────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-status-badge { min-height: 24px; padding: 0 10px; font-size: 11px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-status-badge { min-height: 24px; padding: 0 10px; font-size: 11px; font-weight: 500; }
 
 /* ── Phân trang ────────────────────────────────────────────── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .staff-pager { border-top-color: var(--mgr-border); color: var(--mgr-muted); font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .staff-pager { border-top-color: var(--mgr-border); color: var(--mgr-muted); font-size: 12px; }
 
 /* ── Bộ lọc kỳ báo cáo (Tổng quan, thống kê, hiệu suất, phản hồi): một hàng trên màn rộng ── */
 @media (min-width: 1280px) {
@@ -137,43 +137,43 @@
 /* ── Bảng dạng thẻ trên điện thoại ─────────────────────────── */
 /* Bảng gồm các bản ghi độc lập (hồ sơ, cán bộ, phản hồi) đổi thành thẻ có nhãn; bảng số liệu so sánh vẫn cuộn ngang. */
 @media (max-width: 767px) {
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack { min-width: 0 !important; width: 100%; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack tbody,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack tr,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td { display: block; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack tr { padding: 12px 16px; border-bottom: 1px solid var(--mgr-border-soft); }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack tbody tr:last-child { border-bottom: 0; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td { position: static !important; max-width: none; padding: 4px 0 !important; border: 0; background: transparent !important; box-shadow: none !important; text-align: left !important; white-space: normal; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--mgr-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td[data-label=""]::before { display: none; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td.mgr-stack-actions { padding: 10px 0 0 !important; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td.mgr-stack-actions > * { justify-content: flex-start; flex-wrap: wrap; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table.mgr-stack td[colspan] { padding: 0 !important; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack { min-width: 0 !important; width: 100%; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack tbody,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack tr,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td { display: block; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack tr { padding: 12px 16px; border-bottom: 1px solid var(--mgr-border-soft); }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack tbody tr:last-child { border-bottom: 0; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td { position: static !important; max-width: none; padding: 4px 0 !important; border: 0; background: transparent !important; box-shadow: none !important; text-align: left !important; white-space: normal; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--mgr-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td[data-label=""]::before { display: none; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td.mgr-stack-actions { padding: 10px 0 0 !important; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td.mgr-stack-actions > * { justify-content: flex-start; flex-wrap: wrap; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table.mgr-stack td[colspan] { padding: 0 !important; }
 }
 
 /* ── Điện thoại ────────────────────────────────────────────── */
 @media (max-width: 639px) {
   /* Ô số liệu thống kê: 2 cột thay vì 1 cột để trang không quá dài */
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-card dl.grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-card dl.grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   /* Thanh công cụ danh sách cán bộ: ô lọc chia đều 2 cột, nút chính trải hết chiều ngang */
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-toolbar > * { width: 100%; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) > * { width: 100%; min-width: 0; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) > .admin-primary-action { grid-column: 1 / -1; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row input { width: 100%; min-width: 0; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-toolbar > * { width: 100%; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) > * { width: 100%; min-width: 0; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-toolbar > div:last-child:not(:first-child) > .admin-primary-action { grid-column: 1 / -1; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row input { width: 100%; min-width: 0; }
   /* 16px để iOS không tự phóng to khi chạm vào ô nhập */
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main select,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main textarea { font-size: 16px; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.min-h-12,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.h-11,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-primary-action { min-height: 44px; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-table-wrap th,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) th,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .admin-table-wrap td,
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td { padding-inline: 16px; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main select,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main textarea { font-size: 16px; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.min-h-12,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.h-11,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-primary-action { min-height: 44px; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-table-wrap th,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) th,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .admin-table-wrap td,
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main table:not(.ward-roster-table):not(.schedule-list-table) td { padding-inline: 16px; }
 }
 
 /* ── Dải chỉ số (kpi-strip) và thẻ danh sách số liệu (ws-panel): Thống kê hồ sơ, Tổng quan Admin ── */
@@ -182,6 +182,8 @@
 .kpi-strip { overflow: hidden; }
 .kpi-strip dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .kpi-strip.is-3 dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kpi-strip.is-5 dl { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1279px) { .kpi-strip.is-5 dl { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi-strip.is-5 dl > div:nth-child(4) { border-left: 0; } .kpi-strip.is-5 dl > div:nth-child(n+4) { border-top: 1px solid var(--mgr-border-soft); } }
 .kpi-strip dl > div { min-width: 0; padding: 16px 20px; }
 .kpi-strip dl > div + div { border-left: 1px solid var(--mgr-border-soft); }
 .kpi-strip dt { color: var(--mgr-muted); font-size: 12px; }
@@ -218,7 +220,7 @@
 }
 
 /* ── Đường dẫn trên thanh đầu trang Admin (giống Manager: "Quản lý / Tên trang") ── */
-:is(.it-admin-layout, .citizen-layout, .officer-layout) .admin-breadcrumb { display: flex; min-width: 0; align-items: center; gap: 8px; padding-left: 4px; font-size: 12px; }
+:is(.it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-breadcrumb { display: flex; min-width: 0; align-items: center; gap: 8px; padding-left: 4px; font-size: 12px; }
 :is(.it-admin-layout, .citizen-layout) .admin-breadcrumb > span { color: #94a3b8; font-weight: 600; }
 :is(.it-admin-layout, .citizen-layout) .admin-breadcrumb > span[aria-hidden] { color: #cbd5e1; font-weight: 400; }
 :is(.it-admin-layout, .citizen-layout) .admin-breadcrumb > strong { overflow: hidden; color: var(--mgr-heading); font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
@@ -226,31 +228,31 @@
 
 /* ── Bộ lọc tra cứu dạng hàng (nhật ký, giám sát dịch vụ, sao lưu) ── */
 /* Trường và nút Áp dụng/Xóa bộ lọc trên cùng một hàng, căn đáy; gợi ý nằm trong ô (placeholder) để hàng không lệch. */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter { display: grid; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--mgr-border-soft); }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row > * { flex: 1 1 180px; min-width: 0; max-width: 280px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row > .ops-filter-actions { display: flex; flex: 0 0 auto; gap: 8px; max-width: none; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-note { color: var(--mgr-muted); font-size: 12px; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-more { padding: 0; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-more > summary { display: inline-flex; min-height: 32px; align-items: center; color: var(--mgr-label); font-size: 12px; font-weight: 500; cursor: pointer; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-more > div { margin-top: 8px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter { display: grid; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--mgr-border-soft); }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row > * { flex: 1 1 180px; min-width: 0; max-width: 280px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row > .ops-filter-actions { display: flex; flex: 0 0 auto; gap: 8px; max-width: none; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter label { color: var(--mgr-label); font-size: 12px; font-weight: 500; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-note { color: var(--mgr-muted); font-size: 12px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-more { padding: 0; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-more > summary { display: inline-flex; min-height: 32px; align-items: center; color: var(--mgr-label); font-size: 12px; font-weight: 500; cursor: pointer; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-more > div { margin-top: 8px; }
 
 /* ── Tab gạch chân (giống điều hướng Lịch ca làm) ── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tabs { display: flex; flex-wrap: wrap; gap: 4px 24px; border-bottom: 1px solid var(--mgr-border); }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tab { position: relative; min-height: 44px; padding: 0 0 2px; border: 0; background: none; color: var(--mgr-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tab:hover { color: var(--mgr-heading); }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tab[aria-selected="true"] { color: var(--mgr-accent); font-weight: 600; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tab[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--mgr-accent-strong); content: ''; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .workspace-tab:focus-visible { outline: 2px solid var(--mgr-accent-strong); outline-offset: 3px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tabs { display: flex; flex-wrap: wrap; gap: 4px 24px; border-bottom: 1px solid var(--mgr-border); }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tab { position: relative; min-height: 44px; padding: 0 0 2px; border: 0; background: none; color: var(--mgr-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tab:hover { color: var(--mgr-heading); }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tab[aria-selected="true"] { color: var(--mgr-accent); font-weight: 600; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tab[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--mgr-accent-strong); content: ''; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .workspace-tab:focus-visible { outline: 2px solid var(--mgr-accent-strong); outline-offset: 3px; }
 
 /* ── Khoảng đệm thẻ thống nhất 20px (thẻ dùng p-4 sm:p-6 / p-5 sm:p-6 không đều nhau) ── */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main section.admin-card.space-y-5 { padding: 20px; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main section.admin-card.space-y-5 { padding: 20px; }
 @media (max-width: 639px) {
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main section.admin-card.space-y-5 { padding: 16px; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row > * { flex-basis: calc(50% - 8px); max-width: none; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row > .ops-filter-actions { flex-basis: 100%; }
-  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .ops-filter-row > .ops-filter-actions > * { flex: 1; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main section.admin-card.space-y-5 { padding: 16px; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row > * { flex-basis: calc(50% - 8px); max-width: none; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row > .ops-filter-actions { flex-basis: 100%; }
+  :is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .ops-filter-row > .ops-filter-actions > * { flex: 1; }
 }
 .ws-row dd { color: var(--mgr-body); font-size: 13px; }
 .ws-status { display: inline-flex; align-items: center; gap: 8px; color: var(--mgr-body); font-size: 13px; }
@@ -263,7 +265,7 @@
 }
 
 /* Đoạn mô tả trong đầu thẻ (thẻ dạng section.admin-card.space-y-5): 13px xám như mô tả thẻ của Manager */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main section.admin-card.space-y-5 > div:first-child p { max-width: 72ch; color: var(--mgr-muted); font-size: 13px; line-height: 1.6; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main section.admin-card.space-y-5 > div:first-child p { max-width: 72ch; color: var(--mgr-muted); font-size: 13px; line-height: 1.6; }
 
 /* ── Tổng quan Admin: Cần xử lý, dịch vụ, hoạt động quản trị ── */
 .ws-panel > footer { display: flex; flex-wrap: wrap; gap: 0 20px; }
@@ -286,14 +288,14 @@
 
 /* ── Khu công dân và Frontdesk: đưa thẻ và chữ tự vẽ trong các màn về chuẩn chung (cùng thang chữ với Admin) ── */
 /* Thẻ tự vẽ (rounded-2xl + viền + đổ bóng): bo 8px, không bóng; giữ màu viền riêng (vd. vàng ở "Yêu cầu bổ sung"). */
-:is(.citizen-layout, .officer-layout) .admin-main :is(section, article, div, li, a, button).rounded-2xl { border-radius: 8px; }
-:is(.citizen-layout, .officer-layout) .admin-main :is(.shadow-2xs, .shadow-xs, .shadow-sm) { box-shadow: none; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(section, article, div, li, a, button).rounded-2xl { border-radius: 8px; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(.shadow-2xs, .shadow-xs, .shadow-sm) { box-shadow: none; }
 /* Chữ dưới mức tối thiểu: 9–10px → 11px; 11px chữ thường → 12px (nhãn in hoa giữ 11px). */
-:is(.citizen-layout, .officer-layout) .admin-main :is(.text-\[9px\], .text-\[10px\]) { font-size: 11px; }
-:is(.citizen-layout, .officer-layout) .admin-main .text-\[11px\]:not(.uppercase) { font-size: 12px; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(.text-\[9px\], .text-\[10px\]) { font-size: 11px; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .text-\[11px\]:not(.uppercase) { font-size: 12px; }
 /* Tiêu đề trong nội dung (vd. tên thủ tục ở Chi tiết hồ sơ, Mã QR) không vượt tiêu đề trang 20px. */
-:is(.citizen-layout, .officer-layout) .admin-main :is(h2, h3):is(.text-xl, .text-2xl, .text-lg) { font-size: 18px; line-height: 1.4; }
-@media (min-width: 640px) { :is(.citizen-layout, .officer-layout) .admin-main :is(h2, h3):is(.sm\:text-2xl, .sm\:text-lg) { font-size: 18px; } }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(h2, h3):is(.text-xl, .text-2xl, .text-lg) { font-size: 18px; line-height: 1.4; }
+@media (min-width: 640px) { :is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(h2, h3):is(.sm\:text-2xl, .sm\:text-lg) { font-size: 18px; } }
 
 /* Nút nhỏ trong dòng danh sách (Bổ sung ngay, Đánh giá, Xem QR): một kiểu, cao 32px, chữ 12px. */
 .ws-row-btn { display: inline-flex; min-height: 32px; align-items: center; padding: 0 10px; border: 1px solid var(--mgr-border, #e2e8f0); border-radius: 6px; background: #fff; color: var(--mgr-body, #334155); font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -310,17 +312,17 @@
 .kpi-cover { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; cursor: pointer; }
 .kpi-cover:focus-visible { outline: 2px solid var(--mgr-accent-strong, #b91c1c); outline-offset: -2px; }
 /* Hiệu ứng trang trí còn sót trong các màn công dân: bỏ bóng khi rê chuột, phóng to biểu tượng, chữ quá đậm. */
-:is(.citizen-layout, .officer-layout) .admin-main :is(.shadow-md, .hover\:shadow-md:hover, .hover\:shadow-xs:hover, .hover\:shadow-sm:hover) { box-shadow: none; }
-:is(.citizen-layout, .officer-layout) .admin-main .group:hover .group-hover\:scale-105 { transform: none; }
-:is(.citizen-layout, .officer-layout) .admin-main :is(.font-black, .font-extrabold) { font-weight: 700; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(.shadow-md, .hover\:shadow-md:hover, .hover\:shadow-xs:hover, .hover\:shadow-sm:hover) { box-shadow: none; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .group:hover .group-hover\:scale-105 { transform: none; }
+:is(.citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main :is(.font-black, .font-extrabold) { font-weight: 700; }
 
 /* ── Ô chọn có tìm kiếm (ListSelect) trong khu làm việc: cùng kiểu ô chọn thường, danh sách gọn ── */
 /* Nút mở ô chọn là <button class="min-h-12"> nên bị quy tắc nút chung đặt chữ 600; trả về chữ thường như <select>. */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main button.ui-listselect-trigger { font-weight: 400; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main button.ui-listselect-trigger { font-weight: 400; }
 /* Lựa chọn 13px chữ thường; tên dài (vd. thủ tục) tối đa 2 dòng, rê chuột xem đầy đủ (title). */
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .ui-listselect-option { padding: 8px 12px; font-size: 13px; line-height: 1.5; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main .ui-listselect-label { display: -webkit-box; overflow: hidden; font-weight: 400; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout) .admin-main [aria-selected="true"] > span > .ui-listselect-label { font-weight: 600; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .ui-listselect-option { padding: 8px 12px; font-size: 13px; line-height: 1.5; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main .ui-listselect-label { display: -webkit-box; overflow: hidden; font-weight: 400; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+:is(.manager-layout, .it-admin-layout, .citizen-layout, .officer-layout, .procedure-manager-layout) .admin-main [aria-selected="true"] > span > .ui-listselect-label { font-weight: 600; }
 
 /* ── Thanh lọc danh sách hồ sơ (Frontdesk): mọi ô có nhãn 12px, hai hàng thẳng, chân thanh lọc gồm kết quả + Làm mới ── */
 .list-filter { padding: 16px 20px; }
@@ -350,4 +352,11 @@
   .list-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .list-filter-grid > * { grid-column: span 2 !important; }
   .list-filter-grid > .f-dates { gap: 12px; }
+}
+/* Dải 5 chỉ số (Tổng quan Quản lý thủ tục) trên điện thoại: 2 cột như các dải khác. */
+@media (max-width: 767px) {
+  .kpi-strip.is-5 dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-strip.is-5 dl > div:nth-child(odd) { border-left: 0; }
+  .kpi-strip.is-5 dl > div:nth-child(4) { border-left: 1px solid var(--mgr-border-soft); }
+  .kpi-strip.is-5 dl > div:nth-child(n + 3) { border-top: 1px solid var(--mgr-border-soft); }
 }

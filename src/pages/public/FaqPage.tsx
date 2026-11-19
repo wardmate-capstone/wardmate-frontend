@@ -1,6 +1,8 @@
 import * as Accordion from '@radix-ui/react-accordion';
-import { ArrowRight, CaretDown, Question } from '@phosphor-icons/react';
+import { useState } from 'react';
+import { ArrowRight, BookOpen, Files, MagnifyingGlass, Minus, Plus, X } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
+import { PublicPageIntro } from './PublicPageIntro';
 
 const questions = [
   {
@@ -25,43 +27,61 @@ const questions = [
   },
 ];
 
+function searchText(text: string) {
+  return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').trim();
+}
+
 export function FaqPage() {
+  const [keyword, setKeyword] = useState('');
+  const terms = searchText(keyword).split(/\s+/).filter(Boolean);
+  const visibleQuestions = questions.filter(({ question, answer }) => {
+    const text = searchText(question + ' ' + answer);
+    return terms.every((term) => text.includes(term));
+  });
+
   return (
-    <div className="faq-page">
-      <section className="faq-hero" aria-labelledby="faq-page-title">
-        <div className="faq-hero-pattern" aria-hidden="true" />
-        <div className="faq-hero-simple">
-          <span className="faq-hero-icon"><Question size={26} aria-hidden="true" /></span>
-          <p className="faq-eyebrow">Trung tâm hỗ trợ</p>
-          <h1 id="faq-page-title">Câu hỏi thường gặp</h1>
-          <p>Tìm hiểu những thông tin quan trọng khi tra cứu, chuẩn bị và gửi hồ sơ tiền kiểm.</p>
-        </div>
-      </section>
+    <div className="public-faq">
+      <PublicPageIntro
+        id="faq-page-title"
+        label="Hỏi đáp"
+        title="Câu hỏi thường gặp"
+        description="Giải đáp về tiền kiểm, bổ sung giấy tờ và mã QR của hồ sơ."
+      />
+      <div className="public-shell public-faq-layout">
+        <section className="public-faq-body" aria-label="Giải đáp câu hỏi thường gặp">
+          <div className="public-faq-search" role="search" aria-label="Tìm trong câu hỏi thường gặp">
+            <label htmlFor="faq-search-input">Tìm câu hỏi</label>
+            <div>
+              <MagnifyingGlass size={20} aria-hidden="true" />
+              <input id="faq-search-input" type="search" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Ví dụ: bổ sung giấy tờ, mã QR" />
+              {keyword && <button type="button" aria-label="Xóa tìm kiếm câu hỏi" onClick={() => setKeyword('')}><X size={18} aria-hidden="true" /></button>}
+            </div>
+          </div>
+          {terms.length > 0 && <p className="public-faq-count" role="status">{visibleQuestions.length ? `${visibleQuestions.length} câu hỏi phù hợp` : 'Không tìm thấy câu hỏi phù hợp.'}</p>}
+          {visibleQuestions.length > 0 ? (
+            <Accordion.Root type="single" collapsible className="public-faq-list">
+              {visibleQuestions.map(({ question, answer }) => (
+                <Accordion.Item value={question} key={question}>
+                  <Accordion.Header>
+                    <Accordion.Trigger className="public-faq-trigger">
+                      <span>{question}</span>
+                      <Plus className="faq-icon-plus" size={20} aria-hidden="true" />
+                      <Minus className="faq-icon-minus" size={20} aria-hidden="true" />
+                    </Accordion.Trigger>
+                  </Accordion.Header>
+                  <Accordion.Content className="public-faq-answer"><p>{answer}</p></Accordion.Content>
+                </Accordion.Item>
+              ))}
+            </Accordion.Root>
+          ) : <p className="public-faq-empty">Thử từ khóa ngắn hơn hoặc <button type="button" onClick={() => setKeyword('')}>xem tất cả câu hỏi</button>.</p>}
+        </section>
 
-      <section className="faq-main" aria-label="Giải đáp câu hỏi thường gặp">
-        <div className="faq-list-column">
-          <div className="faq-list-heading"><p>Giải đáp nhanh</p><h2>5 điều bạn cần biết</h2></div>
-          <Accordion.Root type="single" collapsible className="faq-page-accordion">
-            {questions.map((item, index) => (
-              <Accordion.Item value={`question-${index}`} key={item.question} className="faq-page-item">
-                <Accordion.Header>
-                  <Accordion.Trigger className="faq-page-trigger group">
-                    <span className="faq-question-number">{String(index + 1).padStart(2, '0')}</span>
-                    <span className="flex-1">{item.question}</span>
-                    <span className="faq-toggle-icon"><CaretDown size={20} aria-hidden="true" /></span>
-                  </Accordion.Trigger>
-                </Accordion.Header>
-                <Accordion.Content className="faq-page-answer"><p>{item.answer}</p></Accordion.Content>
-              </Accordion.Item>
-            ))}
-          </Accordion.Root>
-        </div>
-      </section>
-
-      <section className="faq-next-step">
-        <div><p>Bạn đã hiểu rõ quy trình?</p><h2>Tra cứu thủ tục cần chuẩn bị</h2><span>Xem hướng dẫn công khai trước, đăng nhập khi bạn muốn lưu hoặc gửi hồ sơ tiền kiểm.</span></div>
-        <Link to="/thu-tuc">Tra cứu thủ tục <ArrowRight size={18} aria-hidden="true" /></Link>
-      </section>
+        <aside className="public-faq-support" aria-labelledby="faq-support-title">
+          <h2 id="faq-support-title">Hướng dẫn liên quan</h2>
+          <Link to="/huong-dan"><BookOpen size={21} aria-hidden="true" /><span><strong>Hướng dẫn thực hiện</strong><small>Các bước chuẩn bị và gửi hồ sơ tiền kiểm</small></span><ArrowRight size={16} aria-hidden="true" /></Link>
+          <Link to="/thu-tuc"><Files size={21} aria-hidden="true" /><span><strong>Tra cứu thủ tục</strong><small>Danh sách giấy tờ và biểu mẫu</small></span><ArrowRight size={16} aria-hidden="true" /></Link>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ import {
   type ProcedureVersion,
 } from "@/lib/api/procedures";
 import { ProcedureApiEditor, validateProcedure } from "./ProcedureApiEditor";
+import { ProcedureReadView } from "./ProcedureReadView";
 import { PdfSource } from "./ProcedureDraftWorkspace";
 import { ProcedureChecklistModal } from "./ProcedureChecklistModal";
 import { toast } from "@/components/ui/Toast";
@@ -134,7 +135,7 @@ export function ProcedureApiDetail({
       </Button>
       <header className="admin-card flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between xl:gap-8">
         <div className="min-w-0 space-y-3">
-          <h1 className="break-words text-xl font-bold leading-snug tracking-tight text-slate-950 sm:text-2xl">
+          <h1 className="break-words text-[20px] font-bold leading-snug tracking-tight text-slate-950">
             {detail.data?.title ?? row.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
@@ -248,11 +249,9 @@ export function ProcedureApiDetail({
       />
       {detail.data && (
         <div className="admin-card space-y-5 p-5">
-          <ProcedureApiEditor
+          {/* Chế độ xem: trang đọc chỉ hiện mục có nội dung; form chỉ mở khi bấm Chỉnh sửa. */}
+          <ProcedureReadView
             value={detail.data}
-            onChange={() => {}}
-            categories={categories}
-            disabled
             onEditForms={
               can("procedure.update")
                 ? () => {
@@ -286,7 +285,7 @@ export function ProcedureApiDetail({
       )}
       {can("procedure.versions.read") && (
         <section className="admin-card space-y-4 p-5">
-          <h2 className="text-xl font-bold">Lịch sử phiên bản</h2>
+          <h2 className="text-[15px] font-semibold">Lịch sử phiên bản</h2>
           <ProcedureFeedback
             loading={versions.loading}
             error={versions.error}
@@ -295,7 +294,7 @@ export function ProcedureApiDetail({
           {versions.data?.length === 0 && <p>Chưa có bản lưu.</p>}
           {versions.data?.map((version) => (
             <details key={version.id} className="rounded-xl border p-4">
-              <summary className="cursor-pointer font-semibold">
+              <summary className="cursor-pointer text-[13px] font-semibold text-slate-800">
                 Bản lưu {version.versionNumber} ·{" "}
                 {version.decisionNumber || "Chưa có số quyết định"} ·{" "}
                 {version.effectiveDate}
@@ -304,12 +303,7 @@ export function ProcedureApiDetail({
                 Ngày lưu: {formatDateTime(version.createdAt)}. Đây là nội dung
                 đã lưu ở phiên bản này.
               </p>
-              <ProcedureApiEditor
-                value={version.snapshotData}
-                categories={categories}
-                onChange={() => {}}
-                disabled
-              />
+              <ProcedureReadView value={version.snapshotData} />
               {version.pdfFileName && (
                 <div className="mt-3">
                   <p className="mb-2 text-sm">

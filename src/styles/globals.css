@@ -815,3 +815,15 @@
   .admin-layout, .admin-workspace, main { overflow: visible !important; max-width: none !important; }
   body { background: white !important; }
 }
+
+/* Form thủ tục ở chế độ xem: ô bị khóa có nền xám, chữ đậm vừa, không con trỏ nhập (L20). */
+fieldset.procedure-fields:disabled :is(input, textarea, select) {
+  background-color: #f8fafc;
+  color: #334155;
+  cursor: default;
+  resize: none;
+  -webkit-text-fill-color: #334155;
+  opacity: 1;
+}
+/* Chế độ xem: ẩn nút chỉ dùng khi sửa (thêm/xóa dòng). */
+fieldset.procedure-fields:disabled .pm-edit-only { display: none; }

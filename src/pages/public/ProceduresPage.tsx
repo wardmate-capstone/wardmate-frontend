@@ -6,7 +6,6 @@ import {
   Check,
   Info,
   MagnifyingGlass,
-  ShieldCheck,
   SquaresFour,
   X,
 } from '@phosphor-icons/react';
@@ -16,6 +15,7 @@ import { procedureError } from '@/lib/api/procedures';
 import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useAuthState } from '@/hooks/useAuthState';
+import { PublicPageIntro } from './PublicPageIntro';
 
 const PAGE_SIZE = 5;
 
@@ -103,35 +103,8 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
     focusResults();
   }
 
-  return (
-    <div className="procedures-page">
-      <section
-        className={`procedures-hero${embedded ? ' procedures-hero-embedded' : ''}`}
-        aria-labelledby={embedded ? undefined : 'procedures-title'}
-        aria-label={embedded ? 'Tìm kiếm thủ tục' : undefined}
-      >
-        <div className="procedures-hero-inner">
-          {!embedded && (
-            <div className="mb-7">
-              <div>
-                <nav aria-label="Đường dẫn trang" className="mb-6 flex items-center gap-2 text-sm text-slate-500">
-                  <Link to="/" className="hover:text-red-800">Trang chủ</Link>
-                  <CaretRight size={14} aria-hidden="true" />
-                  <span aria-current="page" className="font-semibold text-slate-800">Thủ tục hành chính</span>
-                </nav>
-                <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
-                  <ShieldCheck size={18} aria-hidden="true" /> Tra cứu công khai · Cấp xã, phường
-                </p>
-                <h1 id="procedures-title" className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
-                  Tra cứu thủ tục hành chính
-                </h1>
-                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-                  Tìm thủ tục, xem giấy tờ cần chuẩn bị, thời gian giải quyết và biểu mẫu trước khi gửi hồ sơ tiền kiểm.
-                </p>
-              </div>
-            </div>
-          )}
-
+  const searchControls = (
+    <>
           <form className="procedures-search" role="search" onSubmit={handleSearch}>
             <label htmlFor="procedures-search-input" className="sr-only">Tên thủ tục hoặc nhu cầu của bạn</label>
             <div className="relative">
@@ -156,9 +129,9 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
             </Button>
           </form>
 
-          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-              <span className="font-medium text-slate-700">Gợi ý tìm kiếm:</span>
+          <div className="procedure-search-details mt-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="procedure-search-examples flex flex-wrap items-center gap-1.5 text-slate-500">
+              <span className="font-medium text-slate-700">Gợi ý tìm kiếm</span>
               {QUICK_SEARCH_SUGGESTIONS.map((tag) => (
                 <button
                   key={tag}
@@ -175,20 +148,40 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
               <span>Có thể nhập tiếng Việt có dấu hoặc không dấu.{!embedded && !isAuthenticated && ' Không cần đăng nhập để tra cứu.'}</span>
             </p>
           </div>
-        </div>
-      </section>
+    </>
+  );
+
+  return (
+    <div className={embedded ? 'procedures-page' : 'procedures-page public-procedures'}>
+      {embedded ? (
+        <section className="procedures-hero procedures-hero-embedded" aria-label="Tìm kiếm thủ tục">
+          <div className="procedures-hero-inner">{searchControls}</div>
+        </section>
+      ) : (
+        <PublicPageIntro
+          id="procedures-title"
+          label="Thủ tục hành chính"
+          title="Tra cứu thủ tục hành chính"
+          description="Xem giấy tờ cần chuẩn bị, biểu mẫu và cách thực hiện thủ tục cấp xã, phường."
+        >{searchControls}</PublicPageIntro>
+      )}
 
       <section id="danh-sach-thu-tuc" className="procedures-directory" aria-labelledby="procedures-results-title">
         <aside className="procedures-filter" aria-label="Lọc theo lĩnh vực">
           <div className="procedures-filter-heading">
-            <h2><SquaresFour size={19} aria-hidden="true" className="text-red-800" /> Lĩnh vực</h2>
-            {!categoryQuery.isPending && !categoryQuery.isError && (
+            <h2>{embedded && <SquaresFour size={19} aria-hidden="true" className="text-red-800" />} Lĩnh vực</h2>
+            {embedded && !categoryQuery.isPending && !categoryQuery.isError && (
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
                 {Math.max(0, categories.length - 1)} nhóm
               </span>
             )}
           </div>
-          <p className="procedures-filter-description">Chọn lĩnh vực bạn cần tìm</p>
+          {embedded && <p className="procedures-filter-description">Chọn lĩnh vực bạn cần tìm</p>}
+          {!embedded && !categoryQuery.isPending && (
+            <select aria-label="Chọn lĩnh vực" className="public-category-select" value={selectedCategory} onChange={(event) => updateFilter('category', event.target.value)}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.categoryName === 'Tất cả' ? 'Tất cả lĩnh vực' : category.categoryName}</option>)}
+            </select>
+          )}
           <div className="procedures-filter-list">
             {categoryQuery.isPending && (
               <div role="status" aria-label="Đang tải lĩnh vực" className="space-y-3 p-3">
@@ -213,14 +206,14 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
               );
             })}
           </div>
-          <div className="procedures-filter-help">
+          {embedded ? <div className="procedures-filter-help">
             <Info size={20} aria-hidden="true" />
             <div>
               <strong>Bắt đầu từ đâu?</strong>
               <p>Chọn “Xem hướng dẫn” để biết thành phần hồ sơ, thời gian và lệ phí trước khi chuẩn bị.</p>
               <Link to="/hoi-dap">Câu hỏi thường gặp <ArrowRight size={15} aria-hidden="true" /></Link>
             </div>
-          </div>
+          </div> : <div className="public-procedure-help"><Link to="/huong-dan">Hướng dẫn chuẩn bị hồ sơ <ArrowRight size={16} aria-hidden="true" /></Link></div>}
         </aside>
 
         <div className="procedures-results">
@@ -231,7 +224,7 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
 
           <div className="procedures-results-heading">
             <div>
-              <p>Danh sách thủ tục</p>
+              {embedded && <p>Danh sách thủ tục</p>}
               <h2 ref={resultsHeading} tabIndex={-1} className="scroll-mt-36" id="procedures-results-title" aria-live="polite">
                 {isLoading ? 'Đang tìm thủ tục…' : result.isError ? 'Chưa thể tải thủ tục' : `${totalCount} thủ tục phù hợp`}
               </h2>
@@ -280,15 +273,16 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
                       aria-label={'Xem ' + procedure.title}
                     >
                       <span className="procedure-result-copy">
+                        {!embedded && <strong>{procedure.title}</strong>}
                         <span className="procedure-result-labels">
                           <small>{procedure.categoryName}</small>
                           {procedure.procedureCode && <span>Mã: {procedure.procedureCode}</span>}
                         </span>
                         {/* Danh sách chỉ hiện tên thủ tục; thời gian, lệ phí xem ở trang chi tiết */}
-                        <strong>{procedure.title}</strong>
+                        {embedded && <strong>{procedure.title}</strong>}
                       </span>
                       <span className="procedure-result-action">
-                        Xem hướng dẫn<ArrowRight size={18} aria-hidden="true" />
+                        <span className="procedure-action-label">Xem hướng dẫn</span><ArrowRight size={18} aria-hidden="true" />
                       </span>
                     </Link>
                   </li>

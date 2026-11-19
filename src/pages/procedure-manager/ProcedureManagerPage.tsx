@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import '@/styles/workspace-ui.css';
+import { useAutoStackTables } from '@/hooks/useAutoStackTables';
 import { Plus } from '@phosphor-icons/react';
 import { useSearchParams } from "react-router-dom";
 import { UnifiedProcedureSidebar as ProcedureManagerSidebar, type ProcedureNavSection } from "@/components/layout/RoleWorkspaceSidebars";
@@ -122,6 +124,10 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
     setParams({ section: "drafts" });
   };
   const isEditingDraft = !readOnly && Boolean(params.get("draft"));
+  // Bảng tự thành thẻ có nhãn trên điện thoại (giống Admin/Manager).
+  const mainRef = useRef<HTMLElement>(null);
+  useAutoStackTables(mainRef);
+  const currentTitle = selected ? "Chi tiết thủ tục" : sectionTitles[section]?.title;
 
   if (isEditingDraft && !embedded) {
     return (
@@ -159,25 +165,23 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
           onOpenMobileSidebar={() => setMobile(true)}
           isCollapsedDesktop={collapsed}
           onToggleCollapseDesktop={() => setCollapsed(!collapsed)}
+          currentTitle={currentTitle}
         />}
         <main
+          ref={mainRef}
           id={embedded ? undefined : "procedure-manager-main"}
           className={embedded ? "space-y-5" : "admin-main space-y-5"}
           tabIndex={-1}
         >
           {!drafts && !selected && section !== "profile" && (
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="admin-page-heading">
               <div>
-                <h1 className="text-2xl font-bold">
-                  {sectionTitles[section].title}
-                </h1>
+                <h1>{sectionTitles[section].title}</h1>
                 {section === "dashboard" && (
-                  <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                    {getGreeting()}, Chuyên viên {procedureManagerName}
-                  </p>
+                  <p>{getGreeting()}, Chuyên viên {procedureManagerName}</p>
                 )}
               </div>
-              {section === "procedures" && can("procedure.create") && <div className="flex flex-wrap gap-3">
+              {(section === "procedures" || section === "dashboard") && can("procedure.create") && <div className="flex flex-wrap gap-3">
                 <Button size="toolbar" onClick={openCreate}><Plus size={16} weight="bold" aria-hidden="true" />Thêm thủ tục</Button>
               </div>}
             </div>
@@ -234,8 +238,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                 stats={stats.data}
                 statsLoading={stats.loading}
                 categoriesCount={categories.data?.length}
-                canCreate={can('procedure.create')}
-                onCreateProcedure={openCreate}
+                canReadDrafts={can('procedure.drafts.read')}
                 onNavigateSection={navigate}
                 onSelectProcedure={setSelected}
               />

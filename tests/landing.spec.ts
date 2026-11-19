@@ -90,6 +90,34 @@ test('trang hỏi đáp giữ câu trả lời và tra cứu, không có form g�
 
 });
 
+test('hỏi đáp tìm không dấu và có trạng thái không tìm thấy', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/hoi-dap');
+  const search = page.getByRole('searchbox', { name: 'Tìm câu hỏi' });
+  await search.fill('ma qr');
+  await expect(page.getByRole('status')).toContainText('1 câu hỏi phù hợp');
+  const question = page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' });
+  await question.focus();
+  await question.press('Enter');
+  await expect(question).toHaveAttribute('aria-expanded', 'true');
+  await search.fill('khong co ket qua nay');
+  await expect(page.getByRole('status')).toContainText('Không tìm thấy câu hỏi phù hợp.');
+  await page.getByRole('button', { name: 'Xóa tìm kiếm câu hỏi' }).click();
+  await expect(page.getByRole('button', { name: 'Tiền kiểm hồ sơ là gì?' })).toBeVisible();
+});
+
+test('hướng dẫn mở đúng bước theo đường dẫn và mục lục', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/huong-dan#gui-tien-kiem');
+  await expect(page.getByRole('heading', { name: 'Kiểm tra và gửi tiền kiểm' })).toBeInViewport();
+  const contents = page.getByRole('navigation', { name: 'Mục lục hướng dẫn' });
+  const next = contents.getByRole('link', { name: 'Theo dõi và bổ sung nếu cần' });
+  await next.click();
+  await expect(page).toHaveURL('/huong-dan#bo-sung');
+  await expect(next).toHaveAttribute('aria-current', 'location');
+  await expect(page.getByRole('heading', { name: 'Theo dõi và bổ sung nếu cần' })).toBeInViewport();
+});
+
 test('trang hồ sơ cho phép chỉnh sửa và lưu thông tin cá nhân', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
   await page.goto('/citizen');
@@ -113,6 +141,17 @@ test('trang thủ tục hỗ trợ tìm kiếm không dấu, lọc lĩnh vực v
   await expect(page.getByText('Chưa tìm thấy thủ tục phù hợp')).toBeVisible();
   await page.getByRole('button', { name: 'Xem tất cả thủ tục' }).click();
   await expect(page.getByText('6 thủ tục phù hợp')).toBeVisible();
+});
+
+test('trang thủ tục có ô lọc lĩnh vực gọn trên điện thoại', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/thu-tuc');
+  const category = page.getByRole('combobox', { name: 'Chọn lĩnh vực' });
+  await expect(category).toBeVisible();
+  await category.selectOption({ label: 'Chứng thực' });
+  await expect(page).toHaveURL(/category=/);
+  await expect(page.getByRole('link', { name: /Xem Chứng thực/ }).first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('trang quản trị hiển thị tổng quan và menu mobile không tràn ngang', async ({ page }) => {
