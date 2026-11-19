@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockWorkspaceAuth } from './fixtures/auth';
-import { mockCatalog, sampleProcedure } from './fixtures/procedures';
+import { catalogReply, mockCatalog, sampleProcedure } from './fixtures/procedures';
 
 test('không tự tạo hồ sơ mẫu khi dịch vụ hồ sơ chưa tích hợp', async ({ page }) => {
   await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
@@ -103,4 +103,17 @@ test('yêu cầu bắt buộc chọn phường/xã khi tạo hồ sơ và truy�
   await expect.poll(() => createdPayload).not.toBeNull();
   expect(createdPayload?.wardCode).toBe('WARD_A');
   expect(createdPayload?.procedureId).toBe(sampleProcedure.id);
+});
+
+test('Chuẩn bị hồ sơ chọn sẵn đúng thủ tục trên URL khi danh sách thủ tục đã có trong cache (L05)', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
+  await mockCatalog(page);
+  const id = '07000000-0000-0000-0000-000000000011';
+  await page.route(`**/api/v1/procedures/${id}`, route => catalogReply(route, { json: { ...sampleProcedure, id, title: 'Thủ tục API số 2' } }));
+  await page.goto('/citizen');
+  await expect(page.locator('main')).toBeVisible();
+  await page.evaluate(path => { history.pushState({}, '', path); dispatchEvent(new PopStateEvent('popstate')); }, `/thu-tuc/${id}`);
+  await page.getByRole('link', { name: 'Chuẩn bị hồ sơ', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('#create-procedure')).toHaveText(/Thủ tục API số 2/);
 });

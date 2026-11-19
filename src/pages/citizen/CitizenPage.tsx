@@ -148,10 +148,12 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       consumedProcedure.current = requestedProcedureId;
       setSelectedProcedureId(requestedProcedureId);
       setIsCreateModalOpen(true);
-    } else if (availableProcedures.length > 0 && !selectedProcedureId) {
-      setSelectedProcedureId(availableProcedures[0].id);
+    } else if (availableProcedures.length > 0) {
+      // Cập nhật dạng hàm: không ghi đè thủ tục vừa chọn theo procedureId trên URL khi effect chạy lại
+      // trước lúc state kịp cập nhật (danh sách đã có trong cache → lỗi chọn sẵn sai thủ tục).
+      setSelectedProcedureId((current) => current || availableProcedures[0].id);
     }
-  }, [availableProcedures, requestedProcedureId, selectedProcedureId]);
+  }, [availableProcedures, requestedProcedureId]);
 
   useEffect(() => {
     const nextCase = selectedProcedureId === requestedProcedureId && requestedCaseCode && availableCases.some((item) => item.caseCode === requestedCaseCode)
@@ -359,7 +361,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         void handleOpenDossierDetail(found);
       }
     }
-  }, [urlSection, urlDossierCode, urlDossierId, dossiers]);
+  }, [urlSection, urlDossierCode, urlDossierId, dossiers]);
   const meta = sectionTitles[activeSection] || { title: 'Cổng dịch vụ công dân' };
 
   function selectSection(id: CitizenSectionId) {
