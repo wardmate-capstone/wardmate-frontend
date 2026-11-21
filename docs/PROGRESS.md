@@ -1,5 +1,13 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-AZURE-MOVE-1121 — Chuyển sang Gateway Azure mới — 21/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Theo bàn giao BE `fe-handoff-2026-11-20-azure-move.md`: subscription cũ (`blackmeadow-a2f12767`) bị vô hiệu hóa; mọi service đi qua Gateway `https://wardmate-gateway.bravetree-f6485744.japaneast.azurecontainerapps.io`.
+- `vercel.json`: gom 25 rewrite tới IAM/Catalog/Workflow/Gateway cũ thành một rule `/api/:path*` → Gateway mới (đã đối chiếu YARP `appsettings*.json`: Gateway có route cho mọi tiền tố FE dùng). `.env.example` và `.env.development.local` (local, ignored): cả 5 biến `VITE_*_URL` = Gateway mới.
+- `vite.config.ts`: proxy dev bỏ header Origin (kể cả WebSocket) thay vì đặt Origin = đích. Lý do: IAM sau Gateway trả 403 `iam.csrf_rejected` khi Origin = Gateway; không Origin + `X-CSRF-Protection: 1` thì qua. Origin `https://wardmate-frontend.vercel.app` được Gateway chấp nhận (preflight 204, login 401 đúng mã).
+- Kiểm tra thật 21/11 qua Vite dev proxy (không token): login 401 `iam.invalid_credentials`, `/procedures` 200, `/system/app-config` 200, `/form-templates` 401, negotiate hub 401. Không chạy bộ test tự động.
+- **Còn phải làm thủ công:** cập nhật 5 biến `VITE_*_URL` trên Vercel (Production + Preview) rồi redeploy. Người dùng phải đăng nhập lại; PDF/DOCX/tệp cũ cần tải lại theo mục 3 bàn giao BE. Tài liệu audit cũ trong `docs/` giữ URL cũ làm bản ghi lịch sử.
+
 ## FE-UIREVIEW-1118 — Sửa phần FE của báo cáo rà soát UI/UX 18/11/2026 — 19/11/2026 (Asia/Saigon, UTC+07:00)
 
 Chỉ sửa FE (theo chủ dự án: không sửa BE, không ghi dữ liệu production). Mã lỗi theo báo cáo `ui-review-2026-11-18.pdf`.

@@ -6,7 +6,15 @@ import tailwindcss from '@tailwindcss/vite';
 function proxyTo(target?: string): ProxyOptions | undefined {
   const normalized = target?.trim().replace(/\/+$/, '');
   if (!normalized) return undefined;
-  return { target: normalized, changeOrigin: true, secure: true, headers: { Origin: normalized } };
+  // Bỏ Origin khi chuyển tiếp: IAM đứng sau Gateway nên Origin = Gateway bị 403 iam.csrf_rejected;
+  // request không Origin vẫn qua kiểm tra CSRF nhờ header X-CSRF-Protection.
+  return {
+    target: normalized, changeOrigin: true, secure: true,
+    configure: (proxy) => {
+      proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
+      proxy.on('proxyReqWs', (proxyReq) => proxyReq.removeHeader('origin'));
+    },
+  };
 }
 
 export default defineConfig(({ mode }) => {

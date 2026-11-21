@@ -1,33 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/api/v1/system/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/system/:path*" },
-    { "source": "/api/v1/analytics/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/analytics/:path*" },
-    { "source": "/api/v1/citizen/feedback/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/citizen/feedback/:path*" },
-    { "source": "/api/v1/admin/notification-deliveries/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/admin/notification-deliveries/:path*" },
-
-    { "source": "/api/v1/citizen/submissions/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/citizen/submissions/:path*" },
-    { "source": "/api/v1/officer/submissions/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/officer/submissions/:path*" },
-    { "source": "/api/v1/supporting-documents/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/supporting-documents/:path*" },
-    { "source": "/api/v1/generated-documents/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/generated-documents/:path*" },
-    { "source": "/api/v1/applications/:id/:sub(contents|supporting-documents|generate-pdf|generated-documents|approved-qr|file-versions)/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/applications/:id/:sub/:path*" },
-    { "source": "/api/v1/form-templates/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/form-templates/:path*" },
-    { "source": "/api/analytics-system/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/analytics-system/:path*" },
-
-    { "source": "/api/v1/ai-ocr/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/ai-ocr/:path*" },
-    { "source": "/api/v1/ai/chat/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/ai/chat/:path*" },
-    { "source": "/api/v1/ai/knowledge/:path*", "destination": "https://wardmate-gateway.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/ai/knowledge/:path*" },
-
-    { "source": "/api/v1/procedures/:path*", "destination": "https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/procedures/:path*" },
-    { "source": "/api/v1/procedure-manager/:path*", "destination": "https://wardmate-procedure-catalog.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/procedure-manager/:path*" },
-
-    { "source": "/api/v1/staffing/:path*", "destination": "https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/staffing/:path*" },
-    { "source": "/api/v1/officer/applications/:path*", "destination": "https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/officer/applications/:path*" },
-    { "source": "/api/v1/officer/activity/:path*", "destination": "https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/officer/activity/:path*" },
-    { "source": "/api/v1/manager/applications/:path*", "destination": "https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/manager/applications/:path*" },
-    { "source": "/api/v1/applications/:path*", "destination": "https://wardmate-application-workflow.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/v1/applications/:path*" },
-
-    { "source": "/api/:path*", "destination": "https://wardmate-iam.blackmeadow-a2f12767.japaneast.azurecontainerapps.io/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://wardmate-gateway.bravetree-f6485744.japaneast.azurecontainerapps.io/api/:path*" },
 
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
