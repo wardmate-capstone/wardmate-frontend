@@ -1,5 +1,10 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-CITIZEN-QR-MENU-1121 — Đưa "Mã QR hồ sơ" trở lại menu công dân — 21/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Người dùng duyệt lại quyết định 19/11 (FE-UNIFY: bỏ Mã QR khỏi menu): trang Mã QR là nơi gom mọi mã QR (tìm kiếm, tải xuống), người dân cần mở nhanh tại quầy. `CitizenPage.tsx` thêm mục `qr_code` "Mã QR hồ sơ" (icon `QrCode`, quyền `document.submissions.read`) dưới "Hồ sơ của tôi" trong nhóm Hồ sơ & Chuẩn bị. Nút "Mã QR" trên dòng hồ sơ giữ nguyên; "Đánh giá dịch vụ" vẫn chỉ mở từ nút trên dòng.
+- Mở từ menu khi chưa chọn hồ sơ: `CitizenQrCodeView` tự chọn hồ sơ đủ điều kiện đầu tiên. `tsc --noEmit` đạt; chưa chạy Playwright.
+
 ## FE-QR-LINK-1121 — Link tra cứu trong mã QR sau khi BE đổi Azure — 21/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Lỗi: bấm "Mở liên kết tra cứu trong mã QR" trả `{"error":"Failed to resolve route"}` (502). BE lưu cố định `qrCodeValue` + ảnh PNG lúc cấp mã; QR cấp trước 20/11 vẫn trỏ Gateway cũ `blackmeadow-a2f12767` đã chết. BE chỉ regenerate khi value thiếu `/pdf-redirect` nên xuất lại PDF không sửa được.

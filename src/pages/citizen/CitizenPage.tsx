@@ -41,6 +41,7 @@ import {
   Hourglass,
   List,
   Plus,
+  QrCode,
   SidebarSimple,
   UserCircle,
   WarningCircle,
@@ -406,10 +407,12 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         { id: 'dossiers_approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, permissions: ['document.submissions.read'] },
         { id: 'dossiers_cancelled', label: 'Đã hủy', icon: XCircle, permissions: ['document.submissions.read'] },
       ] },
+      // Lối vào thẳng kho mã QR: người dân thường cần mã ngay tại quầy Một cửa, không phải tìm từng dòng hồ sơ.
+      { id: 'qr_code', label: 'Mã QR hồ sơ', icon: QrCode, permissions: ['document.submissions.read'] },
     ] },
     { title: 'Tiện ích & Hỗ trợ', items: [
       { id: 'notifications', label: 'Thông báo', icon: Bell, fallbackRoles: citizenRole },
-      // Mã QR và Đánh giá dịch vụ không còn trên menu: mở từ nút trên dòng hồ sơ (danh sách, Tổng quan); section vẫn giữ.
+      // Đánh giá dịch vụ gắn với từng hồ sơ nên chỉ mở từ nút trên dòng hồ sơ (danh sách, Tổng quan); section vẫn giữ.
       { id: 'profile', label: 'Hồ sơ cá nhân', icon: UserCircle, permissions: ['iam.profile.read', 'iam.profile.write'] },
     ] },
   ];
