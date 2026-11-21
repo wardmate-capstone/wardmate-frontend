@@ -1,5 +1,11 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-QR-LINK-1121 — Link tra cứu trong mã QR sau khi BE đổi Azure — 21/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Lỗi: bấm "Mở liên kết tra cứu trong mã QR" trả `{"error":"Failed to resolve route"}` (502). BE lưu cố định `qrCodeValue` + ảnh PNG lúc cấp mã; QR cấp trước 20/11 vẫn trỏ Gateway cũ `blackmeadow-a2f12767` đã chết. BE chỉ regenerate khi value thiếu `/pdf-redirect` nên xuất lại PDF không sửa được.
+- FE: `qrLookupLink` (`src/lib/api/documentForms.ts`) gắn lại đường dẫn `/api/v1/public/*` vào Gateway hiện tại (cùng origin khi proxy, ngược lại `VITE_DOCUMENT_FORM_API_URL`); link khác giữ nguyên qua `safeDocumentLink`. `CitizenQrCodeView` dùng hàm này. `tsc --noEmit` đạt; link đã đổi gọi thật qua Vercel và Gateway mới tới được BE (404 `qr.not_found` với id giả).
+- **Còn chờ BE:** ảnh QR PNG (quét tại quầy, nút Tải xuống, màn QR mobile) vẫn chứa host cũ — cần BE regenerate QR có host khác `QrCode:VerificationBaseUrl`. PDF cũ mất theo kho blob: cán bộ phải xuất lại PDF, trước đó link mới trả 404 `qr.pdf_not_found`/`qr.pdf_blob_missing`.
+
 ## FE-AZURE-MOVE-1121 — Chuyển sang Gateway Azure mới — 21/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Theo bàn giao BE `fe-handoff-2026-11-20-azure-move.md`: subscription cũ (`blackmeadow-a2f12767`) bị vô hiệu hóa; mọi service đi qua Gateway `https://wardmate-gateway.bravetree-f6485744.japaneast.azurecontainerapps.io`.

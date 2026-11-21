@@ -328,6 +328,18 @@ export function safeDocumentLink(value: string) {
   catch { return undefined; }
 }
 
+// Link trong mã QR do BE lưu cố định lúc cấp mã, nên QR cấp trước khi BE đổi máy chủ (vd. Azure cũ blackmeadow,
+// 20/11/2026) vẫn trỏ host đã chết → "Failed to resolve route". Route công khai /api/v1/public/* luôn đi qua
+// Gateway, nên gắn lại đường dẫn vào Gateway hiện tại (cùng origin khi dùng proxy Vercel/Vite).
+export function qrLookupLink(value: string) {
+  const safe = safeDocumentLink(value);
+  if (!safe) return undefined;
+  const url = new URL(safe);
+  if (!url.pathname.startsWith('/api/v1/public/')) return safe;
+  const base = serviceUrls.documentForm || (typeof window !== 'undefined' ? window.location.origin : '');
+  return base ? new URL(`${url.pathname}${url.search}`, `${base}/`).href : safe;
+}
+
 export function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob); const link = document.createElement('a');
   link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); link.remove();

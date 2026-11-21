@@ -18,7 +18,7 @@ import {
   documentFormApi,
   documentFormError,
   downloadBlob,
-  safeDocumentLink,
+  qrLookupLink,
 } from '@/lib/api/documentForms';
 import { copyToClipboard } from '@/lib/clipboard';
 import type { CitizenDossier, CitizenSectionId } from '../types';
@@ -224,7 +224,7 @@ function ApprovedQr({
     return () => URL.revokeObjectURL(url);
   }, [binaryQuery.data?.blob]);
 
-  const lookupValue = qr.data?.qrCodeValue ? safeDocumentLink(qr.data.qrCodeValue) : null;
+  const lookupValue = qr.data?.qrCodeValue ? qrLookupLink(qr.data.qrCodeValue) : null;
 
   const downloadFileName = `Ma-QR-${dossier.code}.png`;
 
