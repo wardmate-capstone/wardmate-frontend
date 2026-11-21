@@ -15,10 +15,10 @@ async function openKnowledge(page: Page, roles = ['PROCEDURE_MANAGER'], path = '
 
 test('procedure manager sees index status and documents; procedure sources are not editable', async ({ page }) => {
   const ai = await openKnowledge(page);
-  await expect(page.getByText('Tạo vector: Đang bật')).toBeVisible();
+  await expect(page.getByText('Chuẩn bị tài liệu cho AI: Đang bật')).toBeVisible();
   await expect(page.getByText('Trả lời theo nguồn: Đang tắt')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Hỏi đáp khai sinh', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Lỗi tạo vector' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Lỗi chuẩn bị cho AI' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sửa Đăng ký khai sinh từ API' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Dùng lại Đăng ký khai sinh từ API' })).toBeVisible();
   // Search is paid per call: never sent just by opening the screen.

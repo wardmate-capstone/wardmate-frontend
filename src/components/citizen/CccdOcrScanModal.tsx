@@ -166,7 +166,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     }
 
     if (!isSupportedCccdImage(file)) {
-      setError('Ảnh mặt trước phải là ảnh JPEG, PNG, WebP hoặc HEIC.');
+      setError('Vui lòng chọn ảnh chụp mặt trước (JPG, PNG hoặc ảnh từ điện thoại).');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -197,7 +197,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
     }
 
     if (!isSupportedCccdImage(file)) {
-      setError('Ảnh mặt sau phải là ảnh JPEG, PNG, WebP hoặc HEIC.');
+      setError('Vui lòng chọn ảnh chụp mặt sau (JPG, PNG hoặc ảnh từ điện thoại).');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -428,7 +428,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                       </div>
                       <div>
                         <span className="font-semibold text-slate-800 block text-xs group-hover:text-red-800 transition-colors">Tải ảnh mặt trước</span>
-                        <span className="text-[10px] text-slate-500 block mt-0.5">Hỗ trợ JPG, PNG, WebP, HEIC (tối đa 8MB)</span>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Ảnh chụp từ điện thoại hoặc máy tính, tối đa 8 MB</span>
                         <span className="text-[10px] text-slate-400 block mt-1">Chụp đủ 4 góc, rõ nét chữ và số</span>
                       </div>
                     </button>

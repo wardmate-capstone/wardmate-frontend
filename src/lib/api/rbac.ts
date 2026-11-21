@@ -32,7 +32,7 @@ export const rbacApi = {
 };
 
 export function rbacError(error: unknown): string {
-  if (error instanceof z.ZodError) return 'Dữ liệu phân quyền từ máy chủ không đúng định dạng.';
+  if (error instanceof z.ZodError) return 'Không đọc được dữ liệu phân quyền. Vui lòng tải lại.';
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
     const message = data?.detail ?? data?.title;

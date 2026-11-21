@@ -7,7 +7,7 @@ export function vietnamToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 // .NET Guid is not restricted to RFC UUID version/variant bits.
-export const guidSchema = z.guid('ID phải là GUID hợp lệ.').refine(value => value !== '00000000-0000-0000-0000-000000000000', 'ID không được rỗng.');
+export const guidSchema = z.guid('Mã không hợp lệ.').refine(value => value !== '00000000-0000-0000-0000-000000000000', 'ID không được rỗng.');
 const date = z.iso.date('Ngày không hợp lệ.');
 export const dateRangeSchema = z.object({ from: date, to: date }).superRefine((value, ctx) => {
   if (value.from < '2000-01-01') ctx.addIssue({ code: 'custom', path: ['from'], message: 'Chọn ngày từ 01/01/2000.' });

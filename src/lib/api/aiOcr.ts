@@ -417,7 +417,7 @@ export const aiOcrApi = {
         }
         if (status === 415) {
           throw new Error(
-            "Định dạng tệp không được hỗ trợ. Vui lòng tải ảnh CCCD định dạng PNG hoặc JPEG.",
+            "Loại tệp này chưa dùng được. Vui lòng chọn ảnh CCCD dạng JPG hoặc PNG.",
           );
         }
         if (status === 429) {
@@ -603,7 +603,7 @@ export const aiOcrApi = {
 
         if (status === 429 && code === 'ai.provider_busy') {
           const waitTime = !isNaN(retryAfterSec ?? NaN) && (retryAfterSec ?? 0) > 0 ? `${retryAfterSec} giây` : 'chốc lát';
-          const errorObj = new Error(`Dịch vụ AI đang bận hoặc quá tải hạn mức. Vui lòng thử lại sau ${waitTime}.`);
+          const errorObj = new Error(`Trợ lý AI đang bận. Vui lòng thử lại sau ${waitTime}.`);
           Object.assign(errorObj, { retryAfter: retryAfterSec, code: 'ai.provider_busy' });
           throw errorObj;
         }
@@ -785,22 +785,22 @@ const aiErrorMessages: Record<string, string> = {
   "knowledge.catalog_invalid_response":
     "Danh mục thủ tục trả dữ liệu không hợp lệ. Vui lòng thử lại sau.",
   "knowledge.catalog_not_configured":
-    "Dịch vụ AI chưa được cấu hình kết nối danh mục thủ tục.",
+    "AI chưa kết nối được danh mục thủ tục. Vui lòng báo bộ phận vận hành.",
   "knowledge.forbidden":
     "Bạn chưa có quyền quản lý dữ liệu kiến thức AI (knowledge.manage).",
   "knowledge.iam_unavailable":
     "Chưa xác minh được quyền truy cập. Vui lòng thử lại sau.",
   "knowledge.database_unavailable": "Cơ sở dữ liệu kiến thức AI chưa sẵn sàng.",
   "knowledge.embedding_disabled":
-    "Máy chủ chưa bật tạo vector (embedding), nên chưa tìm kiếm theo nguồn được.",
+    "Chức năng chuẩn bị tài liệu cho AI đang tắt, nên AI chưa tìm được nguồn. Vui lòng báo bộ phận vận hành.",
   "knowledge.embedding_not_configured":
-    "Máy chủ chưa cấu hình dịch vụ tạo vector.",
+    "Chức năng chuẩn bị tài liệu cho AI chưa được bật. Vui lòng báo bộ phận vận hành.",
   "knowledge.embedding_unavailable":
     "Dịch vụ tìm nguồn tạm thời không phản hồi. Vui lòng thử lại sau.",
   "knowledge.embedding_invalid":
     "Dịch vụ tìm nguồn trả kết quả không hợp lệ. Vui lòng thử lại sau.",
   "knowledge.index_too_large":
-    "Kho kiến thức vượt giới hạn tìm kiếm của máy chủ.",
+    "Kho kiến thức quá lớn để tìm kiếm. Vui lòng báo bộ phận vận hành.",
   "chat.invalid_input": "Câu hỏi chưa hợp lệ. Vui lòng nhập lại.",
   "chat.invalid_feedback": "Đánh giá chưa hợp lệ. Vui lòng chọn lại lý do hoặc rút ngắn góp ý.",
   "chat.message_not_found": "Không tìm thấy câu trả lời để đánh giá. Vui lòng tải lại cuộc trò chuyện.",
@@ -832,9 +832,9 @@ const aiErrorMessages: Record<string, string> = {
   "ai.application_not_under_review":
     "Hồ sơ cần được cán bộ tiếp nhận (đang thụ lý) trước khi dùng trợ lý AI kiểm tra.",
   "ai.workflow_not_configured":
-    "Hệ thống AI chưa cấu hình kết nối tới dịch vụ quản lý hồ sơ.",
+    "AI tạm thời chưa đọc được hồ sơ. Vui lòng báo bộ phận vận hành.",
   "ai.document_service_not_configured":
-    "Hệ thống AI chưa cấu hình kết nối tới dịch vụ tài liệu.",
+    "AI tạm thời chưa đọc được tài liệu. Vui lòng báo bộ phận vận hành.",
   "ai.document_not_found":
     "Giấy tờ không thuộc danh mục tài liệu minh chứng của hồ sơ này.",
   "ai.document_access_failed":
@@ -856,7 +856,7 @@ export function aiErrorCode(error: unknown): string | undefined {
 
 export function aiError(error: unknown): string {
   if (error instanceof z.ZodError)
-    return "Dịch vụ AI trả dữ liệu không đúng định dạng.";
+    return "Trợ lý AI trả kết quả lỗi. Vui lòng thử lại.";
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { code?: string; title?: string; traceId?: string } | undefined;
     const code = aiErrorCode(error);

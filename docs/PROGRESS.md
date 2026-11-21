@@ -1,5 +1,11 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-PLAIN-TEXT-1121 — Đổi chữ kỹ thuật sang lời dễ hiểu — 21/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Rà 5.578 chuỗi hiển thị trong `src/`, sửa ~55 câu ở 26 tệp nguồn; chỉ đổi câu chữ, không đổi logic/API. Mức sửa theo người đọc: công dân/công khai/lỗi chung sửa hết; cán bộ/quản lý/quản lý thủ tục bỏ GUID, JSON, byte, backend, máy chủ, vector; trang quản trị IT (sức khỏe dịch vụ, sao lưu, HTTP, token, mã tra cứu) giữ thuật ngữ, chỉ sửa câu lẫn tiếng Anh.
+- Ví dụ: "72 byte UTF-8" → "Mật khẩu quá dài…"; "Dữ liệu kê khai phải là object JSON, tối đa 65.536 byte UTF-8" → "Nội dung tờ khai quá dài hoặc chưa hợp lệ…"; "JPEG, PNG, WebP hoặc HEIC" → "JPG, PNG hoặc ảnh chụp từ điện thoại"; "Không thể kết nối máy chủ" → "Không kết nối được…"; "bảo vệ CSRF" → "Hệ thống từ chối yêu cầu gửi từ trang này"; "Mã template không được là GUID rỗng" → "Chưa chọn biểu mẫu"; kho kiến thức "tạo vector" → "chuẩn bị tài liệu cho AI"/"Cho AI đọc lại"; "Dịch vụ AI" → "Trợ lý AI"; "phiên bản delivery" → "Lượt gửi vừa được người khác cập nhật…".
+- Cập nhật 5 test Playwright đang khẳng định câu cũ. `tsc --noEmit` đạt; chưa chạy Playwright.
+
 ## FE-CITIZEN-QR-MENU-1121 — Đưa "Mã QR hồ sơ" trở lại menu công dân — 21/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Người dùng duyệt lại quyết định 19/11 (FE-UNIFY: bỏ Mã QR khỏi menu): trang Mã QR là nơi gom mọi mã QR (tìm kiếm, tải xuống), người dân cần mở nhanh tại quầy. `CitizenPage.tsx` thêm mục `qr_code` "Mã QR hồ sơ" (icon `QrCode`, quyền `document.submissions.read`) dưới "Hồ sơ của tôi" trong nhóm Hồ sơ & Chuẩn bị. Nút "Mã QR" trên dòng hồ sơ giữ nguyên; "Đánh giá dịch vụ" vẫn chỉ mở từ nút trên dòng.

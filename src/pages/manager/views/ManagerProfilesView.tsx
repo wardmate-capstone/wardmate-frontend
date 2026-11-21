@@ -197,7 +197,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
             <strong className="block font-bold mb-0.5 text-amber-950">
               {error.includes('quyền') || error.includes('403') || error.includes('forbidden')
                 ? 'Chưa phân bổ Phường công tác'
-                : 'Thông báo từ máy chủ'}
+                : 'Thông báo từ hệ thống'}
             </strong>
             <p>
               {error.includes('quyền') || error.includes('403') || error.includes('forbidden')

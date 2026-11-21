@@ -197,7 +197,7 @@ test('chọn file không hợp lệ xóa file thử lại và thông báo thành
   await input.setInputFiles(valid);
   await expect(page.getByRole('button', { name: 'Thử lưu lại tờ khai: ghi-chu.docx' })).toBeEnabled();
   await input.setInputFiles({ ...valid, name: 'sai.pdf' });
-  await expect(page.getByText('Vui lòng chọn tệp DOCX.')).toBeVisible();
+  await expect(page.getByText('Vui lòng chọn tệp Word (.docx).')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Thử lưu lại tờ khai/ })).toHaveCount(0);
   fail = false;
   await input.setInputFiles(valid);

@@ -126,14 +126,14 @@ export const notificationAdminApi = {
 
 export function notificationAdminError(error: unknown): string {
   if (error instanceof z.ZodError) {
-    return 'Dữ liệu phát thông báo trả về từ máy chủ không đúng định dạng.';
+    return 'Không đọc được dữ liệu lượt gửi thông báo. Vui lòng tải lại.';
   }
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const data = error.response?.data as { code?: string; title?: string; detail?: string };
     if (status === 403) return 'Bạn không có quyền quản trị phát thông báo.';
     if (status === 404) return 'Không tìm thấy lượt phát thông báo.';
-    if (status === 409) return data?.title || 'Xung đột phiên bản delivery hoặc kênh đã bị đóng.';
+    if (status === 409) return data?.title || 'Lượt gửi vừa được người khác cập nhật hoặc kênh gửi đã đóng. Vui lòng tải lại.';
     if (data?.title) return data.title;
   }
   return error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi xử lý thông báo.';

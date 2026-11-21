@@ -185,7 +185,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   markRead: async (id: string) => {
     const conn = activeConnection;
-    if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối máy chủ thông báo.');
+    if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối được thông báo. Vui lòng thử lại.');
     await conn.invoke('MarkRead', id);
     set((state) => ({
       items: state.items.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
@@ -198,7 +198,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   markAllRead: async () => {
     const conn = activeConnection;
-    if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối máy chủ thông báo.');
+    if (!conn || !isConnected(conn)) throw new Error('Chưa kết nối được thông báo. Vui lòng thử lại.');
     const { items, unreadCount } = get();
     // Còn thông báo chưa đọc ở trang chưa tải về thì chuông vẫn > 0 dù danh sách đang hiển thị đã đọc hết
     if (unreadCount <= 0 && !items.some((n) => !n.isRead)) return;

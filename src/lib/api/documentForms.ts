@@ -275,7 +275,7 @@ export function validateDocumentFile(file: File, docxOnly = false): string | nul
   if (file.size > DOCUMENT_MAX_BYTES) return 'Tệp vượt quá giới hạn 20 MB.';
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (docxOnly ? extension !== 'docx' : !SUPPORTING_EXTENSIONS.includes(extension as typeof SUPPORTING_EXTENSIONS[number]))
-    return docxOnly ? 'Vui lòng chọn tệp DOCX.' : 'Chỉ hỗ trợ PDF, ảnh (JPG, PNG, HEIC, WebP), DOC và DOCX.';
+    return docxOnly ? 'Vui lòng chọn tệp Word (.docx).' : 'Chỉ nhận tệp PDF, ảnh chụp hoặc tệp Word.';
   return null;
 }
 
@@ -294,7 +294,7 @@ export function documentFormError(error: unknown): string {
       'document.storage_unavailable': 'Kho lưu trữ tài liệu tạm thời không phản hồi.',
       'document.blob_upload_failed': 'Kho lưu trữ chưa thể lưu tệp Word. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
       'document.empty_file': 'Tệp đã chọn không có nội dung.',
-      'document.invalid_docx_file': 'Tệp DOCX không hợp lệ hoặc bị hỏng. Vui lòng kiểm tra lại bằng Word.',
+      'document.invalid_docx_file': 'Tệp Word bị lỗi hoặc không mở được. Vui lòng mở bằng Word, lưu lại rồi tải lên lại.',
       'document.file_too_large': 'Tệp vượt quá giới hạn 20 MB.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
       'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Bạn có thể tạo PDF từ tờ khai sẵn sàng rồi tải lại mã QR.',

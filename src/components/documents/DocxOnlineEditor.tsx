@@ -123,7 +123,7 @@ const vi = {
     missingResource: 'Không tìm thấy ảnh',
     externalResource: 'Chưa tải ảnh bên ngoài',
     invalidResource: 'Ảnh không hợp lệ',
-    contentMismatch: 'Nội dung ảnh không khớp định dạng',
+    contentMismatch: 'Tệp ảnh bị lỗi hoặc không đúng loại ảnh',
     decodeFailed: 'Không đọc được ảnh',
     resourceLimit: 'Ảnh vượt giới hạn kích thước',
     pendingResource: 'Đang tải ảnh',
@@ -676,7 +676,7 @@ export default function DocxOnlineEditor({
         {/* Editor Main Canvas */}
         <main
           className="relative flex-1 min-h-0 h-full overflow-hidden"
-          aria-label="Vùng soạn thảo DOCX khổ lớn"
+          aria-label="Vùng soạn thảo tờ khai"
           onKeyDownCapture={(event) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
               event.preventDefault();

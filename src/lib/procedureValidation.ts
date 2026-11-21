@@ -127,7 +127,7 @@ const saveSchema = procedureInputSchema.superRefine((data, context) => {
     required(form.formName, ['formDefinitions', i, 'formName']);
     maxLength(form.formName, LINE, ['formDefinitions', i, 'formName']);
     if (form.formTemplateId === '00000000-0000-0000-0000-000000000000') {
-      context.addIssue({ code: 'custom', path: ['formDefinitions', i, 'formTemplateId'], message: 'Mã template không được là GUID rỗng.' });
+      context.addIssue({ code: 'custom', path: ['formDefinitions', i, 'formTemplateId'], message: 'Chưa chọn biểu mẫu.' });
     }
     if (form.caseCode && !codes.has(form.caseCode.trim())) {
       context.addIssue({ code: 'custom', path: ['formDefinitions', i, 'caseCode'], message: 'Mã trường hợp của biểu mẫu phải thuộc thủ tục.' });

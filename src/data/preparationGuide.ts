@@ -16,7 +16,7 @@ export const guideSteps = [
   {
     id: 'chuan-bi', number: '03', icon: Files, title: 'Điền tờ khai và thêm giấy tờ',
     description: 'Hoàn thành từng mục trong danh sách, điền biểu mẫu và lưu tài liệu rõ nét.',
-    tasks: ['Điền biểu mẫu trực tuyến hoặc tải phôi DOCX, điền và tải lại theo hướng dẫn của từng mục.', 'Tải giấy tờ đúng mục, khai đúng số bản; kiểm tra loại và dung lượng tệp được chấp nhận.'],
+    tasks: ['Điền biểu mẫu trực tuyến, hoặc tải mẫu Word về điền rồi tải lên lại theo hướng dẫn của từng mục.', 'Tải giấy tờ đúng mục, khai đúng số bản; kiểm tra loại và dung lượng tệp được chấp nhận.'],
     outcome: 'Tờ khai và giấy tờ đã được lưu trong hồ sơ. Chỉ chọn tệp trên máy chưa có nghĩa đã lưu thành công.',
   },
   {

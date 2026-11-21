@@ -489,11 +489,11 @@ const iamErrorMessages: Record<string, string> = {
   // PROFILE-AVATAR-01: ảnh đại diện
   'iam.avatar_empty': 'Chưa chọn ảnh. Vui lòng chọn một tệp ảnh.',
   'iam.avatar_too_large': 'Ảnh lớn hơn 10 MB. Vui lòng chọn ảnh nhỏ hơn.',
-  'iam.image_unsupported': 'Định dạng ảnh chưa hỗ trợ. Vui lòng chọn ảnh JPEG, PNG, WebP hoặc HEIC.',
+  'iam.image_unsupported': 'Loại ảnh này chưa dùng được. Vui lòng chọn ảnh JPG, PNG hoặc ảnh chụp từ điện thoại.',
   'iam.image_unreadable': 'Không đọc được ảnh (tệp hỏng hoặc quá lớn). Vui lòng chọn ảnh khác.',
   'iam.invalid_credentials': 'Tên đăng nhập/email hoặc mật khẩu không đúng.',
   'iam.forbidden': 'Bạn không có quyền thực hiện thao tác này hoặc tài khoản nằm ngoài phạm vi quản lý của bạn.',
-  'iam.csrf_rejected': 'Yêu cầu xác thực bị từ chối. Vui lòng kiểm tra cấu hình truy cập với quản trị viên.',
+  'iam.csrf_rejected': 'Chưa đăng nhập được từ trang này. Vui lòng liên hệ quản trị viên.',
   'iam.user_not_found': 'Không tìm thấy tài khoản.',
   'iam.user_unavailable': 'Tài khoản không còn khả dụng. Vui lòng đăng nhập lại.',
   'iam.ward_not_found': 'Phường/xã không tồn tại hoặc đã bị xoá.',
@@ -520,11 +520,11 @@ export function authErrorMessage(error: unknown): string {
   if (axios.isCancel(error)) return 'Phiên đăng nhập đã thay đổi. Vui lòng thử lại.';
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    if (!status) return 'Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối và thử lại.';
+    if (!status) return 'Không kết nối được. Vui lòng kiểm tra mạng và thử lại.';
     const code = iamErrorCode(error);
     if (code && iamErrorMessages[code]) return iamErrorMessages[code];
     if (status === 401) return 'Thông tin đăng nhập không đúng hoặc phiên đã hết hạn.';
-    if (status === 403) return 'Yêu cầu xác thực bị từ chối. Vui lòng kiểm tra cấu hình truy cập với quản trị viên.';
+    if (status === 403) return 'Chưa đăng nhập được từ trang này. Vui lòng liên hệ quản trị viên.';
     if (status === 404) return 'Không tìm thấy thông tin hồ sơ.';
     if (status === 429) return 'Bạn thao tác quá nhiều lần. Vui lòng chờ rồi thử lại.';
     if (status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';

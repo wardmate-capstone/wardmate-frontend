@@ -92,7 +92,7 @@ test.describe('Chế độ khách Chatbot AI & Xử lý lỗi 503 Tiền kiểm'
     if (await verifyBtn.isVisible()) {
       await verifyBtn.click();
       // Khối cảnh báo dịch vụ AI bảo trì xuất hiện thân thiện theo hướng người dùng
-      await expect(page.getByText('Dịch vụ AI đang bảo trì')).toBeVisible();
+      await expect(page.getByText('Trợ lý AI đang bảo trì')).toBeVisible();
       await expect(page.getByText('tự đối chiếu giấy tờ')).toBeVisible();
     }
   });

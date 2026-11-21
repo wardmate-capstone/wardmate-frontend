@@ -40,6 +40,6 @@ export function defaultStaffSchedule(
       }
     }
   }
-  if (current.length + result.length > 500) throw new Error('Lịch mặc định vượt giới hạn 500 ca/tháng của hệ thống. Chưa điền thêm ca; cần điều chỉnh giới hạn ở backend trước khi áp dụng cho toàn bộ cán bộ.');
+  if (current.length + result.length > 500) throw new Error('Lịch mặc định vượt giới hạn 500 ca/tháng của hệ thống. Chưa điền thêm ca; cần nhờ bộ phận kỹ thuật nâng giới hạn trước khi áp dụng cho toàn bộ cán bộ.');
   return result;
 }

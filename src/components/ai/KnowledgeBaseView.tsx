@@ -54,7 +54,7 @@ function IndexStatusCard() {
         <h2 id="knowledge-index-status">Tình trạng sẵn sàng cho trợ lý AI</h2>
         {data && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant={data.embeddingEnabled ? 'success' : 'neutral'}>Tạo vector: {data.embeddingEnabled ? 'Đang bật' : 'Đang tắt'}</Badge>
+            <Badge variant={data.embeddingEnabled ? 'success' : 'neutral'}>Chuẩn bị tài liệu cho AI: {data.embeddingEnabled ? 'Đang bật' : 'Đang tắt'}</Badge>
             <Badge variant={data.ragEnabled ? 'success' : 'neutral'}>Trả lời theo nguồn: {data.ragEnabled ? 'Đang bật' : 'Đang tắt'}</Badge>
           </div>
         )}

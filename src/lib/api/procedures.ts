@@ -48,7 +48,7 @@ export const checklistSchema = z.array(z.object({
   // Cột "Mẫu đơn, tờ khai" của Cổng DVC: mã các formDefinitions gắn với giấy tờ này
   formCodes: z.array(z.string()).nullish(),
 }));
-export const formsSchema = z.array(z.object({ formTemplateId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).refine(val => val !== '00000000-0000-0000-0000-000000000000', { message: 'Mã template không được là GUID rỗng' }).nullish(), caseCode: z.string().nullish(), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']), quantity: z.number().int().positive().max(2147483647), isMandatory: z.boolean() }));
+export const formsSchema = z.array(z.object({ formTemplateId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).refine(val => val !== '00000000-0000-0000-0000-000000000000', { message: 'Chưa chọn biểu mẫu' }).nullish(), caseCode: z.string().nullish(), formCode: z.string(), formName: z.string(), formType: z.enum(['ONLINE_INTERACTIVE', 'DOCX_TEMPLATE']), quantity: z.number().int().positive().max(2147483647), isMandatory: z.boolean() }));
 export const checklistUpdateInputSchema = z.object({
   expectedUpdatedAt: z.string(),
   decisionNumber: z.string().trim().min(1).max(PROCEDURE_LIMITS.decisionNumber),

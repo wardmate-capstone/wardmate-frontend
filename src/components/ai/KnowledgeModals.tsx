@@ -25,9 +25,9 @@ export const sourceTypeLabels: Record<string, string> = {
 };
 
 export const statusLabels: Record<string, { label: string; variant: 'neutral' | 'info' | 'success' | 'warning' | 'danger' }> = {
-  CHUNKED: { label: 'Chờ tạo vector', variant: 'warning' },
+  CHUNKED: { label: 'Chờ chuẩn bị cho AI', variant: 'warning' },
   EMBEDDED: { label: 'Sẵn sàng tìm kiếm', variant: 'success' },
-  EMBEDDING_FAILED: { label: 'Lỗi tạo vector', variant: 'danger' },
+  EMBEDDING_FAILED: { label: 'Lỗi chuẩn bị cho AI', variant: 'danger' },
 };
 
 export function formatDateTime(value?: string | null) {
@@ -254,7 +254,7 @@ export function KnowledgeEditModal({ documentId, onClose }: { documentId: string
       open={!!documentId}
       onOpenChange={(next) => !next && !busy && onClose()}
       title="Sửa tài liệu"
-      description={doc?.sourceType === 'PDF_FILE' ? 'Tài liệu PDF chỉ đổi được tiêu đề. Muốn đổi nội dung, hãy tải PDF mới.' : 'Đổi nội dung sẽ chia đoạn lại và tạo lại vector.'}
+      description={doc?.sourceType === 'PDF_FILE' ? 'Tài liệu PDF chỉ đổi được tiêu đề. Muốn đổi nội dung, hãy tải PDF mới.' : 'Đổi nội dung thì AI sẽ đọc lại tài liệu này từ đầu.'}
       className="sm:max-w-2xl"
       footer={
         <>
@@ -411,7 +411,7 @@ export function KnowledgeDetailModal({ documentId, onClose }: { documentId: stri
             <div><dt className="text-xs text-slate-500">Số đoạn</dt><dd className="font-semibold">{doc.chunkCount}</dd></div>
             <div><dt className="text-xs text-slate-500">Cập nhật</dt><dd className="font-semibold">{formatDateTime(doc.updatedAt)}</dd></div>
             {doc.sourceReference && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Nguồn</dt><dd className="break-all">{doc.sourceReference}</dd></div>}
-            {doc.embeddedAt && <div><dt className="text-xs text-slate-500">Tạo vector lúc</dt><dd>{formatDateTime(doc.embeddedAt)}</dd></div>}
+            {doc.embeddedAt && <div><dt className="text-xs text-slate-500">Chuẩn bị cho AI lúc</dt><dd>{formatDateTime(doc.embeddedAt)}</dd></div>}
           </dl>
           {doc.warnings && doc.warnings.length > 0 && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
@@ -471,7 +471,7 @@ const actionCopy: Record<KnowledgeAction, { title: string; description: string; 
   deactivate: { title: 'Ngừng dùng tài liệu', description: 'Trợ lý AI sẽ không dùng tài liệu này nữa. Tài liệu vẫn được giữ lại và có thể dùng lại sau (không có xóa hẳn).', confirm: 'Ngừng dùng', done: 'Đã ngừng dùng tài liệu.' },
   activate: { title: 'Dùng lại tài liệu', description: 'Tài liệu sẽ được đưa lại vào kho để trợ lý AI sử dụng.', confirm: 'Dùng lại', done: 'Đã bật lại tài liệu.' },
   rechunk: { title: 'Chia đoạn lại', description: 'Chia lại nội dung đang lưu theo quy tắc chia đoạn hiện tại. Vector cũ sẽ được tạo lại.', confirm: 'Chia đoạn lại', done: 'Đã chia đoạn lại.' },
-  reindex: { title: 'Tạo lại vector', description: 'Xóa vector hiện có và đưa tài liệu vào hàng chờ tạo lại, kể cả khi đã hết lượt thử. Việc tạo vector có tính phí.', confirm: 'Tạo lại vector', done: 'Đã đưa tài liệu vào hàng chờ tạo vector.' },
+  reindex: { title: 'Cho AI đọc lại', description: 'Cho AI đọc lại tài liệu từ đầu, kể cả khi đã hết lượt thử. Việc này có tính phí.', confirm: 'Tạo lại vector', done: 'Đã đưa tài liệu vào hàng chờ để AI đọc lại.' },
 };
 
 export function KnowledgeActionModal({ target, onClose }: { target: { action: KnowledgeAction; doc: KnowledgeDocumentSummary } | null; onClose: () => void }) {

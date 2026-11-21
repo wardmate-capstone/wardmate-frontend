@@ -10,7 +10,7 @@ function workflowPath(path: string): string {
   return servicePath(serviceUrls.workflow, path);
 }
 
-const formDataInputSchema = z.record(z.string(), z.unknown()).refine(value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= 65536, 'Dữ liệu kê khai vượt quá 65.536 byte UTF-8.');
+const formDataInputSchema = z.record(z.string(), z.unknown()).refine(value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= 65536, 'Nội dung tờ khai quá dài. Vui lòng rút gọn rồi lưu lại.');
 
 // ----------------------------------------------------
 // Zod Schemas & Domain Types
@@ -465,7 +465,7 @@ export const workflowApi = {
   // === Phân hệ Công dân (Citizen) & Xem hồ sơ ===
   createApplication: async (input: CreateApplicationInput) => {
     const validation = formDataInputSchema.safeParse(input.formData);
-    if (!validation.success) throw new Error('Dữ liệu kê khai phải là object JSON, tối đa 65.536 byte UTF-8.');
+    if (!validation.success) throw new Error('Nội dung tờ khai quá dài hoặc chưa hợp lệ. Vui lòng kiểm tra rồi lưu lại.');
     const res = await api.post(workflowPath('/api/v1/applications'), input);
     return applicationDtoSchema.parse(res.data);
   },
@@ -500,7 +500,7 @@ export const workflowApi = {
 
   resubmitApplication: async (id: string, input: ResubmitInput) => {
     const validation = formDataInputSchema.safeParse(input.formData);
-    if (!validation.success) throw new Error('Dữ liệu kê khai phải là object JSON, tối đa 65.536 byte UTF-8.');
+    if (!validation.success) throw new Error('Nội dung tờ khai quá dài hoặc chưa hợp lệ. Vui lòng kiểm tra rồi lưu lại.');
     const res = await api.post(workflowPath(`/api/v1/applications/${id}/resubmit`), input);
     return reviewResultDtoSchema.parse(res.data);
   },
@@ -593,7 +593,7 @@ export function workflowError(error: unknown): string {
         return 'Dịch vụ lưu trữ giấy tờ DocumentForm tạm thời không phản hồi. Vui lòng thử lại sau.';
       }
       if (code === 'application.invalid_target') {
-        return 'Vị trí nhận xét (trường dữ liệu hoặc mục checklist) không tồn tại trong phiên bản hiện tại.';
+        return 'Mục được nhận xét không còn trong lần gửi hiện tại. Vui lòng tải lại hồ sơ.';
       }
       if (code === 'application.invalid_checklist') {
         return 'Danh sách giấy tờ gửi kèm không khớp với hồ sơ.';

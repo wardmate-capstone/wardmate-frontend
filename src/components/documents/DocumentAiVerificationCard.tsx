@@ -97,7 +97,7 @@ export function DocumentAiVerificationCard({
                   aria-hidden
                 />
                 <span>
-                  {isServerUnavailable ? 'Dịch vụ AI đang bảo trì' : 'Chưa kiểm tra được bằng AI'}
+                  {isServerUnavailable ? 'Trợ lý AI đang bảo trì' : 'Chưa kiểm tra được bằng AI'}
                 </span>
               </div>
               <Button

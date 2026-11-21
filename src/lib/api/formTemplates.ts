@@ -186,7 +186,7 @@ export function formTemplateErrorMessage(error: unknown): string {
     }
     if (error.response?.status === 403) {
       const body = error.response.data;
-      if (body?.code === 'iam.csrf_rejected') return 'Máy chủ từ chối yêu cầu do kiểm tra nguồn truy cập hoặc bảo vệ CSRF. Vui lòng liên hệ quản trị viên.';
+      if (body?.code === 'iam.csrf_rejected') return 'Hệ thống từ chối yêu cầu gửi từ trang này. Vui lòng liên hệ quản trị viên.';
       const reason = body && typeof body === 'object' ? body.detail || body.message || body.title : undefined;
       return 'Máy chủ từ chối thao tác biểu mẫu (403). ' + (typeof reason === 'string' && reason.trim() && reason !== 'Forbidden' ? reason : 'Vui lòng kiểm tra quyền truy cập biểu mẫu của tài khoản trên dịch vụ Document Form.')
         + (typeof body?.traceId === 'string' ? ` Mã hỗ trợ: ${body.traceId}` : '');

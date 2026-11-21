@@ -138,7 +138,7 @@ test.describe('Procedure Checklist Validation & API Flow', () => {
     try {
       validateProcedure(basePayload);
     } catch (e) {
-      expect((e as ProcedureValidationError).message).toContain('Mã template không được là GUID rỗng');
+      expect((e as ProcedureValidationError).message).toContain('Chưa chọn biểu mẫu');
     }
   });
 

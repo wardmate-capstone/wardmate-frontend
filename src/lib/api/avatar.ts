@@ -40,7 +40,7 @@ export function validateAvatarFile(file: File): string | undefined {
   const okType = /^image\/(jpeg|png|webp|heic|heif)$/.test(file.type);
   const okExt = /\.(jpe?g|png|webp|heic|heif)$/.test(name);
   // Một số trình duyệt không nhận diện MIME của HEIC (type rỗng) nên chấp nhận theo đuôi tệp
-  if (!okType && !okExt) return 'Định dạng ảnh chưa hỗ trợ. Vui lòng chọn ảnh JPEG, PNG, WebP hoặc HEIC.';
+  if (!okType && !okExt) return 'Loại ảnh này chưa dùng được. Vui lòng chọn ảnh JPG, PNG hoặc ảnh chụp từ điện thoại.';
   return undefined;
 }
 

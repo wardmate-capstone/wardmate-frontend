@@ -8,8 +8,8 @@ const messages: Record<string, string> = {
   'leave.overlap': 'Khoảng nghỉ trùng với đơn đang chờ hoặc đã duyệt.',
   'leave.template_unavailable': 'Mẫu đơn nghỉ chưa sẵn sàng. Vui lòng liên hệ quản trị viên.',
   'leave.storage_unavailable': 'Chưa đọc hoặc lưu được Word. Giữ nội dung đang soạn và thử lại sau.',
-  'leave.invalid_docx': 'DOCX không được hỗ trợ hoặc chứa thành phần không hợp lệ.',
-  'leave.too_large': 'DOCX vượt quá giới hạn dung lượng cho phép.',
+  'leave.invalid_docx': 'Tệp Word không mở được hoặc có nội dung chưa hỗ trợ.',
+  'leave.too_large': 'Tệp Word quá dung lượng cho phép.',
   'staffing.word_required': 'Đơn nghỉ phải có Word. Vui lòng tạo nháp và nộp theo luồng Word.',
   'schedule.changed': 'Ca hoặc lịch đã thay đổi. Đọc lại lịch trước khi lưu hoặc công bố.',
   'schedule.edit_deadline': 'Đã hết hạn sửa lịch đã công bố. Lịch chỉ được sửa chậm nhất 24 giờ trước ngày 1 của tháng đó (giờ Việt Nam).',
@@ -62,7 +62,7 @@ export function staffingError(error: unknown): string {
     if (typeof code === 'string' && Object.hasOwn(messages, code)) return messages[code] + trace;
     if (status === 503) return 'Dịch vụ tạm thời chưa sẵn sàng. Vui lòng thử lại sau; thao tác ghi không được tự động gửi lại.' + trace;
     if (status === 413) return 'Tệp vượt quá giới hạn dung lượng cho phép.';
-    if (status === 415) return 'Chỉ hỗ trợ tệp Word DOCX hợp lệ.';
+    if (status === 415) return 'Chỉ nhận tệp Word (.docx).';
     if (status === 409) return 'Dữ liệu hoặc trạng thái đã thay đổi. Vui lòng đọc lại trước khi thao tác tiếp.' + trace;
   }
   if (error instanceof Error && !axios.isAxiosError(error) && error.name !== 'ZodError') return error.message;

@@ -6,7 +6,7 @@ import { servicePath, serviceUrls } from './serviceUrls';
 
 const guid = z.guid();
 const natural = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-const time = z.string().refine(v => Number.isFinite(Date.parse(v)), 'Ngày giờ máy chủ không hợp lệ.');
+const time = z.string().refine(v => Number.isFinite(Date.parse(v)), 'Ngày giờ trong lịch không hợp lệ. Vui lòng tải lại.');
 const date = z.iso.date();
 const hash = z.string().regex(/^[a-f\d]{64}$/i);
 const monthSchema = date.refine(v => v.endsWith('-01') && Number(v.slice(0, 4)) >= 2000 && Number(v.slice(0, 4)) <= 2099);
@@ -82,7 +82,7 @@ export const workScheduleApi = {
   deleteDraft: async (id: string, version: number) => sameId(await write('delete', `/leave-drafts/${guid.parse(id)}?expectedVersion=${natural.parse(version)}`, undefined, draftSchema), id),
   draftDocx: (id: string, signal?: AbortSignal) => staffingDocx(`/leave-drafts/${guid.parse(id)}/docx`, signal),
   saveDocx: async (draft: LeaveDraft, file: File, maxBytes: number) => {
-    if (!file.name.toLowerCase().endsWith('.docx') || !file.size || file.size > maxBytes) throw new Error('Chỉ nhận DOCX không rỗng trong giới hạn dung lượng cho phép.');
+    if (!file.name.toLowerCase().endsWith('.docx') || !file.size || file.size > maxBytes) throw new Error('Chỉ nhận tệp Word (.docx) có nội dung và không quá dung lượng cho phép.');
     const body = new FormData(); body.append('file', file); body.append('expectedVersion', String(draft.version)); body.append('metadataVersion', String(draft.metadataVersion));
     const result = draftSchema.parse((await api.put(path(`/leave-drafts/${draft.id}/docx`), body, { headers: { 'Content-Type': undefined } })).data);
     sameId(result, draft.id);
@@ -98,10 +98,10 @@ export const workScheduleApi = {
   shiftImpact: (id: string, signal?: AbortSignal) => read(`/leaves/${guid.parse(id)}/shift-impact`, z.array(z.object({ shiftId: guid, shiftStartsAtUtc: time, shiftEndsAtUtc: time, overlapStartsAtUtc: time, overlapEndsAtUtc: time })), signal),
   month: async (month: string, signal?: AbortSignal) => {
     const result = await read(`/schedules/${monthSchema.parse(month)}`, monthlySchema, signal).catch(error => {
-      if (error instanceof z.ZodError) throw new Error('Dữ liệu lịch từ máy chủ không đúng định dạng. Vui lòng lấy lịch mới hoặc liên hệ hỗ trợ.');
+      if (error instanceof z.ZodError) throw new Error('Không đọc được lịch. Vui lòng tải lại lịch hoặc liên hệ hỗ trợ.');
       throw error;
     });
-    if (result.month !== month) throw new Error('Lịch máy chủ trả về không đúng tháng đang xem.'); return result;
+    if (result.month !== month) throw new Error('Lịch tải về không đúng tháng đang xem. Vui lòng tải lại.'); return result;
   },
   week: (signal?: AbortSignal) => read('/week-pattern', weekSchema, signal),
   saveWeek: (version: number, entries: WeekEntry[]) => write('put', '/week-pattern', z.object({ expectedVersion: natural, entries: z.array(weekEntrySchema).max(200) }).parse({ expectedVersion: version, entries }), weekSchema),

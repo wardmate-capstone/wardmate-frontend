@@ -38,7 +38,7 @@ async function list<T extends z.ZodType>(route: string, schema: T, query: Operat
   const filters = params(query, backup);
   const result = z.object({ items: z.array(schema), page: z.number().int().positive(), pageSize: z.number().int().positive(), totalCount: safeCount }).parse((await api.get(path(route), { params: filters, signal })).data);
   if (result.page !== query.page || result.pageSize !== query.pageSize || result.items.length > query.pageSize
-    || result.items.length > Math.max(0, result.totalCount - (query.page - 1) * query.pageSize)) throw new Error('Trang dữ liệu trả về không khớp yêu cầu. Vui lòng tải lại.');
+    || result.items.length > Math.max(0, result.totalCount - (query.page - 1) * query.pageSize)) throw new Error('Danh sách chưa tải đúng. Vui lòng tải lại.');
   return result;
 }
 export const systemOperationsApi = {

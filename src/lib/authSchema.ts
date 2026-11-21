@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const password = z.string().min(1, 'Vui lòng nhập mật khẩu.').refine(
-  value => new TextEncoder().encode(value).length <= 72, 'Mật khẩu không được vượt quá 72 byte UTF-8.',
+  value => new TextEncoder().encode(value).length <= 72, 'Mật khẩu quá dài. Vui lòng dùng mật khẩu ngắn hơn.',
 );
 
 export const loginSchema = z.object({

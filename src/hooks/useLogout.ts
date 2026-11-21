@@ -18,7 +18,7 @@ export function useLogout(redirectTo: string = '/') {
       navigate(redirectTo, { replace: true });
       return true;
     } catch (error) {
-      toast.error('Chưa xác nhận được việc thu hồi phiên trên máy chủ. ' + authErrorMessage(error), { id: 'auth-logout' });
+      toast.error('Đã đăng xuất trên máy này, nhưng hệ thống chưa xác nhận. ' + authErrorMessage(error), { id: 'auth-logout' });
       return false;
     } finally {
       pending.current = false;
