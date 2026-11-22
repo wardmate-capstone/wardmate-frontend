@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus } from '@phosphor-icons/react';
+import { FileDoc, Plus } from '@phosphor-icons/react';
 import { Button, Modal, RefreshButton } from '@/components/ui';
 import { staffingApi, type DispatchApplication, type Leave } from '@/lib/api/staffing';
 import { workScheduleApi } from '@/lib/api/workSchedules';
 import { validStaffingRange } from '@/lib/staffingValidation';
 import { AssignDialog } from './DispatchView';
 import { LeaveDraftsView, WordViewer } from './LeaveDraftsView';
+import { LeaveTemplatesDialog } from './LeaveTemplatesDialog';
 import { ActionForm, dateText, fieldClass, QueryState, StaffHeading, StaffPeriod, StaffStatus, statusText, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
 
 function LeaveDetail({ id, name, onClose }: { id: string; name: (id: string) => string; onClose: () => void }) {
@@ -49,11 +50,13 @@ export function LeaveRequestsView({ initialLeaveId }: { initialLeaveId?: string 
   const [to, setTo] = useState(today.slice(0, 7) + '-' + new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0).getDate());
   const [tab, setTab] = useState<'submitted' | 'drafts'>(officer && !initialLeaveId && can('workflow.leave.request') ? 'drafts' : 'submitted');
   const [createOpen, setCreateOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [selected, setSelected] = useState(initialLeaveId);
   const valid = validStaffingRange(from, to);
   const query = useStaffQuery(['leaves', from, to], signal => staffingApi.leaves(new Date(`${from}T00:00:00+07:00`).toISOString(), new Date(`${to}T23:59:59.999+07:00`).toISOString(), signal), valid && can('workflow.staffing.read') && tab === 'submitted');
   const capabilities = useStaffQuery(['capabilities'], signal => workScheduleApi.capabilities(signal), officer && can('workflow.leave.request'));
   const directory = useStaffDirectory(manager);
+  const canManageTemplates = manager && Boolean(user?.wardId) && can('workflow.staffing.manage');
   const name = (id: string) => {
     if (id === user?.id) return user.profile?.fullName?.trim() || user.username;
     const person = directory.data?.find(o => o.id.toLowerCase() === id.toLowerCase());
@@ -62,6 +65,7 @@ export function LeaveRequestsView({ initialLeaveId }: { initialLeaveId?: string 
   if (!can('workflow.staffing.read')) return <p role="alert">Bạn không có quyền xem nghỉ phép.</p>;
   return <section className="staff-workspace"><StaffHeading title={manager ? 'Duyệt nghỉ phép' : 'Nghỉ phép của tôi'} description={manager ? 'Theo dõi đơn nghỉ, tài liệu Word và lịch sử. Kiểm tra hồ sơ cần bàn giao trước khi quyết định.' : 'Tạo đơn nghỉ phép mới, tiếp tục soạn đơn hoặc theo dõi kết quả duyệt.'}>
       {officer && can('workflow.leave.request') && <Button size="toolbar" disabled={!capabilities.data || capabilities.isError} onClick={() => { setTab('drafts'); setCreateOpen(true); }}><Plus size={16} weight="bold" aria-hidden="true" />Tạo đơn nghỉ phép</Button>}
+      {canManageTemplates && <Button size="toolbar" variant="outline" onClick={() => setTemplatesOpen(true)}><FileDoc size={18} aria-hidden="true" />Mẫu đơn nghỉ phép</Button>}
     </StaffHeading>
     {officer && can('workflow.leave.request') && <><div className="staff-tabs" aria-label="Loại đơn nghỉ"><Button variant={tab === 'drafts' ? 'primary' : 'outline'} aria-pressed={tab === 'drafts'} onClick={() => setTab('drafts')}>Đơn đang soạn</Button><Button variant={tab === 'submitted' ? 'primary' : 'outline'} aria-pressed={tab === 'submitted'} onClick={() => setTab('submitted')}>Đơn đã gửi</Button></div><QueryState query={capabilities} /></>}
     {tab === 'drafts' && capabilities.data && !capabilities.isError && <LeaveDraftsView capabilities={capabilities.data} createOpen={createOpen} onCreateClose={() => setCreateOpen(false)} onSubmitted={id => { setTab('submitted'); setSelected(id); }} />}
@@ -70,5 +74,6 @@ export function LeaveRequestsView({ initialLeaveId }: { initialLeaveId?: string 
       {!valid ? <p role="alert" className="text-sm text-red-800">Chọn khoảng ngày tăng dần, tối đa 93 ngày.</p> : <><QueryState query={query} empty={manager && !query.data?.length} />{officer && query.isSuccess && !query.data.length && <div role="status" className="staff-state"><p className="font-semibold text-slate-800">Bạn chưa có đơn đã gửi trong khoảng ngày này</p><p>Đơn đã gửi cho quản lý sẽ xuất hiện tại đây. Chọn Đơn đang soạn để tiếp tục viết đơn.</p></div>}{!query.isError && <div className="staff-grid">{query.data?.map(item => <article key={item.id} className="staff-card"><div className="staff-card-heading"><div className="min-w-0"><span className="staff-meta">Cán bộ</span><h3>{name(item.officerId)}</h3></div><StaffStatus value={item.status} /></div><StaffPeriod start={item.startsAtUtc} end={item.endsAtUtc} /><p className="staff-note">{item.reason}</p><div className="staff-card-footer"><Button variant="outline" onClick={() => setSelected(item.id)}>{manager ? 'Chi tiết / lịch sử / bàn giao' : 'Xem đơn và kết quả duyệt'}</Button></div></article>)}</div>}</>}
     </>}
     {selected && <LeaveDetail key={selected} id={selected} name={name} onClose={() => setSelected(undefined)} />}
+    {canManageTemplates && templatesOpen && <LeaveTemplatesDialog onClose={() => setTemplatesOpen(false)} />}
   </section>;
 }

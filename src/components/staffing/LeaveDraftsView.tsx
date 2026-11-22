@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef, useState } from 'react';
+import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,6 +39,7 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
   const operation = useStaffOperation();
   const template = useStaffQuery(['leave-template'], signal => workScheduleApi.template(signal), word && capabilities.templateConfigured);
   const request = useRef<{ body: Metadata & { templateVersionId?: string }; key: string; word: boolean } | null>(null);
+  const [templateChanged, setTemplateChanged] = useState(false);
   const form = useForm<z.infer<typeof createLeaveSchema>>({ resolver: zodResolver(createLeaveSchema), defaultValues: { range: 'single', from: '', to: '', reason: '' } });
   const range = form.watch('range'), from = form.watch('from'), to = range === 'single' ? from : form.watch('to');
   const days = z.iso.date().safeParse(from).success && z.iso.date().safeParse(to).success && to >= from ? Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1 : 0;
@@ -47,8 +49,20 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
     const period = fullDayPeriod(values.from, values.range === 'single' ? values.from : values.to);
     request.current ??= { body: { startsAt: vietnamIso(period.startsAt), endsAt: vietnamIso(period.endsAt), reason: values.reason, ...(word ? { templateVersionId: template.data!.versionId } : {}) }, key: crypto.randomUUID(), word };
     const sent = request.current;
+    setTemplateChanged(false);
     await operation.run(async () => {
-      if (sent.word) return { id: (await workScheduleApi.createDraft(sent.body as Metadata & { templateVersionId: string }, sent.key)).id, draft: true };
+      if (sent.word) {
+        try {
+          const draft = await workScheduleApi.createDraft(sent.body as Metadata & { templateVersionId: string }, sent.key);
+          return { id: draft.id, draft: true };
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response?.status === 409 && (error.response.data?.code ?? error.response.data?.extensions?.code) === 'leave.version_conflict') {
+            request.current = null;
+            setTemplateChanged(true);
+          }
+          throw error;
+        }
+      }
       // Legacy policy explicitly permits a text-only request; never use it when Word is required.
       const policy = await workScheduleApi.capabilities();
       if (policy.wordRequired) throw new Error('Đơn nghỉ cần kèm tệp Word. Vui lòng đóng biểu mẫu và tạo đơn Word.');
@@ -69,7 +83,7 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
       <label className="staff-field">Lý do nghỉ<textarea rows={3} maxLength={2000} placeholder="Ví dụ: Giải quyết công việc cá nhân…" className={fieldClass} {...form.register('reason')} aria-invalid={Boolean(form.formState.errors.reason)} aria-describedby={form.formState.errors.reason ? 'create-leave-reason-error' : undefined} /></label>
       <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={word} disabled={capabilities.wordRequired || locked} onChange={e => setWord(e.target.checked)} className="size-4 accent-red-700" />Soạn đơn Word trực tiếp</label>
     </fieldset>{Object.entries(form.formState.errors).map(([name, error]) => <p id={`create-leave-${name}-error`} key={name} role="alert" className="text-sm text-red-800">{error.message}</p>)}</form>
-    <OperationError operation={operation} />
+    {templateChanged ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-950">Mẫu Word vừa thay đổi. Nội dung đã nhập vẫn còn. Chọn Tạo nháp Word để dùng mẫu hiện hành.</p> : <OperationError operation={operation} />}
     {request.current && operation.error && <p className="mt-3 text-sm text-slate-600">Kiểm tra danh sách nháp/đơn nếu đóng cửa sổ này. Khi gửi lại, hệ thống dùng đúng nội dung của lần gửi trước.</p>}
   </Modal>;
 }
@@ -155,6 +169,6 @@ export function LeaveDraftsView({ capabilities, createOpen, onCreateClose, onSub
     {query.data && (page > 1 || query.data.total > query.data.pageSize) && <Pager page={page} total={query.data.total} setPage={setPage} pageSize={query.data.pageSize} />}
     {createOpen && <CreateLeave capabilities={capabilities} onClose={onCreateClose} onCreated={id => { onCreateClose(); setSelected(id); }} onSubmitted={id => { onCreateClose(); onSubmitted(id); }} />}
     {selected && <DraftWorkspace key={selected} id={selected} capabilities={capabilities} onClose={() => setSelected(undefined)} onSubmitted={id => { setSelected(undefined); onSubmitted(id); }} />}
-    {templateOpen && <Modal open title="Mẫu đơn nghỉ chung" onOpenChange={v => !v && setTemplateOpen(false)}><QueryState query={template} />{!template.isError && template.data && <WordViewer title="Mẫu đơn nghỉ chung — chỉ xem" load={signal => workScheduleApi.templateDocx(template.data.versionId, template.data.sha256, signal)} onClose={() => setTemplateOpen(false)} />}</Modal>}
+    {templateOpen && (template.isSuccess ? <WordViewer title="Mẫu đơn nghỉ phép đang áp dụng" load={signal => workScheduleApi.templateDocx(template.data.versionId, template.data.sha256, signal)} onClose={() => setTemplateOpen(false)} /> : <Modal open title="Mẫu đơn nghỉ phép đang áp dụng" onOpenChange={v => !v && setTemplateOpen(false)}><QueryState query={template} /></Modal>)}
   </div>;
 }

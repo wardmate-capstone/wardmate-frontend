@@ -33,6 +33,75 @@ async function createDraft(page: Page, submit = true) {
   await form.getByLabel('Lý do nghỉ').fill('Nghỉ giải quyết việc gia đình');
   if (submit) await form.getByRole('button', { name: 'Tạo nháp Word', exact: true }).click();
 }
+
+test('Quản lý tải lên mẫu Word cho phường, áp dụng mẫu mới và tải được bản lưu', async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  await page.goto('/manager?section=leaves');
+  await page.getByRole('button', { name: 'Mẫu đơn nghỉ phép', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Mẫu đơn nghỉ phép' });
+  const file = dialog.getByLabel('Tệp mẫu Word');
+  const submit = dialog.getByRole('button', { name: 'Tải lên và áp dụng' });
+  const posts = () => state.requests.filter(request => request.method === 'POST' && request.path.endsWith('/leave-templates'));
+  await expect(dialog.getByText('Mẫu theo cấu hình')).toBeVisible();
+
+  await file.setInputFiles({ name: 'mau.pdf', mimeType: 'application/pdf', buffer: Buffer.from('PDF') });
+  await expect(dialog.getByRole('alert')).toContainText('đuôi .docx');
+  await file.setInputFiles({ name: 'rong.docx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(0) });
+  await expect(dialog.getByRole('alert')).toContainText('Tệp đang trống');
+  await file.setInputFiles({ name: 'qua-lon.docx', mimeType: 'application/octet-stream', buffer: Buffer.alloc(10 * 1024 * 1024 + 1) });
+  await expect(dialog.getByRole('alert')).toContainText('vượt quá dung lượng');
+  await expect(submit).toBeDisabled();
+  expect(posts()).toHaveLength(0);
+
+  const select = (name: string) => file.setInputFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: state.templateBytes });
+  state.templateUploadStatus = 415;
+  await select('bi-tu-choi.docx');
+  await submit.click();
+  await expect(dialog.getByRole('alert')).toContainText('Tệp Word không mở được');
+  expect(state.templateHistory).toHaveLength(0);
+
+  state.templateUploadStatus = 200;
+  await select('mau-cu.docx');
+  await submit.click();
+  await expect(dialog.getByRole('region', { name: 'Mẫu hiện hành của phường' })).toContainText('mau-cu.docx');
+  await select('mau-moi.DOCX');
+  await submit.click();
+  await expect(dialog.getByRole('region', { name: 'Mẫu hiện hành của phường' })).toContainText('mau-moi.DOCX');
+  const old = dialog.getByRole('listitem').filter({ hasText: 'mau-cu.docx' });
+  await expect(old).toContainText('Đã lưu trữ');
+  await expect(dialog.getByRole('listitem').first()).toContainText('Đang áp dụng');
+  const [download] = await Promise.all([page.waitForEvent('download'), old.getByRole('button', { name: 'Tải mau-cu.docx' }).click()]);
+  expect(download.suggestedFilename()).toBe('mau-cu.docx');
+  expect(posts()).toHaveLength(3);
+});
+
+test('Quản lý thấy trạng thái chưa có mẫu và vẫn có thể chọn tệp', async ({ page }) => {
+  const state = await mockWorkSchedules(page, true);
+  state.templateConfigured = false;
+  await page.goto('/manager?section=leaves');
+  await page.getByRole('button', { name: 'Mẫu đơn nghỉ phép', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Mẫu đơn nghỉ phép' });
+  await expect(dialog.getByText('Phường chưa có mẫu đơn nghỉ phép để sử dụng.')).toBeVisible();
+  await expect(dialog.getByLabel('Tệp mẫu Word')).toBeEnabled();
+  await expect(dialog.getByRole('button', { name: 'Tải mẫu hiện hành' })).toHaveCount(0);
+});
+
+test('Cán bộ giữ nội dung khi mẫu đổi trước lúc tạo nháp rồi dùng mẫu hiện hành', async ({ page }) => {
+  const state = await mockWorkSchedules(page);
+  state.templateConflictOnce = true;
+  await createDraft(page);
+  const dialog = page.getByRole('dialog', { name: 'Tạo đơn xin nghỉ' });
+  await expect(dialog.getByText(/Mẫu Word vừa thay đổi/)).toBeVisible();
+  await expect(dialog.getByLabel('Lý do nghỉ')).toHaveValue('Nghỉ giải quyết việc gia đình');
+  await expect(page.getByRole('button', { name: 'Mẫu đơn nghỉ phép', exact: true })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Tạo nháp Word', exact: true }).click();
+  await expect.poll(() => state.draftCreated).toBe(true);
+  const requests = state.requests.filter(request => request.method === 'POST' && request.path.endsWith('/leave-drafts'));
+  expect(requests).toHaveLength(2);
+  expect(requests[1].key).not.toBe(requests[0].key);
+  expect(requests[1].body).toMatchObject({ reason: 'Nghỉ giải quyết việc gia đình', templateVersionId: expect.not.stringMatching(ids.template) });
+});
+
 async function openEditor(page: Page) {
   await page.getByRole('button', { name: 'Soạn / mở lại Word', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Đơn xin nghỉ', exact: true });

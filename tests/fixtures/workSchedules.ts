@@ -21,16 +21,22 @@ export async function mockWorkSchedules(page: Page, manager = false) {
   const templateBytes = await zip.generateAsync({ type: 'nodebuffer' });
   let bytes = templateBytes;
   const digest = (b: Buffer) => createHash('sha256').update(b).digest('hex').toUpperCase();
+  const templateHistory: { id: string; fileName: string; sha256: string; sizeBytes: number; isActive: boolean; wardCode: string; uploadedBy: string; uploadedByName: string; uploadedAtUtc: string }[] = [];
+  const templateFiles = new Map([[ids.template, templateBytes]]);
+  let configuredTemplateId = ids.template;
+  const currentTemplateId = () => templateHistory[0]?.id ?? configuredTemplateId;
   const state = {
     requests: [] as { method: string; path: string; query: string; body: unknown; key?: string }[],
     wordRequired: true, templateConfigured: true, uploadFail: false, createTimeout: false, submitTimeout: false,
+    templateBytes, templateHistory, templateUploadStatus: 200, templateConflictOnce: false,
     conflict: false, draftCreated: false, deleted: false, submitted: false, version: 0, metadataVersion: 1, documentRevisionId: ids.revision,
     startsAtUtc: '2026-11-07T01:00:00Z', endsAtUtc: '2026-11-07T05:00:00Z', reason: 'Nghỉ giải quyết việc gia đình', status: 'PENDING', leaveVersion: 0,
     fingerprint: 'A'.repeat(64), receipts: {} as Record<string, string>, draft: null as null | Record<string, unknown>, weekVersion: 0, week: [] as unknown[],
     changes: [] as Record<string, unknown>[], submittedBytes: undefined as Buffer | undefined,
     slots: [{ shiftId: ids.shift, officerId: ids.officer, startsAt: '2026-11-07T01:00:00+00:00', endsAt: '2026-11-07T05:00:00+00:00', shiftVersion: 3 }],
   };
-  const draft = () => ({ id: ids.draft, version: state.version, metadataVersion: state.metadataVersion, templateVersionId: ids.template, startsAtUtc: state.startsAtUtc, endsAtUtc: state.endsAtUtc, reason: state.reason, documentRevisionId: state.documentRevisionId, submittedLeaveId: state.submitted ? ids.leave : null, updatedAtUtc: '2026-11-06T02:00:00Z' });
+  let draftTemplateId = ids.template;
+  const draft = () => ({ id: ids.draft, version: state.version, metadataVersion: state.metadataVersion, templateVersionId: draftTemplateId, startsAtUtc: state.startsAtUtc, endsAtUtc: state.endsAtUtc, reason: state.reason, documentRevisionId: state.documentRevisionId, submittedLeaveId: state.submitted ? ids.leave : null, updatedAtUtc: '2026-11-06T02:00:00Z' });
   const leave = () => ({ id: ids.leave, officerId: ids.officer, wardCode: 'P01', startsAtUtc: state.startsAtUtc, endsAtUtc: state.endsAtUtc, reason: state.reason, status: state.status, version: state.leaveVersion });
   const createKeys = new Map<string, string>(); const submitKeys = new Map<string, string>();
   await page.route('**/api/v1/staffing/**', async route => {
@@ -43,12 +49,44 @@ export async function mockWorkSchedules(page: Page, manager = false) {
     const fail = (code: string, status = 409) => authReply(route, { status, json: { code, title: code, traceId: 'mock-trace' } });
     const docx = (b = bytes) => authReply(route, { body: b, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     if (path.endsWith('/capabilities')) return ok({ wordRequired: state.wordRequired, templateConfigured: state.templateConfigured, maxDocxBytes: 10485760 });
-    if (path.endsWith('/leave-templates/current')) return state.templateConfigured ? ok({ versionId: ids.template, sha256: digest(templateBytes) }) : fail('leave.template_unavailable', 503);
-    if (path.includes('/leave-templates/') && path.endsWith('/docx')) return docx(templateBytes);
+    if (path.endsWith('/leave-templates/current')) {
+      const id = currentTemplateId();
+      return state.templateConfigured ? ok({ versionId: id, sha256: digest(templateFiles.get(id)!) }) : fail('leave.template_unavailable', 503);
+    }
+    if (path.includes('/leave-templates/') && path.endsWith('/docx')) {
+      const file = templateFiles.get(path.split('/').at(-2)!);
+      return file ? docx(file) : fail('leave.not_found', 404);
+    }
+    if (path.endsWith('/leave-templates')) {
+      if (!manager) return fail('leave.forbidden', 403);
+      if (method === 'GET') return ok(templateHistory);
+      if (method === 'POST') {
+        if (state.templateUploadStatus !== 200) return fail('leave.invalid_docx', state.templateUploadStatus);
+        const contentType = request.headers()['content-type'];
+        const multipart = await new Response(new Uint8Array(request.postDataBuffer() ?? []), { headers: { 'Content-Type': contentType } }).formData();
+        const file = multipart.get('file');
+        if (!file || typeof file === 'string') return fail('leave.invalid_input', 400);
+        const docxBytes = Buffer.from(await file.arrayBuffer());
+        const item = { id: randomUUID(), fileName: file.name, sha256: digest(docxBytes), sizeBytes: docxBytes.length, isActive: true, wardCode: 'P01', uploadedBy: ids.manager, uploadedByName: 'Quản lý kiểm thử', uploadedAtUtc: '2026-11-06T02:00:00Z' };
+        for (const previous of templateHistory) previous.isActive = false;
+        templateHistory.unshift(item);
+        templateFiles.set(item.id, docxBytes);
+        state.templateConfigured = true;
+        return ok(item);
+      }
+    }
     if (path.endsWith('/leave-drafts') && method === 'POST') {
       const key = request.headers()['idempotency-key']; if (!key) return fail('leave.invalid_input', 400);
       if (createKeys.has(key) && createKeys.get(key) !== JSON.stringify(body)) return fail('leave.key_conflict');
+      if (state.templateConflictOnce) {
+        state.templateConflictOnce = false;
+        configuredTemplateId = randomUUID();
+        templateFiles.set(configuredTemplateId, templateBytes);
+        return fail('leave.version_conflict');
+      }
+      if (!createKeys.has(key) && body.templateVersionId !== currentTemplateId()) return fail('leave.version_conflict');
       createKeys.set(key, JSON.stringify(body)); state.draftCreated = true;
+      draftTemplateId = body.templateVersionId;
       state.reason = body.reason; state.startsAtUtc = body.startsAt; state.endsAtUtc = body.endsAt;
       if (state.createTimeout) { state.createTimeout = false; return fail('leave.storage_unavailable', 503); }
       return ok(draft());

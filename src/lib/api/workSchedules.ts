@@ -48,6 +48,19 @@ const changeSchema = z.object({ id: guid, shiftId: guid, officerId: guid, wardCo
 export type ShiftChange = z.infer<typeof changeSchema>;
 const capabilitiesSchema = z.object({ wordRequired: z.boolean(), templateConfigured: z.boolean(), maxDocxBytes: z.number().int().positive() });
 export type LeaveCapabilities = z.infer<typeof capabilitiesSchema>;
+const wardLeaveTemplateSchema = z.object({
+  id: guid, wardCode: z.string().min(1), sha256: hash, sizeBytes: natural.positive(),
+  fileName: z.string().min(1), uploadedBy: guid, uploadedByName: z.string(), uploadedAtUtc: time, isActive: z.boolean(),
+});
+export type WardLeaveTemplate = z.infer<typeof wardLeaveTemplateSchema>;
+export const MAX_LEAVE_TEMPLATE_BYTES = 10 * 1024 * 1024;
+
+export function leaveTemplateFileError(file: File, maxBytes: number) {
+  if (!/\.docx$/i.test(file.name)) return 'Chọn tệp Word có đuôi .docx.';
+  if (!file.size) return 'Tệp đang trống. Chọn một tệp Word có nội dung.';
+  if (file.size > maxBytes) return 'Tệp vượt quá dung lượng cho phép. Hãy giảm kích thước hoặc chọn tệp khác.';
+}
+
 export const leaveDetailSchema = z.object({ leave: leaveSchema, hasSubmittedDocx: z.boolean(), submittedRevisionId: guid.nullable(), sha256: hash.nullable() });
 
 export async function staffingDocx(suffix: string, signal?: AbortSignal, expectedHash?: string | null) {
@@ -72,6 +85,15 @@ export const workScheduleApi = {
   capabilities: (signal?: AbortSignal) => read('/capabilities', capabilitiesSchema, signal),
   template: (signal?: AbortSignal) => read('/leave-templates/current', z.object({ versionId: guid, sha256: hash }), signal),
   templateDocx: (id: string, sha256: string, signal?: AbortSignal) => staffingDocx(`/leave-templates/${guid.parse(id)}/docx`, signal, sha256),
+  wardTemplates: (signal?: AbortSignal) => read('/leave-templates', z.array(wardLeaveTemplateSchema), signal),
+  uploadWardTemplate: async (file: File, maxBytes: number) => {
+    const issue = leaveTemplateFileError(file, Math.min(maxBytes, MAX_LEAVE_TEMPLATE_BYTES));
+    if (issue) throw new Error(issue);
+    const body = new FormData();
+    body.append('file', file);
+    const response = await api.post(path('/leave-templates'), body, { headers: { 'Content-Type': undefined } });
+    return wardLeaveTemplateSchema.extend({ isActive: z.literal(true) }).parse(response.data);
+  },
   drafts: (p: number, signal?: AbortSignal) => read('/leave-drafts', page(draftSchema), signal, { page: p, pageSize: 20 }),
   draft: async (id: string, signal?: AbortSignal) => sameId(await read(`/leave-drafts/${guid.parse(id)}`, draftSchema, signal), id),
   createDraft: (input: { startsAt: string; endsAt: string; reason: string; templateVersionId: string }, key: string) => write('post', '/leave-drafts', z.object({ ...period, templateVersionId: guid }).parse(input), draftSchema, key),
