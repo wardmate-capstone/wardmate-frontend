@@ -24,8 +24,9 @@ for (const roles of [['IT_ADMIN'], ['IT_ADMIN', 'PROCEDURE_MANAGER']]) {
     await expect(page.getByText(sampleProcedure.title, { exact: true })).toBeVisible();
     await page.getByLabel('Trạng thái', { exact: true }).selectOption('false');
     await expect.poll(() => catalog.requests.some(request => request.query.get('isActive') === 'false')).toBe(true);
-    await page.getByLabel('Cấp thực hiện', { exact: true }).selectOption('Cấp Xã');
-    await expect.poll(() => catalog.requests.some(request => request.query.get('levelOfImplementation') === 'Cấp Xã')).toBe(true);
+    await expect(page.getByLabel('Cấp thực hiện', { exact: true })).toHaveCount(0);
+    await page.getByLabel('Sắp xếp', { exact: true }).selectOption('UpdatedAt_desc');
+    await expect.poll(() => catalog.requests.some(request => request.query.get('sortBy') === 'UpdatedAt' && request.query.get('isAscending') === 'false')).toBe(true);
     await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click();
     await expect(page.getByText(sampleProcedure.title, { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Trước', exact: true })).toBeDisabled();
@@ -34,6 +35,7 @@ for (const roles of [['IT_ADMIN'], ['IT_ADMIN', 'PROCEDURE_MANAGER']]) {
       // /api/v1/procedures: trang Tổng quan Admin (mở đầu tiên) đếm số thủ tục đang áp dụng — chỉ đọc.
       '/api/v1/procedures', '/api/v1/procedures/categories', '/api/v1/procedure-manager/procedures',
     ].includes(request.path))).toBe(true);
+    expect(catalog.requests.every(request => !request.query.has('levelOfImplementation'))).toBe(true);
     expect(pageErrors).toEqual([]);
   });
 }

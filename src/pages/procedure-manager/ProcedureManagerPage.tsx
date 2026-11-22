@@ -285,7 +285,6 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               if (!open) guard.requestClose(() => setCreating(false));
             }}
             title="Thêm thủ tục"
-            description="Chỉ bắt buộc mã, tên và lĩnh vực. Bỏ chọn công khai để lưu ở trạng thái ẩn; bật công khai sau trong danh sách thủ tục."
             className="sm:max-w-5xl"
             footer={
               <Button

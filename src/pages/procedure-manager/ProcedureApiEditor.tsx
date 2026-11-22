@@ -272,9 +272,6 @@ function MethodsEditor({ value, cases, change }: { value: unknown; cases: string
   const update = (index: number, patch: Row) => change(list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   return (
     <section className="space-y-4">
-      <p className="text-sm text-slate-600">
-        Mỗi cách nộp có thời hạn và phí riêng. Văn bản gốc không tách được thành số (ví dụ "Theo quy định của Bộ Tài chính", "Không quá 15 phút") thì nhập nguyên văn vào ô <strong>ghi bằng chữ</strong>.
-      </p>
       {list.map((method, index) => {
         const base = `contentPayload.submissionMethods.${index}`;
         // Dữ liệu cũ chỉ có estimatedDays/feeAmount: hiển thị như một thời hạn/mức phí có cấu trúc

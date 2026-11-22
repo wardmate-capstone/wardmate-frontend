@@ -2,9 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClockCounterClockwise, ArrowSquareOut } from '@phosphor-icons/react';
 import { Button, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
-
-/** Cấp thực hiện theo danh mục Cổng DVC; BE lọc khớp đúng một cấp trong danh sách "Cấp tỉnh, Cấp xã" (không phân biệt hoa thường, dấu). */
-const LEVELS = ['Cấp Xã', 'Cấp Tỉnh', 'Cấp Bộ'];
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useProcedureQuery } from '@/hooks/useProcedureQuery';
 import { procedureApi, type Category, type ProcedureSummary } from '@/lib/api/procedures';
@@ -24,7 +21,6 @@ export function ProcedureApiList({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
-  const [level, setLevel] = useState('');
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState('Title_asc');
 
@@ -40,7 +36,6 @@ export function ProcedureApiList({
             keyword: search || undefined,
             categoryId: category ? Number(category) : undefined,
             isActive: status ? status === 'true' : undefined,
-            levelOfImplementation: level || undefined,
             pageNumber: page,
             pageSize: 10,
             sortBy: sort,
@@ -50,7 +45,7 @@ export function ProcedureApiList({
           signal
         );
       },
-      [search, category, status, level, page, sort, isAscending, revision]
+      [search, category, status, page, sort, isAscending, revision]
     )
   );
 
@@ -67,19 +62,18 @@ export function ProcedureApiList({
     setSearch('');
     setCategory('');
     setStatus('');
-    setLevel('');
     setSortOption('Title_asc');
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || category || status || level || sortOption !== 'Title_asc');
+  const hasActiveFilters = Boolean(search || category || status || sortOption !== 'Title_asc');
 
 
   return (
     <div className="space-y-4">
       {/* Thanh lọc luôn hiện, lọc ngay khi gõ/chọn (giống danh sách hồ sơ cán bộ); không còn nút Tìm kiếm / Bộ lọc thu gọn. */}
       <div className="admin-card space-y-3 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div className="min-w-0 sm:col-span-2 xl:col-span-1">
             <label htmlFor="pm-search" className="mb-1.5 block text-xs font-medium text-slate-600">Tìm thủ tục</label>
             <SearchInput
@@ -106,14 +100,7 @@ export function ProcedureApiList({
               <option value="false">Đang ẩn</option>
             </Select>
           </div>
-          <div className="min-w-0">
-            <label htmlFor="pm-level" className="mb-1.5 block text-xs font-medium text-slate-600">Cấp thực hiện</label>
-            <Select id="pm-level" value={level} onChange={(e) => { setLevel(e.target.value); setPage(1); }}>
-              <option value="">Tất cả cấp</option>
-              {LEVELS.map((value) => <option key={value} value={value}>{value}</option>)}
-            </Select>
-          </div>
-          <div className="min-w-0">
+          <div className="min-w-0 sm:col-span-2 xl:col-span-1">
             <label htmlFor="pm-sort" className="mb-1.5 block text-xs font-medium text-slate-600">Sắp xếp</label>
             <Select id="pm-sort" value={sortOption} onChange={(e) => { setSortOption(e.target.value); setPage(1); }}>
               <option value="Title_asc">Tên (A → Z)</option>
