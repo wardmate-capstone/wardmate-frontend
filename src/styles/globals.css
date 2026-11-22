@@ -139,7 +139,7 @@
   .national-pattern { position: absolute; inset: 0; background-image: linear-gradient(180deg, rgba(254,251,245,0.72) 0%, rgba(251,247,238,0.78) 45%, rgba(246,238,223,0.88) 100%), url('/journey-vietnam-background.png'); background-position: center; background-size: cover; }
   .hero-search-box { @apply max-w-3xl rounded-3xl border border-amber-900/10 bg-white/95 p-4 text-slate-900 shadow-[0_22px_55px_rgba(72,18,23,.10)] backdrop-blur-sm sm:p-5; }
   .hero-search-input { @apply min-h-14 w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100; }
-  .hero-suggestion { @apply min-h-9 rounded-full border border-slate-200 bg-slate-50/80 px-3 font-semibold text-slate-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800; }
+  .hero-suggestion { @apply min-h-9 rounded-full border border-slate-200 bg-slate-50/80 px-3 font-semibold text-slate-700 transition-colors duration-200 hover:border-red-300 hover:bg-red-50 hover:text-red-800 focus-visible:border-red-300 focus-visible:bg-red-50; }
   .hero-journey-card { @apply rounded-3xl border border-white/15 bg-white/[0.08] p-5 shadow-[0_24px_60px_rgba(40,5,10,.18)] backdrop-blur-sm sm:p-7; }
   .journey-step { @apply flex min-h-24 flex-col justify-between rounded-2xl border border-white/15 bg-red-950/25 p-4 transition-colors hover:bg-white/[0.12]; }
   .journey-note { @apply mt-5 flex gap-3 rounded-2xl bg-gold-400 px-4 py-3 text-sm leading-6 text-red-950; }
@@ -151,9 +151,11 @@
   .journey-overview-icon { @apply grid size-14 place-items-center rounded-2xl border border-gold-300/50 bg-gold-400 text-red-950 shadow-lg; }
   .journey-eyebrow { @apply mt-9 text-[11px] font-bold uppercase tracking-[.2em] text-gold-300; }
   .journey-overview h2 { @apply mt-3 text-3xl font-bold leading-tight tracking-[-.02em] text-white sm:text-4xl; }
-  .journey-start-link { @apply mt-8 inline-flex min-h-12 w-fit items-center gap-3 rounded-xl bg-white px-5 text-sm font-bold text-red-900 shadow-md transition-all hover:bg-gold-300 hover:text-red-950 hover:-translate-y-0.5; }
-  .journey-start-link svg { @apply transition-transform; }
-  .journey-start-link:hover svg { @apply translate-x-1; }
+  .journey-start-link { @apply mt-8 inline-flex min-h-12 w-fit items-center gap-3 rounded-xl bg-white px-5 text-sm font-bold text-red-900 shadow-md transition-all duration-200 hover:bg-gold-300 hover:text-red-950 motion-safe:hover:-translate-y-0.5; }
+  .journey-start-link svg { @apply motion-safe:transition-transform motion-safe:duration-200; }
+  @media (prefers-reduced-motion: no-preference) {
+    .journey-start-link:is(:hover, :focus-visible) svg { @apply translate-x-1; }
+  }
   .journey-timeline-wrap { @apply bg-white p-6 sm:p-9 lg:p-11; }
   .journey-timeline-heading { @apply mb-6 flex items-center justify-between border-b border-slate-200 pb-5; }
   .journey-timeline-heading p { @apply text-sm font-bold uppercase tracking-[.12em] text-slate-900; }
@@ -200,17 +202,46 @@
   .procedure-content > span { @apply block text-[11px] font-bold uppercase tracking-[0.15em] text-red-700; }
   .procedure-content > strong { @apply mt-1.5 block text-base font-bold leading-7 text-slate-950 group-hover:text-red-800 sm:text-lg; }
   .procedure-link { @apply inline-flex min-h-11 shrink-0 items-center gap-3 border-l border-slate-200 pl-6 text-sm font-bold text-red-800; }
-  .procedure-link svg { @apply shrink-0 transition-transform duration-200 group-hover:translate-x-1; }
+  .procedure-link svg { @apply shrink-0 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-1 motion-safe:group-focus-visible:translate-x-1; }
 
-  .process-card { @apply relative z-10 rounded-2xl border border-red-100 bg-white p-6 shadow-[0_10px_30px_rgba(73,30,20,.05)] transition-transform hover:-translate-y-1; }
+  .process-card { @apply relative z-10 rounded-2xl border border-red-100 bg-white p-6 shadow-[0_10px_30px_rgba(73,30,20,.05)] motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-1; }
   .process-icon { @apply grid size-[72px] place-items-center rounded-full border-4 border-[#f8f5ef] bg-red-800 text-gold-300 shadow-sm; }
 
   .cta-card { @apply relative mx-auto max-w-[1240px] overflow-hidden rounded-3xl bg-red-900 px-6 py-11 text-white shadow-[0_24px_60px_rgba(70,20,24,.16)] sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-12; }
-  .cta-card > a { @apply rounded-xl transition-transform hover:-translate-y-0.5; }
+  .cta-card > a { @apply rounded-xl motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-0.5; }
   #quy-trinh .border-l-4 { @apply rounded-2xl; }
   .cta-pattern { position: absolute; inset: 0; opacity: .14; background-image: repeating-linear-gradient(135deg, transparent 0 22px, #fff 23px 24px, transparent 25px 48px); mask-image: linear-gradient(90deg, transparent 20%, #000); }
 
   .auth-page { @apply bg-[#faf8f5] px-4 py-4 sm:px-6 sm:py-6; }
+  /* Cùng nền với khối "Lĩnh vực thủ tục hành chính" (.service-directory + .service-lotus) */
+  .auth-entry-background {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image: linear-gradient(135deg, rgba(255,248,198,.88) 0%, rgba(255,244,242,.94) 48%, rgba(255,226,222,.82) 100%);
+  }
+  .auth-entry-background::before,
+  .auth-entry-background::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    display: none;
+    pointer-events: none;
+    aspect-ratio: 3 / 2;
+    background: url('/lotus-corner-small.png') center / contain no-repeat;
+  }
+  @media (min-width: 768px) {
+    .auth-entry-background::before,
+    .auth-entry-background::after { display: block; }
+  }
+  .auth-entry-background::before {
+    left: -6rem; top: -6rem; width: 350px; opacity: .15; transform: scaleX(-1);
+    mask-image: linear-gradient(135deg, #000 0%, rgba(0,0,0,.72) 42%, transparent 76%);
+  }
+  .auth-entry-background::after {
+    right: -1.5rem; top: -6rem; width: 500px; opacity: .4;
+    mask-image: linear-gradient(315deg, #000 0%, rgba(0,0,0,.92) 58%, transparent 92%);
+  }
   .auth-shell { @apply mx-auto grid max-w-[1080px] overflow-hidden rounded-3xl bg-white shadow-[0_28px_80px_rgba(70,20,24,.12)] lg:grid-cols-[.9fr_1.1fr]; }
   .auth-intro { @apply relative flex flex-col bg-red-800 p-7 text-white sm:p-10 lg:p-12; background-image: linear-gradient(rgba(153,29,24,.86), rgba(121,27,23,.94)), url('/vietnam-cultural-pattern.png'); background-position: center; background-size: cover; }
   .auth-intro::after { content: ""; position: absolute; width: 190px; height: 190px; right: -70px; bottom: -70px; border: 1px solid rgba(234,185,76,.25); border-radius: 50%; box-shadow: 0 0 0 38px rgba(255,255,255,.035), 0 0 0 76px rgba(255,255,255,.025); }

@@ -111,7 +111,7 @@ test('login uses HttpOnly cookie, RAM token and safe returnTo; reload recovers o
   expect((await context.cookies()).find((value) => value.name === 'refreshToken')?.httpOnly).toBe(true);
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toMatch(/mock-access|mock-refresh/);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Tổng quan công dân', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true, level: 1 })).toBeVisible();
   expect(await requestPrivate(page)).toBe(200);
   expect(refreshes).toBe(1);
 });
@@ -326,7 +326,7 @@ test('tự động làm mới token sau khi access token hết hạn 15 phút m�
 
   // Xác nhận: Người dùng KHÔNG bị văng ra màn hình đăng nhập
   await expect(page).toHaveURL(/\/citizen$/);
-  await expect(page.getByRole('heading', { name: 'Tổng quan công dân', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true, level: 1 })).toBeVisible();
 
   // Xác nhận token mới tiếp tục dùng cho các request tiếp theo mà không cần refresh lại
   const secondStatus = await requestPrivate(page);

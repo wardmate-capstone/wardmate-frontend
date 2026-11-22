@@ -112,7 +112,7 @@ export function AuthPage({ mode }: AuthPageProps) {
   }
 
   return (
-    <section className="auth-page flex min-h-[calc(100vh-135px)] items-center justify-center py-2 sm:py-4">
+    <section className="auth-page auth-entry-background flex min-h-[calc(100vh-135px)] items-center justify-center py-2 sm:py-4">
       <div className="w-full max-w-[480px]">
         {/* Nút quay lại trang chủ */}
         <div className="mb-2.5 flex items-center justify-between">
@@ -123,7 +123,7 @@ export function AuthPage({ mode }: AuthPageProps) {
             <ArrowLeft size={16} aria-hidden="true" />
             <span>Quay lại trang chủ</span>
           </Link>
-       </div>
+        </div>
 
         {/* Khối Card Form đăng nhập / đăng ký duy nhất */}
         <m.div
@@ -134,7 +134,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-[0_20px_50px_rgba(70,20,24,.07)]"
         >
           {/* Header của Form */}
-          <div className="border-b border-slate-100 pb-4 text-center sm:text-left">
+          <div className="border-b border-slate-100 pb-4 text-center">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-red-700">
               {isRegister ? 'Bắt đầu sử dụng' : 'Cổng dịch vụ hành chính'}
             </p>

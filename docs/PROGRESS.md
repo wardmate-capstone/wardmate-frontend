@@ -1,5 +1,63 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-RELEASE-5COMMITS-1122 — Đóng gói và đẩy 5 commit lên nhánh main — 22/11/2026 23:10 (Asia/Saigon, UTC+07:00)
+
+- Tổng hợp các công việc hoàn tất trong ngày 22/11/2026 thành 5 commit theo từng nhóm chức năng độc lập:
+  1. `refactor(procedure-manager): remove implementation level filter and clean up copy text`: gỡ bộ lọc cấp thực hiện, bỏ văn bản hướng dẫn thừa ở Quản lý thủ tục, cập nhật test liên quan.
+  2. `feat(staffing): add ward leave template management and conflict handling`: quản lý mẫu Word đơn nghỉ phép theo phường, xử lý xung đột mẫu 409 khi tạo nháp, cập nhật test work schedules và fixtures.
+  3. `feat(home): polish landing layout and smooth entrance animations`: tinh chỉnh chuyển động vào trang chủ và khối các bước, hỗ trợ prefers-reduced-motion, cập nhật test landing.
+  4. `feat(public): unify rounded corners for procedure lookup and refine AI chat widget`: đồng bộ bán kính bo góc 12px cho trang thủ tục, chỉnh giao diện trang hướng dẫn và hiệu ứng nút trợ lý AI.
+  5. `fix(auth): restore centered single-column card layout and update progress log`: khôi phục bố cục thẻ căn giữa cho đăng nhập/đăng ký, cập nhật globals.css, test auth và nhật ký tiến độ.
+- Kiểm tra toàn bộ mã nguồn: `npm run typecheck`, `npm run lint` và `npm run build` đều đạt. Đẩy thành công 5 commit lên `origin/main`.
+
+## FE-AUTH-RESTORE-1122 — Khôi phục giao diện đăng nhập và đăng ký — 22/11/2026 20:54 (Asia/Saigon, UTC+07:00)
+
+- `src/pages/auth/AuthPage.tsx` và `src/styles/globals.css` đưa `/dang-nhap` và `/dang-ky` về thẻ biểu mẫu một cột căn giữa, rộng tối đa 480 px, theo bố cục trước đợt chỉnh UI.
+- `tests/auth.spec.ts` cập nhật hai kiểm tra tiêu đề trang công dân sau khi làm mới phiên để khớp tiêu đề hiện tại «Tổng quan». Build và lint frontend đạt. Playwright giả lập báo 5 đạt và 1 lỗi do tiêu đề cũ ở lần chạy đầu. Ca đó và ca làm mới token bổ sung đều đạt khi chạy lại, tổng cộng 7 ca phân biệt báo đạt. Trình chạy chưa tự thoát sau khi báo kết quả. Kiểm tra bố cục cả hai trang ở 360 px và 1440 px đạt.
+- Không đổi API, DTO, ProblemDetails hoặc token.
+
+## FE-PUBLIC-POLISH-1122 — Chuyển động Trang chủ và bo góc trang thủ tục — 22/11/2026 20:51 (Asia/Saigon, UTC+07:00)
+
+- `src/pages/public/HomePage.tsx`, `src/components/home/JourneySteps.tsx` và `src/styles/globals.css` chỉnh chuyển động ngắn theo lượt xem đầu cho phần đầu trang, khối các bước và lời mời tra cứu. Giới hạn độ trễ và bỏ chuyển động khi bật chế độ giảm chuyển động. Bố cục lấy từ bản vừa khôi phục.
+- `src/styles/public-pages.css` đồng bộ bán kính 12 px với trang Hướng dẫn thực hiện cho khung lọc, ô tìm kiếm và từng kết quả thủ tục. Bổ sung phản hồi khi trỏ chuột và viền khi dùng bàn phím. Giữ vị trí các bộ lọc và kết quả.
+- Frontend build/lint đạt. Playwright Edge với API giả lập báo 6 đạt, 0 lỗi, 0 bỏ qua theo từng ca, trong đó `tests/landing.spec.ts` và `tests/procedures-ui.spec.ts` kiểm tra giảm chuyển động và bán kính bo góc. Trình chạy chưa tự thoát sau khi báo kết quả. Không đổi API, DTO, ProblemDetails hoặc token.
+
+## FE-RESTORE-PUBLIC-1122 — Khôi phục Trang chủ và Thủ tục hành chính — 22/11/2026 20:49 (Asia/Saigon, UTC+07:00)
+
+- Khôi phục Trang chủ `/` về bố cục trước đợt nâng cấp, gồm ảnh nền, ô tra cứu, khối bốn bước, lĩnh vực, thủ tục nổi bật và sáu bước hướng dẫn. Khôi phục bố cục trước đợt chỉnh trang `/thu-tuc`, đưa liên kết hướng dẫn về thanh lọc lĩnh vực.
+- Đường dẫn cập nhật: `src/pages/public/HomePage.tsx`, `src/components/home/JourneySteps.tsx`, `src/pages/public/ProceduresPage.tsx`, `src/styles/globals.css`, `src/styles/public-pages.css`, `tests/landing.spec.ts`, `tests/public-search-chat.spec.ts`, `tests/procedures-ui.spec.ts` và nhật ký này.
+- `npm run build` và `npm run lint` đạt. Playwright với API giả lập báo 7 đạt, 0 lỗi, 0 bỏ qua theo từng ca. Các ca kiểm tra tìm kiếm, gợi ý, trạng thái trống, bố cục, lọc lĩnh vực và phân trang. Trình chạy chưa tự thoát sau khi báo kết quả. Không đổi API, DTO, ProblemDetails hoặc token.
+
+## FE-LEAVE-TEMPLATE-1122 và FE-PUBLIC-UI-1122 — Mẫu Word theo phường và giao diện công dân — 22/11/2026 20:40 (Asia/Saigon, UTC+07:00)
+
+- Manager vào Duyệt nghỉ phép → Mẫu đơn nghỉ phép để xem mẫu hiện hành, tải lên `.docx`, tải mẫu hiện hành hoặc bản lưu và xem người tải/ngày/dung lượng. Mẫu mới tự áp dụng cho đơn tạo sau đó. Khi phản hồi ghi không rõ, giao diện yêu cầu kiểm tra lại lịch sử trước khi gửi tiếp. Cán bộ xem mẫu hiện hành trong trình đọc Word. Nếu mã 409 `leave.version_conflict` báo mẫu đổi trong lúc tạo nháp, ngày nghỉ và lý do được giữ để xác nhận gửi lại với mẫu mới.
+- Các tệp chức năng mẫu Word gồm `src/components/staffing/LeaveTemplatesDialog.tsx` (mới), `LeaveRequestsView.tsx`, `LeaveDraftsView.tsx` và `src/lib/api/workSchedules.ts`. Kiểm tra đuôi tệp, tệp rỗng, giới hạn đến 10 MiB (đối chiếu capabilities), ProblemDetails và SHA-256 khi tải. Backend thực thi quyền/phường và kiểm tra cấu trúc Word.
+- Dùng JWT hiện có qua Workflow. `GET /api/v1/staffing/leave-templates` trả 200 `WardLeaveTemplate[]`, `POST` cùng route gửi `multipart/form-data` trường `file` và trả 200 `WardLeaveTemplate`. `GET /leave-templates/current` trả 200 `{versionId, sha256}` hoặc 503 khi chưa có mẫu. `GET /leave-templates/{id}/docx` trả 200 binary, 404 khi mẫu không thuộc phạm vi hoặc 503 khi lỗi kho. `GET /capabilities` trả 200 `{wordRequired, templateConfigured, maxDocxBytes}`. Các đường dẫn rút gọn dùng cùng tiền tố `/api/v1/staffing`.
+- `src/pages/auth/AuthPage.tsx`, `src/pages/public/ProceduresPage.tsx`, `src/pages/public/GuidePage.tsx`, `src/components/ai/AiChatWidget.tsx`, `src/styles/globals.css` và `src/styles/public-pages.css` cập nhật bố cục đăng nhập/đăng ký, tìm kiếm có nhãn, liên kết hướng dẫn theo bước và nút AI có chuyển động theo tương tác. Kiểm tra trực quan đăng nhập và tra cứu trên desktop, hướng dẫn trên mobile. Đăng ký ở 360px không tràn ngang, nút AI tôn trọng chế độ giảm chuyển động.
+- `npm run build` và `npm run lint` đạt. Bản dựng Vite còn cảnh báo dependency và kích thước chunk. Playwright Edge với API giả lập báo 12 đạt, 1 lỗi trong lần chạy nhóm gần nhất. Ca còn lại kiểm tra hướng dẫn desktop báo đạt khi chạy riêng sau khi sửa phép đo căn giữa theo chiều rộng thực, tổng 13 ca phân biệt đã báo đạt. Trình chạy Playwright không thoát sạch sau khi báo kết quả từng ca. Cập nhật `tests/fixtures/workSchedules.ts`, `tests/work-schedules.spec.ts`, `tests/guide-profile-email.spec.ts`, `tests/procedures-ui.spec.ts`, `tests/landing.spec.ts`.
+- Gọi Gateway thật qua localhost với bốn GET mẫu/capabilities và một POST tải mẫu không token, cả năm trả 401. Chưa xác minh thao tác có xác thực trên Azure. Chưa triển khai Automation. Đề xuất ưu tiên kiểm tra tuyến công khai và liên kết nguồn, cảnh báo nội bộ khi lỗi lặp, sau đó thử luồng AI soạn nháp có nguồn với cán bộ duyệt trước khi gửi.
+
+## FE-PROCEDURE-FILTER-1122 — Gỡ bộ lọc Cấp thực hiện — 22/11/2026 20:11 (Asia/Saigon, UTC+07:00)
+
+- `src/pages/procedure-manager/ProcedureApiList.tsx` gỡ bộ lọc «Cấp thực hiện» khỏi danh sách dùng chung ở Quản lý thủ tục và Admin. Bố trí lại ô tìm kiếm, lĩnh vực, trạng thái và sắp xếp. Danh sách ngừng gửi tham số `levelOfImplementation`; các màn hình chi tiết và chỉnh sửa vẫn hiển thị trường này.
+- Cập nhật `tests/admin-procedures-readonly.spec.ts` để kiểm tra bộ lọc đã được gỡ, truy vấn không mang tham số đã bỏ và sắp xếp vẫn gửi đúng tham số.
+- Frontend build và lint đạt. Vite báo cảnh báo chú thích dependency và kích thước chunk. Playwright với API giả lập ghi nhận 6 đạt, 0 lỗi, 0 bỏ qua theo kết quả từng ca; tiến trình dừng ở bước kết thúc sau khi báo đủ sáu ca. Dùng cổng thử riêng vì cổng mặc định đang bận.
+- Không sửa hợp đồng API, DTO, ProblemDetails hoặc token. Cập nhật nhật ký frontend và backend.
+
+## FE-AZURE-LOCAL-1122 — Khôi phục đăng nhập trên localhost — 22/11/2026 20:05 (Asia/Saigon, UTC+07:00)
+
+- Đã tái hiện `502 {"error":"Failed to resolve route"}` khi `POST /api/v1/auth/refresh-token` qua `localhost:5173`. Cấu hình hiệu lực của Vite lấy năm địa chỉ từ `.env.development.local` và vẫn dùng Azure `blackmeadow-a2f12767`, dù `.env.example` và `vercel.json` đã trỏ Gateway `bravetree-f6485744`.
+- Đã đổi cả năm địa chỉ trong `.env.development.local` sang Gateway mới, giữ proxy local. Tệp này được bỏ qua khi commit. Cập nhật nhật ký `docs/PROGRESS.md`.
+- Gọi thật qua `localhost:5173`: `POST /api/v1/auth/refresh-token` không cookie trả `401 iam.invalid_token`, `POST /api/v1/auth/login` dùng thông tin giả trả `401 iam.invalid_credentials`. Các GET `/api/v1/procedures`, `/api/v1/system/app-config`, `/api/v1/wards` trả 200. Các GET `/api/v1/users/me`, `/api/v1/citizen/submissions`, `/api/v1/manager/applications` và POST `/api/analytics-system/hubs/notifications/negotiate?negotiateVersion=1` trả 401 khi thiếu token.
+- Bản Vercel đang chạy trả 200 cho GET app-config và `401 iam.invalid_token` cho POST refresh không cookie. Chưa xác minh biến Production/Preview từ dashboard và chưa redeploy. Chưa thử đăng nhập tài khoản thật. Thay đổi cấu hình local không đổi API, DTO, ProblemDetails hoặc token. Chưa chạy lại build/lint và bộ test tự động.
+
+## FE-UI-COPY-1122 — Xóa ba đoạn hướng dẫn được đánh dấu — 22/11/2026 19:53 (Asia/Saigon, UTC+07:00)
+
+- Xóa mô tả dưới tiêu đề «Thêm thủ tục» trong `src/pages/procedure-manager/ProcedureManagerPage.tsx`, hướng dẫn đầu thẻ «Thời hạn & lệ phí» trong `src/pages/procedure-manager/ProcedureApiEditor.tsx` và chú giải dưới lịch tháng trong `src/components/staffing/MonthlyScheduleView.tsx`.
+- `npm run build` và `npm run lint` đạt. Bản dựng có cảnh báo chú thích dependency và kích thước chunk. Đã kiểm tra ba đoạn đều vắng mặt trong mã giao diện và bản dựng.
+- Playwright (`procedure-manager.spec.ts`, `schedule-calendar.spec.ts`, API giả lập) ghi nhận 47 đạt, 1 lỗi. Kiểm thử trang tổng quan hết thời gian chờ nút «Thêm thủ tục» khi phân hệ còn đang tải. Chạy riêng kiểm thử này và gặp cùng lỗi.
+- Phạm vi thay đổi là nội dung hiển thị frontend. Không có thay đổi endpoint, request/response, DTO, ProblemDetails hoặc token.
+
 ## FE-PLAIN-TEXT-1121 — Đổi chữ kỹ thuật sang lời dễ hiểu — 21/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Rà 5.578 chuỗi hiển thị trong `src/`, sửa ~55 câu ở 26 tệp nguồn; chỉ đổi câu chữ, không đổi logic/API. Mức sửa theo người đọc: công dân/công khai/lỗi chung sửa hết; cán bộ/quản lý/quản lý thủ tục bỏ GUID, JSON, byte, backend, máy chủ, vector; trang quản trị IT (sức khỏe dịch vụ, sao lưu, HTTP, token, mã tra cứu) giữ thuật ngữ, chỉ sửa câu lẫn tiếng Anh.
