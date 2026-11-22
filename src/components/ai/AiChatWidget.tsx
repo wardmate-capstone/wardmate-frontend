@@ -11,6 +11,7 @@ import {
   Plus,
   CaretLeft,
   SignIn,
+  Sparkle,
 } from '@phosphor-icons/react';
 import { aiOcrApi, AiChatError, type ChatSession } from '@/lib/api/aiOcr';
 import { useQuery } from '@tanstack/react-query';
@@ -540,7 +541,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
   };
 
   return (
-    <div role="region" aria-label="Trợ lý hỗ trợ thủ tục" className="fixed bottom-3 right-3 z-40 sm:bottom-6 sm:right-6" onKeyDown={event => {
+    <div role="region" aria-label="Trợ lý hỗ trợ thủ tục" className="fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] right-3 z-40 sm:bottom-6 sm:right-6" onKeyDown={event => {
       if (event.key === 'Escape' && isOpen) {
         event.stopPropagation();
         setIsOpen(false);
@@ -553,14 +554,14 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
           ref={toggleRef}
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2.5 rounded-full bg-red-800 p-3 sm:px-4 text-white shadow-xl hover:bg-red-900 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
+          className="group flex items-center gap-2.5 rounded-full border border-red-950/20 bg-linear-to-br from-red-700 to-red-900 p-2 text-white shadow-[0_8px_25px_rgba(121,27,23,.28)] hover:from-red-800 hover:to-red-950 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-red-800 motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0 sm:pr-4"
           aria-label="Mở trợ lý hỗ trợ thủ tục"
         >
-          <div className="relative grid size-7 place-items-center rounded-full bg-white/20">
-            <BrandMark size={28} className="size-7 object-contain" />
-            <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 ring-2 ring-red-800" />
-          </div>
-          <span className="hidden text-xs font-bold tracking-wide sm:inline">Hỏi Đáp AI</span>
+          <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white/15" aria-hidden="true">
+            <BrandMark size={28} className="size-7 object-contain motion-safe:transition-transform motion-safe:group-hover:-rotate-6" />
+            <Sparkle size={13} weight="fill" className="absolute -top-0.5 -right-0.5 text-amber-200 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:rotate-12 motion-safe:group-hover:scale-125 motion-safe:group-focus-visible:scale-125" />
+          </span>
+          <span className="hidden text-sm font-bold sm:inline">Hỏi Đáp AI</span>
         </button>
       )}
 
@@ -568,7 +569,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
       {isOpen && (
         <section
           aria-label="Cửa sổ hội thoại trợ lý ảo"
-          className="flex h-[min(520px,calc(100dvh-24px))] w-[calc(100vw-24px)] max-w-[400px] flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          className="flex h-[min(520px,calc(100dvh-24px))] w-[calc(100vw-24px)] max-w-[400px] flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-200"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-red-900 bg-red-800 px-4 py-3 text-white">

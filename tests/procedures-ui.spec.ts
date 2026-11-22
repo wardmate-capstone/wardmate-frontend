@@ -11,6 +11,8 @@ test('lookup keeps readable cards and filters within public and citizen layouts'
     if (path.includes('citizen')) {
       await expect(page.locator('#citizen-main h1')).toHaveCount(1);
       await expect(page.locator('#citizen-main h1')).toHaveText('Tra cứu thủ tục');
+    } else {
+      await expect(page.getByRole('complementary', { name: 'Lọc theo lĩnh vực' }).getByRole('link', { name: 'Hướng dẫn chuẩn bị hồ sơ', includeHidden: true })).toHaveAttribute('href', '/huong-dan');
     }
     await expect(page.locator('.procedures-breadcrumb')).toHaveCount(0);
     await expect(page.locator('.procedures-hero-copy')).toHaveCount(0);
@@ -22,9 +24,12 @@ test('lookup keeps readable cards and filters within public and citizen layouts'
       await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const card = page.locator('.procedure-result-row').first();
-      await expect(card).toContainText('Thời gian: Trong ngày');
-      await expect(card).toContainText('Lệ phí: Theo nội dung đối soát');
-      await expect(card.getByText('Xem hướng dẫn')).toBeVisible();
+      if (path === '/thu-tuc') {
+        await expect(card).toHaveCSS('border-top-left-radius', '12px');
+        await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toHaveCSS('border-top-left-radius', '12px');
+      }
+      await expect(card).toContainText('Mã: TEST-KS');
+      await expect(card).toHaveAccessibleName('Xem Đăng ký khai sinh từ API');
       if (width === 1440 || width === 390) {
         await page.screenshot({ path: `test-results/procedures-${path.includes('citizen') ? 'citizen' : 'public'}-${width}.png`, fullPage: true, animations: 'disabled' });
       }

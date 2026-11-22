@@ -6,6 +6,7 @@
   --public-ink: #222525;
   --public-muted: #575a57;
   --public-red: #90241f;
+  --public-card-radius: 12px;
   background: #fff;
   color: var(--public-ink);
 }
@@ -96,8 +97,9 @@
 
 .public-procedures .public-masthead-copy { max-width: 850px; }
 .public-procedures .procedures-search { margin-top: 22px; max-width: 740px; gap: 8px; }
-.public-procedures .procedures-search input { min-height: 52px; border-radius: 6px; background: #fff; box-shadow: none; }
-.public-procedures .procedures-search > button { min-height: 52px; border-radius: 6px; background: var(--public-red); }
+.public-procedures .procedures-search input { min-height: 52px; border-radius: var(--public-card-radius); background: #fff; box-shadow: none; }
+.public-procedures .procedures-search input:focus-visible { border-color: var(--public-red); box-shadow: 0 0 0 3px #90241f26; }
+.public-procedures .procedures-search > button { min-height: 52px; border-radius: var(--public-card-radius); background: var(--public-red); }
 .public-procedures .procedures-search > button:hover, .public-masthead a.public-action:hover { background: #731c18; }
 .public-procedures .procedure-search-details { margin-top: 7px; justify-content: flex-start; gap: 0 20px; }
 .public-procedures .procedure-search-examples { gap: 0 12px; }
@@ -118,47 +120,45 @@
   gap: clamp(24px, 4vw, 55px);
   padding: 34px clamp(20px, 4vw, 34px) clamp(52px, 7vw, 97px);
 }
-.public-procedures .procedures-filter { position: static; padding: 0; border: 0; border-radius: 0; }
-.public-procedures .procedures-filter-heading { border-bottom: 1px solid var(--public-line); padding: 6px 0 13px; }
+.public-procedures .procedures-filter { position: static; padding: 13px; border: 1px solid var(--public-line); border-top: 3px solid var(--public-red); border-radius: var(--public-card-radius); background: #fff; }
+.public-procedures .procedures-filter-heading { border-bottom: 1px solid var(--public-line); padding: 2px 0 10px; }
 .public-procedures .procedures-filter-heading h2 { font-size: 1rem; }
 .public-procedures .procedures-filter-list { margin-top: 8px; grid-template-columns: minmax(0, 1fr); gap: 1px; }
-.public-procedures .procedures-filter-list button { min-height: 44px; border-radius: 0; border: 0; border-left: 3px solid transparent; color: var(--public-muted); }
+.public-procedures .procedures-filter-list button { min-height: 44px; border-radius: 8px; border: 0; border-left: 3px solid transparent; color: var(--public-muted); }
 .public-procedures .procedures-filter-list button.is-selected { border-left-color: var(--public-red); background: #faf0ed; color: var(--public-red); }
 .public-category-select { display: none; }
 .public-procedure-help { border-top: 1px solid var(--public-line); margin-top: 14px; padding-top: 6px; }
 .public-procedure-help svg { flex: none; }
 .public-procedures .procedures-results-heading h2 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.6rem); scroll-margin-top: 160px; }
-.public-procedures .procedures-list { gap: 0; }
-.public-procedures .procedures-list:where(ul) { border-top: 1px solid var(--public-line); }
+.public-procedures .procedures-list { gap: 8px; }
 .public-procedures .procedure-result-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 24px;
-  padding: 17px 8px 17px 0;
-  border: 0;
-  border-bottom: 1px solid var(--public-line);
-  border-radius: 0;
+  padding: 16px clamp(11px, 2vw, 19px);
+  border: 1px solid var(--public-line);
+  border-radius: var(--public-card-radius);
   box-shadow: none;
 }
-.public-procedures .procedure-result-row:hover { background: #fcfaf7; border-color: var(--public-line); }
+.public-procedures .procedure-result-row:hover { background: #fffdfa; border-color: #c38b7f; }
 .public-procedures .procedure-result-row:hover strong { color: var(--public-red); }
 .public-procedures .procedure-result-copy strong { margin: 0; line-height: 1.45; color: var(--public-ink); }
 .public-procedures .procedure-result-labels { margin-top: 7px; gap: 5px 12px; }
 .public-procedures .procedure-result-labels small { padding: 0; border-radius: 0; background: transparent; color: var(--public-red); }
 .public-procedures .procedure-result-action { padding: 0; border: 0; color: var(--public-red); }
-.public-procedures .procedures-empty { border-color: var(--public-line); border-radius: 6px; padding-block: 34px; }
+.public-procedures .procedures-empty { border-color: var(--public-line); border-radius: var(--public-card-radius); padding-block: 34px; }
 
 .guide-hero-photo { margin: 0; justify-self: end; width: min(100%, 365px); }
-.guide-hero-photo img { display: block; width: 100%; height: clamp(150px, 17vw, 205px); object-fit: cover; object-position: center 48%; }
+.guide-hero-photo img { display: block; width: 100%; height: clamp(150px, 17vw, 205px); object-fit: cover; object-position: center 48%; border-radius: 14px; }
 .guide-hero-photo figcaption { margin-top: 7px; color: var(--public-muted); font-size: .75rem; }
 .public-reading-layout, .public-faq-layout { display: grid; gap: clamp(26px, 5vw, 64px); padding-block: 34px clamp(55px, 8vw, 96px); align-items: start; }
 .public-reading-layout { grid-template-columns: minmax(190px, 252px) minmax(0, 1fr); }
 .public-reading-body, .public-faq-body { min-width: 0; }
-.guide-contents { position: sticky; top: 157px; border-top: 3px solid var(--public-red); }
+.guide-contents { position: sticky; top: 157px; border: 1px solid var(--public-line); border-top: 3px solid var(--public-red); border-radius: var(--public-card-radius); padding-inline: 13px; background: #fff; }
 .guide-contents h2 { font-size: .9375rem; font-weight: 700; margin: 15px 0 8px; }
 .guide-contents ol { list-style: none; padding: 0; margin: 0; }
-.guide-contents li { border-bottom: 1px solid var(--public-line); }
+.guide-contents li + li { border-top: 1px solid var(--public-line); }
 .guide-contents li a { display: flex; min-height: 44px; padding: 8px 5px 8px 0; align-items: center; gap: 11px; font-size: .875rem; color: var(--public-muted); }
 .guide-contents li a span { color: var(--public-red); font-weight: 700; font-variant-numeric: tabular-nums; }
 .guide-contents li a:hover, .guide-contents li a[aria-current] { color: var(--public-red); background: #fbf4f0; }
@@ -179,7 +179,8 @@
 .guide-step:not(:last-child)::before { content: ''; position: absolute; inset: 36px auto 0 19px; width: 1px; background: var(--public-line); }
 .guide-step-number { display: grid; place-items: center; align-self: start; border: 1px solid #dec2b9; border-radius: 50%; width: 40px; height: 40px; color: var(--public-red); font-size: .8125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .guide-step:target .guide-step-number { background: var(--public-red); color: white; }
-.guide-step > section { border-bottom: 1px solid var(--public-line); padding: 3px 0 23px; }
+.guide-step > section { border: 1px solid var(--public-line); border-radius: var(--public-card-radius); padding: clamp(13px, 2.5vw, 23px); }
+.guide-step:target > section { border-color: #c38b7f; background: #fffdfa; }
 .guide-step h2, .guide-support h2 { font-size: clamp(1.08rem, 2.2vw, 1.4rem); font-weight: 700; line-height: 1.4; }
 .guide-step section > p { margin-top: 7px; color: var(--public-muted); font-size: .9375rem; line-height: 1.7; }
 .guide-step ul { list-style: none; margin: 13px 0; padding: 0; display: grid; gap: 7px; }
@@ -229,7 +230,7 @@
   .public-procedures .procedures-directory { gap: 20px; padding-top: 21px; }
   .public-procedures .procedures-filter-heading { border: 0; padding: 0 0 6px; }
   .public-procedures .procedures-filter-list:has(button), .public-procedure-help { display: none; }
-  .public-category-select { display: block; width: 100%; min-height: 46px; border: 1px solid #bbb8b1; border-radius: 6px; background: #fff; padding-inline: 11px; font-size: 1rem; }
+  .public-category-select { display: block; width: 100%; min-height: 46px; border: 1px solid #bbb8b1; border-radius: 8px; background: #fff; padding-inline: 11px; font-size: 1rem; }
   .public-procedures .procedures-results-heading h2, .guide-step { scroll-margin-top: 90px; }
 }
 

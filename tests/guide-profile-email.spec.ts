@@ -7,14 +7,16 @@ test('menu căn giữa và mở trang hướng dẫn có đủ sáu bước', as
   await page.route('**/api/v1/auth/refresh-token', route => authReply(route, { status: 401 }));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   const nav = page.getByRole('navigation', { name: 'Điều hướng chính', exact: true });
   const links = nav.getByRole('link');
   const first = await links.first().boundingBox();
   const last = await links.last().boundingBox();
-  expect(Math.abs((first!.x + last!.x + last!.width) / 2 - 720)).toBeLessThan(2);
+  const contentCenter = await page.evaluate(() => document.documentElement.clientWidth / 2);
+  expect(Math.abs((first!.x + last!.x + last!.width) / 2 - contentCenter)).toBeLessThan(2);
   await nav.getByRole('link', { name: 'Hướng dẫn thực hiện' }).click();
   await expect(page).toHaveURL(/\/huong-dan$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Chuẩn bị hồ sơ,\s*rõ từng bước/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hướng dẫn thực hiện');
   await expect(nav.getByRole('link', { name: 'Hướng dẫn thực hiện' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('navigation', { name: 'Mục lục hướng dẫn' }).getByRole('link')).toHaveCount(6);
   await page.screenshot({ path: 'test-results/guide-desktop.png', fullPage: true });
@@ -36,9 +38,9 @@ test('hướng dẫn dùng được từ menu mobile, giữ bố cục 320px', a
   await expect(page.getByRole('dialog', { name: 'Danh mục' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/guide-mobile.png', fullPage: true });
-  await page.getByRole('navigation', { name: 'Mục lục hướng dẫn' }).getByRole('link', { name: /03/ }).click();
+  await page.getByRole('navigation', { name: 'Mục lục hướng dẫn' }).getByRole('link', { name: 'Điền tờ khai và thêm giấy tờ', exact: true }).click();
   await expect(page).toHaveURL(/#chuan-bi$/);
-  await expect(page.getByRole('heading', { name: 'Điền tờ khai và thêm giấy tờ', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Điền tờ khai và thêm giấy tờ', exact: true })).toBeFocused();
 });
 
 test('hồ sơ hiện email từ tài khoản, không gửi email vào API profile', async ({ page }) => {

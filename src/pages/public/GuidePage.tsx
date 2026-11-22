@@ -5,12 +5,20 @@ import { buttonVariants } from '@/components/ui';
 import { guideSteps } from '@/data/preparationGuide';
 import { PublicPageIntro } from './PublicPageIntro';
 
+const stepActions: Partial<Record<string, { to: string; label: string }>> = {
+  'tim-thu-tuc': { to: '/thu-tuc', label: 'Tra cứu thủ tục hành chính' },
+  'tai-khoan': { to: '/dang-nhap?returnTo=%2Fcitizen%3Fsection%3Ddossiers_all', label: 'Đăng nhập để chuẩn bị hồ sơ' },
+  'bo-sung': { to: '/citizen?section=dossiers_all', label: 'Theo dõi hồ sơ của tôi' },
+};
+
 export function GuidePage() {
   const { hash } = useLocation();
 
   useEffect(() => {
-    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
-    else window.scrollTo(0, 0);
+    if (!hash) { window.scrollTo(0, 0); return; }
+    const target = document.getElementById(hash.slice(1));
+    target?.scrollIntoView({ block: 'start' });
+    target?.querySelector('h2')?.focus({ preventScroll: true });
   }, [hash]);
 
   return (
@@ -28,8 +36,8 @@ export function GuidePage() {
         }
       >
         <div className="public-masthead-actions">
-          <Link to="#tim-thu-tuc" className={buttonVariants({ className: 'public-action' })}>Xem các bước <ArrowRight size={17} aria-hidden="true" /></Link>
-          <Link to="/citizen?section=dossiers_all" className="public-text-link">Hồ sơ của tôi <ArrowRight size={16} aria-hidden="true" /></Link>
+          <Link to="#tim-thu-tuc" className={buttonVariants({ className: 'public-action' })}>Xem các bước</Link>
+          <Link to="/citizen?section=dossiers_all" className="public-text-link">Hồ sơ của tôi</Link>
         </div>
       </PublicPageIntro>
 
@@ -65,19 +73,23 @@ export function GuidePage() {
           </details>
 
           <ol className="guide-sequence">
-            {guideSteps.map((step) => (
+            {guideSteps.map((step) => {
+              const action = stepActions[step.id];
+              return (
               <li key={step.id} id={step.id} className="guide-step">
                 <span className="guide-step-number" aria-hidden="true">{step.number}</span>
                 <section aria-labelledby={step.id + '-title'}>
-                  <h2 id={step.id + '-title'}>{step.title}</h2>
+                  <h2 id={step.id + '-title'} tabIndex={-1}>{step.title}</h2>
                   <p>{step.description}</p>
                   <ul>
                     {step.tasks.map(task => <li key={task}><Check size={17} aria-hidden="true" /><span>{task}</span></li>)}
                   </ul>
                   <div className="guide-outcome"><Info size={18} aria-hidden="true" /><p><strong>Sau bước này</strong> {step.outcome}</p></div>
+                  {action && <Link to={action.to} className="public-text-link underline underline-offset-4">{action.label}</Link>}
                 </section>
               </li>
-            ))}
+              );
+            })}
           </ol>
 
           <section className="guide-support" aria-labelledby="guide-help">
