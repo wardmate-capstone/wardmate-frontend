@@ -20,6 +20,17 @@ test('ô tìm kiếm trống có thông báo hướng dẫn', async ({ page }) =
   await expect(page.getByText('Vui lòng nhập tên thủ tục hoặc nhu cầu cần giải quyết.')).toBeVisible();
 });
 
+test('trang chủ hiển thị ngay nội dung khi bật giảm chuyển động', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await expect(page.getByLabel('Tra cứu thủ tục hành chính')).toBeVisible();
+  for (const selector of ['.hero-main-content', '.journey-node', '.process-card', '.cta-card']) {
+    const block = page.locator(selector).first();
+    await expect(block).toHaveCSS('opacity', '1');
+    await expect(block).toHaveCSS('transform', 'none');
+  }
+});
+
 test('menu mobile mở, đóng và không tràn ngang', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -148,9 +159,9 @@ test('trang thủ tục có ô lọc lĩnh vực gọn trên điện thoại', a
   await page.goto('/thu-tuc');
   const category = page.getByRole('combobox', { name: 'Chọn lĩnh vực' });
   await expect(category).toBeVisible();
-  await category.selectOption({ label: 'Chứng thực' });
-  await expect(page).toHaveURL(/category=/);
-  await expect(page.getByRole('link', { name: /Xem Chứng thực/ }).first()).toBeVisible();
+  await category.selectOption({ label: 'Hộ tịch' });
+  await expect(page).toHaveURL(/category=1/);
+  await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 

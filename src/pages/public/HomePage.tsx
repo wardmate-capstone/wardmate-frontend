@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { m } from 'motion/react';
+import { m, useReducedMotion } from 'motion/react';
 import { toast } from '@/components/ui/Toast';
 import {
   ArrowRight,
@@ -19,15 +19,17 @@ import { procedureError } from '@/lib/api/procedures';
 import { useProcedureCategories, useFeaturedProcedures } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
-const reveal = {
-  initial: { opacity: 0, y: 18 },
+const revealInView = {
+  initial: { opacity: 0.84, y: 10 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.18 },
-  transition: { duration: 0.45 },
+  transition: { duration: 0.34, ease: 'easeOut' as const },
 };
 
 export function HomePage() {
   const [query, setQuery] = useState('');
+  const reduceMotion = useReducedMotion();
+  const reveal = reduceMotion ? { initial: false as const } : revealInView;
 
   const navigate = useNavigate();
   const categories = useProcedureCategories();
@@ -49,7 +51,7 @@ export function HomePage() {
       <section id="trang-chu" className="hero-main" aria-labelledby="hero-title">
         <div className="national-pattern" aria-hidden="true" />
         <div className="hero-main-glow" aria-hidden="true" />
-        <m.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className="hero-main-content">
+        <m.div initial={reduceMotion ? false : { opacity: 0.88, y: 10 }} animate={reduceMotion ? undefined : { opacity: 1, y: 0 }} transition={revealInView.transition} className="hero-main-content">
           <BrandMark className="hero-brand-mark" size={96} title="Logo WardMate" />
           <p className="hero-agency">Ủy ban nhân dân cấp xã / phường</p>
           <h1 id="hero-title">Chuẩn bị hồ sơ đúng ngay từ đầu</h1>
@@ -88,7 +90,7 @@ export function HomePage() {
           {categories.isPending && <CardGridSkeleton />}
           <div className="service-grid relative z-10">
             {(categories.data ?? []).map((group, index) => (
-              <m.button {...reveal} transition={{ duration: 0.35, delay: index * 0.04 }} key={group.id} type="button" onClick={() => navigate('/thu-tuc?category=' + group.id)} className="service-group group">
+              <m.button {...reveal} transition={{ ...revealInView.transition, delay: Math.min(index * 0.04, 0.12) }} key={group.id} type="button" onClick={() => navigate('/thu-tuc?category=' + group.id)} className="service-group group">
                 <span className="service-icon"><FileSearch size={25} strokeWidth={1.7} aria-hidden="true" /></span>
                 <span className="service-content"><strong>{group.categoryName}</strong><span>{group.description}</span></span>
                 <span className="service-meta"><ChevronDown className="-rotate-90" size={18} aria-hidden="true" /></span>
@@ -137,7 +139,7 @@ export function HomePage() {
           <m.div {...reveal} className="mx-auto max-w-3xl text-center"><p className="section-label justify-center">Hướng dẫn thực hiện</p><h2 className="mt-3 text-3xl font-bold text-slate-950 sm:text-4xl">Từ tra cứu đến giấy tờ sẵn sàng</h2><p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">Theo dõi sáu bước chuẩn bị, gửi tiền kiểm và bổ sung hồ sơ trên WardMate.</p></m.div>
           <div className="relative mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {preparationSteps.map(({ icon: Icon, ...step }, index) => (
-              <m.article {...reveal} transition={{ duration: 0.4, delay: index * 0.07 }} key={step.number} className="process-card">
+              <m.article {...reveal} transition={{ ...revealInView.transition, delay: Math.min(index * 0.045, 0.16) }} key={step.number} className="process-card">
                 <div className="relative z-10 flex items-center justify-between"><span className="process-icon"><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span><span className="text-3xl font-bold text-red-100">{step.number}</span></div>
                 <h3 className="mt-6 text-lg font-bold text-slate-950">{step.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p>
                 <Link to={'/huong-dan#' + step.id} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-red-800 hover:underline">Xem hướng dẫn bước {step.number}<ArrowRight size={17} aria-hidden="true" /></Link>
@@ -149,11 +151,11 @@ export function HomePage() {
       </section>
 
       <section className="px-5 pb-20 sm:px-8 sm:pb-24">
-        <div className="cta-card">
+        <m.div {...reveal} className="cta-card">
           <div className="cta-pattern" aria-hidden="true" />
           <div className="relative z-10 max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.16em] text-gold-300">Bắt đầu ngay hôm nay</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">Tìm thủ tục bạn cần chuẩn bị</h2><p className="mt-4 text-base leading-7 text-red-50/80">Xem hướng dẫn công khai trước, đăng nhập khi bạn muốn lưu và gửi hồ sơ tiền kiểm.</p></div>
           <a href="#trang-chu" className="relative z-10 mt-7 inline-flex min-h-14 shrink-0 items-center gap-2 bg-gold-400 px-7 text-base font-bold text-red-950 hover:bg-gold-300 lg:mt-0">Tra cứu thủ tục <ArrowRight size={18} aria-hidden="true" /></a>
-        </div>
+        </m.div>
       </section>
 
     </>
