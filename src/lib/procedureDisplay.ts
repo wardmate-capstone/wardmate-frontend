@@ -50,3 +50,13 @@ export function methodTimeLabel(method: Method): string | null {
   if (method.estimatedDays != null) return method.estimatedDays > 0 ? `${method.estimatedDays.toLocaleString('vi-VN')} ngày làm việc` : 'Trong ngày';
   return null;
 }
+
+// PROC-LEGAL-01 (BE 23/11/2026): căn cứ pháp lý 4 cột Cổng DVC, cả 4 trường đều có thể null.
+type LegalReference = { documentNumber?: string | null; documentName?: string | null; issueDate?: string | null; authority?: string | null };
+// Hiện bảng 4 cột khi ít nhất một dòng có ngày ban hành hoặc cơ quan ban hành; ngược lại giữ 2 cột như cũ
+export const hasFourColumnLegal = (refs: LegalReference[]) => refs.some(ref => !!ref.issueDate?.trim() || !!ref.authority?.trim());
+// BE trả yyyy-MM-dd; hiển thị dd-MM-yyyy, tách chuỗi trực tiếp để không lệch múi giờ
+export function legalIssueDate(value?: string | null) {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : value?.trim() ?? '';
+}

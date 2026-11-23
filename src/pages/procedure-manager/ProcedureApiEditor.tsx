@@ -773,13 +773,16 @@ export function ProcedureApiEditor({
                 next.map((row) => ({
                   ...row,
                   issueDate: row.issueDate || null,
+                  authority: row.authority || null,
                 })),
               )
             }
-            // Theo Cổng DVC: chỉ cần Tên văn bản + Mã văn bản (ngày, cơ quan ban hành cũ vẫn được giữ nguyên)
+            // PROC-LEGAL-01: 4 cột Cổng DVC, không ô nào bắt buộc; mỗi dòng chỉ cần Số ký hiệu hoặc Trích yếu
             fields={[
-              { key: "documentName", label: "Tên văn bản pháp lý", rows: 3 },
-              { key: "documentNumber", label: "Mã văn bản" },
+              { key: "documentNumber", label: "Số ký hiệu" },
+              { key: "documentName", label: "Trích yếu", rows: 3 },
+              { key: "issueDate", label: "Ngày ban hành", kind: "date" },
+              { key: "authority", label: "Cơ quan ban hành" },
             ]}
           />
         )}

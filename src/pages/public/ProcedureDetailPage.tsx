@@ -12,7 +12,7 @@ import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/usePro
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
 import { ProcedureFormLink } from '@/components/forms/ProcedureFormLink';
-import { checklistQuantityLabel, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { checklistQuantityLabel, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
@@ -487,14 +487,31 @@ export function ProcedureDetailPage() {
 
                 <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
                   <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                    {/* PROC-LEGAL-01: có ngày/cơ quan ban hành → bảng 4 cột Cổng DVC; không thì giữ 2 cột như cũ */}
                     <thead>
-                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-3/4">Tên văn bản pháp lý</th>
-                        <th scope="col" className="p-2.5 w-1/4">Mã văn bản</th>
-                      </tr>
+                      {hasFourColumnLegal(payload.legalReferences) ? (
+                        <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                          <th scope="col" className="p-2.5 border-r border-slate-200">Số ký hiệu</th>
+                          <th scope="col" className="p-2.5 border-r border-slate-200">Trích yếu</th>
+                          <th scope="col" className="p-2.5 border-r border-slate-200 whitespace-nowrap">Ngày ban hành</th>
+                          <th scope="col" className="p-2.5">Cơ quan ban hành</th>
+                        </tr>
+                      ) : (
+                        <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
+                          <th scope="col" className="p-2.5 border-r border-slate-200 w-3/4">Tên văn bản pháp lý</th>
+                          <th scope="col" className="p-2.5 w-1/4">Mã văn bản</th>
+                        </tr>
+                      )}
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {payload.legalReferences.map((ref, idx) => (
+                      {payload.legalReferences.map((ref, idx) => hasFourColumnLegal(payload.legalReferences) ? (
+                        <tr key={idx} className="hover:bg-slate-50/70">
+                          <td className="p-2.5 border-r border-slate-200 font-medium text-slate-900">{ref.documentNumber}</td>
+                          <td className="p-2.5 border-r border-slate-200 text-slate-800 leading-relaxed">{ref.documentName}</td>
+                          <td className="p-2.5 border-r border-slate-200 text-slate-800 whitespace-nowrap">{legalIssueDate(ref.issueDate)}</td>
+                          <td className="p-2.5 text-slate-800">{ref.authority}</td>
+                        </tr>
+                      ) : (
                         <tr key={idx} className="hover:bg-slate-50/70">
                           <td className="p-2.5 border-r border-slate-200 text-slate-800 leading-relaxed">
                             {ref.documentName}

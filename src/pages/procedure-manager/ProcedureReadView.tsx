@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui';
-import { checklistQuantityLabel, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { checklistQuantityLabel, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 import type { submissionMethodSchema } from '@/lib/api/procedures';
 import type { z } from 'zod';
 import { ProcedureFormPicker } from './ProcedureFormPicker';
@@ -64,6 +64,7 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
   const methods = rows(content.submissionMethods) as unknown as Method[];
   const steps = (items: unknown) => rows(items).sort((a, b) => Number(a.stepOrder ?? 0) - Number(b.stepOrder ?? 0));
   const legal = rows(content.legalReferences).filter((item) => text(item.documentName) || text(item.documentNumber));
+  const legalFourColumns = hasFourColumnLegal(legal.map((item) => ({ issueDate: text(item.issueDate), authority: text(item.authority) })));
   const sections = rows(content.additionalSections).filter((item) => text(item.title) || text(item.content));
 
   return (
@@ -210,15 +211,26 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
         />
       )}
 
+      {/* PROC-LEGAL-01: có ngày/cơ quan ban hành → bảng 4 cột Cổng DVC; không thì giữ 2 cột như cũ */}
       {step === 5 && (!legal.length ? <Empty>Thủ tục chưa khai căn cứ pháp lý.</Empty> : (
-        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-          {legal.map((item, i) => (
-            <li key={i} className="p-3 text-[13px]">
-              <p className="text-slate-900">{text(item.documentName) || text(item.documentNumber)}</p>
-              {text(item.documentName) && text(item.documentNumber) && <p className="mt-0.5 text-xs text-slate-500">Số hiệu: {text(item.documentNumber)}</p>}
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full border-collapse text-left text-[13px]">
+            <thead className="bg-slate-50 text-xs font-semibold text-slate-600">
+              {legalFourColumns ? (
+                <tr><th scope="col" className="p-3">Số ký hiệu</th><th scope="col" className="p-3">Trích yếu</th><th scope="col" className="p-3 whitespace-nowrap">Ngày ban hành</th><th scope="col" className="p-3">Cơ quan ban hành</th></tr>
+              ) : (
+                <tr><th scope="col" className="p-3">Tên văn bản pháp lý</th><th scope="col" className="p-3">Mã văn bản</th></tr>
+              )}
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-900">
+              {legal.map((item, i) => legalFourColumns ? (
+                <tr key={i}><td className="p-3 font-medium">{text(item.documentNumber)}</td><td className="p-3">{text(item.documentName)}</td><td className="p-3 whitespace-nowrap">{legalIssueDate(text(item.issueDate))}</td><td className="p-3">{text(item.authority)}</td></tr>
+              ) : (
+                <tr key={i}><td className="p-3">{text(item.documentName)}</td><td className="p-3 font-medium whitespace-nowrap">{text(item.documentNumber)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ))}
 
       {step === 6 && (!sections.length ? <Empty>Không có thông tin khác.</Empty> : (

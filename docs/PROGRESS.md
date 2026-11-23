@@ -1,5 +1,14 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-PROC-LEGAL-1123 — Căn cứ pháp lý 4 cột theo PROC-LEGAL-01 — 23/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Theo bàn giao BE `wardmate-backend/docs/fe-handoff-2026-11-23.md` (BE đã deploy DEPLOY-1123a, không đổi API/tên trường).
+- Màn nhập (bản nháp AI, sửa thủ tục — `ProcedureApiEditor.tsx`): 4 ô Số ký hiệu, Trích yếu, Ngày ban hành (ô chọn ngày, được để trống), Cơ quan ban hành; ô trống gửi `null`.
+- Validation (`procedureValidation.ts`): mỗi dòng cần Số ký hiệu hoặc Trích yếu (khớp 400 `ContentPayload.LegalReferences` của BE); Số ký hiệu ≤ 255 ký tự.
+- Màn xem quản trị (`ProcedureReadView.tsx`) và trang công dân (`ProcedureDetailPage.tsx`): có ít nhất một dòng có `issueDate` hoặc `authority` → bảng 4 cột, ngày dd-MM-yyyy; ngược lại giữ bảng 2 cột "Tên văn bản pháp lý / Mã văn bản". Helper `hasFourColumnLegal`, `legalIssueDate` trong `procedureDisplay.ts`.
+- Kiểm tra: `npm run typecheck`, eslint các file sửa, `npm run build` đạt. Test mới `tests/procedure-legal-references.spec.ts` 3/3 đạt. Bộ test thủ tục (7 file): 35 đạt, 8 lỗi — cả 8 lỗi y hệt trên code gốc trước khi sửa (đã chạy lại với `git stash`), không do thay đổi này; còn chờ sửa riêng.
+- Chưa kiểm tra với BE thật (5 mục kiểm tra sau deploy trong bàn giao BE).
+
 ## FE-RELEASE-5COMMITS-1122 — Đóng gói và đẩy 5 commit lên nhánh main — 22/11/2026 23:10 (Asia/Saigon, UTC+07:00)
 
 - Tổng hợp các công việc hoàn tất trong ngày 22/11/2026 thành 5 commit theo từng nhóm chức năng độc lập:

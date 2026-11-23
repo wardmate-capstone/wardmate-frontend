@@ -16,7 +16,7 @@ const labels: Record<string, string> = {
   checklistId: 'Mã giấy tờ', itemName: 'Tên giấy tờ', submissionType: 'Hình thức giấy tờ', documentCopyType: 'Loại bản sao',
   methodName: 'Hình thức nộp', feeAmount: 'Lệ phí', feeUnit: 'Đơn vị lệ phí', estimatedDays: 'Thời hạn',
   stepOrder: 'Thứ tự', stepName: 'Tên bước', executor: 'Người thực hiện', actionDetails: 'Nội dung thực hiện',
-  documentNumber: 'Số văn bản', documentName: 'Tên văn bản', issueDate: 'Ngày ban hành',
+  documentNumber: 'Số ký hiệu', documentName: 'Trích yếu', issueDate: 'Ngày ban hành', authority: 'Cơ quan ban hành',
 };
 export function procedureIssue(path: string, message?: string): ProcedureIssue {
   const step = path.startsWith('formDefinitions') ? 4 : path.startsWith('checklistSchema') ? 1
@@ -66,6 +66,12 @@ const saveSchema = procedureInputSchema.superRefine((data, context) => {
     if (list && list.length > PROCEDURE_LIMITS.listItems) context.addIssue({ code: 'custom', path: ['contentPayload', key], message: `Tối đa ${PROCEDURE_LIMITS.listItems} mục.` });
     list?.forEach((text, i) => maxLength(text, LINE, ['contentPayload', key, i]));
   }
+  // PROC-LEGAL-01: mỗi văn bản cần Số ký hiệu hoặc Trích yếu (BE trả 400 nếu thiếu cả hai); số ký hiệu ≤ 255 ký tự
+  content.legalReferences.forEach((row, i) => {
+    if (!row.documentNumber?.trim() && !row.documentName?.trim())
+      context.addIssue({ code: 'custom', path: ['contentPayload', 'legalReferences', i, 'documentNumber'], message: 'Nhập số ký hiệu hoặc trích yếu của văn bản.' });
+    maxLength(row.documentNumber, 255, ['contentPayload', 'legalReferences', i, 'documentNumber']);
+  });
   content.resultDetails?.forEach((row, i) => {
     required(row.name ?? '', ['contentPayload', 'resultDetails', i, 'name']);
     maxLength(row.code, 255, ['contentPayload', 'resultDetails', i, 'code']);
