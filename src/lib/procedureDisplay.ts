@@ -30,6 +30,20 @@ export function checklistQuantityLabel(item: QuantitySource) {
   return `${item.quantity ?? 1} ${copyTypeLabel(item.documentCopyType)}`;
 }
 
+/** Tách chuỗi số lượng thành các dòng rõ ràng, tránh rớt chữ giữa 'Bản' và 'sao' */
+export function formatQuantityLines(text: string): string[] {
+  if (!text) return [];
+  const trimmed = text.trim();
+  // Khớp định dạng: "Bản chính: 0 Bản sao: 1", "Bản chính: 1; Bản sao: 0", "Bản chính: 1, Bản sao: 1"
+  const match = trimmed.match(/^(Bản chính:\s*[^;\n,]+)[;\n,]?\s*(Bản sao.*)$/i);
+  if (match) return [match[1].trim(), match[2].trim()];
+  if (trimmed.includes(';') || trimmed.includes(',')) {
+    const parts = trimmed.split(/[;,]/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) return parts;
+  }
+  return [trimmed];
+}
+
 /** Phí của một cách nộp: feeText → danh sách fees → feeAmount; null khi không có thông tin. */
 export function methodFeeLabel(method: Method): string | null {
   if (method.feeText?.trim()) return method.feeText.trim();

@@ -1,9 +1,10 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui';
-import { checklistQuantityLabel, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { checklistQuantityLabel, formatQuantityLines, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 import type { submissionMethodSchema } from '@/lib/api/procedures';
 import type { z } from 'zod';
 import { ProcedureFormPicker } from './ProcedureFormPicker';
+import { IdentificationCard, Buildings, Clock, ClipboardText } from '@phosphor-icons/react';
 
 type Row = Record<string, unknown>;
 type Method = z.infer<typeof submissionMethodSchema>;
@@ -16,25 +17,42 @@ const rows = (value: unknown): Row[] => (Array.isArray(value) ? value.map(record
 const text = (value: unknown) => (typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '');
 const list = (value: unknown) => (Array.isArray(value) ? value.map(text).filter(Boolean) : []);
 
-/** Một dòng thông tin; không có giá trị thì không vẽ (trang đọc chỉ hiện mục đã khai). */
-function Item({ label, value, wide }: { label: string; value: ReactNode; wide?: boolean }) {
+/** Một ô thông tin trong thẻ nhóm; không có giá trị thì không vẽ. */
+function Item({ label, value, wide, highlight, boxed }: { label: string; value: ReactNode; wide?: boolean; highlight?: boolean; boxed?: boolean }) {
   if (value === '' || value === null || value === undefined || (Array.isArray(value) && !value.length)) return null;
   return (
-    <div className={wide ? 'sm:col-span-2' : undefined}>
-      <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1 whitespace-pre-line break-words text-[13px] text-slate-900">
-        {Array.isArray(value) ? <ul className="list-disc space-y-0.5 pl-4">{value.map((item, i) => <li key={i}>{item}</li>)}</ul> : value}
+    <div className={`space-y-1.5 ${wide ? 'sm:col-span-2' : ''}`}>
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</dt>
+      <dd className={`break-words text-sm leading-relaxed ${highlight ? 'font-semibold text-slate-900 text-[15px]' : 'text-slate-800 font-medium'} ${boxed ? 'rounded-lg border border-slate-200/80 bg-slate-50/70 p-3.5 text-slate-700 whitespace-pre-line' : 'whitespace-pre-line'}`}>
+        {Array.isArray(value) ? (
+          <ul className="mt-1 space-y-1 pl-4 list-disc text-slate-700 text-sm">
+            {value.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+        ) : (
+          value
+        )}
       </dd>
     </div>
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode[] }) {
-  if (!children.some(Boolean)) return null;
+function Group({ title, icon, badge, children }: { title: string; icon?: ReactNode; badge?: string; children: ReactNode[] }) {
+  const validChildren = children.filter(Boolean);
+  if (!validChildren.length) return null;
   return (
-    <section className="space-y-3">
-      <h3 className="text-[13px] font-semibold text-slate-800">{title}</h3>
-      <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{children}</dl>
+    <section className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all hover:border-slate-300">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-5">
+        <div className="flex items-center gap-2 text-slate-700">
+          {icon && <span className="text-slate-600 flex items-center">{icon}</span>}
+          <h3 className="text-sm font-bold text-slate-800 tracking-tight">{title}</h3>
+        </div>
+        {badge && (
+          <span className="inline-flex items-center rounded-full bg-slate-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+            {badge}
+          </span>
+        )}
+      </div>
+      <dl className="p-4 sm:p-5 grid gap-x-6 gap-y-4 sm:grid-cols-2">{validChildren}</dl>
     </section>
   );
 }
@@ -86,18 +104,18 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
 
       {step === 0 && (
         <div className="space-y-6">
-          <Group title="Định danh thủ tục">{[
-            <Item key="code" label="Mã thủ tục" value={<span className="font-mono">{text(value.procedureCode)}</span>} />,
-            <Item key="cat" label="Lĩnh vực" value={text(value.categoryName)} />,
-            <Item key="title" label="Tên thủ tục" value={text(value.title)} wide />,
-            <Item key="level" label="Cấp thực hiện" value={text(value.levelOfImplementation) || list(content.levels).join(', ')} />,
+          <Group title="Định danh thủ tục" icon={<IdentificationCard size={18} className="text-blue-600" />}>{[
+            <Item key="code" label="Mã thủ tục" value={<span className="inline-flex items-center px-2.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-100 text-slate-900 border border-slate-200 shadow-2xs">{text(value.procedureCode)}</span>} />,
+            <Item key="cat" label="Lĩnh vực" value={<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">{text(value.categoryName)}</span>} />,
+            <Item key="title" label="Tên thủ tục" value={text(value.title)} wide highlight />,
+            <Item key="level" label="Cấp thực hiện" value={<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">{text(value.levelOfImplementation) || list(content.levels).join(', ')}</span>} />,
             <Item key="target" label="Đối tượng thực hiện" value={text(value.targetAudience)} />,
             <Item key="type" label="Loại thủ tục" value={text(content.procedureType)} />,
           ]}</Group>
-          <Group title="Cơ quan & pháp lý ban hành">{[
+          <Group title="Cơ quan & pháp lý ban hành" icon={<Buildings size={18} className="text-amber-600" />}>{[
             <Item key="issuer" label="Cơ quan ban hành" value={text(value.issuingAuthority)} />,
             <Item key="exec" label="Cơ quan thực hiện" value={text(value.executingAgency)} />,
-            <Item key="decision" label="Số quyết định" value={text(content.decisionNumber)} />,
+            <Item key="decision" label="Số quyết định" value={<span className="font-semibold text-slate-900">{text(content.decisionNumber)}</span>} />,
             <Item key="address" label="Địa chỉ tiếp nhận" value={text(content.receivingAddress)} />,
             <Item key="competent" label="Cơ quan có thẩm quyền" value={list(content.competentAuthorities)} />,
             <Item key="agencies" label="Cơ quan thực hiện (nhiều cơ quan)" value={list(content.executingAgencies)} />,
@@ -105,15 +123,15 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
             <Item key="coord" label="Cơ quan phối hợp" value={list(content.coordinatingAgencies)} />,
             <Item key="addresses" label="Các địa chỉ tiếp nhận khác" value={list(content.receivingAddresses)} wide />,
           ]}</Group>
-          <Group title="Yêu cầu, điều kiện & mô tả">{[
-            <Item key="req" label="Yêu cầu, điều kiện thực hiện" value={text(content.requirements)} wide />,
-            <Item key="desc" label="Mô tả" value={text(content.description)} wide />,
-            <Item key="kw" label="Từ khóa" value={list(content.keywords).join(', ')} wide />,
-          ]}</Group>
-          <Group title="Thời hạn, lệ phí & kết quả">{[
-            <Item key="fee" label="Tóm tắt lệ phí" value={text(value.feeSummary)} />,
-            <Item key="time" label="Tóm tắt thời hạn" value={text(value.processingTimeSummary)} />,
+          <Group title="Thời hạn, lệ phí & kết quả" icon={<Clock size={18} className="text-indigo-600" />}>{[
+            <Item key="time" label="Tóm tắt thời hạn" value={<span className="inline-block rounded-md border border-indigo-100 bg-indigo-50/80 px-2.5 py-1 text-xs font-semibold text-indigo-700">{text(value.processingTimeSummary) || 'Theo quy định'}</span>} />,
+            <Item key="fee" label="Tóm tắt lệ phí" value={<span className="inline-block rounded-md border border-emerald-100 bg-emerald-50/80 px-2.5 py-1 text-xs font-semibold text-emerald-700">{text(value.feeSummary) || 'Miễn phí'}</span>} />,
             <Item key="results" label="Kết quả giải quyết" value={results} wide />,
+          ]}</Group>
+          <Group title="Yêu cầu, điều kiện & mô tả" icon={<ClipboardText size={18} className="text-purple-600" />}>{[
+            <Item key="req" label="Yêu cầu, điều kiện thực hiện" value={text(content.requirements)} wide boxed />,
+            <Item key="desc" label="Mô tả" value={text(content.description)} wide boxed />,
+            <Item key="kw" label="Từ khóa" value={list(content.keywords).length ? <div className="mt-1 flex flex-wrap gap-1.5">{list(content.keywords).map((kw, i) => <span key={i} className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 border border-slate-200/70">{kw}</span>)}</div> : null} wide />,
           ]}</Group>
         </div>
       )}
@@ -129,7 +147,7 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
           {!checklist.length ? <Empty>Thủ tục chưa khai thành phần hồ sơ.</Empty> : (
             <div className="admin-table-wrap overflow-x-auto">
               <table>
-                <thead><tr><th>Tên giấy tờ</th><th>Hình thức</th><th>Số lượng</th><th>Bắt buộc</th><th>Trường hợp</th><th>Mẫu kèm theo</th></tr></thead>
+                <thead><tr><th>Tên giấy tờ</th><th>Hình thức</th><th className="whitespace-nowrap min-w-[130px]">Số lượng</th><th>Bắt buộc</th><th>Trường hợp</th><th>Mẫu kèm theo</th></tr></thead>
                 <tbody>
                   {checklist.map((item, index) => (
                     <tr key={text(item.checklistId) || index}>
@@ -138,7 +156,11 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
                         {(text(item.conditionNote) || text(item.note)) && <p className="mt-0.5 text-xs text-slate-500">{[text(item.conditionNote), text(item.note)].filter(Boolean).join(' · ')}</p>}
                       </td>
                       <td className="whitespace-nowrap">{SUBMISSION_LABELS[text(item.submissionType)] ?? text(item.submissionType)}</td>
-                      <td>{checklistQuantityLabel(item as Parameters<typeof checklistQuantityLabel>[0])}</td>
+                      <td className="whitespace-nowrap">
+                        {formatQuantityLines(checklistQuantityLabel(item as Parameters<typeof checklistQuantityLabel>[0])).map((line, lIdx) => (
+                          <span key={lIdx} className="block whitespace-nowrap">{line}</span>
+                        ))}
+                      </td>
                       <td className="whitespace-nowrap">{item.isMandatory ? 'Có' : 'Không'}</td>
                       <td>{text(item.caseCode) ? caseName(item.caseCode) || text(item.caseCode) : 'Áp dụng chung'}</td>
                       <td>{list(item.formCodes).map(formName).join(', ') || '—'}</td>
@@ -217,14 +239,14 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
           <table className="w-full border-collapse text-left text-[13px]">
             <thead className="bg-slate-50 text-xs font-semibold text-slate-600">
               {legalFourColumns ? (
-                <tr><th scope="col" className="p-3">Số ký hiệu</th><th scope="col" className="p-3">Trích yếu</th><th scope="col" className="p-3 whitespace-nowrap">Ngày ban hành</th><th scope="col" className="p-3">Cơ quan ban hành</th></tr>
+                <tr><th scope="col" className="p-3">Số ký hiệu</th><th scope="col" className="p-3">Trích yếu</th><th scope="col" className="p-3 whitespace-nowrap">Ngày ban hành</th><th scope="col" className="p-3 whitespace-nowrap min-w-[140px]">Cơ quan ban hành</th></tr>
               ) : (
                 <tr><th scope="col" className="p-3">Tên văn bản pháp lý</th><th scope="col" className="p-3">Mã văn bản</th></tr>
               )}
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-900">
               {legal.map((item, i) => legalFourColumns ? (
-                <tr key={i}><td className="p-3 font-medium">{text(item.documentNumber)}</td><td className="p-3">{text(item.documentName)}</td><td className="p-3 whitespace-nowrap">{legalIssueDate(text(item.issueDate))}</td><td className="p-3">{text(item.authority)}</td></tr>
+                <tr key={i}><td className="p-3 font-medium">{text(item.documentNumber)}</td><td className="p-3">{text(item.documentName)}</td><td className="p-3 whitespace-nowrap">{legalIssueDate(text(item.issueDate))}</td><td className="p-3 whitespace-nowrap">{text(item.authority)}</td></tr>
               ) : (
                 <tr key={i}><td className="p-3">{text(item.documentName)}</td><td className="p-3 font-medium whitespace-nowrap">{text(item.documentNumber)}</td></tr>
               ))}

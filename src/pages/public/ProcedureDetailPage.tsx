@@ -12,7 +12,7 @@ import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/usePro
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
 import { ProcedureFormLink } from '@/components/forms/ProcedureFormLink';
-import { checklistQuantityLabel, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { checklistQuantityLabel, formatQuantityLines, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
@@ -375,7 +375,7 @@ export function ProcedureDetailPage() {
                       <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
                         <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
                         <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-1/5 text-center">Số lượng</th>
+                        <th scope="col" className="p-2.5 w-[140px] min-w-[130px] whitespace-nowrap text-center">Số lượng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -394,8 +394,10 @@ export function ProcedureDetailPage() {
                               <td className="p-2.5 border-r border-slate-200 text-slate-600">
                                 <FormCell formsOfItem={formsOf(item)} />
                               </td>
-                              <td className="p-2.5 text-center text-slate-800 font-medium">
-                                {checklistQuantityLabel(item)}
+                              <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
+                                {formatQuantityLines(checklistQuantityLabel(item)).map((line, lIdx) => (
+                                  <span key={lIdx} className="block whitespace-nowrap">{line}</span>
+                                ))}
                               </td>
                             </tr>
                           );
@@ -409,7 +411,7 @@ export function ProcedureDetailPage() {
                             <td className="p-2.5 border-r border-slate-200 text-slate-600">
                               <FormCell formsOfItem={[form]} />
                             </td>
-                            <td className="p-2.5 text-center text-slate-800 font-medium">{form.quantity} bản</td>
+                            <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">{form.quantity} bản</td>
                           </tr>
                         ))]
                       ) : (
@@ -436,7 +438,7 @@ export function ProcedureDetailPage() {
                       <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
                         <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
                         <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-1/5 text-center">Số lượng</th>
+                        <th scope="col" className="p-2.5 w-[140px] min-w-[130px] whitespace-nowrap text-center">Số lượng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -454,8 +456,10 @@ export function ProcedureDetailPage() {
                             <td className="p-2.5 border-r border-slate-200 text-slate-600">
                               <FormCell formsOfItem={formsOf(item)} />
                             </td>
-                            <td className="p-2.5 text-center text-slate-800 font-medium">
-                              {checklistQuantityLabel(item)}
+                            <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
+                              {formatQuantityLines(checklistQuantityLabel(item)).map((line, lIdx) => (
+                                <span key={lIdx} className="block whitespace-nowrap">{line}</span>
+                              ))}
                             </td>
                           </tr>
                         ))
@@ -467,7 +471,7 @@ export function ProcedureDetailPage() {
                           <td className="p-2.5 border-r border-slate-200 text-center text-slate-400">
                             —
                           </td>
-                          <td className="p-2.5 text-center text-slate-800 font-medium">
+                          <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
                             1 bản chính
                           </td>
                         </tr>
@@ -494,7 +498,7 @@ export function ProcedureDetailPage() {
                           <th scope="col" className="p-2.5 border-r border-slate-200">Số ký hiệu</th>
                           <th scope="col" className="p-2.5 border-r border-slate-200">Trích yếu</th>
                           <th scope="col" className="p-2.5 border-r border-slate-200 whitespace-nowrap">Ngày ban hành</th>
-                          <th scope="col" className="p-2.5">Cơ quan ban hành</th>
+                          <th scope="col" className="p-2.5 whitespace-nowrap min-w-[140px]">Cơ quan ban hành</th>
                         </tr>
                       ) : (
                         <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
@@ -509,7 +513,7 @@ export function ProcedureDetailPage() {
                           <td className="p-2.5 border-r border-slate-200 font-medium text-slate-900">{ref.documentNumber}</td>
                           <td className="p-2.5 border-r border-slate-200 text-slate-800 leading-relaxed">{ref.documentName}</td>
                           <td className="p-2.5 border-r border-slate-200 text-slate-800 whitespace-nowrap">{legalIssueDate(ref.issueDate)}</td>
-                          <td className="p-2.5 text-slate-800">{ref.authority}</td>
+                          <td className="p-2.5 text-slate-800 whitespace-nowrap">{ref.authority}</td>
                         </tr>
                       ) : (
                         <tr key={idx} className="hover:bg-slate-50/70">
