@@ -14,7 +14,7 @@ const server = await createServer({
 let checks = 0;
 const check = (label, actual, expected) => { assert.equal(actual, expected, label); checks++; };
 try {
-  const { staffingFormSchema, validStaffingRange, validatePeriod, vietnamIso } = await server.ssrLoadModule('/src/lib/staffingValidation.ts');
+  const { staffingFormSchema, validStaffingRange, validatePeriod, validateShiftChangePeriod, vietnamIso } = await server.ssrLoadModule('/src/lib/staffingValidation.ts');
   const { closureInputSchema, closureReasonSchema, calendarClosuresApi } = await server.ssrLoadModule('/src/lib/api/calendarClosures.ts');
   const { api } = await server.ssrLoadModule('/src/lib/api/index.ts');
   const { vietnamToday, addCalendarDays } = await server.ssrLoadModule('/src/lib/calendarRules.ts');
@@ -22,6 +22,18 @@ try {
   api.interceptors.request.use(() => { networkAttempts++; throw new Error('Network is forbidden in validation checks.'); });
 
   const now = Date.parse('2026-11-01T00:00:00Z');
+  for (const [start, end, valid] of [
+    ['08:30', '11:30', true], ['06:30', '11:30', false],
+    ['07:30', '09:30', true], ['15:00', '17:00', true],
+    ['07:30', '17:00', true], ['07:29:59', '11:30', false],
+    ['15:00', '17:00:01', false], ['08:30', '10:29:59', false],
+    ['08:30', '08:30', false], ['11:30', '08:30', false],
+    ['15:00:00', '17:00:00', true], ['', '11:30', false],
+  ]) {
+    check(`shift change ${start}-${end}`, !validateShiftChangePeriod({ startsAt: `2026-11-02T${start}`, endsAt: `2026-11-02T${end}` }, now), valid);
+  }
+  check('overnight shift change blocked', Boolean(validateShiftChangePeriod({ startsAt: '2026-11-02T15:00', endsAt: '2026-11-03T09:00' }, now)), true);
+  check('past shift change blocked', Boolean(validateShiftChangePeriod({ startsAt: '2026-10-31T08:30', endsAt: '2026-10-31T11:30' }, now)), true);
   const period = (start, end, shift = false) => validatePeriod({ startsAt: start, endsAt: end }, shift, now);
   check('valid future shift', period('2026-11-02T08:00', '2026-11-02T16:30', true), undefined);
   check('24-hour shift allowed', period('2026-11-02T08:00', '2026-11-03T08:00', true), undefined);

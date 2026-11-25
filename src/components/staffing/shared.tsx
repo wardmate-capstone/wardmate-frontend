@@ -104,7 +104,7 @@ export function Pager({ page, total, setPage, pageSize = 20 }: { page: number; t
 // Danh sách trên 7 lựa chọn mới hiện ô tìm kiếm; ngắn hơn thì cuộn/nhìn là thấy (ngưỡng chung với bộ lọc)
 const SEARCH_THRESHOLD = LIST_SEARCH_THRESHOLD;
 // 'listbox': ô chọn tùy biến (ListSelect) cho lựa chọn cần nhiều dòng thông tin, danh sách nằm trong hộp thoại
-type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'datetime-local' | 'select' | 'listbox'; options?: ListSelectOption[]; max?: number; placeholder?: string };
+type Field = { name: string; label: string; type?: 'text' | 'textarea' | 'time' | 'datetime-local' | 'select' | 'listbox'; options?: ListSelectOption[]; max?: number; placeholder?: string };
 export function ActionForm({ title, description, fields, validate, submit, onClose, children, defaultValues, inline = false, onDirtyChange, submitLabel = 'Xác nhận', submitDisabled = false }: {
   title: string; description?: string; fields: Field[]; validate?: (values: Record<string, string>) => string | undefined;
   submit: (values: Record<string, string>) => Promise<unknown>; onClose: () => void; children?: ReactNode; defaultValues?: Record<string, string>;

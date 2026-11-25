@@ -1,5 +1,28 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-SCHEDULE-CONFIRM-POSITION-1125 — Chuyển nút xác nhận lên hàng bộ lọc — 25/11/2026 17:06 (Asia/Saigon, UTC+07:00)
+
+- `src/components/staffing/MonthlyScheduleView.tsx`: đặt nút “Xác nhận đã xem lịch” ở góc phải hàng chọn tháng/năm và Lấy lịch mới bằng portal; hàng flex vẫn xuống dòng trên màn hẹp. Giữ logic fingerprint, quyền, khóa khi xử lý/lỗi cần đọc lại, trạng thái ẩn sau xác nhận. Không đổi BE/API/DTO/ProblemDetails/token hoặc validation.
+- ESLint file sửa đạt. Playwright test “Xác nhận đã xem ẩn sau tải lại, hiện lại khi lịch cá nhân thay đổi”: 1 đạt, 0 lỗi (HTTP mock, cổng tạm 4320); không chứng minh API thật. Không chạy Git/deploy.
+- File thay đổi: `src/components/staffing/MonthlyScheduleView.tsx`, `docs/PROGRESS.md`. Commit gợi ý: `fix(staffing): move schedule confirmation to top controls`.
+- Typecheck sau thay đổi đạt; chưa chạy build đầy đủ trong task bố cục này.
+
+## FE-SHIFT-VALIDATION-1125 — Giới hạn giờ đề nghị đổi ca — 25/11/2026 17:00 (Asia/Saigon, UTC+07:00)
+
+- Theo yêu cầu mới nhất: chỉ validation FE, không thay đổi backend. `RequestShiftChange` dùng `validateShiftChangePeriod`: khoảng đề xuất phải nằm trọn 07:30–17:00 cùng ngày Việt Nam, tối thiểu 2 giờ; chấp nhận đúng hai biên và đúng 2 giờ. Giữ kiểm tra ngày/giờ hợp lệ, tương lai, kết thúc sau bắt đầu, khác ca gốc và ngày gốc của form. Ca qua đêm không đáp ứng khung cùng ngày nên bị chặn ở form.
+- Ràng buộc này chỉ được thực thi tại form web; không khẳng định API chặn các khoảng tương tự. Khi có lỗi, sửa giờ trong form rồi xác nhận lại; dữ liệu không được gửi khi không hợp lệ. Không áp dụng cho form xếp lịch khác hoặc nghỉ phép.
+- File sửa: `src/components/staffing/ShiftChangesView.tsx`, `src/lib/staffingValidation.ts`, `tests/staffing-validation-check.mjs`, `tests/work-schedules.spec.ts`, `docs/PROGRESS.md`.
+- Kiểm tra: `node tests/staffing-validation-check.mjs` 70/70 đạt, 0 lỗi, 0 request mạng (14 kiểm tra mới cho đổi ca); `npm run lint` đạt. Playwright test Frontdesk xác nhận fingerprint/gửi đổi giờ: 1 đạt, 0 lỗi; kiểm tra giờ ngoài khung/ca 1,5 giờ không gửi API, sau đó ca hợp lệ gửi đúng body UTC. Dùng HTTP mock, không xác minh API/DB thật. Chạy bằng cấu hình tạm cổng 4318 vì 4317 đang được sử dụng.
+- DTO/body `{shiftId,expectedVersion,startsAt,endsAt,reason}`, endpoint/status, ProblemDetails và token không đổi. Không Git hoặc deploy. Commit gợi ý: `fix(staffing): validate shift change hours and minimum duration`.
+- `npm run build` đạt (TypeScript và Vite), có cảnh báo annotation trong dependency và chunk lớn hơn 500 kB. Không chạy kiểm thử .NET vì phạm vi cuối cùng chỉ FE.
+
+## FE-SHIFT-TIME-1125 — Đề nghị đổi ca chỉ chọn giờ — 25/11/2026 16:37 (Asia/Saigon, UTC+07:00)
+
+- Đã đổi hai ô đề xuất sang `time`; giữ ngày bắt đầu/kết thúc của từng mốc ca gốc theo giờ Việt Nam, kể cả ca qua đêm. Tái sử dụng kiểm tra khoảng ca, tương lai và khác ca gốc.
+- File: `src/components/staffing/ShiftChangesView.tsx`, `src/components/staffing/shared.tsx`, `tests/work-schedules.spec.ts`, `docs/PROGRESS.md`. Nhật ký/ràng buộc liên quan được ghi thêm tại backend `PROGRESS.md`, `docs/system-constraints.md`.
+- Kiểm tra: `npm run build` đạt (cảnh báo annotation dependency và chunk >500 kB); `npm run lint` đạt. Playwright chọn test Frontdesk xác nhận fingerprint/gửi đổi giờ: 1 đạt, 0 thất bại; xác nhận input chỉ giờ và body UTC giữ ngày. HTTP mock, chưa kiểm chứng API thật hoặc ca qua đêm trong test này.
+- Không đổi endpoint, DTO, ProblemDetails hoặc token; không chạy Git, không deploy. Không sửa source backend nên không chạy build/test .NET.
+
 ## FE-PROC-LEGAL-1123 — Căn cứ pháp lý 4 cột theo PROC-LEGAL-01 — 23/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Theo bàn giao BE `wardmate-backend/docs/fe-handoff-2026-11-23.md` (BE đã deploy DEPLOY-1123a, không đổi API/tên trường).

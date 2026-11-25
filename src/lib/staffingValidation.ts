@@ -39,3 +39,15 @@ export function validatePeriod(values: Record<string, string>, shift = false, no
   if (end - start > (shift ? 1 : 93) * 86400000) return shift ? 'Ca làm tối đa 24 giờ.' : 'Khoảng nghỉ tối đa 93 ngày.';
   if (shift ? start < now : end <= now) return shift ? 'Ca làm phải bắt đầu trong tương lai.' : 'Khoảng nghỉ chưa được kết thúc.';
 }
+
+export function validateShiftChangePeriod(values: Record<string, string>, now = Date.now()): string | undefined {
+  const issue = validatePeriod(values, true, now);
+  if (issue) return issue;
+  const start = vietnamDateTime(values.startsAt), end = vietnamDateTime(values.endsAt);
+  const midnight = Date.parse(`${values.startsAt.slice(0, 10)}T00:00:00+07:00`);
+  if (values.startsAt.slice(0, 10) !== values.endsAt.slice(0, 10) ||
+      start - midnight < 7.5 * 3600000 || end - midnight > 17 * 3600000) {
+    return 'Giờ đề xuất phải trong khung 07:30–17:00 cùng ngày (giờ Việt Nam).';
+  }
+  if (end - start < 2 * 3600000) return 'Mỗi ca đề xuất phải kéo dài tối thiểu 2 giờ.';
+}

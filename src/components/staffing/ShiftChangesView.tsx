@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { Button, RefreshButton } from '@/components/ui';
 import { workScheduleApi, type ScheduleSlot, type ShiftChange } from '@/lib/api/workSchedules';
-import { vietnamIso, vietnamLocal, validatePeriod } from '@/lib/staffingValidation';
+import { vietnamIso, vietnamLocal, validateShiftChangePeriod } from '@/lib/staffingValidation';
 import { ActionForm, Pager, QueryState, StaffPeriod, StaffStatus, useStaffAccess, useStaffDirectory, useStaffQuery } from './shared';
 
 export function RequestShiftChange({ slot, onClose }: { slot: ScheduleSlot; onClose: () => void }) {
-  return <ActionForm title="Đề nghị đổi giờ ca" description="Ca hiện tại vẫn có hiệu lực trong khi chờ quản lý duyệt. Chỉ thay đổi giờ của chính ca này." fields={[{ name: 'startsAt', label: 'Giờ bắt đầu đề xuất (Việt Nam)', type: 'datetime-local' }, { name: 'endsAt', label: 'Giờ kết thúc đề xuất (Việt Nam)', type: 'datetime-local' }, { name: 'reason', label: 'Lý do đổi ca', type: 'textarea' }]} defaultValues={{ startsAt: vietnamLocal(slot.startsAt), endsAt: vietnamLocal(slot.endsAt), reason: '' }} validate={v => validatePeriod(v, true) || (Date.parse(vietnamIso(v.startsAt)) === Date.parse(slot.startsAt) && Date.parse(vietnamIso(v.endsAt)) === Date.parse(slot.endsAt) ? 'Giờ đề xuất cần khác ca hiện tại.' : undefined)} submit={v => workScheduleApi.requestChange({ shiftId: slot.shiftId, expectedVersion: slot.shiftVersion, startsAt: vietnamIso(v.startsAt), endsAt: vietnamIso(v.endsAt), reason: v.reason })} onClose={onClose}><p className="mb-3 text-sm font-semibold">Ca hiện tại</p><StaffPeriod start={slot.startsAt} end={slot.endsAt} /></ActionForm>;
+  const start = vietnamLocal(slot.startsAt);
+  const end = vietnamLocal(slot.endsAt);
+  const period = (values: Record<string, string>) => ({
+    ...values,
+    startsAt: start.slice(0, 10) + 'T' + values.startsAt,
+    endsAt: end.slice(0, 10) + 'T' + values.endsAt,
+  });
+  return <ActionForm title="Đề nghị đổi giờ ca" description="Ca hiện tại vẫn có hiệu lực trong khi chờ quản lý duyệt. Chỉ thay đổi giờ của chính ca này." fields={[{ name: 'startsAt', label: 'Giờ bắt đầu đề xuất (Việt Nam)', type: 'time' }, { name: 'endsAt', label: 'Giờ kết thúc đề xuất (Việt Nam)', type: 'time' }, { name: 'reason', label: 'Lý do đổi ca', type: 'textarea' }]} defaultValues={{ startsAt: start.slice(11), endsAt: end.slice(11), reason: '' }} validate={v => validateShiftChangePeriod(period(v)) || (Date.parse(vietnamIso(period(v).startsAt)) === Date.parse(slot.startsAt) && Date.parse(vietnamIso(period(v).endsAt)) === Date.parse(slot.endsAt) ? 'Giờ đề xuất cần khác ca hiện tại.' : undefined)} submit={v => workScheduleApi.requestChange({ shiftId: slot.shiftId, expectedVersion: slot.shiftVersion, startsAt: vietnamIso(period(v).startsAt), endsAt: vietnamIso(period(v).endsAt), reason: v.reason })} onClose={onClose}><p className="mb-3 text-sm font-semibold">Ca hiện tại</p><StaffPeriod start={slot.startsAt} end={slot.endsAt} /></ActionForm>;
 }
 export function ShiftChangesView() {
   const { manager, can } = useStaffAccess();

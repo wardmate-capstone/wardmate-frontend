@@ -3,8 +3,8 @@ import { calendarDays, scheduleDay } from '@/lib/scheduleCalendar';
 import { vietnamIso } from '@/lib/staffingValidation';
 
 // Khớp quy tắc tính hạn 45 giờ làm việc của BE (5 ngày × 9 giờ): Thứ Hai–Thứ Sáu 07:30–16:30, không làm Thứ Bảy.
-export const defaultWorkingHours = 'Thứ Hai–Thứ Sáu: 07:30–16:30.';
-const DEFAULT_HOURS: [string, string][] = [['07:30', '16:30']];
+export const defaultWorkingHours = 'Thứ Hai–Thứ Sáu: 07:30–17:00.';
+const DEFAULT_HOURS: [string, string][] = [['07:30', '17:00']];
 
 // Prepare real slots for the existing draft/publish API, never fabricate a published calendar.
 export function defaultStaffSchedule(

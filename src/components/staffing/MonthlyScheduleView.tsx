@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDateTime } from '@/lib/dateFormat';
 import { Plus } from '@phosphor-icons/react';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -29,6 +30,7 @@ export function MonthlyScheduleView({ onRequestChange }: { onRequestChange: (slo
   const [officerId, setOfficer] = useState(manager ? '' : user!.id);
   const [month, setMonth] = useState(currentMonth);
   const [generation, setGeneration] = useState(0);
+  const [confirmationTarget, setConfirmationTarget] = useState<HTMLDivElement | null>(null);
   const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false);
   const guard = useUnsavedChanges(dirty, busy);
   const officers = directory.data?.filter(o => o.isActive && o.roles.includes('FRONT_DESK_OFFICER') && !o.roles.includes('MANAGER')) || [];
@@ -43,9 +45,10 @@ export function MonthlyScheduleView({ onRequestChange }: { onRequestChange: (slo
       {manager && <label className="staff-field">1. Chọn cán bộ<select className={fieldClass} value={officerId} disabled={busy || directory.isPending || directory.isError} onChange={e => change(() => setOfficer(e.target.value))}><option value="">Chọn cán bộ cần xếp lịch</option>{officers.map(o => <option key={o.id} value={o.id}>{o.fullName || o.username}</option>)}</select></label>}
       <div className="staff-field"><span>{manager ? '2. Chọn tháng' : 'Tháng làm việc'}</span><div className="flex gap-2"><select aria-label="Tháng làm việc" className={fieldClass} value={month.slice(5, 7)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(month.slice(0, 5) + value)); }}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>Tháng {i + 1}</option>)}</select><select aria-label="Năm làm việc" className={fieldClass} value={month.slice(0, 4)} disabled={busy || !officerId} onChange={e => { const value = e.target.value; change(() => setMonth(value + month.slice(4))); }}>{[...new Set([...scheduleYears(), Number(month.slice(0, 4))])].sort((a, b) => a - b).map(y => <option key={y} value={y}>{y}</option>)}</select></div></div>
       <Button variant="outline" disabled={!officerId || busy} onClick={() => change(() => setGeneration(g => g + 1))}>Lấy lịch mới</Button>
+      {!manager && <div ref={setConfirmationTarget} className="ml-auto" />}
     </div>
     {manager && <QueryState query={directory} />}
-    {!officerId ? <div className="staff-state"><p className="font-semibold">Chọn cán bộ để xem và xếp lịch tháng.</p><p>Bấm ngày để đặt giờ. Ngày chưa có ca không được xem là ngày nghỉ.</p></div> : <CalendarLoader key={`${officerId}:${month}:${generation}`} officerId={officerId} officerIds={officers.map(o => o.id)} month={month + '-01'} name={name} onDirty={setDirty} onBusy={setBusy} onRequestChange={onRequestChange} onPublished={() => { setDirty(false); setBusy(false); setGeneration(g => g + 1); }} move={move} />}
+    {!officerId ? <div className="staff-state"><p className="font-semibold">Chọn cán bộ để xem và xếp lịch tháng.</p><p>Bấm ngày để đặt giờ. Ngày chưa có ca không được xem là ngày nghỉ.</p></div> : <CalendarLoader key={`${officerId}:${month}:${generation}`} officerId={officerId} officerIds={officers.map(o => o.id)} confirmationTarget={confirmationTarget} month={month + '-01'} name={name} onDirty={setDirty} onBusy={setBusy} onRequestChange={onRequestChange} onPublished={() => { setDirty(false); setBusy(false); setGeneration(g => g + 1); }} move={move} />}
     {guard.confirmation}
   </div>;
 }
@@ -69,8 +72,8 @@ function CalendarLoader(props: BoardProps & { month: string }) {
   // Start from a fresh response, but keep the editor mounted if a later background read fails.
   return <><QueryState query={{ ...query, isPending: !ready && !query.isError }} />{ready && query.data && <CalendarBoard key={manager ? 'manager' : `${query.data.baseFingerprint}:${query.data.confirmations.find(c => c.officerId === props.officerId)?.confirmedAtUtc ?? ''}`} {...props} initial={query.data} />}</>;
 }
-type BoardProps = { officerId: string; officerIds: string[]; month: string; name: (id: string) => string; onDirty: (v: boolean) => void; onBusy: (v: boolean) => void; onPublished: () => void; onRequestChange: (s: ScheduleSlot) => void; move: (n: number) => void };
-function CalendarBoard({ initial, officerId, officerIds, month, name, onDirty, onBusy, onPublished, onRequestChange, move }: BoardProps & { initial: MonthData }) {
+type BoardProps = { confirmationTarget: HTMLDivElement | null; officerId: string; officerIds: string[]; month: string; name: (id: string) => string; onDirty: (v: boolean) => void; onBusy: (v: boolean) => void; onPublished: () => void; onRequestChange: (s: ScheduleSlot) => void; move: (n: number) => void };
+function CalendarBoard({ initial, confirmationTarget, officerId, officerIds, month, name, onDirty, onBusy, onPublished, onRequestChange, move }: BoardProps & { initial: MonthData }) {
   const { manager, officer, can, user } = useStaffAccess();
   const [base] = useState(initial);
   const [confirmedFingerprint, setConfirmedFingerprint] = useState<string>();
@@ -200,11 +203,11 @@ function CalendarBoard({ initial, officerId, officerIds, month, name, onDirty, o
     <OperationError operation={operation} />
     {viewDay && <Modal open title={`Lịch ngày ${calendarDate(viewDay)}`} description={name(officerId)} onOpenChange={v => !v && setViewDay(undefined)}><div className="space-y-4">{locked(viewDay) && <p className="staff-note">Ngày đã qua hoặc có ca đã bắt đầu. Chỉ xem, không sửa hoặc xóa lịch sử.</p>}{dayLeave(viewDay) && <p>Có thời gian nghỉ phép đã được duyệt trong ngày.</p>}{base.closures.some(c => c.closureDate === viewDay) && <p>Ngày nghỉ / lễ chung của phường.</p>}{[...incoming(viewDay), ...daySlots(viewDay)].map(s => <div key={s.shiftId} className="space-y-2"><StaffPeriod start={s.startsAt} end={s.endsAt} />{officer && can('workflow.leave.request') && Date.parse(s.startsAt) > Date.now() && <Button variant="outline" onClick={() => { setViewDay(undefined); onRequestChange(s); }}>Đề nghị đổi giờ ca</Button>}</div>)}{!incoming(viewDay).length && !daySlots(viewDay).length && <p>Không có ca làm trong ngày này.</p>}</div></Modal>}
     {manager && can('workflow.staffing.manage') && <section className="schedule-publish" aria-label="Công bố lịch"><div><h3>Hoàn tất lịch tháng</h3><p>{personal.length} ca · {new Set(personal.map(s => scheduleDay(s.startsAt))).size} ngày làm việc của {name(officerId)}.</p><p>{affected.length ? `${affected.length} cán bộ có lịch thay đổi. Chưa gửi lịch mới cho cán bộ.` : 'Lịch đang hiển thị giống lịch đã công bố.'}</p></div><Button variant="outline" disabled={!editable || !dirty} onClick={() => void operation.run(() => persistDraft(slots))}>Lưu bản nháp</Button><Button disabled={!editable || !affected.length} onClick={() => { setAck(false); setAllowClosure(false); setConfirm(true); }}>Xác nhận công bố lịch</Button>{operation.review && <p className="text-sm">Chưa xác nhận công bố thành công. Các giờ bạn chọn vẫn được giữ. {saved.current ? <Button variant="outline" disabled={operation.busy} onClick={() => void publish()}>Kiểm tra và thử công bố lại</Button> : 'Chọn Lấy lịch mới để kiểm tra bản đã lưu trên hệ thống trước khi tiếp tục.'}</p>}</section>}
-    {officer && can('workflow.leave.request') && !confirmed && <Button disabled={operation.busy || operation.review || !personal.length} onClick={() => void operation.run(async () => {
+    {officer && can('workflow.leave.request') && !confirmed && confirmationTarget && createPortal(<Button disabled={operation.busy || operation.review || !personal.length} onClick={() => void operation.run(async () => {
       const receipt = await workScheduleApi.confirm(month, base.baseFingerprint);
       if (receipt.officerId !== officerId || receipt.month !== month || receipt.fingerprint !== base.baseFingerprint) throw new Error('Kết quả xác nhận không khớp lịch đang xem. Hãy lấy lịch mới để kiểm tra.');
       return receipt;
-    }, receipt => setConfirmedFingerprint(receipt.fingerprint))}>Xác nhận đã xem lịch</Button>}
+    }, receipt => setConfirmedFingerprint(receipt.fingerprint))}>Xác nhận đã xem lịch</Button>, confirmationTarget)}
     {manager && can('workflow.staffing.manage') && <details className="staff-card">
       <summary className="cursor-pointer rounded font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Tiện ích xếp lịch</summary>
       <div className="mt-4 space-y-4">
