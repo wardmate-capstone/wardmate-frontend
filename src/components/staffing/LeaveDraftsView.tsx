@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, toast } from '@/components/ui';
+import { Button, Modal, toast, DateField } from '@/components/ui';
 import { staffingApi } from '@/lib/api/staffing';
 import { workScheduleApi, type LeaveCapabilities, type LeaveDraft } from '@/lib/api/workSchedules';
 import { staffingError } from '@/lib/api/staffingError';
@@ -75,8 +75,8 @@ function CreateLeave({ capabilities, onClose, onCreated, onSubmitted }: { capabi
     <form onSubmit={e => void submit(e)} noValidate className="space-y-5"><fieldset disabled={locked} className="space-y-5">
       <fieldset className="space-y-3"><legend className="font-semibold text-slate-900">Thời gian nghỉ</legend><div className="flex flex-wrap gap-x-6 gap-y-2">{([['single', 'Nghỉ 1 ngày'], ['multiple', 'Nghỉ nhiều ngày']] as const).map(([value, label]) => <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm"><input type="radio" value={value} {...form.register('range')} className="size-4 accent-red-700" />{label}</label>)}</div></fieldset>
       <div className={`grid gap-4 ${range === 'multiple' ? 'sm:grid-cols-2' : ''}`}>
-        <label className="staff-field">{range === 'single' ? 'Ngày nghỉ' : 'Từ ngày'}<input type="date" className={fieldClass} {...form.register('from')} aria-invalid={Boolean(form.formState.errors.from)} aria-describedby={form.formState.errors.from ? 'create-leave-from-error' : undefined} /></label>
-        {range === 'multiple' && <label className="staff-field">Đến ngày<input type="date" className={fieldClass} {...form.register('to')} aria-invalid={Boolean(form.formState.errors.to)} aria-describedby={form.formState.errors.to ? 'create-leave-to-error' : undefined} /></label>}
+        <label className="staff-field">{range === 'single' ? 'Ngày nghỉ' : 'Từ ngày'}<DateField className={fieldClass} {...form.register('from')} aria-invalid={Boolean(form.formState.errors.from)} aria-describedby={form.formState.errors.from ? 'create-leave-from-error' : undefined} /></label>
+        {range === 'multiple' && <label className="staff-field">Đến ngày<DateField className={fieldClass} {...form.register('to')} aria-invalid={Boolean(form.formState.errors.to)} aria-describedby={form.formState.errors.to ? 'create-leave-to-error' : undefined} /></label>}
       </div>
       <p className="text-xs text-slate-500">Nghỉ trọn các ngày đã chọn, theo giờ Việt Nam.</p>
       {!!days && <div role="status" className="space-y-1 rounded-xl bg-slate-50 p-3"><p className="text-sm font-semibold text-slate-900">Tổng thời gian: {days} ngày lịch</p><p className="text-xs text-slate-500">Tính cả ngày bắt đầu và kết thúc, chưa loại trừ cuối tuần hoặc ngày lễ. Không phải số ngày phép được trừ.</p></div>}

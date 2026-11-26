@@ -21,7 +21,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { updateMyProfile, deleteMyProfile, getPublicWards, authErrorMessage, type WardDto } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
-import { Button, Input, Modal, Skeleton, formSelectClass, textareaClass } from '@/components/ui';
+import { Button, Input, Modal, Skeleton, formSelectClass, textareaClass, DateField } from '@/components/ui';
 import { AccountSecuritySection } from '@/components/profile/AccountSecuritySection';
 import { CccdOcrScanModal } from '@/components/citizen/CccdOcrScanModal';
 import type { CccdExtractionDto } from '@/lib/api/aiOcr';
@@ -455,8 +455,8 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
                   Ngày sinh
                 </label>
                 {isEditing ? (
-                  <input
-                    type="date"
+                  <DateField
+                   
                     aria-label="Ngày sinh" id="self-profile-dateOfBirth" disabled={isSaving} aria-invalid={Boolean(errors.dateOfBirth)} aria-describedby={errors.dateOfBirth ? "self-error-dateOfBirth" : undefined} value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"

@@ -11,7 +11,7 @@ import {
 } from '@/lib/api/analytics';
 import type { z } from 'zod';
 import { Button } from '@/components/ui/Button';
-import { Pagination } from '@/components/ui';
+import { Pagination, DateField } from '@/components/ui';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { procedureApi } from '@/lib/api/procedures';
@@ -109,12 +109,12 @@ export function AnalyticsFilters({
       <div className={`grid items-start gap-3 sm:grid-cols-2 ${showProcedure ? 'lg:grid-cols-[repeat(2,minmax(0,160px))_minmax(0,1fr)_auto]' : 'lg:grid-cols-[repeat(2,minmax(0,180px))_auto] lg:justify-start'}`}>
         <div>
           <label htmlFor="analytics-filter-from" className={labelClass}>Từ ngày</label>
-          <input id="analytics-filter-from" type="date" min="2000-01-01" max={vietnamToday()} {...register('from', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.from} aria-describedby={errors.from ? 'analytics-filter-from-error' : undefined} className={fieldClass(!!errors.from)} />
+          <DateField id="analytics-filter-from" min="2000-01-01" max={vietnamToday()} {...register('from', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.from} aria-describedby={errors.from ? 'analytics-filter-from-error' : undefined} className={fieldClass(!!errors.from)} />
           {errors.from && <p id="analytics-filter-from-error" role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.from.message}</p>}
         </div>
         <div>
           <label htmlFor="analytics-filter-to" className={labelClass}>Đến ngày</label>
-          <input id="analytics-filter-to" type="date" min="2000-01-01" max={vietnamToday()} {...register('to', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.to} aria-describedby={errors.to ? 'analytics-filter-to-error' : undefined} className={fieldClass(!!errors.to)} />
+          <DateField id="analytics-filter-to" min="2000-01-01" max={vietnamToday()} {...register('to', { onChange: () => setActivePeriod('') })} aria-invalid={!!errors.to} aria-describedby={errors.to ? 'analytics-filter-to-error' : undefined} className={fieldClass(!!errors.to)} />
           {errors.to && <p id="analytics-filter-to-error" role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.to.message}</p>}
         </div>
         {showProcedure && (

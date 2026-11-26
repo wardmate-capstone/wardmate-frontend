@@ -4,7 +4,7 @@ import {
   Funnel,
   Eye,
 } from '@phosphor-icons/react';
-import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState } from '@/components/ui';
+import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select, Pagination, EmptyState, ErrorAlert, DateField } from '@/components/ui';
 import { ApplicationStatusBadge } from '@/components/workflow/ApplicationStatusBadge';
 import type { OfficerApplication, ApplicationStatus, OfficerSection } from '@/types/officer';
 import { matchesSearch } from '@/lib/utils';
@@ -19,6 +19,8 @@ export interface PaginationConfig {
 }
 
 interface OfficerApplicationListViewProps {
+  /** Lỗi tải danh sách (vd. 503 khi dịch vụ đang khởi động): hiện ngay trong bảng kèm nút Thử lại. */
+  errorMessage?: string;
   applications: OfficerApplication[];
   activeSection: OfficerSection;
   onSelectSection: (section: OfficerSection) => void;
@@ -74,6 +76,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   onRefresh,
   isRefreshing = false,
   isLoading = false,
+  errorMessage,
   pagination,
   submittedRange = { from: '', to: '' },
   onSubmittedRangeChange,
@@ -222,9 +225,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             <legend className="sr-only">Lọc theo ngày gửi</legend>
             <div className="min-w-0">
               <label htmlFor="filter-submitted-from" className="f-label">Gửi từ</label>
-              <input
+              <DateField
                 id="filter-submitted-from"
-                type="date"
+               
                 value={submittedRange.from}
                 max={submittedRange.to || undefined}
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, from: e.target.value })}
@@ -235,9 +238,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
             </div>
             <div className="min-w-0">
               <label htmlFor="filter-submitted-to" className="f-label">Đến ngày</label>
-              <input
+              <DateField
                 id="filter-submitted-to"
-                type="date"
+               
                 value={submittedRange.to}
                 min={submittedRange.from || undefined}
                 onChange={(e) => onSubmittedRangeChange({ ...submittedRange, to: e.target.value })}
@@ -338,8 +341,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 
         <div className="list-filter-foot">
           <div className="flex items-center gap-3">
-            <span>
-              Tìm thấy <strong>{filteredApps.length}</strong> hồ sơ phù hợp
+            <span aria-live="polite">
+              {isLoading ? 'Đang tải danh sách hồ sơ…' : errorMessage ? 'Chưa tải được danh sách hồ sơ' : <>Tìm thấy <strong>{filteredApps.length}</strong> hồ sơ phù hợp</>}
             </span>
             {hasFilters && (
               <button
@@ -383,6 +386,12 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                   columnWidths={['w-28 font-mono', 'w-32', 'w-56', 'w-24', 'w-28', 'w-28', 'ml-auto w-24']}
                   lastCellClassName="sticky right-0 z-10 bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]"
                 />
+              ) : errorMessage ? (
+                <tr>
+                  <td colSpan={7} className="p-4">
+                    <ErrorAlert retrying={isRefreshing} onRetry={onRefresh}>{errorMessage}</ErrorAlert>
+                  </td>
+                </tr>
               ) : filteredApps.length === 0 ? (
                 <tr>
                   <td colSpan={7}>

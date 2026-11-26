@@ -1,5 +1,5 @@
 import { accountRoleLabel } from '@/lib/personName';
-import { formSelectClass, textareaClass } from '@/components/ui';
+import { formSelectClass, textareaClass, DateField } from '@/components/ui';
 import { copyToClipboard } from '@/lib/clipboard';
 import React, { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -392,8 +392,8 @@ export const ManagerProfileDetailView: React.FC<ManagerProfileDetailViewProps> =
                       Ngày sinh
                     </label>
                     {isEditing ? (
-                      <input
-                        type="date"
+                      <DateField
+                       
                         aria-label="Ngày sinh" {...form.register('dateOfBirth')} aria-invalid={Boolean(form.formState.errors.dateOfBirth)} aria-describedby={form.formState.errors.dateOfBirth ? 'managed-profile-errors' : undefined}
                         className="w-full h-9 px-3 text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs transition-all focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                       />
