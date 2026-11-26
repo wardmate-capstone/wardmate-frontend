@@ -80,6 +80,7 @@ export async function mockCatalog(page: Page) {
     if (path.endsWith('/rollback')) { state.detail = { ...state.detail, ...(state.detail as ProcedureDetail) }; return reply(state.detail); }
     if (path.endsWith('/status')) { state.detail.isActive = body?.isActive === true; return reply({ id: procedureId, isActive: state.detail.isActive, reason: body?.reason, updatedAt: state.detail.updatedAt }); }
     if (method === 'POST' || method === 'PUT') { state.detail = { ...state.detail, ...body } as ProcedureDetail; return reply(state.detail, method === 'POST' && !path.endsWith('/publish') ? 201 : 200); }
+    if (path.endsWith('/procedures/featured')) return reply(state.detail.isActive ? [{ ...state.detail, versionCount: 1 }] : []);
     if (path.endsWith('/procedures')) {
       if (state.procedureListDelay) await new Promise(resolve => setTimeout(resolve, state.procedureListDelay));
       if (state.listError) return reply({ title: 'Dịch vụ tạm thời không khả dụng.' }, 503);

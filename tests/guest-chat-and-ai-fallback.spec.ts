@@ -21,11 +21,11 @@ test.describe('Chế độ khách Chatbot AI & Xử lý lỗi 503 Tiền kiểm'
     const sendBtn = page.locator('button[aria-label="Gửi tin nhắn"]');
     await sendBtn.click();
 
-    // Tin nhắn của khách xuất hiện
-    await expect(page.getByText('Thủ tục làm CCCD')).toBeVisible();
-
-    // Trợ lý trả lời tư vấn nghiệp vụ ngay
-    await expect(page.getByText('Để thực hiện cấp, đổi Thẻ Căn cước công dân')).toBeVisible();
+    // Không có máy chủ AI trong môi trường kiểm thử: không còn trả lời soạn sẵn,
+    // báo gián đoạn và giữ câu hỏi trong ô nhập để gửi lại.
+    await expect(page.getByText('Trợ lý AI đang tạm gián đoạn', { exact: false })).toBeVisible();
+    await expect(input).toHaveValue('Thủ tục làm CCCD');
+    await expect(page.getByText('Để thực hiện cấp, đổi Thẻ Căn cước công dân')).toHaveCount(0);
   });
 
   test('Tiền kiểm AI khi máy chủ trả về 503 chat.database_unavailable hiển thị thông báo hướng dẫn rõ ràng', async ({ page }) => {

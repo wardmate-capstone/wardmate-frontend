@@ -40,14 +40,18 @@ test('Lịch toàn phường: mọi cán bộ, ca qua tháng UTC, ca hủy và t
   await expect(table).toContainText('Từ 31/10/2026');
   expect(requests).toEqual(expect.arrayContaining(['?year=2026&month=11', '?year=2026&month=10']));
   await page.screenshot({ path: testInfo.outputPath('ward-schedule-desktop.png'), fullPage: true });
-  await expect(table).toContainText('Điều chỉnh nhân sự');
-  await page.getByLabel('Hiện ca đã hủy', { exact: true }).uncheck();
-  await expect(table).not.toContainText('Điều chỉnh nhân sự');
+  // FE-14: tuần Thứ Hai–Chủ nhật; 01/11/2026 là Chủ nhật nên tuần đầu mượn 26–31/10 (hiện mờ, không có ca)
+  await expect(page.getByText('26/10/2026 – 01/11/2026')).toBeVisible();
+  await expect(table.locator('thead th').nth(1)).toContainText('26/10');
+  await expect(table.locator('td.ward-roster-outside').first()).toBeVisible();
   await page.getByRole('searchbox', { name: 'Tìm cán bộ' }).fill('Nguyễn');
   await expect(table.getByRole('row')).toHaveCount(2);
   await page.getByRole('button', { name: 'Tuần sau', exact: true }).click();
+  await expect(page.getByText('02/11/2026 – 08/11/2026')).toBeVisible();
   await expect(table).not.toContainText('07:30–11:30');
-  await expect(page.getByText('08/11/2026 – 14/11/2026')).toBeVisible();
+  await expect(table).toContainText('Điều chỉnh nhân sự');
+  await page.getByLabel('Hiện ca đã hủy', { exact: true }).uncheck();
+  await expect(table).not.toContainText('Điều chỉnh nhân sự');
 });
 
 test('Lịch toàn phường: đổi tháng/năm, lỗi API và thử lại', async ({ page }) => {
@@ -63,7 +67,7 @@ test('Lịch toàn phường: đổi tháng/năm, lỗi API và thử lại', as
   const next = page.waitForRequest(r => r.url().includes('ward-shifts?year=2026&month=12'));
   await page.getByRole('combobox', { name: 'Tháng lịch toàn phường' }).selectOption('12');
   await next;
-  await expect(page.getByText('01/12/2026 – 07/12/2026')).toBeVisible();
+  await expect(page.getByText('30/11/2026 – 06/12/2026')).toBeVisible();
   // Ô năm chỉ có năm trước, năm nay, năm sau (không sổ 100 năm).
   await expect(page.getByRole('combobox', { name: 'Năm lịch toàn phường' }).locator('option')).toHaveCount(3);
   const year = page.waitForRequest(r => r.url().includes('ward-shifts?year=2027&month=12'));

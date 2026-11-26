@@ -30,6 +30,8 @@ try {
   await vite.listen();
   const base = `http://127.0.0.1:${vite.httpServer.address().port}`;
   const cases = [
+    ['/api/v1/public/form-templates/11111111-1111-1111-1111-111111111111/download-docx', 'document'],
+    ['/api/v1/public/qr-lookup?code=abc', 'document'],
     ['/api/analytics-system/api/v1/system/health/services', 'document'],
     ['/api/analytics-system/api/v1/system/health/services/iam', 'document'],
     ['/api/analytics-system/api/v1/system/health/history?service=iam&page=2&pageSize=20', 'document'],

@@ -93,7 +93,9 @@ test('trang hỏi đáp giữ câu trả lời và tra cứu, không có form g�
   await expect(page.getByRole('heading', { name: 'Câu hỏi thường gặp' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' })).toBeVisible();
   await page.getByRole('button', { name: 'Khi nào hệ thống tạo mã QR?' }).click();
-  await expect(page.getByText('Mã QR chỉ được tạo sau khi cán bộ xác nhận giấy tờ sẵn sàng.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Mã QR được tạo sau khi cán bộ xác nhận giấy tờ sẵn sàng.', { exact: false })).toBeVisible();
+  // FE-07: thủ tục chỉ có giấy tờ thì không có PDF nhưng QR vẫn dùng được
+  await expect(page.getByText('không có PDF nhưng mã QR vẫn dùng được', { exact: false })).toBeVisible();
 
   await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Tra cứu thủ tục', exact: false }).last()).toHaveAttribute('href', '/thu-tuc');

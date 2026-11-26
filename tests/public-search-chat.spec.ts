@@ -35,11 +35,15 @@ async function send(page: Page, text: string) {
 test('home suggestions open procedure results with the same keyword and API filter', async ({ page }) => {
   const { catalog } = await publicMocks(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Khai sinh', exact: true }).click();
-  await expect(page).toHaveURL('/thu-tuc?q=Khai+sinh');
-  await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toHaveValue('Khai sinh');
+  // FE-06: gợi ý lấy từ thủ tục nổi bật đang công khai, không cố định trong code
+  // Tên thủ tục rút còn 5 từ làm nút gợi ý; tên đầy đủ ở title
+  const suggestion = page.getByRole('button', { name: 'Đăng ký khai sinh từ', exact: true });
+  await expect(suggestion).toHaveAttribute('title', 'Đăng ký khai sinh từ API');
+  await suggestion.click();
+  await expect(page).toHaveURL('/thu-tuc?' + new URLSearchParams({ q: 'Đăng ký khai sinh từ' }));
+  await expect(page.getByLabel('Tên thủ tục hoặc nhu cầu của bạn')).toHaveValue('Đăng ký khai sinh từ');
   await expect(page.getByRole('link', { name: /Xem Đăng ký khai sinh/ })).toBeVisible();
-  expect(catalog.requests.some(request => request.path === '/api/v1/procedures' && request.query.get('keyword') === 'Khai sinh')).toBe(true);
+  expect(catalog.requests.some(request => request.path === '/api/v1/procedures' && request.query.get('keyword') === 'Đăng ký khai sinh từ')).toBe(true);
 });
 
 test('every public page and procedure detail has one assistant using the site logo', async ({ page }) => {

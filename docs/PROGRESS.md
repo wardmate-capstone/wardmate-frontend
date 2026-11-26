@@ -1,5 +1,29 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-UIREVIEW-1126 — Lỗi giao diện còn lại theo `fe-handoff-2026-11-26-ui-review.md` — 26/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Đã làm trước (FE-HANDOFF-1125): FE-01, FE-05 (nguyên nhân: tệp mẫu mất, 404), FE-07 bước 06/FAQ, câu báo FE-11.
+- FE-02: giữ thử lại 1 lần như cũ (thử 2 lần/giãn 7s làm lỗi hiện quá chậm, hỏng nhiều test chờ lỗi). Bảng hồ sơ cán bộ hiện lỗi + Thử lại trong bảng, dòng đếm không còn lấy số cũ khi đang tải/lỗi. `workflowError` có câu tiếng Việt cho 503/mất mạng/5xx không có JSON.
+- FE-04: Xem nhanh dùng `fileExists` của `contents`: mục COMPLETED mà mọi tệp đã mất → "Tệp không còn trên hệ thống".
+- FE-06: gợi ý tìm kiếm (trang chủ, /thu-tuc) và câu hỏi gợi ý chatbot lấy từ `GET /procedures/featured` (`useProcedureSuggestions`); không còn cố định Khai sinh/Kết hôn. Chưa sửa phần trả lời dự phòng soạn sẵn khi AI gián đoạn (`generateGuestAssistantAnswer`) — vẫn nói về khai sinh/kết hôn.
+- FE-07: bước 4 trang chủ "Nhận QR khi giấy tờ sẵn sàng" (`JourneySteps.tsx`, `landing.ts`).
+- FE-08: có bước rút gọn + `stepsText` thì thêm "Xem đầy đủ trình tự thực hiện". Thủ tục trợ cấp thất nghiệp: chính dữ liệu `stepsText` chứa "..." → Quản lý thủ tục nhập lại.
+- FE-09: hồ sơ công dân có nhãn "Thủ tục đã ngừng áp dụng trên cổng" khi API thủ tục công khai trả 404.
+- FE-10: `displayDocumentFileName` bỏ hẳn tiền tố mã và đuôi lặp; áp dụng ở danh sách giấy tờ công dân/cán bộ. Gốc lỗi ở FE: trình soạn Word lấy tên tải về (tên trong kho) rồi lưu lại → đã làm sạch tên trước khi lưu (`DocxOnlineEditor`). Bản ghi cũ vẫn mang mã trong DB (FE ẩn khi hiển thị).
+- FE-11: mục giấy tờ/tờ khai mất tệp có khung cảnh báo + nút "Tải lại tệp" mở ô chọn tệp của mục (hồ sơ còn sửa được); tệp cũ vẫn phải xóa tay.
+- FE-12: ô lọc dịch vụ Sao lưu = dịch vụ hỗ trợ sao lưu + danh sách Giám sát dịch vụ + dịch vụ đã có bản sao lưu.
+- FE-13: Xem mẫu 404 → "Tệp mẫu không còn trên hệ thống, vui lòng tải lên lại" + nút "Thay đổi" (người có quyền quản lý).
+- FE-14: Lịch toàn phường chia tuần từ Thứ Hai (tuần đầu/cuối có thể ngắn).
+- FE-15: avatar dùng `getInitials` như header; nút xóa có nhãn "Xóa hồ sơ cá nhân của {tên}" (nút xóa dữ liệu hồ sơ cá nhân, không xóa cán bộ nên không dùng "Xóa cán bộ").
+- FE-16/FE-17: tiêu đề viết hoa đầu câu; bảng thông tin chung thành 2 cột ở ≤ 500px (`public-pages.css`).
+- Mục D: thêm proxy `/api/v1/public` → DocumentForm (`node tests/api-proxy-check.mjs`: 55 route đạt). Lock file: `npm ci --dry-run` đạt trên máy này (npm 11.6.2, Node 24); `npm install --package-lock-only` chỉ xóa gói tùy chọn `@emnapi/*` nên KHÔNG commit (có thể hỏng build Linux/Vercel).
+- FE-19: `src/components/ui/DateField.tsx` — ô ngày hiển thị dd/mm/yyyy (tự chèn "/", nhận dán ISO, loại ngày không có thật) + nút lịch mở bộ chọn của trình duyệt. Giá trị form vẫn là `yyyy-mm-dd` ('' khi chưa hợp lệ) nên dùng được với `register` (RHF đọc/ghi `.value` qua handle ổn định) và `value/onChange`. `Input type="date"` tự dùng DateField; các `<input type="date">` viết tay ở 6 tệp đã đổi. Ô `datetime-local` giữ nguyên.
+- Chatbot: bỏ câu trả lời soạn sẵn khi AI gián đoạn (`generateGuestAssistantAnswer`); giờ báo lỗi và giữ câu hỏi để gửi lại.
+- FE-03: giữ 07:30–17:00 theo quyết định người dùng (không đổi).
+- FE-18: thêm kiểm tra tự động 375px (Tổng quan) và 1366px (bảng hồ sơ vừa khung) trong `tests/ui-review-1126.spec.ts`.
+- `tests/full-audit.spec.ts`: gỡ test đơn vị dùng `chatInputSchema` (đã bỏ khỏi `aiOcr.ts` từ `7dc14e7` 29/10; lỗi import làm cả bộ Playwright không chạy được).
+- Kiểm tra: `npm run typecheck` đạt, eslint các tệp sửa đạt. Chưa chạy Playwright (theo quy ước chỉ chạy khi được yêu cầu); đã cập nhật `tests/public-search-chat.spec.ts` + mock `featured`. Chưa commit.
+
 ## FE-HANDOFF-1125 — Làm phần FE theo bàn giao BE `fe-handoff-2026-11-25.md` — 26/11/2026 (Asia/Saigon, UTC+07:00)
 
 - **L02 Tiếp nhận tại quầy:** `src/components/workflow/CounterReceiptModal.tsx` (mới) + nút ở `OfficerReviewWorkspaceView.tsx`. Hiện khi hồ sơ `DOCUMENTS_READY`, đúng cán bộ thụ lý, không phải hồ sơ của mình, có quyền `workflow.receipt.confirm`. Body `{paperDossierVerified:true, appointmentDate?, notes?}`; ngày hẹn chọn theo ngày VN, gửi `YYYY-MM-DDT16:30:00+07:00`. Toast hiện số biên nhận. Badge/tab PDF nhận thêm `OFFICIALLY_RECEIVED`. `workflowError` dịch `application.receipt_invalid`.

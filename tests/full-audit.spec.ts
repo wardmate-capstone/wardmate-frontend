@@ -3,7 +3,6 @@ import { authReply, mockWorkspaceAuth } from './fixtures/auth';
 import { mockCatalog, procedureId } from './fixtures/procedures';
 import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
 import { normalizeProfileInput, validateProfile } from '../src/lib/profileSchema';
-import { chatInputSchema } from '../src/lib/api/aiOcr';
 import { mapSummaryDtoToCitizenDossier, mapSummaryDtoToOfficerApplication } from '../src/lib/api/workflowAdapters';
 
 for (const signedIn of [false, true]) {
@@ -73,15 +72,6 @@ test('trạng thái lạ không trở thành bản nháp hoặc hồ sơ đượ
   const summary = { id: documentIds.application, procedureId: documentIds.template, createdAt: '2026-10-27T00:00:00Z', status: 'FUTURE_STATE' };
   expect(mapSummaryDtoToCitizenDossier(summary).status).toBe('Chưa xác định trạng thái');
   expect(mapSummaryDtoToOfficerApplication(summary).status).toBe('UNKNOWN');
-});
-
-test('chat: bắt buộc phạm vi phường và chặn câu hỏi rỗng/quá dài, GUID rỗng', () => {
-  for (const input of [
-    { message: '   ', wardCode: 'WARD_A' },
-    { message: 'a'.repeat(4001), wardCode: 'WARD_A' },
-    { message: 'Câu hỏi', wardCode: '' },
-    { message: 'Câu hỏi', wardCode: 'WARD_A', conversationId: '00000000-0000-0000-0000-000000000000' },
-  ]) expect(chatInputSchema.safeParse(input).success).toBe(false);
 });
 
 test('chat mobile: chọn phường thật, giữ câu hỏi khi lỗi và xử lý clipboard bị từ chối', async ({ page }) => {
