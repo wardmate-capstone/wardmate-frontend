@@ -578,6 +578,9 @@ export function workflowError(error: unknown): string {
       if (code === 'application.invalid_status') {
         return 'Trạng thái hiện tại của hồ sơ không cho phép thực hiện thao tác này.';
       }
+      if (code === 'application.receipt_invalid') {
+        return 'Cần xác nhận đã đối chiếu hồ sơ giấy và chọn ngày hẹn không nằm trong quá khứ.';
+      }
       if (code === 'application.invalid_ward') {
         return 'Phường/xã tiếp nhận không hợp lệ hoặc không tồn tại trong hệ thống.';
       }

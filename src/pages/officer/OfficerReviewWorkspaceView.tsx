@@ -10,9 +10,11 @@ import axios from 'axios';
 import { Badge, Button, ListSelect, Modal, RefreshButton, Skeleton, toast, EmptyState, ErrorAlert, textareaClass } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation } from '@/hooks/useWorkflow';
+import { useAddCommentMutation, useWithdrawCommentMutation, useApplicationComments, useApplicationDiff, useApplicationVersions, useReleaseApplicationMutation, useOfficiallyReceiveMutation } from '@/hooks/useWorkflow';
 import { compareSubmissionSnapshots, humanizeFieldName, workflowStatusLabel, formDataFields, mapAssignmentHistoryToTimelineItem } from '@/lib/api/workflowAdapters';
 import { ReleaseApplicationModal } from '@/components/workflow/AssignmentModals';
+import { CounterReceiptModal } from '@/components/workflow/CounterReceiptModal';
+import type { OfficialReceiptInput } from '@/lib/api/workflow';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { OfficerDocumentsPanel } from './OfficerDocumentsPanel';
 import { DossierAiReviewCard } from '@/components/documents/DossierAiReviewCard';
@@ -113,6 +115,8 @@ export function OfficerReviewWorkspaceView({
   const [withdrawError, setWithdrawError] = useState('');
   const release = useReleaseApplicationMutation();
   const [releaseOpen, setReleaseOpen] = useState(false);
+  const receive = useOfficiallyReceiveMutation();
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const writing = useIsMutating() > 0;
   const [decision, setDecision] = useState<'ready' | 'revision'>();
   const [decisionContext, setDecisionContext] = useState<{ version: number; hadSubmissions: boolean }>();
@@ -157,6 +161,15 @@ export function OfficerReviewWorkspaceView({
     ['UNDER_REVIEW', 'NEED_REVISION'].includes(detail.data.status) &&
     detail.data.assignedOfficerId === user?.id &&
     detail.data.userId !== user?.id;
+
+  // L02: cán bộ thụ lý tiếp nhận tại quầy hồ sơ đã sẵn sàng (BE kiểm tra lại quyền workflow.receipt.confirm, phường, người thụ lý).
+  const canReceive =
+    !writing &&
+    detail.isSuccess &&
+    detail.data.status === 'DOCUMENTS_READY' &&
+    detail.data.assignedOfficerId === user?.id &&
+    detail.data.userId !== user?.id &&
+    Boolean(user?.permissions.includes('workflow.receipt.confirm'));
 
   const isManager = Boolean(user?.roles.includes('WARD_MANAGER'));
   const canVerifyAi = Boolean(detail.data?.assignedOfficerId === user?.id && !isManager);
@@ -426,6 +439,19 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
     guard.requestClose(onBack);
   }
 
+  async function handleReceive(input: OfficialReceiptInput) {
+    try {
+      const result = await receive.mutateAsync({ id: application.id, input });
+      setReceiptOpen(false);
+      toast.success(result.receiptNumber
+        ? `Đã tiếp nhận hồ sơ ${application.applicationNumber}. Số biên nhận: ${result.receiptNumber}.`
+        : `Đã tiếp nhận hồ sơ ${application.applicationNumber} tại quầy.`);
+      return result;
+    } finally {
+      void detail.refetch();
+    }
+  }
+
   return (
     <article aria-label="Không gian làm việc tiền kiểm hồ sơ" className="space-y-6 pb-16 max-sm:pb-28">
       {/* 1. Header Banner & Actions */}
@@ -459,7 +485,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 </span>
                 <Badge
                   variant={
-                    detail.data?.status === 'DOCUMENTS_READY'
+                    detail.data?.status === 'DOCUMENTS_READY' || detail.data?.status === 'OFFICIALLY_RECEIVED'
                       ? 'success'
                       : detail.data?.status === 'UNDER_REVIEW'
                         ? 'warning'
@@ -469,6 +495,8 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 >
                   {detail.data?.status === 'DOCUMENTS_READY'
                     ? 'Giấy tờ sẵn sàng'
+                    : detail.data?.status === 'OFFICIALLY_RECEIVED'
+                      ? 'Đã tiếp nhận tại quầy'
                     : detail.data?.status === 'UNDER_REVIEW'
                       ? 'Đang kiểm tra'
                       : 'Xem trạng thái hồ sơ'}
@@ -524,6 +552,17 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     Xác nhận giấy tờ sẵn sàng
                   </Button>
                 </div>
+              )}
+              {canReceive && (
+                <Button
+                  variant="primary"
+                  className="gap-2"
+                  disabled={busy}
+                  onClick={() => setReceiptOpen(true)}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Tiếp nhận tại quầy
+                </Button>
               )}
               {canRelease && (
                 <Button
@@ -1086,7 +1125,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         {/* Tab 6: PDF */}
         {tab === 'pdf' && (
           <div>
-            {['DOCUMENTS_READY', 'APPROVED'].includes(detail.data?.status ?? '') ? (
+            {['DOCUMENTS_READY', 'OFFICIALLY_RECEIVED', 'APPROVED'].includes(detail.data?.status ?? '') ? (
               <GeneratedDocumentsPanel applicationId={application.id} />
             ) : (
               <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
@@ -1232,6 +1271,13 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
         applicationNumber={application.applicationNumber}
         onConfirm={handleRelease}
         variant={releaseVariant}
+      />
+
+      <CounterReceiptModal
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        applicationNumber={application.applicationNumber}
+        onConfirm={handleReceive}
       />
 
       {withdrawingComment && (
