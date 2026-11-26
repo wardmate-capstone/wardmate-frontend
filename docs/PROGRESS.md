@@ -1,5 +1,16 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-HANDOFF-1125 — Làm phần FE theo bàn giao BE `fe-handoff-2026-11-25.md` — 26/11/2026 (Asia/Saigon, UTC+07:00)
+
+- **L02 Tiếp nhận tại quầy:** `src/components/workflow/CounterReceiptModal.tsx` (mới) + nút ở `OfficerReviewWorkspaceView.tsx`. Hiện khi hồ sơ `DOCUMENTS_READY`, đúng cán bộ thụ lý, không phải hồ sơ của mình, có quyền `workflow.receipt.confirm`. Body `{paperDossierVerified:true, appointmentDate?, notes?}`; ngày hẹn chọn theo ngày VN, gửi `YYYY-MM-DDT16:30:00+07:00`. Toast hiện số biên nhận. Badge/tab PDF nhận thêm `OFFICIALLY_RECEIVED`. `workflowError` dịch `application.receipt_invalid`.
+- **Mục 1 QR không PDF:** sửa câu FAQ, bước 06 (`preparationGuide.ts` → "Tải mã QR và mang giấy tờ đến quầy"), mục hỗ trợ ở `GuidePage.tsx`, câu `document.qr_not_found`. FE không gọi `pdf-redirect` bằng fetch (chỉ mở link) nên không đổi luồng.
+- **Mục 2 Chỉ xem:** không cần sửa; FE đã gọi `by-application` + `contents` cho hồ sơ chưa nhận và khóa thao tác ghi khi `editable=false`.
+- **Mục 3 Tệp mất khỏi kho:** `isDocumentFileMissing` + câu `document.file_missing` (`documentForms.ts`). `DocumentFilePreview` hiện cảnh báo, bỏ nút "Thử tải lại" với lỗi này. Công dân (`DossierChecklistView`): hồ sơ còn sửa được → gợi ý xóa rồi tải lên lại; đã khóa → liên hệ cán bộ phường.
+- **Mục 7 danh sách cán bộ 503:** `authErrorMessage` có câu riêng cho 503 (dịch vụ đang khởi động); Giám sát hồ sơ (`ManagerApplicationsView`) lỗi tải cán bộ có nút Thử lại. Màn Cán bộ (`ManagerProfilesView`) và lịch (`QueryState`) vốn đã có lỗi + Thử lại.
+- **Mục 7 khách xem mẫu:** gọi thật API công khai: cả 7 mẫu gắn với thủ tục công khai trả 404 `document.template_not_found` (BE trả mã này cả khi tệp Word mất khỏi kho). `ProcedureFormLink` chỉ mời đăng nhập khi 401/403; 404 báo mẫu chưa có tệp. **Còn chờ:** tải lại tệp Word cho các mẫu (dữ liệu/BE).
+- **Giờ lịch ca vs giờ tính hạn (đã chốt 26/11):** giữ lịch ca mặc định FD 07:30–17:00 (commit `5ac499b`) và giữ khung tính hạn BE 07:30–16:30 (WF-05). Hai khung cố ý khác nhau; BE không đọc lịch ca khi tính hạn nên không ảnh hưởng hạn/thống kê. Chỉ sửa chú thích trong `src/lib/defaultStaffSchedule.ts` cho đúng, không đổi logic.
+- Kiểm tra: `npm run typecheck` đạt, eslint các file sửa đạt. Chưa chạy Playwright. Gọi thật Gateway không token: `pdf-redirect` id giả → 404 `text/html`; `officially-received` → 401; public download → 404 như trên. Chưa thử luồng có đăng nhập. Không Git, không deploy.
+
 ## FE-SCHEDULE-CONFIRM-POSITION-1125 — Chuyển nút xác nhận lên hàng bộ lọc — 25/11/2026 17:06 (Asia/Saigon, UTC+07:00)
 
 - `src/components/staffing/MonthlyScheduleView.tsx`: đặt nút “Xác nhận đã xem lịch” ở góc phải hàng chọn tháng/năm và Lấy lịch mới bằng portal; hàng flex vẫn xuống dòng trên màn hẹp. Giữ logic fingerprint, quyền, khóa khi xử lý/lỗi cần đọc lại, trạng thái ẩn sau xác nhận. Không đổi BE/API/DTO/ProblemDetails/token hoặc validation.

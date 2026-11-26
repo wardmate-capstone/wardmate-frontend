@@ -2,7 +2,9 @@ import type { ScheduleSlot } from '@/lib/api/workSchedules';
 import { calendarDays, scheduleDay } from '@/lib/scheduleCalendar';
 import { vietnamIso } from '@/lib/staffingValidation';
 
-// Khớp quy tắc tính hạn 45 giờ làm việc của BE (5 ngày × 9 giờ): Thứ Hai–Thứ Sáu 07:30–16:30, không làm Thứ Bảy.
+// Giờ đi làm mặc định của cán bộ Một cửa: Thứ Hai–Thứ Sáu 07:30–17:00, không làm Thứ Bảy.
+// Cố ý KHÁC khung tính hạn tiền kiểm của BE (WF-05: 45 giờ, 07:30–16:30, cấu hình ReviewDeadline ở Workflow).
+// BE không đọc lịch ca khi tính hạn, nên đổi giờ ở đây không làm thay đổi hạn hồ sơ. Không sửa cho "khớp" hai bên.
 export const defaultWorkingHours = 'Thứ Hai–Thứ Sáu: 07:30–17:00.';
 const DEFAULT_HOURS: [string, string][] = [['07:30', '17:00']];
 
@@ -28,7 +30,7 @@ export function defaultStaffSchedule(
         const startsAt = vietnamIso(`${day}T${start}`), endsAt = vietnamIso(`${day}T${end}`);
         if (Date.parse(startsAt) <= now) continue;
         if (options.carry?.some(slot => slot.officerId === officerId && Date.parse(slot.startsAt) < Date.parse(endsAt) && Date.parse(slot.endsAt) > Date.parse(startsAt))) continue;
-        // Ca liền 07:30–16:30: nghỉ phép nửa buổi chỉ cắt phần trùng, giữ phần còn lại (tối thiểu 1 giờ).
+        // Ca liền 07:30–17:00: nghỉ phép nửa buổi chỉ cắt phần trùng, giữ phần còn lại (tối thiểu 1 giờ).
         let segments: [number, number][] = [[Date.parse(startsAt), Date.parse(endsAt)]];
         for (const leave of leaves.filter(row => row.officerId === officerId)) {
           const ls = Date.parse(leave.startsAtUtc), le = Date.parse(leave.endsAtUtc);
