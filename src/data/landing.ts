@@ -35,7 +35,7 @@ export const preparationSteps = [
   { number: '01', title: 'Tìm đúng thủ tục', description: 'Tra cứu theo nhu cầu, đọc điều kiện và xác định đúng cơ quan tiếp nhận.', icon: BookOpenCheck },
   { number: '02', title: 'Chuẩn bị hồ sơ', description: 'Hoàn thành danh sách giấy tờ, tờ khai và tài liệu cần tiền kiểm.', icon: FileCheck2 },
   { number: '03', title: 'Nhận góp ý', description: 'Cán bộ chỉ rõ nội dung cần bổ sung. Những phần khác được giữ nguyên.', icon: ShieldCheck },
-  { number: '04', title: 'Nhận QR sau khi duyệt', description: 'Mang QR cùng hồ sơ giấy đến cơ quan có thẩm quyền để đối chiếu.', icon: BadgeCheck },
+  { number: '04', title: 'Nhận QR khi giấy tờ sẵn sàng', description: 'Mang QR cùng hồ sơ giấy đến cơ quan có thẩm quyền để đối chiếu.', icon: BadgeCheck },
 ];
 
 export const notices = [

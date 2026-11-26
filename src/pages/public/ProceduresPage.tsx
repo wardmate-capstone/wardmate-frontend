@@ -12,14 +12,12 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input, Skeleton } from '@/components/ui';
 import { procedureError } from '@/lib/api/procedures';
-import { useProcedureCategories, usePublicProcedureList } from '@/hooks/useProcedureCategories';
+import { useProcedureCategories, useProcedureSuggestions, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useAuthState } from '@/hooks/useAuthState';
 import { PublicPageIntro } from './PublicPageIntro';
 
 const PAGE_SIZE = 5;
-
-const QUICK_SEARCH_SUGGESTIONS = ['Khai sinh', 'Kết hôn', 'Chứng thực', 'Khai tử', 'Cư trú'];
 
 export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
   const { isAuthenticated } = useAuthState();
@@ -28,6 +26,7 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
   const query = searchParams.get('q') ?? '';
   const [keyword, setKeyword] = useState(query);
   const categoryQuery = useProcedureCategories();
+  const suggestions = useProcedureSuggestions();
   const categories = [{ id: 0, categoryName: 'Tất cả' }, ...(categoryQuery.data ?? [])];
   const selectedCategory = searchParams.get('category') ?? '0';
   const requestedPage = Number(searchParams.get('page') ?? 1);
@@ -130,19 +129,20 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
           </form>
 
           <div className="procedure-search-details mt-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="procedure-search-examples flex flex-wrap items-center gap-1.5 text-slate-500">
+            {suggestions.length > 0 && <div className="procedure-search-examples flex flex-wrap items-center gap-1.5 text-slate-500">
               <span className="font-medium text-slate-700">Gợi ý tìm kiếm</span>
-              {QUICK_SEARCH_SUGGESTIONS.map((tag) => (
+              {suggestions.map(({ id, label: tag, title }) => (
                 <button
-                  key={tag}
+                  key={id}
                   type="button"
+                  title={title}
                   onClick={() => handleQuickSearch(tag)}
                   className="rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-900 border border-slate-200/80 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors"
                 >
                   {tag}
                 </button>
               ))}
-            </div>
+            </div>}
             <p id="procedures-search-hint" className="procedures-search-hint m-0">
               <Info size={16} aria-hidden="true" />
               <span>Có thể nhập tiếng Việt có dấu hoặc không dấu.{!embedded && !isAuthenticated && ' Không cần đăng nhập để tra cứu.'}</span>

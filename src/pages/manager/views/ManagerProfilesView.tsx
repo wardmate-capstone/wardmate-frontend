@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { TableSkeletonRows, ConfirmDeleteModal, RefreshButton, SearchInput, Select } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
+import { getInitials } from '@/hooks/useUserProfile';
 import { toast } from '@/components/ui/Toast';
 import { createFrontDeskAccount, authErrorMessage } from '@/lib/api';
 import type { Category } from '@/lib/api/procedures';
@@ -242,12 +243,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 <td>
                   <div className="admin-person flex items-center gap-3">
                     <span className="size-9 rounded-full bg-red-100 text-red-900 font-bold text-xs flex items-center justify-center shrink-0">
-                      {item.fullName
-                        .split(' ')
-                        .slice(-2)
-                        .map((part) => part[0])
-                        .join('')
-                        .toLocaleUpperCase('vi')}
+                      {getInitials(item.fullName)}
                     </span>
                     <p>
                       <strong className="block text-[13px] font-semibold text-slate-900">{item.fullName}</strong>
@@ -313,7 +309,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                     {onDeleteProfile && item.userId && (
                       <button
                         type="button"
-                        aria-label="Xóa hồ sơ cá nhân"
+                        aria-label={`Xóa hồ sơ cá nhân của ${item.fullName}`}
                         title={
                           item.hasProfile === false
                             ? 'Cán bộ chưa có dữ liệu hồ sơ cá nhân để xóa'

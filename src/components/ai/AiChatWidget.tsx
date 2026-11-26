@@ -21,6 +21,7 @@ import { copyToClipboard } from '@/lib/clipboard';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui';
 import { BrandMark } from '@/components/brand/BrandMark';
+import { useProcedureSuggestions } from '@/hooks/useProcedureCategories';
 import { ChatFeedbackControls } from '@/components/ai/ChatFeedbackControls';
 import { clearGuestChat, GUEST_CHAT_KEY, loadGuestChat, saveGuestChat, type ChatMessage } from '@/lib/guestChatStorage';
 
@@ -31,24 +32,11 @@ const WELCOME_MESSAGE: ChatMessage = {
   timestamp: new Date(),
 };
 
-const QUICK_SUGGESTIONS = [
-  {
-    label: 'Đăng ký kết hôn',
-    query: 'Thủ tục đăng ký kết hôn tại UBND cấp xã/phường cần chuẩn bị những giấy tờ gì của cả hai bên?',
-  },
-  {
-    label: 'Khai sinh cho con',
-    query: 'Thủ tục đăng ký khai sinh lần đầu cho con gồm những giấy tờ bắt buộc nào và nộp ở đâu?',
-  },
-  {
-    label: 'Sao y chứng thực CCCD',
-    query: 'Bản sao y công chứng CCCD gắn chip có cần mang bản gốc đối chiếu không và có thời hạn bao lâu?',
-  },
-  {
-    label: 'Quy trình tiền kiểm hồ sơ',
-    query: 'Quy trình chuẩn bị và tiền kiểm hồ sơ trên WardMate trước khi ra UBND phường gồm các bước nào?',
-  },
-];
+// FE-06: câu hỏi gợi ý theo thủ tục nổi bật đang công khai; hỏi một ý (giấy tờ) để chatbot trả đủ danh mục.
+const PROCESS_SUGGESTION = {
+  label: 'Quy trình tiền kiểm hồ sơ',
+  query: 'Quy trình chuẩn bị và tiền kiểm hồ sơ trên WardMate trước khi ra UBND phường gồm các bước nào?',
+};
 
 function formatChatTime(date: Date | string | number | undefined | null): string {
   if (!date) return '';
@@ -59,67 +47,6 @@ function formatChatTime(date: Date | string | number | undefined | null): string
   } catch {
     return '';
   }
-}
-
-function generateGuestAssistantAnswer(query: string, wardName?: string): string {
-  const q = query.toLowerCase();
-  const wardText = wardName ? ` tại ${wardName}` : '';
-
-  if (q.includes('cccd') || q.includes('căn cước') || q.includes('định danh')) {
-    return `Chào bạn! Để thực hiện cấp, đổi Thẻ Căn cước công dân${wardText}, bạn cần chuẩn bị:
-1. Thẻ CCCD cũ (nếu có để đổi/thu hồi).
-2. Tài khoản định danh điện tử VNeID mức độ 2 hoặc giấy tờ tùy thân hợp lệ.
-3. Địa điểm nộp: Bộ phận Tiếp nhận và Trả kết quả Một cửa hoặc Công an quận/huyện.
-4. Thời hạn giải quyết: Thông thường từ 7 đến 15 ngày làm việc.
-
-💡 Gợi ý: Bạn có thể Đăng nhập tài khoản WardMate để được hỗ trợ tiền kiểm tra ảnh CCCD và điền biểu mẫu tự động.`;
-  }
-
-  if (q.includes('kết hôn') || q.includes('hôn nhân') || q.includes('độc thân')) {
-    return `Chào bạn! Để thực hiện thủ tục Đăng ký kết hôn${wardText}, hai bên nam nữ cần chuẩn bị:
-1. Tờ khai đăng ký kết hôn (theo mẫu quy định).
-2. Giấy xác nhận tình trạng hôn nhân do UBND cấp xã nơi thường trú cấp (nếu không cư trú tại địa phương nộp hồ sơ).
-3. CCCD / Hộ chiếu còn thời hạn của hai bên.
-4. Nơi nộp: UBND xã/phường nơi cư trú của một trong hai bên.
-5. Thời hạn giải quyết: Trong ngày làm việc nếu hồ sơ đầy đủ, hợp lệ.
-
-💡 Cả hai bạn cần cùng có mặt khi ký Giấy chứng nhận kết hôn tại UBND xã/phường.`;
-  }
-
-  if (q.includes('khai sinh') || q.includes('giấy khai sinh')) {
-    return `Chào bạn! Hồ sơ Đăng ký khai sinh${wardText} gồm có:
-1. Tờ khai đăng ký khai sinh (theo mẫu).
-2. Bản chính Giấy chứng sinh do cơ sở y tế cấp.
-3. Giấy chứng nhận kết hôn của cha mẹ (nếu đã kết hôn).
-4. CCCD và giấy tờ cư trú của người đi khai sinh.
-5. Thời hạn giải quyết: Trong ngày làm việc (áp dụng cả liên thông thủ tục Khai sinh - Thường trú - BHYT trẻ em).
-
-💡 Đăng nhập WardMate để trải nghiệm dịch vụ điền tờ khai và chuẩn bị giấy tờ trực tuyến.`;
-  }
-
-  if (q.includes('chứng thực') || q.includes('sao y') || q.includes('bản sao')) {
-    return `Chào bạn! Thủ tục Chứng thực bản sao từ bản chính${wardText}:
-1. Mang bản chính giấy tờ, văn bản cần chứng thực.
-2. Bản photocopy cần chứng thực (hoặc nhờ photocopy tại Bộ phận Một cửa).
-3. Thời hạn giải quyết: Trong ngày làm việc; hồ sơ số lượng lớn có thể hẹn trả vào ngày làm việc tiếp theo.
-
-💡 Bạn có thể quét kiểm tra chất lượng tệp bằng tính năng Tiền kiểm AI của WardMate.`;
-  }
-
-  if (q.includes('quy trình') || q.includes('tiền kiểm') || q.includes('chuẩn bị')) {
-    return `Chào bạn! Quy trình chuẩn bị và tiền kiểm hồ sơ trên WardMate gồm 4 bước:
-1. Chọn thủ tục hành chính cần làm tại UBND cấp xã/phường.
-2. Điền thông tin vào các tờ khai trực tuyến được hướng dẫn từng trường.
-3. Tải lên tệp giấy tờ đính kèm và bấm "Kiểm tra sơ bộ bằng AI" để phát hiện trước các lỗi mờ, lóa hoặc thiếu trang.
-4. Nộp hồ sơ và theo dõi tiến độ phản hồi từ cán bộ Một cửa.
-
-💡 Bạn có thể Đăng nhập để lưu tiến độ chuẩn bị hồ sơ bất kỳ lúc nào.`;
-  }
-
-  return `Chào bạn! Trợ lý ảo WardMate luôn sẵn sàng hỗ trợ tư vấn thủ tục hành chính${wardText}.
-Bạn có thể tra cứu chi tiết danh mục hồ sơ, biểu mẫu và mức phí tại mục "Thủ tục hành chính" trên cổng dịch vụ.
-
-💡 Mẹo: Bạn có thể Đăng nhập để AI ghi nhớ lịch sử hội thoại, chuẩn bị hồ sơ và tiền kiểm tra giấy tờ tự động.`;
 }
 
 const KNOWN_WARDS: Record<string, string> = {
@@ -146,6 +73,11 @@ export const AiChatWidget: React.FC = () => {
 
 function ChatPanel({ authenticated }: { authenticated: boolean }) {
   const location = useLocation();
+  const procedureSuggestions = useProcedureSuggestions(3);
+  const quickSuggestions = [
+    ...procedureSuggestions.map(p => ({ label: p.label, query: `Thủ tục "${p.title}" cần chuẩn bị những giấy tờ gì?` })),
+    PROCESS_SUGGESTION,
+  ];
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'chat' | 'history'>('chat');
   const [initialGuest] = useState(() => authenticated ? null : loadGuestChat());
@@ -423,18 +355,11 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
         msg.includes('NetworkError') ||
         msg.includes('Không kết nối');
 
-      if (!authenticated && isOfflineOrUnavailable) {
-        const selectedWard = wards.data?.find(w => w.code === targetWardCode);
-        const fallbackAnswer = generateGuestAssistantAnswer(text, selectedWard?.name);
-        const assistantMessage: ChatMessage = {
-          id: String(Date.now() + 1),
-          sender: 'assistant',
-          text: `${fallbackAnswer}\n\n*(Lưu ý: Trợ lý AI đang tạm gián đoạn. Dưới đây là hướng dẫn tham khảo, không phải câu trả lời trực tiếp của AI.)*`,
-          timestamp: new Date(),
-        };
-        const finalMessages = [...nextMessages, assistantMessage];
-        setMessages(finalMessages);
-        if (!authenticated) persistGuest(finalMessages, activeConversationId, targetWardCode);
+      // Không còn trả lời soạn sẵn khi AI gián đoạn (nội dung cố định dễ sai/không còn thủ tục): giữ câu hỏi để gửi lại.
+      if (isOfflineOrUnavailable) {
+        setMessages(prev => prev.filter(message => message.id !== userMessage.id));
+        setInputValue(text);
+        setError('Trợ lý AI đang tạm gián đoạn. Vui lòng thử lại sau ít phút, hoặc tra cứu tại mục Thủ tục hành chính.');
         return;
       }
       setMessages(prev => prev.filter(message => message.id !== userMessage.id));
@@ -767,7 +692,7 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
                         <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
                           <p className="text-[10px] font-semibold text-slate-500">Gợi ý câu hỏi phổ biến:</p>
                           <div className="flex flex-col gap-1.5">
-                            {QUICK_SUGGESTIONS.map((s, idx) => (
+                            {quickSuggestions.map((s, idx) => (
                               <button
                                 key={idx}
                                 type="button"

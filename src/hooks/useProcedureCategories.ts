@@ -52,3 +52,18 @@ export function useFeaturedProcedures() {
     staleTime: 5 * 60_000,
   });
 }
+
+/** Rút tên thủ tục còn tối đa 5 từ để làm nút gợi ý; vẫn đủ để ô tìm kiếm khớp thủ tục. */
+export function shortProcedureLabel(title: string, maxWords = 5) {
+  const words = title.trim().split(/\s+/);
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') : title.trim();
+}
+
+/**
+ * FE-06: gợi ý tìm kiếm/câu hỏi lấy từ thủ tục nổi bật đang công khai (API featured), không cố định trong code,
+ * để không trỏ tới thủ tục đã ẩn. Chưa tải xong hoặc lỗi thì trả mảng rỗng (ẩn gợi ý).
+ */
+export function useProcedureSuggestions(limit = 5) {
+  const featured = useFeaturedProcedures();
+  return (featured.data ?? []).slice(0, limit).map(item => ({ id: item.id, title: item.title, label: shortProcedureLabel(item.title) }));
+}

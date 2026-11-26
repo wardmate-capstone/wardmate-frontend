@@ -243,3 +243,19 @@
   .public-procedures .procedure-result-row { grid-template-columns: minmax(0, 1fr) 18px; gap: 9px; }
   .public-procedures .procedure-result-action .procedure-action-label { display: none; }
 }
+
+/* FE-17: bảng thông tin chung 4 cột → 2 cột (nhãn | giá trị) trên điện thoại ≤ 500px */
+@media (max-width: 500px) {
+  .procedure-info-table tr {
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr);
+  }
+  .procedure-info-table td {
+    display: block;
+    width: auto !important;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .procedure-info-table td:nth-child(2n) { border-right: 0; }
+  .procedure-info-table td:nth-child(n + 3) { border-top: 1px solid rgb(226 232 240); }
+}

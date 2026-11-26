@@ -1,3 +1,4 @@
+import '@/styles/public-pages.css';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -151,7 +152,7 @@ export function ProcedureDetailPage() {
           <div className="min-w-0 lg:col-span-8 space-y-6">
             {/* 1. BẢNG THÔNG TIN CHUNG (Grid table kẻ viền xám theo mẫu Cổng DVCQG) */}
             <div className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-2xs">
-              <table className="w-full border-collapse text-xs sm:text-sm">
+              <table aria-label="Thông tin chung của thủ tục" className="procedure-info-table w-full border-collapse text-xs sm:text-sm">
                 <tbody>
                   {/* Hàng 1: Tên thủ tục */}
                   <tr className="border-b border-slate-200">
@@ -257,7 +258,7 @@ export function ProcedureDetailPage() {
             {/* 3. TRÌNH TỰ THỰC HIỆN */}
             <section className="space-y-3">
               <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
-                Trình Tự Thực Hiện
+                Trình tự thực hiện
               </h2>
 
               {cases.length > 1 && (
@@ -293,7 +294,16 @@ export function ProcedureDetailPage() {
                         {step.actionDetails}
                       </p>
                     </div>
-                  ))
+                  )).concat(payload.stepsText?.trim() ? [
+                    // FE-08: các bước có cấu trúc là bản tóm tắt; văn bản trình tự đầy đủ mở bằng "Xem đầy đủ"
+                    <details key="full-steps" className="group border-t border-slate-100 pt-3">
+                      <summary className="cursor-pointer rounded font-semibold text-red-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
+                        <span className="group-open:hidden">Xem đầy đủ trình tự thực hiện</span>
+                        <span className="hidden group-open:inline">Thu gọn</span>
+                      </summary>
+                      <p className="mt-2 whitespace-pre-line">{payload.stepsText}</p>
+                    </details>,
+                  ] : [])
                 ) : payload.stepsText ? (
                   <p className="whitespace-pre-line">{payload.stepsText}</p>
                 ) : (
@@ -309,7 +319,7 @@ export function ProcedureDetailPage() {
             {/* 4. CÁCH THỨC THỰC HIỆN (Bảng 4 cột chuẩn Cổng DVCQG) */}
             <section className="space-y-3">
               <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
-                Cách Thức Thực Hiện
+                Cách thức thực hiện
               </h2>
 
               <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">

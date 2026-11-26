@@ -28,6 +28,8 @@
 .ward-shift-cancelled { background: #f1f5f9; border-color: #94a3b8; color: #475569; }
 .ward-shift-cancelled strong { text-decoration: line-through; }
 .ward-roster-today { background: #fffbeb; }
+.ward-roster-outside { background: #f8fafc; color: #94a3b8; }
+.ward-roster-table thead .ward-roster-outside strong, .ward-roster-table thead .ward-roster-outside span { color: #94a3b8; }
 .ward-roster-legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; padding-top: 1rem; font-size: .75rem; color: #475569; }
 .ward-roster-legend span { display: inline-flex; align-items: center; gap: .4rem; }
 .ward-roster-legend i { width: .6rem; height: .6rem; border-radius: 50%; }

@@ -16,7 +16,7 @@ import { guideSteps as preparationSteps } from '@/data/preparationGuide';
 
 import { Link, useNavigate } from 'react-router-dom';
 import { procedureError } from '@/lib/api/procedures';
-import { useProcedureCategories, useFeaturedProcedures } from '@/hooks/useProcedureCategories';
+import { useProcedureCategories, useFeaturedProcedures, shortProcedureLabel } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
 const revealInView = {
@@ -66,12 +66,13 @@ export function HomePage() {
                 </div>
                 <Button type="submit" variant="primary" size="large">Tìm kiếm <ArrowRight size={18} aria-hidden="true" /></Button>
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              {featuredList.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <span className="font-medium">Gợi ý:</span>
-                {['Khai sinh', 'Kết hôn', 'Chứng thực bản sao'].map((suggestion) => (
-                  <button key={suggestion} type="button" className="hero-suggestion" onClick={() => navigate('/thu-tuc?' + new URLSearchParams({ q: suggestion }))}>{suggestion}</button>
-                ))}
-              </div>
+                {featuredList.slice(0, 3).map((item) => {
+                  const suggestion = shortProcedureLabel(item.title);
+                  return <button key={item.id} type="button" title={item.title} className="hero-suggestion" onClick={() => navigate('/thu-tuc?' + new URLSearchParams({ q: suggestion }))}>{suggestion}</button>;
+                })}
+              </div>}
             </form>
         </m.div>
       </section>

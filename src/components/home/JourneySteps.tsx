@@ -12,7 +12,7 @@ const steps = [
   { label: 'Tìm đúng thủ tục', detail: 'Tra cứu bằng tên thủ tục hoặc nhu cầu của bạn để xem đúng hướng dẫn.', icon: FileSearch },
   { label: 'Chuẩn bị giấy tờ', detail: 'Đọc điều kiện và hoàn thành danh sách giấy tờ theo từng mục rõ ràng.', icon: ClipboardList },
   { label: 'Nhận góp ý tiền kiểm', detail: 'Cán bộ kiểm tra trước và chỉ rõ nội dung cần bổ sung nếu có.', icon: ShieldCheck },
-  { label: 'Nhận QR sau khi duyệt', detail: 'Mang giấy tờ và mã QR đến cơ quan để thực hiện tiếp nhận chính thức.', icon: QrCode },
+  { label: 'Nhận QR khi giấy tờ sẵn sàng', detail: 'Mang giấy tờ và mã QR đến cơ quan để thực hiện tiếp nhận chính thức.', icon: QrCode },
 ];
 
 export function JourneySteps() {
