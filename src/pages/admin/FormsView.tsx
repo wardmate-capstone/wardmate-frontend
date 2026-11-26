@@ -118,7 +118,7 @@ export function FormsView() {
             <td className="whitespace-nowrap"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
             <td className="whitespace-nowrap">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
             <td className="w-[380px] min-w-[350px]">
-              <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
+              <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} onReupload={canManage ? () => openUpload(item) : undefined} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
                 {item.fileDocxUrl ? <ArrowsClockwise size={16} aria-hidden /> : <UploadSimple size={16} aria-hidden />}
                 {item.fileDocxUrl ? 'Thay đổi' : 'Tải lên'}
               </Button>} />

@@ -640,6 +640,16 @@ export function workflowError(error: unknown): string {
     if (error.response?.status === 404) {
       return 'Không tìm thấy hồ sơ hoặc phiên bản yêu cầu.';
     }
+    // 503 khi dịch vụ Azure đang khởi động (minReplicas: 0) thường không kèm nội dung JSON
+    if (error.response?.status === 503) {
+      return 'Hệ thống đang khởi động. Vui lòng chờ vài giây rồi bấm Thử lại.';
+    }
+    if (!error.response) {
+      return 'Không kết nối được hệ thống. Vui lòng kiểm tra mạng rồi bấm Thử lại.';
+    }
+    if (error.response.status >= 500) {
+      return 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.';
+    }
   }
   return error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi xử lý hồ sơ. Vui lòng thử lại.';
 }

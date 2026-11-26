@@ -9,6 +9,15 @@ import type { CitizenDossier, CitizenSectionId } from '../types';
 import { getStatusBadgeClass, QR_ELIGIBLE_STATUSES } from '../types';
 import { Button, RefreshButton, TableSkeletonRows, SearchInput, Select } from '@/components/ui';
 import { matchesSearch } from '@/lib/utils';
+import axios from 'axios';
+import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
+
+/** FE-09: thủ tục đã ngừng công khai (API công khai trả 404) → nhắc ngay dưới tên thủ tục. Lỗi khác không hiện gì. */
+function InactiveProcedureNote({ procedureId }: { procedureId?: string }) {
+  const detail = usePublicProcedureDetail(procedureId);
+  const inactive = detail.isError && axios.isAxiosError(detail.error) && detail.error.response?.status === 404;
+  return inactive ? <small className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">Thủ tục đã ngừng áp dụng trên cổng</small> : null;
+}
 
 export interface CitizenInfiniteListProps {
   totalItems: number;
@@ -165,6 +174,7 @@ export function CitizenDossiersView({
                   <td>
                     <span className="font-semibold text-slate-900">{item.procedureName}</span>
                     <small className="block text-[11px] text-slate-500">Lĩnh vực: {item.field}</small>
+                    <InactiveProcedureNote procedureId={item.procedureId} />
                   </td>
                   <td>{item.updatedAt}</td>
                   <td>

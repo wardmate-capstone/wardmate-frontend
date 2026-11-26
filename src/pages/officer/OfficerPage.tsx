@@ -392,7 +392,7 @@ export const OfficerPage: React.FC = () => {
 
         {/* Semantic Main Content */}
         <main ref={mainRef} id="officer-main" className="admin-main flex-1" tabIndex={-1}>
-          {activeQuery.isError && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
+          {activeQuery.isError && !inListSection && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
           {/* Tiêu đề trang chung (như Admin/Manager/Công dân); màn kiểm tra hồ sơ và Hồ sơ cá nhân tự có tiêu đề */}
           {!reviewingApp && activeSection !== 'profile' && (
             <div className="admin-page-heading mb-6">
@@ -453,6 +453,7 @@ export const OfficerPage: React.FC = () => {
                   onRefresh={() => void refetchAll()}
                   isRefreshing={activeQuery.isFetching}
                   isLoading={activeQuery.isPending}
+                  errorMessage={activeQuery.isError ? workflowError(activeQuery.error) : undefined}
                   submittedRange={submittedRange}
                   onSubmittedRangeChange={setSubmittedRange}
                   pagination={{

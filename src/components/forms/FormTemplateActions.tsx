@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Modal, Skeleton } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
@@ -9,8 +10,14 @@ import { DocxPreview } from './DocxPreview';
 import { downloadFormTemplateDocx, formTemplateErrorMessage, getFormTemplateById, triggerFileDownload } from '@/lib/api/formTemplates';
 
 /** Trang công khai chỉ xem/tải phôi mẫu đang hoạt động qua API. */
-export function FormTemplateActions({ templateId, name, hasFile, managementAction, publicAccess = false, previewOnly = false }: {
+/** FE-13: bản ghi mẫu còn đường dẫn tệp nhưng tệp Word đã mất khỏi kho (404 khi tải). */
+const isTemplateFileMissing = (error: unknown) => axios.isAxiosError(error) && error.response?.status === 404;
+const TEMPLATE_FILE_MISSING = 'Tệp mẫu không còn trên hệ thống, vui lòng tải lên lại.';
+
+export function FormTemplateActions({ templateId, name, hasFile, managementAction, publicAccess = false, previewOnly = false, onReupload }: {
   publicAccess?: boolean;
+  /** Người quản lý mẫu: hiện nút "Thay đổi" khi tệp mẫu đã mất (đóng xem trước rồi mở hộp tải lên) */
+  onReupload?: () => void;
   /** Chỉ hiện nút "Xem" (dùng trong bảng chọn gọn); tải mẫu vẫn có trong hộp thoại xem trước */
   previewOnly?: boolean;
   templateId?: string | null;
@@ -46,7 +53,7 @@ export function FormTemplateActions({ templateId, name, hasFile, managementActio
       const file = await downloadFormTemplateDocx(templateId, undefined, publicAccess);
       triggerFileDownload(file.blob, file.fileName);
     } catch (error) {
-      const message = formTemplateErrorMessage(error);
+      const message = isTemplateFileMissing(error) ? TEMPLATE_FILE_MISSING : formTemplateErrorMessage(error);
       setDownloadError(message); toast.error(message);
     } finally { setDownloading(false); }
   };
@@ -73,7 +80,9 @@ export function FormTemplateActions({ templateId, name, hasFile, managementActio
           <div role="status" aria-label="Đang tải nội dung biểu mẫu" className="py-2">
             <Skeleton className="h-64 w-full rounded-xl" />
           </div>
-        ) : preview.isError ? <div role="alert" className="space-y-2 text-sm text-red-800"><p>{formTemplateErrorMessage(preview.error)}</p><Button variant="outline" size="small" onClick={() => void preview.refetch()}>Thử lại</Button></div> : <DocxPreview key={preview.data.blob.size + ':' + preview.dataUpdatedAt} blob={preview.data.blob} />)}
+        ) : preview.isError ? (isTemplateFileMissing(preview.error)
+          ? <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p>{TEMPLATE_FILE_MISSING}</p>{onReupload && <Button variant="outline" size="small" onClick={() => { setOpen(false); onReupload(); }}>Thay đổi</Button>}</div>
+          : <div role="alert" className="space-y-2 text-sm text-red-800"><p>{formTemplateErrorMessage(preview.error)}</p><Button variant="outline" size="small" onClick={() => void preview.refetch()}>Thử lại</Button></div>) : <DocxPreview key={preview.data.blob.size + ':' + preview.dataUpdatedAt} blob={preview.data.blob} />)}
       </div>}
     </Modal>
   </div>;

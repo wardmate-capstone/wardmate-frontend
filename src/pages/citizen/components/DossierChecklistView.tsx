@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { displayDocumentFileName } from '@/lib/documentFileName';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -123,6 +124,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
             <span className="block text-[11px] text-slate-400">{item.formTemplateId ? 'Tệp Word, tối đa 20 MB' : 'PDF, ảnh chụp (JPG, PNG, HEIC) hoặc Word · Tối đa 20 MB'}</span>
           </span>
           <input
+            id={`upload-${item.checklistId}`}
             aria-label={item.formTemplateId ? (submissions.length ? 'Thay tệp Word đã điền' : 'Tải lên tệp Word đã điền') : 'Đính kèm giấy tờ'}
             aria-describedby={errors[item.checklistId] ? `error-${item.checklistId}` : undefined}
             aria-invalid={Boolean(errors[item.checklistId])}
@@ -241,7 +243,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                       className="inline-flex items-center gap-1.5 break-all text-left text-xs sm:text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 hover:text-red-800"
                       onClick={() => void download(x.id, true, x.fileName)}
                     >
-                      <span>{x.fileName}</span>
+                      <span>{displayDocumentFileName(x.fileName)}</span>
                       <DownloadSimple size={14} className="shrink-0 text-slate-400" aria-hidden />
                     </button>
                     <p className="text-[11px] text-slate-500">
@@ -250,6 +252,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                     </p>
                   </div>
                 </div>
+                {!x.fileExists && <MissingFileNotice editable={editable && !busy} inputId={`upload-${item.checklistId}`} replaceHint="Chọn tệp Word mới để thay tờ khai này." />}
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="small"
@@ -287,19 +290,20 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                         className="inline-flex items-center gap-1.5 break-all text-left text-xs sm:text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 hover:text-red-700"
                         onClick={() => void download(x.id, false, x.fileName)}
                       >
-                        <span>{x.fileName}</span>
+                        <span>{displayDocumentFileName(x.fileName)}</span>
                         <DownloadSimple size={14} className="shrink-0 text-slate-400" aria-hidden />
                       </button>
                       <p className="text-[11px] text-slate-500">{x.quantity} bản{x.fileExists ? ' · Đã tải lên' : ' · Không tìm thấy tệp'}</p>
                     </div>
                   </div>
+                  {!x.fileExists && <MissingFileNotice editable={editable && !busy} inputId={`upload-${item.checklistId}`} replaceHint="Chọn tệp mới, sau đó xóa tệp cũ này khỏi danh sách." />}
                   <div className="flex flex-wrap items-center gap-2">
                     <Button size="small" variant="outline" onClick={() => setPreview({ id: x.id, name: x.fileName, form: false })}>
                       Xem giấy tờ
                     </Button>
                     {editable && (
                       <Button variant="ghost" size="small" className="text-slate-400 hover:text-red-700 text-xs" disabled={busy} onClick={() => setRemoving({ id: x.id, name: x.fileName, item })}>
-                        Xóa {x.fileName}
+                        Xóa {displayDocumentFileName(x.fileName)}
                       </Button>
                     )}
                   </div>
@@ -405,4 +409,18 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       </Suspense>
     )}
   </div>;
+}
+
+/** FE-11: tệp đã mất khỏi kho. Hồ sơ còn sửa được thì có nút "Tải lại tệp" mở ô chọn tệp của chính mục giấy tờ. */
+function MissingFileNotice({ editable, inputId, replaceHint }: { editable: boolean; inputId: string; replaceHint: string }) {
+  return (
+    <div role="status" className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      <span>Tệp không còn trên hệ thống lưu trữ.{editable ? ` ${replaceHint}` : ' Hồ sơ đang khóa chỉnh sửa, vui lòng liên hệ cán bộ phường.'}</span>
+      {editable && (
+        <label htmlFor={inputId} className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-900 hover:bg-amber-100 focus-within:ring-2 focus-within:ring-amber-600">
+          <UploadSimple size={14} aria-hidden />Tải lại tệp
+        </label>
+      )}
+    </div>
+  );
 }

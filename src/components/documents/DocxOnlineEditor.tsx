@@ -212,7 +212,9 @@ export default function DocxOnlineEditor({
     void loader
       .current(controller.signal)
       .then(async (file) => {
-        const fileName = file.fileName.toLowerCase().endsWith('.docx') ? file.fileName : 'ban-khai.docx';
+        // FE-10: tên tải về là tên trong kho (mã + "_" + tên, có thể lặp đuôi); bỏ trước khi lưu lại để không ghi mã vào tên tờ khai
+        const cleanName = displayDocumentFileName(file.fileName, 'ban-khai.docx');
+        const fileName = cleanName.toLowerCase().endsWith('.docx') ? cleanName : 'ban-khai.docx';
         const issue = validateDocumentFile(new File([file.blob], fileName), true);
         if (issue) throw new Error(issue);
         const data = new Uint8Array(await file.blob.arrayBuffer());

@@ -10,6 +10,8 @@ export const queryClient = new QueryClient({
       // Tắt tự động refetch ngầm khi chuyển tab/focus cửa sổ để tránh spam API
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      // Thử lại 1 lần với lỗi mạng/5xx (kể cả 503 khi dịch vụ Azure đang khởi động). Hết lượt thì
+      // màn hình hiện lỗi + nút Thử lại (FE-02) để người dùng chủ động gọi lại.
       retry: (count, error) => {
         if (axios.isCancel(error) || !axios.isAxiosError(error)) return false;
         const status = error.response?.status;

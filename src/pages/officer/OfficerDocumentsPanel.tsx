@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
+import { displayDocumentFileName } from '@/lib/documentFileName';
 import { formatDateTime } from '@/lib/dateFormat';
 import { Badge, Button, ListSkeleton } from '@/components/ui';
 import { useApplicationContents, useDocumentMutations, useOfficerSubmissions } from '@/hooks/useDocumentForms';
@@ -105,7 +106,7 @@ export function OfficerDocumentsPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Tờ khai</p>
-            <h4 className="break-all font-semibold">{item.fileName}</h4>
+            <h4 className="break-all font-semibold">{displayDocumentFileName(item.fileName)}</h4>
             {isUpdated(item) && (
               <Badge variant="info" className="mr-1.5">Mới cập nhật sau lần gửi {previousVersion}</Badge>
             )}
@@ -176,7 +177,7 @@ export function OfficerDocumentsPanel({
         {isSelected && (
           <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <h5 className="break-all font-bold text-sm text-slate-800">Xem trước: {item.fileName}</h5>
+              <h5 className="break-all font-bold text-sm text-slate-800">Xem trước: {displayDocumentFileName(item.fileName)}</h5>
               <Button size="small" variant="ghost" onClick={() => setSelected(undefined)}>Đóng</Button>
             </div>
             <DocumentFilePreview
@@ -198,7 +199,7 @@ export function OfficerDocumentsPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Giấy tờ tải lên</p>
-            <h4 className="break-all font-semibold">{item.fileName}</h4>
+            <h4 className="break-all font-semibold">{displayDocumentFileName(item.fileName)}</h4>
             {isDocumentUpdated(item) && (
               <Badge variant="info" className="mt-0.5">Mới cập nhật sau lần gửi {previousVersion}</Badge>
             )}
@@ -232,7 +233,7 @@ export function OfficerDocumentsPanel({
         {isSelected && (
           <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <h5 className="break-all font-bold text-sm text-slate-800">Xem trước: {item.fileName}</h5>
+              <h5 className="break-all font-bold text-sm text-slate-800">Xem trước: {displayDocumentFileName(item.fileName)}</h5>
               <Button size="small" variant="ghost" onClick={() => setSelected(undefined)}>Đóng</Button>
             </div>
             <DocumentFilePreview

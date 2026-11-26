@@ -4,6 +4,7 @@ import { workflowApi, workflowError } from '@/lib/api/workflow';
 import { useWardName } from '@/hooks/useWardName';
 import type { OfficerApplication } from '@/types/officer';
 import { parseFormData } from '@/lib/api/workflowAdapters';
+import { useApplicationContents } from '@/hooks/useDocumentForms';
 
 /**
  * Xem nhanh hồ sơ. Dòng danh sách không có giấy tờ, CCCD, SĐT, nên hộp tự tải chi tiết hồ sơ (cùng phường được đọc)
@@ -30,6 +31,14 @@ export function OfficerQuickPreview({ app, canTake, onClose, onTake, onOpen }: {
   const address = text('address', 'currentAddress', 'permanentAddress');
   const checklists = [...(detail.data?.checklists ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   const submitted = (status?: string | null) => status === 'COMPLETED';
+  // FE-04: checklist COMPLETED nhưng mọi tệp của mục đã mất khỏi kho (sự cố 20/11) → không ghi "Đã nộp".
+  // Lỗi tải danh sách tệp thì giữ trạng thái theo checklist.
+  const contents = useApplicationContents(app.id);
+  const fileMissing = (checklistId: string) => {
+    if (!contents.data) return false;
+    const files = [...contents.data.submissions, ...contents.data.supportingDocuments].filter(f => f.checklistId?.toLowerCase() === checklistId.toLowerCase());
+    return files.length > 0 && files.every(f => !f.fileExists);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="quick-preview-title">
@@ -73,9 +82,13 @@ export function OfficerQuickPreview({ app, canTake, onClose, onTake, onOpen }: {
               {checklists.map((item) => (
                 <li key={item.id} className="flex items-start justify-between gap-2 rounded-md border border-slate-200 bg-white p-2">
                   <span className="min-w-0 break-words">{item.title || 'Giấy tờ'}{item.isRequired ? '' : ' (không bắt buộc)'}</span>
-                  <span className={`shrink-0 text-xs font-semibold ${submitted(item.status) ? 'text-emerald-700' : 'text-slate-500'}`}>
-                    {submitted(item.status) ? 'Đã nộp' : 'Chưa nộp'}
-                  </span>
+                  {submitted(item.status) && fileMissing(item.id) ? (
+                    <span className="shrink-0 text-right text-xs font-semibold text-amber-700">Tệp không còn trên hệ thống</span>
+                  ) : (
+                    <span className={`shrink-0 text-xs font-semibold ${submitted(item.status) ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      {submitted(item.status) ? 'Đã nộp' : 'Chưa nộp'}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
