@@ -527,6 +527,8 @@ export function authErrorMessage(error: unknown): string {
     if (status === 403) return 'Chưa đăng nhập được từ trang này. Vui lòng liên hệ quản trị viên.';
     if (status === 404) return 'Không tìm thấy thông tin hồ sơ.';
     if (status === 429) return 'Bạn thao tác quá nhiều lần. Vui lòng chờ rồi thử lại.';
+    // 503: dịch vụ Azure đang khởi động lại (minReplicas: 0), thường sẵn sàng sau vài giây
+    if (status === 503) return 'Hệ thống đang khởi động. Vui lòng chờ vài giây rồi bấm Thử lại.';
     if (status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
     const data = error.response?.data;
     const errors = data?.errors && typeof data.errors === 'object'

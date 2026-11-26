@@ -354,9 +354,9 @@ export function ManagerApplicationsView() {
           </p>
         )}
         {officers.isError && (
-          <p role="alert" className="mx-4 my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <ErrorAlert className="mx-4 my-3" retrying={officers.isFetching} onRetry={() => void officers.refetch()}>
             Chưa tải được danh sách cán bộ: {authErrorMessage(officers.error)}
-          </p>
+          </ErrorAlert>
         )}
 
         <div className="admin-table-wrap">

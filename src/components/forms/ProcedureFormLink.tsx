@@ -18,8 +18,11 @@ import {
  * Mẫu đơn, tờ khai trong bảng "Thành phần hồ sơ" (giống Cổng DVC Quốc gia):
  * - Tải mẫu và Xem trước: không cần đăng nhập (khách dùng API công khai BE-J; phôi trống không có dữ liệu cá nhân).
  * - Xem trước chỉ là tải file .docx rồi hiển thị trên trình duyệt, nên dùng chung API tải.
- * - Khi API công khai chưa phục vụ (chưa deploy / mẫu ẩn) thì mời đăng nhập.
+ * - API công khai đã deploy (DOC-TPL-PUB-01): 404 nghĩa là mẫu ngừng dùng hoặc tệp Word không còn trong kho,
+ *   đăng nhập cũng không xem được → báo rõ thay vì mời đăng nhập. Chỉ 401/403 mới mời đăng nhập.
  */
+const TEMPLATE_UNAVAILABLE = 'Mẫu này hiện chưa có tệp để xem hoặc tải. Vui lòng thử lại sau hoặc liên hệ cán bộ phường.';
+
 export function ProcedureFormLink({ templateId, name }: { templateId?: string | null; name: string }) {
   const user = useAuthStore(s => s.user);
   const location = useLocation();
@@ -36,9 +39,9 @@ export function ProcedureFormLink({ templateId, name }: { templateId?: string | 
   });
   const loginUrl = '/dang-nhap?returnTo=' + encodeURIComponent(location.pathname + location.search + location.hash);
   const previewStatus = axios.isAxiosError(preview.error) ? preview.error.response?.status : undefined;
-  // Khách xem trước nhưng API công khai chưa phục vụ mẫu → đổi sang hộp mời đăng nhập
+  // Khách xem trước nhưng API từ chối truy cập ẩn danh → đổi sang hộp mời đăng nhập
   useEffect(() => {
-    if (!user && mode === 'preview' && (previewStatus === 401 || previewStatus === 403 || previewStatus === 404)) {
+    if (!user && mode === 'preview' && (previewStatus === 401 || previewStatus === 403)) {
       setLoginReason('Vui lòng đăng nhập để xem mẫu.');
       setMode('login');
     }
@@ -59,7 +62,8 @@ export function ProcedureFormLink({ templateId, name }: { templateId?: string | 
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       if (status === 429) toast.error('Bạn tải mẫu quá nhiều lần. Vui lòng thử lại sau 1 phút.');
       // Khách: API công khai chưa phục vụ mẫu này → mời đăng nhập thay vì báo lỗi kỹ thuật
-      else if (!user && (status === 401 || status === 403 || status === 404)) askLogin('Vui lòng đăng nhập để tải mẫu.');
+      else if (!user && (status === 401 || status === 403)) askLogin('Vui lòng đăng nhập để tải mẫu.');
+      else if (status === 404) toast.error(TEMPLATE_UNAVAILABLE);
       else toast.error(formTemplateErrorMessage(error));
     } finally {
       setDownloading(false);
@@ -92,8 +96,8 @@ export function ProcedureFormLink({ templateId, name }: { templateId?: string | 
           <div role="status" aria-label="Đang tải nội dung biểu mẫu" className="py-2"><Skeleton className="h-64 w-full rounded-xl" /></div>
         ) : preview.isError ? (
           <div role="alert" className="space-y-2 text-sm text-red-800">
-            <p>{previewStatus === 429 ? 'Bạn xem mẫu quá nhiều lần. Vui lòng thử lại sau 1 phút.' : formTemplateErrorMessage(preview.error)}</p>
-            <Button variant="outline" size="small" onClick={() => void preview.refetch()}>Thử lại</Button>
+            <p>{previewStatus === 429 ? 'Bạn xem mẫu quá nhiều lần. Vui lòng thử lại sau 1 phút.' : previewStatus === 404 ? TEMPLATE_UNAVAILABLE : formTemplateErrorMessage(preview.error)}</p>
+            {previewStatus !== 404 && <Button variant="outline" size="small" onClick={() => void preview.refetch()}>Thử lại</Button>}
           </div>
         ) : (
           <DocxPreview key={preview.data.blob.size + ':' + preview.dataUpdatedAt} blob={preview.data.blob} />
