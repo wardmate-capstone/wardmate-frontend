@@ -32,9 +32,9 @@ export const guideSteps = [
     outcome: 'Tiếp tục trên hồ sơ đang có; không cần tạo hồ sơ mới chỉ vì có yêu cầu bổ sung.',
   },
   {
-    id: 'pdf-qr', number: '06', icon: QrCode, title: 'Tải PDF, QR và mang giấy tờ đến quầy',
-    description: 'Khi giấy tờ sẵn sàng, tạo PDF từ bản khai và tải mã QR do hệ thống cấp.',
-    tasks: ['Mở hồ sơ có trạng thái Giấy tờ sẵn sàng để tạo và tải PDF cùng mã QR.', 'In tài liệu cần thiết, chuẩn bị giấy tờ theo danh sách và mang đến cơ quan có thẩm quyền để đối chiếu.'],
+    id: 'pdf-qr', number: '06', icon: QrCode, title: 'Tải mã QR và mang giấy tờ đến quầy',
+    description: 'Khi giấy tờ sẵn sàng, tải mã QR do hệ thống cấp; thủ tục có tờ khai thì tải thêm bản PDF.',
+    tasks: ['Mở hồ sơ có trạng thái Giấy tờ sẵn sàng để tải mã QR và bản PDF (nếu có). Thủ tục chỉ có giấy tờ đính kèm thì không có PDF, mã QR vẫn dùng được.', 'In tài liệu cần thiết, chuẩn bị giấy tờ theo danh sách và mang đến cơ quan có thẩm quyền để đối chiếu.'],
     outcome: 'Giấy tờ đã được chuẩn bị cho bước làm thủ tục tại cơ quan tiếp nhận. QR không phải giấy hẹn hay kết quả giải quyết.',
   },
 ];

@@ -7,7 +7,7 @@ import { Badge, Button, ChecklistSkeleton, Input, Modal, toast } from '@/compone
 import { CheckCircle, FileDoc, Paperclip, PencilSimple, UploadSimple, DownloadSimple, ArrowClockwise, CaretDown } from '@phosphor-icons/react';
 import { useAuthStore } from '@/stores/authStore';
 import { useApplicationContents, useDocumentMutations } from '@/hooks/useDocumentForms';
-import { documentFormApi, documentFormError, documentQuantitySchema, downloadBlob, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
+import { documentFormApi, documentFormError, documentQuantitySchema, downloadBlob, isDocumentFileMissing, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
@@ -48,6 +48,10 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   const [chosenForm, setChosenForm] = useState<Record<string, string>>({});
   const quantityForm = useForm<z.input<typeof quantitySchema>, unknown, z.output<typeof quantitySchema>>({ resolver: zodResolver(quantitySchema), defaultValues: { quantity: 1 } });
   const editable = dossierStatus === 'Bản nháp' || dossierStatus === 'Cần chỉnh sửa';
+  // Tệp mất khỏi kho: hồ sơ còn sửa được thì hướng dẫn tải lên lại, đã khóa thì liên hệ phường.
+  const fileMissingMessage = editable
+    ? 'Tệp không còn trên hệ thống lưu trữ. Vui lòng xóa tệp này rồi tải lên lại ở mục giấy tờ tương ứng.'
+    : 'Tệp không còn trên hệ thống lưu trữ. Hồ sơ đang khóa chỉnh sửa, vui lòng liên hệ cán bộ phường để được hướng dẫn.';
   const current = [...checklist].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const ready = (item: ChecklistItem) => Boolean(contents.data && hasChecklistEvidence(item, contents.data));
 
@@ -88,7 +92,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   }
   async function download(id: string, isForm: boolean, name: string) {
     try { if (!user?.id) return; const result = isForm ? await documentFormApi.downloadSubmission(id, user.id) : await documentFormApi.downloadSupportingDocument(id); downloadBlob(result.blob, result.fileName === 'tai-lieu' ? name : result.fileName); }
-    catch (error) { toast.error(documentFormError(error)); }
+    catch (error) { toast.error(isDocumentFileMissing(error) ? fileMissingMessage : documentFormError(error)); }
   }
 
   if (contents.isPending) return <ChecklistSkeleton count={Math.max(2, current.length || 3)} />;
@@ -371,7 +375,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       })} noValidate><p className="break-all text-sm">{upload?.file.name}</p><Input label="Số bản thực tế" type="number" min={1} max={2147483647} required disabled={busy} {...quantityForm.register('quantity')} error={quantityForm.formState.errors.quantity?.message} />{upload && errors[upload.item.checklistId] && <p role="alert" className="text-sm text-red-800">{errors[upload.item.checklistId]}</p>}<Button type="submit" loading={busy}>Lưu giấy tờ</Button></form>
     </Modal>
     <Modal open={Boolean(removing)} onOpenChange={open => { if (!open && !busy) setRemoving(undefined); }} title="Xóa giấy tờ khỏi hồ sơ" description="Sau khi xóa, bạn có thể cần đính kèm lại để hồ sơ đủ giấy tờ."><p className="mb-4 break-all">{removing?.name}</p>{removing && errors[removing.item.checklistId] && <p role="alert" className="mb-4 text-sm text-red-800">{errors[removing.item.checklistId]}</p>}<Button loading={busy} onClick={() => { if (!removing || !applicationId) return; const selected = removing; void perform(selected.item, async () => { await mutations.deleteSupporting.mutateAsync({ documentId: selected.id, applicationId }); setRemoving(undefined); await syncChecklist(selected.item); toast.success('Đã xóa giấy tờ.'); }); }}>Xác nhận xóa</Button></Modal>
-    <Modal open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(undefined); }} title="Xem giấy tờ đã lưu" className="sm:max-w-4xl">{preview && <DocumentFilePreview key={preview.id} fileId={preview.id} fileName={preview.name} load={signal => /\.(pdf|png|jpe?g)$/i.test(preview.name) ? documentFormApi.previewSupportingDocument(preview.id, signal).catch(() => documentFormApi.downloadSupportingDocument(preview.id, signal)) : documentFormApi.downloadSupportingDocument(preview.id, signal)} />}</Modal>
+    <Modal open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(undefined); }} title="Xem giấy tờ đã lưu" className="sm:max-w-4xl">{preview && <DocumentFilePreview key={preview.id} fileId={preview.id} fileName={preview.name} fileMissingMessage={fileMissingMessage} load={signal => /\.(pdf|png|jpe?g)$/i.test(preview.name) ? documentFormApi.previewSupportingDocument(preview.id, signal).catch(() => documentFormApi.downloadSupportingDocument(preview.id, signal)) : documentFormApi.downloadSupportingDocument(preview.id, signal)} />}</Modal>
     {editing && user && (
       <Suspense
         fallback={

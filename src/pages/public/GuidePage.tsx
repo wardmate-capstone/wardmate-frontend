@@ -101,7 +101,7 @@ export function GuidePage() {
             </details>
             <details>
               <summary>Giấy tờ đã sẵn sàng nhưng chưa có QR? <CaretDown size={17} aria-hidden="true" /></summary>
-              <p>Mở chi tiết hồ sơ, tạo PDF từ bản khai đã sẵn sàng rồi tải lại mã QR. Nếu tạo PDF thất bại, giữ hồ sơ và thử lại theo thông báo trên màn hình.</p>
+              <p>Mã QR được cấp khi hồ sơ được xác nhận giấy tờ sẵn sàng, không cần chờ PDF. Mở lại chi tiết hồ sơ sau ít phút; nếu vẫn chưa có mã, liên hệ cán bộ phường. Thủ tục chỉ có giấy tờ đính kèm thì không có PDF, mã QR vẫn dùng được.</p>
             </details>
             <Link to="/hoi-dap" className="public-text-link">Xem thêm câu hỏi thường gặp <ArrowRight size={16} aria-hidden="true" /></Link>
           </section>

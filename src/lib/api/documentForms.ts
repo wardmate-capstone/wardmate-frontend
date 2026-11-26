@@ -297,13 +297,15 @@ export function documentFormError(error: unknown): string {
       'document.invalid_docx_file': 'Tệp Word bị lỗi hoặc không mở được. Vui lòng mở bằng Word, lưu lại rồi tải lên lại.',
       'document.file_too_large': 'Tệp vượt quá giới hạn 20 MB.',
       'document.pdf_render_failed': 'Chưa thể tạo PDF. Vui lòng thử lại sau.',
-      'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Bạn có thể tạo PDF từ tờ khai sẵn sàng rồi tải lại mã QR.',
+      'document.qr_not_found': 'Giấy tờ đã sẵn sàng nhưng chưa có mã QR. Vui lòng mở lại hồ sơ sau ít phút hoặc liên hệ cán bộ phường.',
       'document.concurrent_update': 'Dữ liệu vừa thay đổi. Vui lòng tải lại hồ sơ.',
       'document.sync_unavailable': 'Chưa cập nhật được trạng thái tờ khai. Vui lòng tải lại trước khi thử tiếp.',
       'document.application_not_approved': 'Hồ sơ thuộc luồng cũ, chưa được xác nhận giấy tờ sẵn sàng.',
       'document.application_not_ready': 'Hồ sơ chưa được xác nhận giấy tờ sẵn sàng để tải PDF.',
       'document.readiness_invalid': 'Hồ sơ thiếu thông tin cán bộ xác nhận. Vui lòng liên hệ đơn vị phụ trách.',
       'document.workflow_review_failed': 'Chưa thực hiện được quyết định. Kiểm tra quyền thụ lý, trạng thái và nhận xét còn mở.',
+      // Sau sự cố kho Azure 20/11/2026: bản ghi còn nhưng tệp đã mất (404)
+      'document.file_missing': 'Tệp không còn trên hệ thống lưu trữ. Vui lòng tải lên lại (giấy tờ) hoặc tạo lại (bản PDF).',
       'document.workflow_decision_rejected': 'Chưa thể quyết định hồ sơ. Vui lòng kiểm tra trạng thái, quyền thụ lý và nhận xét còn mở.',
     };
     if (typeof code === 'string' && messages[code]) return messages[code];
@@ -317,6 +319,13 @@ export function documentFormError(error: unknown): string {
   }
   if (error instanceof Error && !axios.isAxiosError(error)) return error.message;
   return 'Không thể xử lý tài liệu. Vui lòng kiểm tra kết nối và thử lại.';
+}
+
+/** Bản ghi còn nhưng tệp đã mất khỏi kho (404 document.file_missing) — thử lại không có tác dụng. */
+export function isDocumentFileMissing(error: unknown) {
+  if (!axios.isAxiosError(error)) return false;
+  const body = error.response?.data;
+  return Boolean(body && typeof body === 'object' && (body as { code?: unknown }).code === 'document.file_missing');
 }
 
 export function submissionStatusLabel(status: string) {

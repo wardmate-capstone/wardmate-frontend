@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Skeleton } from '@/components/ui';
 import { DocxPreview } from '@/components/forms/DocxPreview';
-import { documentFormError, downloadBlob } from '@/lib/api/documentForms';
+import { documentFormError, downloadBlob, isDocumentFileMissing } from '@/lib/api/documentForms';
 
 type BinaryLoader = (signal: AbortSignal) => Promise<{ blob: Blob; fileName: string }>;
 
 /** Binary is fetched only for the selected file, through the authenticated client. */
-export function DocumentFilePreview({ fileId, fileName, load, revision = '', accessDeniedMessage }: { fileId: string; fileName: string; load: BinaryLoader; revision?: string; accessDeniedMessage?: string }) {
+export function DocumentFilePreview({ fileId, fileName, load, revision = '', accessDeniedMessage, fileMissingMessage }: { fileId: string; fileName: string; load: BinaryLoader; revision?: string; accessDeniedMessage?: string; fileMissingMessage?: string }) {
   const userId = useAuthStore(s => s.user?.id);
   const binary = useQuery({ queryKey: ['document-binary', userId, fileId, revision], queryFn: ({ signal }) => load(signal), enabled: Boolean(userId), gcTime: 0 });
   return <div className="space-y-3">
@@ -19,7 +19,9 @@ export function DocumentFilePreview({ fileId, fileName, load, revision = '', acc
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     )}
-    {binary.isError && <div role="alert"><p>{accessDeniedMessage && axios.isAxiosError(binary.error) && binary.error.response?.status === 403 ? accessDeniedMessage : documentFormError(binary.error)}</p><Button variant="outline" onClick={() => void binary.refetch()}>Thử tải lại tệp</Button></div>}
+    {binary.isError && (isDocumentFileMissing(binary.error)
+      ? <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{fileMissingMessage ?? documentFormError(binary.error)}</p>
+      : <div role="alert"><p>{accessDeniedMessage && axios.isAxiosError(binary.error) && binary.error.response?.status === 403 ? accessDeniedMessage : documentFormError(binary.error)}</p><Button variant="outline" onClick={() => void binary.refetch()}>Thử tải lại tệp</Button></div>)}
     {binary.data && <><Button size="small" variant="outline" onClick={() => downloadBlob(binary.data.blob, binary.data.fileName === 'tai-lieu' ? fileName : binary.data.fileName)}>Tải xuống {fileName}</Button><BinaryPreview key={`${fileId}-${revision}`} blob={binary.data.blob} fileName={fileName} /></>}
   </div>;
 }

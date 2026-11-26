@@ -22,7 +22,7 @@ test('menu căn giữa và mở trang hướng dẫn có đủ sáu bước', as
   await page.screenshot({ path: 'test-results/guide-desktop.png', fullPage: true });
   await page.goto('/huong-dan#pdf-qr');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Tải PDF, QR và mang giấy tờ đến quầy', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tải mã QR và mang giấy tờ đến quầy', exact: true })).toBeVisible();
   await page.getByText('Tôi quên mật khẩu hoặc chưa nhận được email?', { exact: true }).click();
   await expect(page.getByRole('link', { name: 'Khôi phục mật khẩu' })).toHaveAttribute('href', '/quen-mat-khau');
 });
