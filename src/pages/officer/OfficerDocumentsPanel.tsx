@@ -19,6 +19,8 @@ export type DocumentChecklistGroup = {
   title: string;
   isRequired: boolean;
   completed: boolean;
+  /** Giấy tờ chỉ xuất trình bản chính tại quầy (không gắn tờ khai): có thể hoàn tất mà không có tệp. */
+  presentOnly?: boolean;
   meta?: string;
   /** Điều kiện áp dụng / lưu ý của mục */
   note?: string;
@@ -293,7 +295,7 @@ export function OfficerDocumentsPanel({
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    {[group.meta, group.completed ? 'Công dân đã chuẩn bị' : 'Chưa hoàn tất', `${groupSubmissions.length + groupDocuments.length} tệp đã nộp`].filter(Boolean).join(' · ')}
+                    {[group.meta, group.completed ? (group.presentOnly && empty ? 'Công dân xác nhận sẽ mang bản chính đến quầy (chưa có tệp)' : 'Công dân đã chuẩn bị') : 'Chưa hoàn tất', `${groupSubmissions.length + groupDocuments.length} tệp đã nộp`].filter(Boolean).join(' · ')}
                   </p>
                   {group.note && <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-600">{group.note}</p>}
                   {(group.forms?.length ?? 0) > 0 && (

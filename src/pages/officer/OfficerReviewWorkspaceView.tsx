@@ -1,4 +1,6 @@
 import { checklistQuantityLabel } from '@/lib/procedureDisplay';
+import { caseDisplayName, requiresCaseChoice } from '@/lib/procedureCases';
+import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
 import { formatDateTime } from '@/lib/dateFormat';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
@@ -176,6 +178,11 @@ export function OfficerReviewWorkspaceView({
 
   const openComments = comments.data?.filter(x => x.status === 'OPEN' && x.versionNumber === version) ?? [];
   const checklists = detail.data?.checklists ?? [];
+  // Hồ sơ chỉ lưu mã trường hợp; tên lấy từ thủ tục công khai (thủ tục đã ẩn thì hiện mã).
+  const procedureQuery = usePublicProcedureDetail(detail.data?.caseCode ? detail.data.procedureId : undefined);
+  const procedureCases = procedureQuery.data?.contentPayload.cases ?? [];
+  const showCase = Boolean(detail.data?.caseCode) && (requiresCaseChoice(procedureCases) || checklists.some(x => x.caseCode));
+  const caseName = caseDisplayName(detail.data?.caseCode, procedureCases);
   const fields = detail.data ? formDataFields(detail.data.formData) : application.eformFields;
 
   const targets = [
@@ -606,6 +613,14 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             </div>
           </div>
 
+          {/* WF-CASE-01: hồ sơ chỉ gồm giấy tờ chung + giấy tờ của trường hợp công dân đã chọn (snapshot lúc tạo) */}
+          {showCase && (
+            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs text-slate-700">
+              Trường hợp công dân đã chọn: <strong className="font-semibold text-slate-900">{caseName}</strong>
+              <span className="text-slate-500"> · Hồ sơ chỉ gồm giấy tờ chung và giấy tờ của trường hợp này.</span>
+            </p>
+          )}
+
           {detail.isError && (
             <ErrorAlert className="mt-4" retryLabel="Tải lại hồ sơ" retrying={detail.isFetching} onRetry={() => void detail.refetch()}>{workflowError(detail.error)}</ErrorAlert>
           )}
@@ -763,7 +778,12 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 title: x.title || x.code || 'Giấy tờ',
                 isRequired: x.isRequired,
                 completed: x.status === 'COMPLETED',
-                meta: checklistQuantityLabel(x),
+                presentOnly: x.submissionType === 'XUAT_TRINH' && !x.formTemplateId && !x.forms?.some(f => f.formTemplateId),
+                meta: [
+                  checklistQuantityLabel(x),
+                  x.submissionType === 'XUAT_TRINH' ? 'Xuất trình bản chính tại quầy' : null,
+                  showCase ? (x.caseCode ? 'Riêng trường hợp' : 'Giấy tờ chung') : null,
+                ].filter(Boolean).join(' · '),
                 // Ghi chú điều kiện + mẫu đơn trước đây hiện ở tab Thông tin, nay chuyển sang đây
                 note: [x.conditionNote, x.itemNote !== x.conditionNote ? x.itemNote : null].filter(Boolean).join('\n') || undefined,
                 forms: x.forms?.map(f => f.formName || f.formCode).filter(Boolean) as string[] | undefined,

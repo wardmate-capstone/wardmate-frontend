@@ -5,6 +5,8 @@ import { useWardName } from '@/hooks/useWardName';
 import type { OfficerApplication } from '@/types/officer';
 import { parseFormData } from '@/lib/api/workflowAdapters';
 import { useApplicationContents } from '@/hooks/useDocumentForms';
+import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
+import { caseDisplayName } from '@/lib/procedureCases';
 
 /**
  * Xem nhanh hồ sơ. Dòng danh sách không có giấy tờ, CCCD, SĐT, nên hộp tự tải chi tiết hồ sơ (cùng phường được đọc)
@@ -39,6 +41,14 @@ export function OfficerQuickPreview({ app, canTake, onClose, onTake, onOpen }: {
     const files = [...contents.data.submissions, ...contents.data.supportingDocuments].filter(f => f.checklistId?.toLowerCase() === checklistId.toLowerCase());
     return files.length > 0 && files.every(f => !f.fileExists);
   };
+  // D: giấy tờ chỉ xuất trình (không gắn tờ khai) được hoàn tất khi công dân xác nhận mang bản chính, có thể không có tệp
+  const presentWithoutFile = (item: (typeof checklists)[number]) => {
+    if (item.submissionType !== 'XUAT_TRINH' || item.formTemplateId || item.forms?.some(f => f.formTemplateId) || !contents.data) return false;
+    return ![...contents.data.submissions, ...contents.data.supportingDocuments].some(f => f.checklistId?.toLowerCase() === item.id.toLowerCase());
+  };
+  // WF-CASE-01: tên trường hợp lấy từ thủ tục công khai; thủ tục ẩn thì hiện mã
+  const procedureQuery = usePublicProcedureDetail(detail.data?.caseCode ? detail.data.procedureId : undefined);
+  const caseName = caseDisplayName(detail.data?.caseCode, procedureQuery.data?.contentPayload.cases);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="quick-preview-title">
@@ -63,6 +73,7 @@ export function OfficerQuickPreview({ app, canTake, onClose, onTake, onOpen }: {
             <span className="block text-[11px] font-semibold uppercase text-slate-500">Thông tin thủ tục</span>
             <p><strong>Thủ tục:</strong> {app.procedureName}</p>
             <p><strong>Lĩnh vực:</strong> {app.procedureCategory}</p>
+            {caseName && <p className="break-words"><strong>Trường hợp:</strong> {caseName}</p>}
             <p><strong>Phường/Xã tiếp nhận:</strong> {wardName(detail.data?.wardCode)}</p>
             <p><strong>Thời gian gửi:</strong> {app.submittedAt}</p>
             <p><strong>Lần gửi:</strong> {detail.data ? Math.max(1, (detail.data.resubmitCount ?? 0) + 1) : app.currentVersion}</p>
@@ -82,7 +93,9 @@ export function OfficerQuickPreview({ app, canTake, onClose, onTake, onOpen }: {
               {checklists.map((item) => (
                 <li key={item.id} className="flex items-start justify-between gap-2 rounded-md border border-slate-200 bg-white p-2">
                   <span className="min-w-0 break-words">{item.title || 'Giấy tờ'}{item.isRequired ? '' : ' (không bắt buộc)'}</span>
-                  {submitted(item.status) && fileMissing(item.id) ? (
+                  {submitted(item.status) && presentWithoutFile(item) ? (
+                    <span className="shrink-0 text-right text-xs font-semibold text-sky-800">Xuất trình tại quầy (chưa có tệp)</span>
+                  ) : submitted(item.status) && fileMissing(item.id) ? (
                     <span className="shrink-0 text-right text-xs font-semibold text-amber-700">Tệp không còn trên hệ thống</span>
                   ) : (
                     <span className={`shrink-0 text-xs font-semibold ${submitted(item.status) ? 'text-emerald-700' : 'text-slate-500'}`}>
