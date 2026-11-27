@@ -13,7 +13,9 @@ import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/usePro
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { PdfSource } from '@/pages/procedure-manager/ProcedureDraftWorkspace';
 import { ProcedureFormLink } from '@/components/forms/ProcedureFormLink';
-import { checklistQuantityLabel, formatQuantityLines, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
+import { ProcedureDocumentsView } from '@/components/procedures/ProcedureDocumentsView';
+import { caseDisplayName, requiresCaseChoice } from '@/lib/procedureCases';
 
 export function ProcedureDetailPage() {
   const { procedureId } = useParams();
@@ -28,8 +30,6 @@ export function ProcedureDetailPage() {
   // Catalog trả danh sách công khai, không có số liệu xếp hạng lượt tìm kiếm.
   const popularQuery = usePublicProcedureList({ pageSize: 7 });
 
-  // State chọn trường hợp nếu thủ tục có nhiều case
-  const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -74,27 +74,15 @@ export function ProcedureDetailPage() {
   const cases = payload.cases || [];
   // BE-H: danh sách cơ quan/địa chỉ có thể nhiều mục; ghép thành một dòng để hiển thị trong bảng thông tin chung
   const joinList = (...lists: (string[] | string | null | undefined)[]) => lists.flat().map(x => x?.trim()).filter(Boolean).join('; ');
-  const activeCase = cases[selectedCaseIdx] || cases[0];
+  // 1 trường hợp: bước của trường hợp nối sau bước chung; nhiều trường hợp: mỗi trường hợp một accordion (chỉ khi có bước riêng)
+  const sharedSteps = [...(payload.commonSteps ?? []), ...(cases.length === 1 ? cases[0].steps : [])];
+  const caseSteps = cases.length > 1 && cases.some(c => c.steps.length) ? cases : [];
   const checklist = procedure.checklistSchema || [];
-  const forms = (procedure.formDefinitions || []).filter(form => !form.caseCode || !activeCase || form.caseCode === activeCase.caseCode);
-  // Cột "Mẫu đơn, tờ khai" của Cổng DVC: mẫu gắn với giấy tờ qua formCodes;
-  // thủ tục cũ chưa có formCodes thì khớp theo mã biểu mẫu trùng mã giấy tờ (quy tắc Workflow cũ)
-  const formsOf = (item: { checklistId: string; formCodes?: string[] | null }) => item.formCodes?.length
-    ? item.formCodes.map(code => forms.find(form => form.formCode === code)).filter((form): form is (typeof forms)[number] => Boolean(form))
-    : forms.filter(form => form.formCode === item.checklistId);
-
-  // Lọc checklist theo trường hợp
-  const currentChecklist = checklist.filter((item) => {
-    if (!item.caseCode) return true;
-    if (!activeCase) return true;
-    return item.caseCode === activeCase.caseCode;
-  });
-
-  const nopItems = currentChecklist.filter((item) => item.submissionType === 'NOP');
-  const xuatTrinhItems = currentChecklist.filter((item) => item.submissionType === 'XUAT_TRINH');
-  // Mẫu không thuộc giấy tờ nào vẫn hiện thành dòng riêng trong bảng "Giấy tờ phải nộp"
-  const linkedFormCodes = new Set(currentChecklist.flatMap(item => formsOf(item).map(form => form.formCode)));
-  const looseForms = forms.filter(form => !linkedFormCodes.has(form.formCode));
+  const allForms = procedure.formDefinitions || [];
+  // WF-CASE-01: từ 2 trường hợp người dân phải tự chọn ở bước tạo hồ sơ; không chọn sẵn trường hợp đầu tiên.
+  const prepareUrl = (caseCode?: string) =>
+    `/cong-dan?section=dossiers_all&procedureId=${encodeURIComponent(procedure.id)}${caseCode ? `&caseCode=${encodeURIComponent(caseCode)}` : ''}`;
+  const methodCaseName = (code?: string | null) => caseDisplayName(code, cases);
 
 
   return (
@@ -132,7 +120,7 @@ export function ProcedureDetailPage() {
               {procedure.title}
             </h1>
             <Link
-              to={`/cong-dan?section=dossiers_all&procedureId=${encodeURIComponent(procedure.id)}${activeCase?.caseCode ? `&caseCode=${encodeURIComponent(activeCase.caseCode)}` : ''}`}
+              to={prepareUrl()}
               className={`${buttonVariants({ variant: 'primary' })} shrink-0 self-start whitespace-nowrap`}
             >
               Chuẩn bị hồ sơ
@@ -261,57 +249,36 @@ export function ProcedureDetailPage() {
                 Trình tự thực hiện
               </h2>
 
-              {cases.length > 1 && (
-                <div className="flex flex-wrap gap-1.5 border-b border-slate-200 pb-2">
-                  {cases.map((c, idx) => (
-                    <button
-                      key={c.caseCode || idx}
-                      type="button"
-                      onClick={() => setSelectedCaseIdx(idx)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        selectedCaseIdx === idx
-                          ? 'bg-red-800 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {c.caseName || `Trường hợp ${idx + 1}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-
+              {/* WF-CASE-01: bước chung luôn hiện; bước riêng của từng trường hợp xem bằng accordion như Thành phần hồ sơ */}
               <div className="rounded-md border border-slate-200 bg-white p-4 sm:p-5 text-xs sm:text-sm leading-relaxed text-slate-800 space-y-4">
-                {[...(payload.commonSteps ?? []), ...(activeCase?.steps ?? [])].length > 0 ? (
-                  [...(payload.commonSteps ?? []), ...(activeCase?.steps ?? [])].map((step, stepIdx) => (
-                    <div key={stepIdx} className="space-y-1">
-                      <p className="font-semibold text-slate-900">
-                        {step.stepOrder}. {step.stepName}
-                        {step.executor && (
-                          <span className="text-slate-500 font-normal"> ({step.executor})</span>
-                        )}
-                      </p>
-                      <p className="whitespace-pre-line text-slate-700 pl-4 border-l-2 border-slate-200">
-                        {step.actionDetails}
-                      </p>
-                    </div>
-                  )).concat(payload.stepsText?.trim() ? [
-                    // FE-08: các bước có cấu trúc là bản tóm tắt; văn bản trình tự đầy đủ mở bằng "Xem đầy đủ"
-                    <details key="full-steps" className="group border-t border-slate-100 pt-3">
-                      <summary className="cursor-pointer rounded font-semibold text-red-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
-                        <span className="group-open:hidden">Xem đầy đủ trình tự thực hiện</span>
-                        <span className="hidden group-open:inline">Thu gọn</span>
-                      </summary>
-                      <p className="mt-2 whitespace-pre-line">{payload.stepsText}</p>
-                    </details>,
-                  ] : [])
-                ) : payload.stepsText ? (
-                  <p className="whitespace-pre-line">{payload.stepsText}</p>
-                ) : (
-                  <p className="whitespace-pre-line">
-                    - Người yêu cầu nộp hồ sơ trực tiếp tại Bộ phận Một cửa UBND cấp xã/phường hoặc nộp trực tuyến qua Cổng Dịch vụ công.
-                    {'\n'}- Cán bộ tiếp nhận kiểm tra tính đầy đủ, hợp lệ của thành phần hồ sơ và cấp giấy tiếp nhận/hẹn trả kết quả.
-                    {'\n'}- Cơ quan có thẩm quyền xử lý, thẩm tra và ban hành kết quả theo quy định.
-                  </p>
+                {sharedSteps.length > 0 && <StepList steps={sharedSteps} />}
+                {caseSteps.length > 0 && (
+                  <div className="space-y-2">
+                    {caseSteps.map(c => (
+                      <details key={c.caseCode} className="group rounded-md border border-slate-200">
+                        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 font-semibold text-slate-900 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-800">
+                          <span className="min-w-0 break-words">Bước riêng: {c.caseName}</span>
+                          <CaretRight size={14} className="shrink-0 text-slate-500 transition group-open:rotate-90" aria-hidden />
+                        </summary>
+                        <div className="border-t border-slate-100 p-3">
+                          {c.steps.length ? <StepList steps={c.steps} /> : <p className="text-slate-500">Thực hiện theo các bước chung.</p>}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+                {payload.stepsText?.trim() && (sharedSteps.length > 0 || caseSteps.length > 0 ? (
+                  // FE-08: các bước có cấu trúc là bản tóm tắt; văn bản trình tự đầy đủ mở bằng "Xem đầy đủ"
+                  <details className="group border-t border-slate-100 pt-3">
+                    <summary className="cursor-pointer rounded font-semibold text-red-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
+                      <span className="group-open:hidden">Xem đầy đủ trình tự thực hiện</span>
+                      <span className="hidden group-open:inline">Thu gọn</span>
+                    </summary>
+                    <p className="mt-2 whitespace-pre-line">{payload.stepsText}</p>
+                  </details>
+                ) : <p className="whitespace-pre-line">{payload.stepsText}</p>)}
+                {!sharedSteps.length && !caseSteps.length && !payload.stepsText?.trim() && (
+                  <p className="text-slate-500">Thủ tục chưa cập nhật trình tự thực hiện.</p>
                 )}
               </div>
             </section>
@@ -338,6 +305,9 @@ export function ProcedureDetailPage() {
                         <tr key={idx} className="hover:bg-slate-50/70">
                           <td className="p-2.5 border-r border-slate-200 font-medium text-slate-900">
                             {method.methodName}
+                            {methodCaseName(method.caseCode) && (
+                              <span className="mt-0.5 block text-xs font-normal text-slate-500">Áp dụng: {methodCaseName(method.caseCode)}</span>
+                            )}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 text-slate-700">
                             {methodTimeLabel(method) || procedure.processingTimeSummary || 'Chưa cập nhật'}
@@ -362,134 +332,27 @@ export function ProcedureDetailPage() {
               </div>
             </section>
 
-            {/* 5. THÀNH PHẦN HỒ SƠ (Bảng phân chia Giấy tờ phải nộp & Giấy tờ phải xuất trình) */}
+            {/* 5. THÀNH PHẦN HỒ SƠ: giấy tờ xuất trình, nộp chung và từng trường hợp (WF-CASE-01) */}
             <section className="space-y-4">
               <h2 className="text-base sm:text-lg font-bold text-[#b91c1c]">
                 Thành phần hồ sơ
               </h2>
-
-              {/* Bảng Giấy tờ phải nộp */}
-              {forms.length > 0 && (
+              {allForms.length > 0 && (
                 <p className="text-xs text-slate-500">
                   Bấm <strong>Tải mẫu</strong> để tải phôi trống về máy hoặc <strong>Xem</strong> để xem trước nội dung. Tải hoặc điền mẫu chưa phải là gửi hồ sơ tiền kiểm.
                 </p>
               )}
-              <div className="space-y-2">
-                <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
-                  * Giấy tờ phải nộp:
-                </p>
-
-                <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
-                  <table className="w-full border-collapse text-left text-xs sm:text-sm">
-                    <thead>
-                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-[140px] min-w-[130px] whitespace-nowrap text-center">Số lượng</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {nopItems.length > 0 || looseForms.length > 0 ? (
-                        [...nopItems.map((item, idx) => {
-                          return (
-                            <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
-                              <td className="p-2.5 border-r border-slate-200">
-                                <p className="font-medium text-slate-900">{item.itemName}</p>
-                                {item.conditionNote && (
-                                  <p className="mt-1 text-xs text-slate-500 italic">
-                                    Ghi chú: {item.conditionNote}
-                                  </p>
-                                )}
-                              </td>
-                              <td className="p-2.5 border-r border-slate-200 text-slate-600">
-                                <FormCell formsOfItem={formsOf(item)} />
-                              </td>
-                              <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
-                                {formatQuantityLines(checklistQuantityLabel(item)).map((line, lIdx) => (
-                                  <span key={lIdx} className="block whitespace-nowrap">{line}</span>
-                                ))}
-                              </td>
-                            </tr>
-                          );
-                        }),
-                        ...looseForms.map((form, idx) => (
-                          <tr key={`form-${form.formCode}-${idx}`} className="hover:bg-slate-50/70">
-                            <td className="p-2.5 border-r border-slate-200">
-                              <p className="font-medium text-slate-900">{form.formName}</p>
-                              {!form.isMandatory && <p className="mt-1 text-xs text-slate-500 italic">Nộp theo nhu cầu</p>}
-                            </td>
-                            <td className="p-2.5 border-r border-slate-200 text-slate-600">
-                              <FormCell formsOfItem={[form]} />
-                            </td>
-                            <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">{form.quantity} bản</td>
-                          </tr>
-                        ))]
-                      ) : (
-                        <tr>
-                          <td colSpan={3} className="p-3 text-center text-slate-500">
-                            Không yêu cầu thêm giấy tờ nộp kèm ngoài tờ khai chính.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Bảng Giấy tờ phải xuất trình */}
-              <div className="space-y-2 pt-2">
-                <p className="text-xs sm:text-sm font-semibold text-slate-800 italic">
-                  * Giấy tờ phải xuất trình:
-                </p>
-
-                <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-2xs">
-                  <table className="w-full border-collapse text-left text-xs sm:text-sm">
-                    <thead>
-                      <tr className="bg-[#eaeff5] text-slate-800 font-semibold border-b-2 border-[#ca5116]">
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[45%]">Tên giấy tờ</th>
-                        <th scope="col" className="p-2.5 border-r border-slate-200 w-[35%]">Mẫu đơn, tờ khai</th>
-                        <th scope="col" className="p-2.5 w-[140px] min-w-[130px] whitespace-nowrap text-center">Số lượng</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {xuatTrinhItems.length > 0 ? (
-                        xuatTrinhItems.map((item, idx) => (
-                          <tr key={item.checklistId || idx} className="hover:bg-slate-50/70">
-                            <td className="p-2.5 border-r border-slate-200">
-                              <p className="font-medium text-slate-900">{item.itemName}</p>
-                              {item.conditionNote && (
-                                <p className="mt-1 text-xs text-slate-500 italic">
-                                  Ghi chú: {item.conditionNote}
-                                </p>
-                              )}
-                            </td>
-                            <td className="p-2.5 border-r border-slate-200 text-slate-600">
-                              <FormCell formsOfItem={formsOf(item)} />
-                            </td>
-                            <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
-                              {formatQuantityLines(checklistQuantityLabel(item)).map((line, lIdx) => (
-                                <span key={lIdx} className="block whitespace-nowrap">{line}</span>
-                              ))}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td className="p-2.5 border-r border-slate-200">
-                            Thẻ Căn cước công dân / Thẻ căn cước hoặc Hộ chiếu còn giá trị sử dụng
-                          </td>
-                          <td className="p-2.5 border-r border-slate-200 text-center text-slate-400">
-                            —
-                          </td>
-                          <td className="p-2.5 text-center text-slate-800 font-medium whitespace-nowrap">
-                            1 bản chính
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <ProcedureDocumentsView
+                checklist={checklist}
+                forms={allForms}
+                cases={cases}
+                renderForms={formsOfItem => <FormCell formsOfItem={formsOfItem} />}
+                caseAction={requiresCaseChoice(cases) ? caseCode => (
+                  <Link to={prepareUrl(caseCode)} className={`${buttonVariants({ variant: 'outline', size: 'small' })} w-full sm:w-auto`}>
+                    Chuẩn bị hồ sơ cho trường hợp này
+                  </Link>
+                ) : undefined}
+              />
             </section>
 
             {/* 6. CĂN CỨ PHÁP LÝ */}
@@ -666,6 +529,23 @@ function FormCell({ formsOfItem }: { formsOfItem: { formCode: string; formName: 
     <div className="space-y-3">
       {formsOfItem.map((form, idx) => (
         <ProcedureFormLink key={`${form.formCode}-${idx}`} templateId={form.formTemplateId} name={form.formName || form.formCode} />
+      ))}
+    </div>
+  );
+}
+
+/** Danh sách bước thực hiện (thứ tự, tên, người thực hiện, nội dung). */
+function StepList({ steps }: { steps: { stepOrder: number; stepName: string; executor: string; actionDetails: string }[] }) {
+  return (
+    <div className="space-y-4">
+      {steps.map((step, idx) => (
+        <div key={idx} className="space-y-1">
+          <p className="font-semibold text-slate-900">
+            {step.stepOrder}. {step.stepName}
+            {step.executor && <span className="font-normal text-slate-500"> ({step.executor})</span>}
+          </p>
+          {step.actionDetails && <p className="whitespace-pre-line border-l-2 border-slate-200 pl-4 text-slate-700">{step.actionDetails}</p>}
+        </div>
       ))}
     </div>
   );
