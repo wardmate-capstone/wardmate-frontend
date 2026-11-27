@@ -410,8 +410,35 @@ export function ProcedureApiDetail({
           if (!open) guard.requestClose(() => setEditing(null));
         }}
         title="Chỉnh sửa thủ tục"
+        description="Lưu thay đổi sẽ tạo phiên bản mới; phiên bản trước được giữ lại. Số quyết định (phần 1) và ngày hiệu lực là bắt buộc."
         className="sm:max-w-5xl"
         footer={
+          <div className="flex w-full flex-wrap items-end justify-between gap-3">
+          {/* Ngày hiệu lực đặt cạnh nút lưu để luôn thấy, không bị khuất cuối nội dung */}
+          <div className="min-w-0 flex-1 basis-60 sm:max-w-xs">
+          <Input
+            label="Ngày hiệu lực của thay đổi"
+            required
+            hint="Ngày thay đổi bắt đầu áp dụng."
+            ref={dateInput}
+            error={dateError}
+            disabled={busy}
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setDateError("");
+            }}
+            onBlur={() => {
+              const result = effectiveDateSchema.safeParse(date);
+              setDateError(result.success ? "" : result.error.issues[0].message);
+            }}
+          />
+            </div>
+          <div className="flex shrink-0 gap-2">
+          <Button variant="outline" disabled={busy} onClick={() => guard.requestClose(() => setEditing(null))}>
+            Hủy
+          </Button>
           <Button
             loading={busy}
             onClick={() => {
@@ -453,6 +480,8 @@ export function ProcedureApiDetail({
           >
             Lưu thay đổi
           </Button>
+          </div>
+          </div>
         }
       >
         <ProcedureFeedback error={error} />
@@ -466,24 +495,6 @@ export function ProcedureApiDetail({
             disabled={busy}
           />
         )}
-        <Input
-          label="Ngày hiệu lực của thay đổi"
-          required
-          hint="Bắt buộc nhập ngày hiệu lực trước khi lưu thay đổi."
-          ref={dateInput}
-          error={dateError}
-          disabled={busy}
-          type="date"
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
-            setDateError("");
-          }}
-          onBlur={() => {
-            const result = effectiveDateSchema.safeParse(date);
-            setDateError(result.success ? "" : result.error.issues[0].message);
-          }}
-        />
       </Modal>
       <Modal
         open={!readOnly && statusOpen}

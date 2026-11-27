@@ -501,22 +501,21 @@ test('invalid quantity switches to forms, opens settings and focuses the offendi
   expect(catalog.requests.find(request => request.method === 'PUT')?.body?.formDefinitions).toEqual(expect.arrayContaining([expect.objectContaining({ quantity: 3, caseCode: 'A', isMandatory: false })]));
 });
 
-test('renaming a referenced case prevents save and requires choosing an existing case', async ({ page }) => {
+test('WF-CASE-01: renaming a case in Thành phần hồ sơ carries its documents and forms to the new code', async ({ page }) => {
   const { catalog, editor } = await openLinkedEditor(page);
-  await editor.getByRole('button', { name: /3 Quy trình/ }).click();
-  await editor.getByLabel('Mã trường hợp', { exact: true }).first().fill('A-NEW');
+  // Đổi tên/mã trường hợp nằm ở phần 2; đổi khi rời ô và cập nhật mọi giấy tờ/biểu mẫu đang gắn mã cũ
+  await editor.getByRole('button', { name: /2 Thành phần hồ sơ/ }).click();
+  const code = editor.getByLabel('Mã trường hợp', { exact: true }).first();
+  if (!(await code.isVisible())) await editor.locator('details').filter({ hasText: 'giấy tờ riêng' }).first().locator('summary').first().click();
+  await code.fill('A-NEW');
+  await code.blur();
   await editor.getByLabel('Ngày hiệu lực của thay đổi').fill('2026-10-14');
   await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
-  await expect(editor.getByRole('button', { name: /2 Thành phần hồ sơ/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(editor.getByLabel('Mã trường hợp (trống = áp dụng chung)').nth(1)).toBeFocused();
-  await editor.getByLabel('Mã trường hợp (trống = áp dụng chung)').nth(1).selectOption('A-NEW');
-  await editor.getByRole('button', { name: /5 Biểu mẫu/ }).click();
-  await editor.getByText('Thiết lập sử dụng mẫu', { exact: true }).click();
-  await expect(editor.getByLabel('Trường hợp áp dụng', { exact: true })).toHaveAttribute('aria-invalid', 'true');
-  await editor.getByLabel('Trường hợp áp dụng', { exact: true }).selectOption('A-NEW');
-  await editor.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
   await expect(editor).toHaveCount(0);
-  expect(catalog.requests.find(request => request.method === 'PUT')?.body?.formDefinitions).toEqual(expect.arrayContaining([expect.objectContaining({ caseCode: 'A-NEW' })]));
+  const body = catalog.requests.find(request => request.method === 'PUT')?.body;
+  expect(body?.contentPayload?.cases?.[0]?.caseCode).toBe('A-NEW');
+  expect(body?.formDefinitions).toEqual(expect.arrayContaining([expect.objectContaining({ caseCode: 'A-NEW' })]));
+  expect((body?.checklistSchema ?? []).some((item: { caseCode?: string | null }) => item.caseCode === 'A')).toBe(false);
 });
 
 test('escape requires an explicit choice before discarding an edited procedure', async ({ page }) => {

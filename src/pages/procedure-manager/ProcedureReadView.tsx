@@ -4,7 +4,8 @@ import { checklistQuantityLabel, formatQuantityLines, hasFourColumnLegal, legalI
 import type { submissionMethodSchema } from '@/lib/api/procedures';
 import type { z } from 'zod';
 import { ProcedureFormPicker } from './ProcedureFormPicker';
-import { IdentificationCard, Buildings, Clock, ClipboardText } from '@phosphor-icons/react';
+import { IdentificationCard, Buildings, Clock, ClipboardText, Eye } from '@phosphor-icons/react';
+import { ChecklistPreviewModal } from './ProcedureChecklistCasesEditor';
 
 type Row = Record<string, unknown>;
 type Method = z.infer<typeof submissionMethodSchema>;
@@ -69,6 +70,7 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
   onEditChecklist?: () => void;
 }) {
   const [step, setStep] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const removedForms = useRef<Record<string, Row>>({});
   const content = record(value.contentPayload);
   const cases = rows(content.cases);
@@ -142,6 +144,12 @@ export function ProcedureReadView({ value, onEditForms, onEditChecklist }: {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-[13px] text-slate-600">Cập nhật riêng danh mục giấy tờ theo quyết định mới mà không đổi các phần khác.</p>
               <Button size="small" variant="outline" onClick={onEditChecklist}>Cập nhật danh mục giấy tờ (Checklist)</Button>
+            </div>
+          )}
+          {checklist.length > 0 && (
+            <div className="flex justify-end">
+              <Button size="small" variant="outline" onClick={() => setPreviewOpen(true)}><Eye size={16} aria-hidden />Xem trước như công dân</Button>
+              <ChecklistPreviewModal open={previewOpen} onOpenChange={setPreviewOpen} value={value} />
             </div>
           )}
           {!checklist.length ? <Empty>Thủ tục chưa khai thành phần hồ sơ.</Empty> : (

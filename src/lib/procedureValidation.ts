@@ -4,7 +4,8 @@ import { PROCEDURE_LIMITS, procedureInputSchema, type ProcedureInput, type Check
 // Trần BE-H (10/11/2026): trường một dòng 10.000 ký tự, số quyết định 255
 const LINE = PROCEDURE_LIMITS.singleLine;
 
-export type ProcedureIssue = { path: string; label: string; step: number; message: string };
+/** `recheck(value)`: lỗi ngoài kiểm tra lưu (VD: điều kiện xuất bản bản nháp) còn hay không với dữ liệu hiện tại. */
+export type ProcedureIssue = { path: string; label: string; step: number; message: string; recheck?: (value: unknown) => boolean };
 export const ProcedureErrorsContext = createContext<Record<string, string>>({});
 export const ProcedureFieldPrefix = createContext('');
 const labels: Record<string, string> = {
@@ -19,7 +20,9 @@ const labels: Record<string, string> = {
   documentNumber: 'Số ký hiệu', documentName: 'Trích yếu', issueDate: 'Ngày ban hành', authority: 'Cơ quan ban hành',
 };
 export function procedureIssue(path: string, message?: string): ProcedureIssue {
+  // Mã/tên trường hợp nhập ở phần Thành phần hồ sơ; bước riêng của trường hợp vẫn ở phần Quy trình
   const step = path.startsWith('formDefinitions') ? 4 : path.startsWith('checklistSchema') ? 1
+    : /^contentPayload\.cases(\.\d+)?$/.test(path) || /^contentPayload\.cases\.\d+\.(caseCode|caseName)$/.test(path) ? 1
     : path.startsWith('contentPayload.cases') || path.startsWith('contentPayload.commonSteps') || path.startsWith('contentPayload.stepsText') ? 2
     : path.startsWith('contentPayload.submissionMethods') ? 3 : path.startsWith('contentPayload.legalReferences') ? 5
     : path.startsWith('contentPayload.additionalSections') ? 6 : 0;
@@ -90,6 +93,8 @@ const saveSchema = procedureInputSchema.superRefine((data, context) => {
       context.addIssue({ code: 'custom', path: ['contentPayload', 'cases', i, 'caseCode'], message: 'Mã trường hợp không được có khoảng trắng đầu/cuối.' });
     }
     required(item.caseName, ['contentPayload', 'cases', i, 'caseName']);
+    // Catalog: tên trường hợp tối đa 10.000 ký tự (ProcedureLimits.Line)
+    maxLength(item.caseName, LINE, ['contentPayload', 'cases', i, 'caseName']);
     item.steps.forEach((step, j) => checkStep(step, ['contentPayload', 'cases', i, 'steps', j]));
     if (seen.has(item.caseCode)) context.addIssue({ code: 'custom', path: ['contentPayload', 'cases', i, 'caseCode'], message: 'Mã trường hợp bị trùng.' });
     seen.add(item.caseCode);
@@ -173,6 +178,8 @@ const saveSchema = procedureInputSchema.superRefine((data, context) => {
     if (method.caseCode && !codes.has(method.caseCode.trim())) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'caseCode'], message: 'Trường hợp áp dụng phải thuộc thủ tục.' });
     if ((method.fees?.length ?? 0) > PROCEDURE_LIMITS.fees) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'fees'], message: 'Tối đa 100 mức phí cho một cách nộp.' });
     method.fees?.forEach((fee, j) => {
+      // Catalog từ chối mức phí gắn mã trường hợp không thuộc thủ tục (ContentPayload.SubmissionMethods.Fees)
+      if (fee.caseCode && !codes.has(fee.caseCode.trim())) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'fees', j, 'caseCode'], message: 'Trường hợp của mức phí phải thuộc thủ tục; chọn lại hoặc để trống (áp dụng chung).' });
       if ((fee.amount ?? 0) < 0) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'fees', j, 'amount'], message: 'Số tiền phải lớn hơn hoặc bằng 0.' });
       if (fee.percent != null && (fee.percent < 0 || fee.percent > 100)) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'fees', j, 'percent'], message: 'Tỷ lệ phải từ 0 đến 100.' });
       if (fee.amount == null && fee.percent == null && !fee.description?.trim()) context.addIssue({ code: 'custom', path: ['contentPayload', 'submissionMethods', i, 'fees', j, 'amount'], message: 'Nhập số tiền, tỷ lệ % hoặc mô tả; dòng trống thì xóa đi.' });

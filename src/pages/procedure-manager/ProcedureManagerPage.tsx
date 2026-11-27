@@ -285,8 +285,30 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               if (!open) guard.requestClose(() => setCreating(false));
             }}
             title="Thêm thủ tục"
+            description="Nhập lần lượt 7 phần. Bắt buộc: Mã thủ tục, Danh mục và Tên thủ tục; các phần khác bổ sung khi có."
             className="sm:max-w-5xl"
             footer={
+              <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              {/* Quyết định công khai nằm cạnh nút lưu để luôn thấy, không bị khuất cuối nội dung */}
+              <label className="flex min-h-11 min-w-0 flex-1 basis-72 cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 accent-red-700"
+                  disabled={busy}
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                />
+                <span className="min-w-0">
+                  <span className="font-semibold text-slate-900">Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.</span>
+                  <span className="mt-0.5 hidden text-xs sm:block text-slate-500">
+                    {confirmed ? "Người dân sẽ thấy thủ tục ngay sau khi lưu." : "Bỏ chọn để lưu ở trạng thái ẩn; bật công khai sau trong danh sách thủ tục."}
+                  </span>
+                </span>
+              </label>
+              <div className="flex shrink-0 gap-2">
+              <Button variant="outline" disabled={busy} onClick={() => guard.requestClose(() => setCreating(false))}>
+                Hủy
+              </Button>
               <Button
                 loading={busy}
                 onClick={async () => {
@@ -317,6 +339,8 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               >
                 {confirmed ? "Tạo và công khai" : "Lưu ở trạng thái ẩn"}
               </Button>
+              </div>
+              </div>
             }
           >
             <ProcedureFeedback error={error} />
@@ -329,21 +353,6 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
               categories={categories.data ?? []}
               disabled={busy}
             />
-            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-sm">
-              <input
-                type="checkbox"
-                className="mt-0.5 size-4 shrink-0 accent-red-700"
-                disabled={busy}
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-              />
-              <span>
-                <span className="font-semibold text-slate-900">Tôi đã kiểm tra thông tin và xác nhận công khai thủ tục này.</span>
-                <span className="mt-0.5 block text-xs text-slate-500">
-                  {confirmed ? "Người dân sẽ thấy thủ tục ngay sau khi lưu." : "Bỏ chọn để lưu ở trạng thái ẩn; bật công khai sau trong danh sách thủ tục."}
-                </span>
-              </span>
-            </label>
           </Modal>
           {guard.confirmation}
           <ProcedureVersionsModal

@@ -113,14 +113,20 @@ test.describe('FE-07: Liên kết mẫu đơn DOCX ở màn sửa thủ tục nh
     await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
     await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
 
-    // Bấm "Cập nhật giấy tờ (Checklist)"
-    await page.getByRole('button', { name: 'Cập nhật giấy tờ (Checklist)', exact: true }).click();
+    // Nút nằm ở phần 2 Thành phần hồ sơ của màn xem chi tiết
+    await page.getByRole('button', { name: /Thành phần hồ sơ/ }).first().click();
+    await page.getByRole('button', { name: 'Cập nhật danh mục giấy tờ (Checklist)', exact: true }).first().click();
     const modal = page.getByRole('dialog');
     await expect(modal).toBeVisible();
 
     // Kiểm tra dòng hướng dẫn rõ ràng
-    await expect(modal.getByText('Lưu ý phân biệt Giấy tờ đính kèm và Biểu mẫu:')).toBeVisible();
-    await expect(modal.getByText(/Mẫu đơn, tờ khai điện tử \(phôi Word DOCX\) được liên kết tại mục/)).toBeVisible();
+    await expect(modal.getByText(/Mẫu đơn, tờ khai Word được gắn ở phần/)).toBeVisible();
+    // Giấy tờ nhóm theo Giấy tờ chung / từng trường hợp; nút thêm có tên riêng theo nhóm
+    await expect(modal.getByRole('button', { name: 'Thêm giấy tờ vào nhóm Giấy tờ chung' })).toBeVisible();
+    // Dấu * nằm cùng dòng với nhãn (lỗi cũ: rơi xuống dòng riêng)
+    const label = modal.getByText('Số quyết định ban hành', { exact: false }).first();
+    const box = await label.boundingBox();
+    expect(box !== null && box.height < 30).toBe(true);
   });
 });
 
