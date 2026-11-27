@@ -1,5 +1,302 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-DRAFT-PUBLISH-MSG-1127 — Báo rõ ô cần điền khi xuất bản bản nháp bị từ chối — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+- **Hiện tượng:** người dùng báo xuất bản lỗi "404".
+  - Thực tế `POST /api/v1/procedure-manager/drafts/{id}/publish` trả **400** `validation.failed`.
+  - Khóa lỗi `contentPayload.submissionMethods[i].estimatedDays`, câu "Cần đối soát và cung cấp giá trị…".
+- **Nguyên nhân (BE, không sửa theo quyết định người dùng):**
+  - Catalog `Drafts/DraftPayloadRequirements.cs` bắt mỗi cách nộp có `feeAmount`, `feeUnit`, `estimatedDays` khác null.
+  - Tài liệu PROC-01b/PROC-05b ghi các trường này được null, nên code lệch tài liệu.
+  - Trình sửa FE để null các trường này (để BE tự suy ra ở luồng thường), nên bản nháp không xuất bản được.
+- **FE đã làm** (`src/lib/draftPublishChecks.ts`, `ProcedureDraftWorkspace.tsx`, `ProcedureApiEditor.tsx`, `procedureValidation.ts`):
+  - **Trước khi gửi:** lấy số người dùng đã nhập (thời hạn đơn vị Ngày/Ngày làm việc → số ngày; số tiền nhỏ nhất của các mức phí; đơn vị mức phí). Không tự điền mặc định.
+  - **Vẫn thiếu thì chặn tại FE**, không gửi lên BE. Khung báo lỗi và toast ghi "Cách nộp N (tên) – Thời hạn giải quyết / Phí, lệ phí / Đơn vị phí".
+  - Trình sửa tự chuyển sang phần 4, ô "Số" (hoặc khung Phí, lệ phí) viền đỏ kèm câu hướng dẫn cách điền. Mục lỗi tự mất khi đã điền (`recheck`).
+  - **Lỗi 400 của BE** (nếu còn): đổi khóa kỹ thuật sang mục dễ hiểu như trên, không hiện tên trường BE.
+- **Kiểm tra:**
+  - typecheck, lint, build đạt;
+  - `node tests/procedure-cases-check.mjs` 72/72 đạt (thêm 6 kiểm tra, gồm đúng 3 khóa lỗi trong ảnh người dùng);
+  - Playwright (mock) `procedure-manager.spec.ts` + `form-templates:504` 29 đạt, gồm test mới: thiếu số ngày/phí bị chặn, điền xong xuất bản gửi `estimatedDays: 5, feeAmount: 0, feeUnit: VND`.
+- **Giới hạn:** cách nộp có thời hạn tính bằng giờ/phút hoặc chỉ ghi chữ vẫn phải nhập số ngày mới xuất bản bản nháp được (do BE). Muốn bỏ hẳn hạn chế này cần sửa `DraftPayloadRequirements.cs` ở BE.
+- **Commit gợi ý:** `fix(procedure-manager): explain missing draft publish fields in plain Vietnamese`.
+
+## FE-PDF-DRAFT-LAYOUT-1127 — Căn trang PDF và bảng bản nháp | 2026-11-27 19:08 (Asia/Saigon, UTC+07:00)
+
+- `src/pages/procedure-manager/ProcedureDraftWorkspace.tsx` căn hai thẻ theo cùng lề. Khung rộng đặt lựa chọn và vùng tải PDF cạnh nhau, dùng chung thanh hành động. Khung hẹp xếp dọc. Lựa chọn dùng radio native để chuyển bằng phím mũi tên, chỉ hiện chế độ có quyền và giữ bước tải tệp riêng với bước gửi xử lý.
+- Bảng dùng cùng các cột cho tiêu đề và dữ liệu trên khung rộng. Ba nút Mở bản nháp, Hủy xuất bản và Xóa có vị trí cố định. Trên khung hẹp từng dòng xếp tệp, trạng thái và thao tác theo chiều dọc, tên dài xuống dòng.
+- `tests/procedure-manager.spec.ts` kiểm bố cục tại 1805, 1024, 390 và 320 px bằng dữ liệu mock, gồm tên tệp dài, hàng có/không có Hủy xuất bản, chọn chế độ bằng bàn phím và mở hộp thoại xác nhận. Đã xem ảnh chụp Edge tại 1805 và 390 px.
+- Kiểm tra typecheck, lint và build đạt. Vite còn cảnh báo chú thích từ SignalR/Zod và kích thước chunk. Playwright Edge bộ `procedure-manager.spec.ts` đạt 27/27, 0 lỗi, 0 bỏ qua.
+- Tuyến API, DTO, ProblemDetails và luồng token giữ theo client hiện tại. Kết quả kiểm thử dùng mock HTTP, chưa kiểm chứng Azure, cơ sở dữ liệu hay AI thật.
+- Commit gợi ý `fix(procedure-manager): align PDF upload and draft actions`.
+
+## FE-DRAFTS-FULLWIDTH-1127 — Thẻ "Tạo bản nháp từ PDF" rộng bằng danh sách — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Theo ảnh người dùng: bỏ giới hạn 768 px, thẻ rộng bằng "Bản nháp gần đây".
+  - Màn ≥ 1024 px chia 2 cột: trái "Cách xử lý PDF" (2 lựa chọn xếp dọc và một dòng mô tả); phải ô chọn tệp, gợi ý và nút.
+  - Màn hẹp xếp dọc.
+- Bảng "Bản nháp gần đây": chiều rộng tối thiểu 760 → 640 px, cột trạng thái hẹp hơn. Trước đây ở 1024 px bảng phải cuộn ngang và cột Thao tác bị cắt (lỗi có sẵn).
+- **Rà soát:** chụp ở 1440, 1024 và 390 px, không tràn ngang; bảng ở 1024 px vừa khung.
+- **Kiểm tra:** typecheck, lint đạt; Playwright `procedure-manager.spec.ts` 26 đạt (mock).
+- **Commit gợi ý:** `refactor(procedure-manager): full-width two-column PDF draft creation card`.
+
+## FE-DRAFTS-COMPACT-1127 — Gọn khối "Tạo bản nháp từ PDF", bỏ dải 4 bước, bỏ mô tả thừa ở Thành phần hồ sơ — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+Theo ảnh phản hồi của người dùng. Chỉ đổi giao diện.
+
+- **Trang PDF và bản nháp** (`ProcedureDraftWorkspace.tsx`):
+  - bỏ dải 4 bước quy trình (thêm ở FE-DRAFTS-CHECKLIST-UX-1127);
+  - khối "Tạo bản nháp từ PDF" thành thẻ gọn, rộng tối đa 768 px (`max-w-3xl`), không còn kéo hết trang;
+  - 2 lựa chọn ngắn một dòng có dấu chọn, một dòng mô tả cho lựa chọn đang chọn;
+  - ô tệp thấp hơn; "Chọn tệp PDF để tiếp tục" bên trái, nút chính bên phải, không kéo hết ngang.
+  - Kết quả "Xem và nhận diện" (PDF + 7 phần + xuất bản) tách khỏi thẻ, hiện thành khối riêng rộng hết trang khi có kết quả.
+- **Thành phần hồ sơ** (`ProcedureChecklistCasesEditor.tsx`):
+  - bỏ mô tả dưới "A. Giấy tờ chung" và "B. Giấy tờ theo trường hợp";
+  - bỏ dòng "Đổi mã sẽ cập nhật…" dưới Mã trường hợp (chỉ hiện khi có lỗi);
+  - ví dụ Tên trường hợp chuyển thành chữ mờ trong ô;
+  - thẻ giấy tờ bỏ gợi ý ở Hình thức, Loại bản, Bắt buộc; ví dụ số lượng/điều kiện chuyển thành chữ mờ trong ô; ô Mẫu đơn chỉ còn gợi ý khi chưa có biểu mẫu.
+- **Rà soát:** chụp trang bản nháp 1440 px (hai chế độ) và 390 px, phần Thành phần hồ sơ có trường hợp và giấy tờ ở 1440 px. Không tràn ngang. Nút "Xem và nhận diện PDF" trông mờ trong ảnh do hiệu ứng chuyển màu, đã kiểm là đang bật.
+- **Kiểm tra:**
+  - typecheck, lint, build đạt;
+  - Playwright (mock) 28 đạt;
+  - lỗi cũ còn lại: `procedure-draft-direct-docx:6, :119`, `procedure-form-linking:6`.
+- **Commit gợi ý:** `refactor(procedure-manager): compact PDF draft creation card and trim checklist hints`.
+
+## FE-DRAFTS-CHECKLIST-UX-1127 — Nâng cấp giao diện "PDF và bản nháp" và hộp "Cập nhật danh mục giấy tờ" — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+Chỉ đổi giao diện. Không đổi API, luồng lưu hay quy tắc kiểm tra.
+
+- **Trang PDF và bản nháp** (`ProcedureDraftWorkspace.tsx`):
+  - dải 4 bước quy trình: Tải PDF → AI đọc và bóc tách → Đối soát, chỉnh sửa → Xuất bản (điện thoại: 2 cột, ẩn mô tả);
+  - thẻ chọn chế độ có dấu chọn tròn; nhãn "Khuyến nghị" không xuống dòng;
+  - ô chọn tệp nhận kéo thả PDF (cùng xử lý như chọn tệp); nút bị khóa có câu "Chọn tệp PDF ở trên để tiếp tục";
+  - phân trang vào trong thẻ danh sách và chỉ hiện khi có hơn một trang;
+  - nút xóa có chữ "Xóa" (tên đọc giữ "Xóa bản nháp …");
+  - danh sách trống có hướng dẫn;
+  - thanh thao tác đối soát: ô xác nhận và các nút cùng hàng trên màn rộng; ô xác nhận đổi màu xanh khi đã tích.
+- **Hộp Cập nhật danh mục giấy tờ** (`ProcedureChecklistModal.tsx`, viết lại phần hiển thị, logic lưu giữ nguyên). Lỗi đã sửa:
+  - dấu * rơi xuống dòng riêng dưới nhãn;
+  - ô chọn cao hơn ô nhập nên hàng lệch;
+  - danh sách có thanh cuộn lồng trong hộp thoại (2 thanh cuộn);
+  - khung lưu ý chiếm nhiều chỗ;
+  - mọi giấy tờ luôn mở rộng;
+  - chỉ thêm được giấy tờ chung;
+  - lỗi kiểm tra chỉ hiện thành một khối chữ;
+  - ngày hiệu lực mặc định lấy giờ UTC nên lùi một ngày trước 07:00.
+- **Sau khi sửa:**
+  - mỗi giấy tờ là thẻ thu gọn có nhãn Nộp/Xuất trình, Bắt buộc/Có điều kiện, số lượng, mã;
+  - mỗi nhóm (Giấy tờ chung / từng trường hợp) có nút "Thêm giấy tờ" riêng, tên đọc có tên nhóm;
+  - lỗi hiện dưới đúng ô, thẻ có lỗi tự mở và cuộn tới ô lỗi đầu tiên; khung trên chỉ ghi tổng số lỗi;
+  - chân hộp ghi số giấy tờ / số bắt buộc và nhãn "Chưa lưu".
+- **Rà soát giao diện:** chụp ảnh trang bản nháp ở 1440 và 390 px, không gian đối soát ở 1440 và 1024 px, hộp danh mục ở 1440 và 1024 px (kể cả khi có lỗi). Không tràn ngang.
+- **Kiểm tra:**
+  - typecheck, lint, build đạt;
+  - Playwright (mock) bộ thủ tục 36 đạt;
+  - `procedure-form-linking:108` cập nhật theo nút và câu hướng dẫn hiện tại, có kiểm dấu * cùng dòng nhãn, nay đạt;
+  - lỗi cũ còn lại: `procedure-draft-direct-docx:6, :119`, `procedure-form-linking:6`.
+- **Commit gợi ý:** `refactor(procedure-manager): polish drafts page and checklist update dialog`.
+
+## FE-PROC-WIZARD-UX-1127 — Làm lại giao diện "Thêm/Chỉnh sửa thủ tục" 7 phần — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+Chỉ đổi giao diện, không đổi logic lưu, API hay validation.
+
+- **Lỗi đã sửa:**
+  - nội dung lộ phía trên thanh bước khi cuộn;
+  - thanh 7 bước xuống hai hàng;
+  - mọi ô đều là ô nhiều dòng nên cao thấp không đều;
+  - ô "Mã thủ tục" cao hơn ô "Danh mục" (52 so với 46 px) do nút "Tạo danh mục" làm dòng nhãn cao hơn;
+  - ô xác nhận công khai và ô ngày hiệu lực nằm cuối nội dung, phải cuộn mới thấy;
+  - nút chuyển phần nằm cuối trang;
+  - phần 4 hiện ô "Chỉ áp dụng cho trường hợp: Chưa xác định" khi thủ tục không có trường hợp.
+- **Thanh bước** (`ProcedureApiEditor.tsx`):
+  - một hàng, cuộn ngang khi màn hẹp, tự đưa phần đang chọn vào tầm nhìn;
+  - dính trên cùng, có lớp che phía trên;
+  - ghi "Phần x/7: tên phần" và chú thích dấu *;
+  - phần có lỗi hiện viền đỏ và nhãn "Có lỗi".
+  - Giữ `aria-pressed` và tên nút "N Tên phần" để test cũ không đổi.
+- **Điều hướng:** thanh "← Phần trước / Tiếp theo: … / Phần tiếp theo →" dính đáy vùng cuộn. Chuyển phần thì cuộn về đầu.
+- **Ô nhập** (`ProcedureFieldInput.tsx`):
+  - thêm `kind: "text"` (ô một dòng, để trống vẫn gửi chuỗi rỗng như cũ) và `placeholder`;
+  - ô nhiều dòng chỉ kéo giãn dọc;
+  - `content-start` để ô không bị kéo giãn theo ô bên cạnh.
+  - Trường ngắn (mã, cấp, loại, cơ quan, số quyết định, địa chỉ, tóm tắt phí/thời hạn, tên bước, số ký hiệu, tên cách nộp…) chuyển sang ô một dòng.
+- **Phần 1** sắp lại thành 4 nhóm cân đối:
+  - định danh;
+  - cơ quan và quyết định công bố;
+  - danh sách nhiều mục;
+  - yêu cầu và mô tả.
+- **Dòng lặp** (kết quả, bước, căn cứ, mức phí…):
+  - tiêu đề "Tên N" và nút "Xóa dòng N" ở góc thẻ;
+  - có trạng thái trống;
+  - dòng mới giữ chuỗi rỗng cho ô chữ.
+- **Hộp thoại:**
+  - "Thêm thủ tục": mô tả ngắn; chân hộp gồm ô xác nhận công khai, nút Hủy và nút lưu.
+  - "Chỉnh sửa thủ tục": mô tả về phiên bản; chân hộp gồm ngày hiệu lực, nút Hủy và Lưu thay đổi.
+  - Hộp sửa chỉ chuyển vị trí, không đổi logic.
+- **Kèm theo:** trang công khai đưa biểu mẫu chưa gắn giấy tờ vào mục "Biểu mẫu khác để tham khảo" (vẫn tải được, không hiện thành dòng giấy tờ). Lượt trước ẩn hẳn làm mất nút "Xem mẫu" (`form-templates:198`).
+- **Rà soát giao diện:** chụp hộp Thêm ở 1440 và 390 px (đầu trang, khi cuộn, phần 4) và hộp Chỉnh sửa ở 1440 px. Kết quả:
+  - không tràn ngang;
+  - thanh bước đủ 7 nút ở 1440 px;
+  - các ô thẳng hàng.
+- **Kiểm tra:**
+  - typecheck, lint, build đạt;
+  - logic 66/66 đạt;
+  - Playwright (mock) các bộ thủ tục đạt, gồm ca đổi mã trường hợp viết lại theo hành vi mới (`form-templates:504`).
+- **Lỗi cũ còn lại** (nhãn đã đổi từ trước, không do lượt này):
+  - `form-templates`: điều hướng "Danh sách biểu mẫu" / "Kho biểu mẫu Word", nút "Tạo thủ tục", câu "Đã có mẫu Word." ở trang công khai;
+  - `procedure-form-linking:6, :108`;
+  - `procedure-draft-direct-docx:6, :119`.
+- **Commit gợi ý:** `refactor(procedure-manager): redesign 7-part procedure wizard layout`.
+
+## FE-CASES-STANDALONE-1127 — Ẩn "biểu mẫu đứng riêng" khỏi bảng giấy tờ — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+- **Phản ánh:** người dùng gửi ảnh thủ tục trợ cấp xã hội (1.001776). Ở "Giấy tờ nộp chung" hiện 5 dòng "Tờ khai của đối tượng (Mẫu 1, 1a–1d)". Theo Cổng DVC, đây là 5 mẫu thay thế của **một** giấy tờ thuộc Trường hợp 2.
+- **Nguyên nhân:**
+  - 5 biểu mẫu được lưu áp dụng chung và không giấy tờ nào chọn chúng ở ô "Mẫu đơn, tờ khai kèm theo".
+  - FE hiện biểu mẫu không gắn giấy tờ thành dòng riêng, đúng như Workflow tách khi tạo hồ sơ.
+  - Nếu giữ dữ liệu này, hồ sơ ở **cả hai** trường hợp sẽ có 5 mục tờ khai riêng.
+- **Đã sửa:**
+  - `ProcedureDocumentsView`: chỉ hiện giấy tờ, không hiện biểu mẫu đứng riêng thành dòng (trang công khai và xem trước).
+  - Bản xem trước của Quản lý thủ tục có cảnh báo liệt kê các biểu mẫu này.
+  - Trình sửa phần 2 có khối "N biểu mẫu chưa gắn với giấy tờ nào": chọn biểu mẫu và giấy tờ đích, bấm "Gắn".
+  - Khi gắn, biểu mẫu được thêm vào `formCodes` của giấy tờ (thành mẫu thay thế) và chuyển sang trường hợp của giấy tờ đó, nên trường hợp khác không bị đòi (`attachFormsToItem`, `standaloneForms`).
+- **Đã kiểm 3 thủ tục đang công khai** (1.001612, 1.014748, 1.008309): không thủ tục nào có biểu mẫu đứng riêng, nên việc ẩn không làm mất tờ khai đang hiển thị.
+- **Còn lại:** xem trước khi chọn trường hợp trong hộp tạo hồ sơ vẫn tính biểu mẫu đứng riêng, vì hồ sơ thật sẽ có các mục đó cho đến khi dữ liệu được sửa.
+- **Cần Quản lý thủ tục sửa dữ liệu 1.001776:** gắn 5 mẫu vào giấy tờ "Tờ khai của đối tượng" của Trường hợp 2 rồi lưu.
+- **Kiểm tra:**
+  - `npm run lint`, `npm run build` đạt;
+  - `node tests/procedure-cases-check.mjs` 66/66 đạt (có kịch bản 1.001776);
+  - Playwright (mock) 44 đạt, có 1 test mới;
+  - còn lỗi cũ `citizen-application-wizard:29`.
+- **Commit gợi ý:** `fix(procedures): hide standalone forms from document tables and add quick attach`.
+
+## FE-CASES-REVIEW-1127 — Sửa lỗi sau rà soát trường hợp thủ tục (mục B, C, D, E) — 27/11/2026 09:06 (Asia/Saigon, UTC+07:00)
+
+Người dùng duyệt sửa B, C, D, E; **giữ nguyên A** (luồng "Đổi trường hợp" vẫn như FE-CASES-1127). Không sửa Backend.
+
+- **C1 + B1 — danh mục khớp Workflow:** `workflowRows` (`src/lib/procedureCases.ts`) mô phỏng đúng `WorkflowRequests` khi tạo hồ sơ:
+  - biểu mẫu tham chiếu qua `formCodes` gắn vào giấy tờ;
+  - biểu mẫu không ai tham chiếu mà trùng mã giấy tờ cũng gắn vào giấy tờ đó (bắt buộc nếu biểu mẫu bắt buộc, số lượng lấy giá trị lớn hơn);
+  - các biểu mẫu còn lại thành dòng riêng.
+  - `ProcedureDocumentsView` và xem trước khi chọn trường hợp dùng chung hàm này. Biểu mẫu chung chỉ được giấy tờ của một trường hợp tham chiếu không còn bị hiện lặp ở "Giấy tờ nộp chung".
+- **C2:** giấy tờ không bắt buộc nhưng sẽ thành bắt buộc vì biểu mẫu bắt buộc trùng mã → nhãn "Sẽ thành bắt buộc" và hướng dẫn sửa trong trình sửa (`formForcedRequired`).
+- **C3:** validation mức phí có `caseCode` không thuộc thủ tục (khớp Catalog `ContentPayload.SubmissionMethods.Fees`); mức phí có thêm ô "Chỉ áp dụng cho trường hợp" khi thủ tục có trường hợp.
+- **C4:** tên trường hợp tối đa 10.000 ký tự.
+- **C5 — hộp "Cập nhật danh mục giấy tờ":**
+  - không tự đổi loại bản trống thành "bản chính" (lỗi cũ: người dân bị đòi đúng bản chính);
+  - mốc "chưa lưu" so với dữ liệu đã chuẩn hóa nên hết báo nhầm;
+  - giấy tờ hiển thị theo nhóm Giấy tờ chung / từng trường hợp.
+- **C6 (mobile):** xem mục MOBILE-CASES-1127 trong `wardmate-mobile/PROGRESS.md`. Mobile không có màn tạo hồ sơ nên không gặp `invalid_case`.
+- **B2 + D:** giữ quy tắc cho xác nhận giấy tờ xuất trình mà không cần tệp; phía cán bộ ghi rõ.
+  - Xem nhanh hiện "Xuất trình tại quầy (chưa có tệp)".
+  - Màn kiểm tra hiện "Công dân xác nhận sẽ mang bản chính đến quầy (chưa có tệp)" thay cho "Đã nộp" / "Công dân đã chuẩn bị".
+- **B3:** đổi "Áp dụng cho" bỏ liên kết tới biểu mẫu của trường hợp khác và báo qua toast (`moveChecklistItem`).
+- **B4:** hộp xóa trường hợp cho chọn chuyển hoặc xóa biểu mẫu riêng. Khi biểu mẫu riêng trùng mã biểu mẫu chung thì cảnh báo và mặc định chọn xóa (`caseFormConflicts`). Giấy tờ còn lại bỏ tham chiếu tới biểu mẫu đã xóa.
+- **B5:** chọn sai trường hợp chỉ báo tại ô trường hợp. Lỗi cập nhật mục giấy tờ chỉ báo tại mục (bỏ toast lặp trong `CitizenPage`).
+- **B6:** khóa React ổn định (`useStableKeys`), xóa dòng không làm dòng sau thừa hưởng trạng thái mở/đóng.
+- **B7:** sau khi chuyển nhóm, mở nhóm đích và thẻ giấy tờ, cuộn tới và làm nổi thẻ 2,5 giây.
+- **E1:** thẻ phần 2 có nhãn "AI cần kiểm tra" khi có cảnh báo bóc tách.
+- **E2:** "Trình tự thực hiện" ở trang công khai đổi tab trường hợp thành accordion "Bước riêng: …". Bỏ đoạn trình tự viết cứng khi thiếu dữ liệu, thay bằng "Thủ tục chưa cập nhật trình tự thực hiện."
+- **E3:** chụp thanh 4 bước ở 360px: vừa khung, không tràn ngang, không cần sửa.
+- **E4:** Xem nhanh của cán bộ hiện "Trường hợp: …".
+  - Hàng đợi cán bộ và danh sách giám sát Manager **chưa làm được**: `ApplicationSummaryDto` của BE không có `caseCode`.
+  - Gọi chi tiết từng dòng là quá nhiều request.
+- **File sửa:**
+  - lib: `src/lib/procedureCases.ts`, `src/lib/procedureCaseEdits.ts`, `src/lib/procedureValidation.ts`;
+  - component công khai: `src/components/procedures/ProcedureDocumentsView.tsx`, `src/pages/public/ProcedureDetailPage.tsx`;
+  - Quản lý thủ tục: `ProcedureChecklistCasesEditor.tsx`, `ProcedureApiEditor.tsx`, `ProcedureChecklistModal.tsx`;
+  - công dân: `CitizenPage.tsx`, `components/CreateDossierModal.tsx`;
+  - cán bộ: `OfficerQuickPreview.tsx`, `OfficerDocumentsPanel.tsx`, `OfficerReviewWorkspaceView.tsx`;
+  - test: `tests/procedure-cases-check.mjs`, `tests/procedure-manager.spec.ts`, `tests/citizen-application-wizard.spec.ts`.
+- **Kiểm tra:**
+  - `npx tsc --noEmit`, `npm run lint`, `npm run build` đạt;
+  - `node tests/procedure-cases-check.mjs` 58/58 đạt, 0 request mạng;
+  - Playwright (mock): bộ thủ tục/công dân 42 đạt.
+- **Lỗi Playwright có từ trước, không do lượt này:**
+  - Hỏng ở `citizen-application-wizard:29` (mock tên phường lệch).
+  - `wizard:113` hỏng khi chạy song song, chạy riêng đạt 2/2.
+  - `officer-submissions` 12 ca và `officer-ui-repairs:25, :84`: lệch nhãn/luồng ở hộp quyết định, tab "So sánh lần gửi", câu tham vấn; mã không sửa trong lượt này.
+- **Chưa kiểm với BE thật.**
+- **Cần BE:** thêm `caseCode` vào `ApplicationSummaryDto` (E4, và tên trường hợp ở "Hồ sơ của tôi").
+- **Commit gợi ý:** `fix(procedures): align case checklist preview with workflow and harden case editing`.
+
+## FE-CASES-1127 — Trường hợp thủ tục và checklist theo trường hợp (WF-CASE-01) — 27/11/2026 08:07 (Asia/Saigon, UTC+07:00)
+
+Theo bàn giao BE `wardmate-backend/docs/fe-handoff-2026-11-26-procedure-cases.md`. Không sửa Backend, schema, migration.
+
+- **Quyết định của người dùng (27/11):**
+  - chọn trường hợp ngay khi tạo hồ sơ (BE bắt buộc `caseCode` lúc tạo, chưa có API đổi);
+  - đổi trường hợp = tạo hồ sơ nháp mới theo trường hợp mới rồi hủy nháp cũ; tệp đã tải KHÔNG chuyển sang;
+  - trường hợp chỉ có Mã + Tên (BE không lưu mô tả);
+  - AI tư vấn chọn trường hợp để sau (chưa có API).
+- **Procedure Manager:**
+  - phần 2 "Thành phần hồ sơ" của wizard 7 phần chia **A. Giấy tờ chung** / **B. Giấy tờ theo trường hợp** (`ProcedureChecklistCasesEditor.tsx`);
+  - mỗi trường hợp là accordion, có số giấy tờ, thêm/sửa/xóa giấy tờ riêng; mỗi giấy tờ là accordion, có nhãn Nộp/Xuất trình, Bắt buộc/Có điều kiện/Không bắt buộc, số lượng, số mẫu thay thế;
+  - mã trường hợp chỉ đổi khi rời ô, từ chối mã trùng; đổi mã cập nhật cả giấy tờ, biểu mẫu, cách nộp, mức phí;
+  - xóa trường hợp có hộp xác nhận: chuyển giấy tờ riêng sang giấy tờ chung hoặc xóa; biểu mẫu/cách nộp chuyển về áp dụng chung (tránh 400 của Catalog);
+  - phần 3 "Quy trình" chỉ còn tách bước riêng từng trường hợp;
+  - lỗi mã/tên trường hợp nhảy về phần 2 và mở đúng accordion;
+  - nút "Xem trước như công dân" ở phần 2 của trình sửa và màn xem chi tiết (`ChecklistPreviewModal`);
+  - bản nháp AI: hiện cảnh báo bóc tách có tiền tố `checklistSchema:` / `contentPayload.cases:` (các lưu ý AI khác vẫn ẩn như quyết định trước).
+- **Trang chi tiết thủ tục** (`ProcedureDetailPage` + `components/procedures/ProcedureDocumentsView.tsx`):
+  - Giấy tờ xuất trình / Giấy tờ nộp chung / Giấy tờ theo trường hợp (accordion, xem được mọi trường hợp cùng lúc);
+  - thủ tục không có giấy tờ riêng giữ 2 bảng cũ; không hiện mục rỗng;
+  - bỏ dòng CCCD viết cứng khi thiếu giấy tờ xuất trình;
+  - nút "Chuẩn bị hồ sơ" chung không còn chọn sẵn trường hợp đầu; mỗi trường hợp có nút riêng mang `caseCode`;
+  - cách nộp ghi "Áp dụng: <trường hợp>".
+- **Công dân:**
+  - hộp tạo hồ sơ chọn trường hợp bằng thẻ (`CasePicker.tsx`) kèm xem trước "Giấy tờ chung / Giấy tờ của trường hợp này";
+  - 400 `application.invalid_case` → báo chọn lại và tải lại thủ tục;
+  - chi tiết hồ sơ: dòng "Trường hợp: …", thanh 4 bước khi thủ tục ≥ 2 trường hợp;
+  - checklist chia nhóm chung/riêng theo snapshot `checklists[]`;
+  - "Đổi trường hợp" chỉ khi DRAFT: tạo trước, hủy sau, có xác nhận khi đã có tệp.
+- **Giấy tờ xuất trình** (không gắn tờ khai): không bắt buộc tải tệp.
+  - Người dân bấm "Tôi sẽ mang bản chính khi đến quầy" → PATCH mục `COMPLETED`.
+  - `hasChecklistEvidence` tính đủ khi có tệp **hoặc** đã xác nhận. Xóa tệp cuối cùng thì phải xác nhận lại.
+  - BE chỉ kiểm trạng thái mục khi nộp nên hợp lệ với BE. Đây là thay đổi nghiệp vụ hiển thị cho cán bộ: mục có thể "hoàn tất" mà không có tệp.
+- **Front Desk:**
+  - đầu hồ sơ ghi "Trường hợp công dân đã chọn" (tên lấy từ API thủ tục công khai, thủ tục ẩn thì hiện mã);
+  - từng mục giấy tờ có nhãn "Giấy tờ chung" / "Riêng trường hợp" / "Xuất trình bản chính tại quầy";
+  - luồng tiếp nhận/tham vấn/bổ sung/sẵn sàng không đổi;
+  - PDF/QR do BE sinh theo tệp/hồ sơ, đã theo snapshot nên không cần sửa.
+- **File mới:**
+  - `src/lib/procedureCases.ts`, `src/lib/procedureCaseEdits.ts`;
+  - `src/components/procedures/ProcedureDocumentsView.tsx`;
+  - `src/pages/procedure-manager/ProcedureChecklistCasesEditor.tsx`, `src/pages/procedure-manager/ProcedureFieldInput.tsx` (tách `FieldInput` khỏi `ProcedureApiEditor`);
+  - `src/pages/citizen/components/CasePicker.tsx`;
+  - `tests/procedure-cases-check.mjs`.
+- **File sửa:**
+  - Procedure Manager: `ProcedureApiEditor.tsx`, `ProcedureDraftWorkspace.tsx`, `ProcedureReadView.tsx`;
+  - công khai: `ProcedureDetailPage.tsx`;
+  - công dân: `CitizenPage.tsx`, `CreateDossierModal.tsx`, `DossierChecklistView.tsx`, `CitizenDossierDetailView.tsx`;
+  - cán bộ: `OfficerReviewWorkspaceView.tsx`;
+  - lib: `lib/api/workflow.ts` (`isInvalidCaseError`, câu lỗi `application.invalid_case`), `lib/documentEvidence.ts`, `lib/procedureValidation.ts`;
+  - test: `tests/procedure-manager.spec.ts`, `tests/citizen-application-wizard.spec.ts`.
+- **API dùng (không thêm mới):**
+  - `GET /api/v1/procedures/{id}`;
+  - POST/PUT procedure-manager procedures, PUT drafts;
+  - `POST /api/v1/applications` (`caseCode`);
+  - `POST /api/v1/applications/{id}/cancel`;
+  - `PATCH /api/v1/applications/{id}/checklists/{checklistId}`.
+- **Kiểm tra:**
+  - `npm run typecheck`, `npm run lint`, `npm run build` đạt (còn cảnh báo chunk > 500 kB có sẵn);
+  - `node tests/procedure-cases-check.mjs` 44/44 đạt, 0 request mạng;
+  - Playwright (mock): 2 test mới đạt (editor trường hợp; chọn trường hợp + `invalid_case`); 2 test sửa theo hành vi mới đạt (`procedure-manager.spec.ts:40`, `citizen-application-wizard.spec.ts:14`); 40 ca khác của bộ thủ tục/công dân đạt.
+- **Lỗi Playwright không do thay đổi này** (kiểm chứ chữ/nhãn ở mã không sửa; không chạy được bản gốc vì không dùng Git):
+  - `citizen-application-wizard:24` (mock tên phường khác chữ tìm);
+  - `procedure-form-linking:6, :108`;
+  - `procedure-draft-direct-docx:6, :119`;
+  - `document-workflow:12, :51, :81, :102`;
+  - `document-lifecycle:4, :56`;
+  - `officer:6, :49`.
+- **Chưa kiểm với BE thật** (12 bước mục 4 của bàn giao BE).
+- **Giới hạn do BE:**
+  - không đổi được trường hợp mà giữ tệp;
+  - không có mô tả trường hợp, chưa có API AI tư vấn trường hợp;
+  - Catalog không cảnh báo thủ tục nhiều trường hợp mà không có giấy tờ riêng (FE có cảnh báo trong trình sửa);
+  - `PUT …/checklist` không thêm được trường hợp (modal "Cập nhật danh mục giấy tờ" giữ nguyên).
+- **Commit gợi ý:** `feat(procedures): group checklist by procedure case for managers, citizens and officers`.
+
 ## FE-UIREVIEW-1126 — Lỗi giao diện còn lại theo `fe-handoff-2026-11-26-ui-review.md` — 26/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Đã làm trước (FE-HANDOFF-1125): FE-01, FE-05 (nguyên nhân: tệp mẫu mất, 404), FE-07 bước 06/FAQ, câu báo FE-11.

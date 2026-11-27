@@ -42,10 +42,22 @@ test('public detail supports case switching, no fake download, source and mobile
   await page.route('https://example.test/source.pdf', route => route.fulfill({ body: '%PDF-1.4', contentType: 'application/pdf' }));
   await page.goto(`/thu-tuc/${procedureId}?category=1`);
   await expect(page.getByRole('heading', { name: sampleProcedure.title, exact: true })).toBeFocused();
-  await expect(page.getByText('Giấy chứng sinh', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /Trường hợp B/ }).click();
-  await expect(page.getByText('Giấy tờ trường hợp B', { exact: true })).toBeVisible();
+  // WF-CASE-01: giấy tờ chung (xuất trình) luôn hiện; giấy tờ từng trường hợp nằm trong accordion riêng, không gộp checklist
+  await expect(page.getByText('Giấy tờ xuất trình', { exact: true })).toBeVisible();
   await expect(page.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
+  await expect(page.getByText('Giấy chứng sinh', { exact: true })).toBeHidden();
+  const cases = page.locator('section', { has: page.getByRole('heading', { name: 'Thành phần hồ sơ', exact: true }) }).locator('details');
+  await expect(cases).toHaveCount(2);
+  // E2: bước riêng của trường hợp cũng là accordion (không còn tab)
+  await expect(page.locator('summary', { hasText: 'Bước riêng: Trường hợp A' })).toBeVisible();
+  await cases.filter({ hasText: 'Trường hợp A' }).locator('summary').click();
+  await expect(page.getByText('Giấy chứng sinh', { exact: true })).toBeVisible();
+  await expect(page.getByText('Giấy tờ trường hợp B', { exact: true })).toBeHidden();
+  await cases.filter({ hasText: 'Trường hợp B' }).locator('summary').click();
+  // Xem được mọi trường hợp cùng lúc trước khi tạo hồ sơ
+  await expect(page.getByText('Giấy tờ trường hợp B', { exact: true })).toBeVisible();
+  await expect(page.getByText('Giấy chứng sinh', { exact: true })).toBeVisible();
+  await expect(cases.filter({ hasText: 'Trường hợp B' }).getByRole('link', { name: 'Chuẩn bị hồ sơ cho trường hợp này' })).toHaveAttribute('href', /caseCode=B/);
   await expect(page.locator('#thanh-phan-ho-so input[type=checkbox]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Tải mẫu', exact: true })).toHaveCount(0);
   await expect(page.locator('#can-cu-phap-luat script')).toHaveCount(0);
@@ -139,9 +151,88 @@ test('loading states never render empty category or draft content underneath ske
   state.draftListDelay = 800;
   await page.getByRole('button', { name: 'PDF và bản nháp', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Bản nháp gần đây' })).toBeVisible();
-  await expect(page.locator('tbody tr[aria-hidden="true"]').first()).toBeVisible();
+  await expect(page.locator('[role="table"][aria-labelledby="recent-drafts-title"] [role="row"][aria-hidden="true"]').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mở bản nháp' }).first()).toBeVisible();
-  await expect(page.locator('tbody tr[aria-hidden="true"]')).toHaveCount(0);
+  await expect(page.locator('[role="table"][aria-labelledby="recent-drafts-title"] [role="row"][aria-hidden="true"]')).toHaveCount(0);
+});
+
+test('PDF upload and mixed draft rows stay aligned from desktop to mobile', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']);
+  const state = await mockCatalog(page);
+  state.detail.isActive = false;
+  await page.route('**/api/v1/procedure-manager/drafts?*', route => {
+    if (route.request().method() === 'OPTIONS') return catalogReply(route, { status: 204 });
+    const timestamps = { createdAt: state.detail.createdAt, updatedAt: state.detail.updatedAt, revision: savedRevision };
+    return catalogReply(route, { json: [
+      { id: draftId, status: 'NeedsReview', pdfFileName: `${'thu-tuc-'.repeat(18)}.pdf`, ...timestamps },
+      { id: procedureId, status: 'Published', pdfFileName: 'da-xuat-ban.pdf', ...timestamps, publishedProcedureId: procedureId },
+      { id: savedRevision, status: 'Failed', pdfFileName: 'doc-that-bai.pdf', ...timestamps },
+    ] });
+  });
+
+  await page.goto('/procedure-manager?section=drafts');
+  const upload = page.getByRole('region', { name: 'Xử lý tệp PDF' });
+  const list = page.getByRole('region', { name: 'Bản nháp gần đây' });
+  const draftMode = upload.getByRole('radio', { name: 'Tạo bản nháp có PDF gốc' });
+  const previewMode = upload.getByRole('radio', { name: 'Xem và nhận diện nội dung' });
+  const fileInput = upload.getByLabel('PDF mô tả thủ tục (tối đa 20 MB)');
+
+  await expect(draftMode).toBeChecked();
+  await draftMode.focus();
+  await draftMode.press('ArrowDown');
+  await expect(previewMode).toBeChecked();
+  await expect(upload.getByRole('button', { name: 'Xem và nhận diện PDF' })).toBeDisabled();
+  await fileInput.setInputFiles({ name: `${'quyet-dinh-'.repeat(16)}.pdf`, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') });
+  await expect(upload.getByRole('button', { name: 'Xem và nhận diện PDF' })).toBeEnabled();
+  await draftMode.check();
+
+  const unpublish = list.getByRole('button', { name: 'Hủy xuất bản' });
+  await expect(unpublish).toBeVisible();
+  const openButtons = list.getByRole('button', { name: 'Mở bản nháp' });
+  const deleteButtons = list.getByRole('button', { name: /^Xóa bản nháp / });
+  await expect(openButtons).toHaveCount(3);
+  await expect(deleteButtons).toHaveCount(3);
+
+  for (const width of [1805, 1024, 390, 320]) {
+    await page.setViewportSize({ width, height: 954 });
+    const uploadBox = (await upload.boundingBox())!;
+    const listBox = (await list.boundingBox())!;
+    expect(uploadBox.x).toBeCloseTo(listBox.x);
+    expect(uploadBox.width).toBeCloseTo(listBox.width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    const openBoxes = await Promise.all((await openButtons.all()).map(button => button.boundingBox()));
+    const deleteBoxes = await Promise.all((await deleteButtons.all()).map(button => button.boundingBox()));
+    const unpublishBox = (await unpublish.boundingBox())!;
+
+    for (const [index, box] of openBoxes.entries()) {
+      expect(box!.x).toBeCloseTo(openBoxes[0]!.x);
+      expect(deleteBoxes[index]!.x, `Delete column at ${width}px`).toBeCloseTo(deleteBoxes[0]!.x);
+      expect(deleteBoxes[index]!.x + deleteBoxes[index]!.width).toBeLessThan(listBox.x + listBox.width);
+    }
+    expect(openBoxes[1]!.x + openBoxes[1]!.width).toBeLessThan(unpublishBox.x);
+    expect(unpublishBox.x + unpublishBox.width).toBeLessThan(deleteBoxes[1]!.x);
+
+    const modeBox = (await draftMode.locator('..').boundingBox())!;
+    const dropBox = (await fileInput.locator('..').boundingBox())!;
+    if (width >= 1024) {
+      expect(modeBox.y).toBeCloseTo(dropBox.y);
+      expect(modeBox.x + modeBox.width).toBeLessThan(dropBox.x);
+      const actionHeader = (await list.getByRole('columnheader', { name: 'Thao tác' }).boundingBox())!;
+      expect(openBoxes[0]!.x, `Action header at ${width}px`).toBeCloseTo(actionHeader.x);
+    } else {
+      expect(modeBox.x).toBeCloseTo(dropBox.x);
+      expect(modeBox.y + modeBox.height).toBeLessThan(dropBox.y);
+      const publishedRow = list.getByRole('row').filter({ has: page.getByRole('button', { name: 'Hủy xuất bản' }) });
+      await expect(publishedRow.getByRole('cell')).toHaveCount(3);
+      const [fileCell, statusCell, actionCell] = await Promise.all((await publishedRow.getByRole('cell').all()).map(cell => cell.boundingBox()));
+      expect(fileCell!.y + fileCell!.height).toBeLessThan(statusCell!.y);
+      expect(statusCell!.y + statusCell!.height).toBeLessThan(actionCell!.y);
+    }
+  }
+
+  await unpublish.click();
+  await expect(page.getByRole('dialog', { name: 'Hủy xuất bản thủ tục' })).toBeVisible();
 });
 
 test('manager deletes an unused draft through administration API', async ({ page }) => {
@@ -356,4 +447,128 @@ test('dashboard retains actual metrics and recent procedures without empty place
   await expect.poll(() => state.requests.some(r => r.query.get('sortBy') === 'UpdatedAt' && r.query.get('isAscending') === 'false')).toBe(true);
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
   await expect(page.getByRole('table')).toBeVisible();
+});
+
+test('WF-CASE-01: giấy tờ chung, trường hợp (accordion), đổi mã, xóa trường hợp và xem trước như công dân', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager?section=procedures'); await page.getByRole('button', { name: 'Thêm thủ tục', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Mã thủ tục', { exact: true }).fill('TEST-CASES');
+  await dialog.getByLabel('Tên thủ tục', { exact: true }).fill('Thủ tục nhiều trường hợp');
+  await dialog.getByLabel('Danh mục', { exact: true }).selectOption('1');
+  await dialog.getByRole('button', { name: /Thành phần hồ sơ/ }).first().click();
+
+  await dialog.getByRole('button', { name: 'Thêm giấy tờ chung' }).click();
+  await dialog.getByLabel('Tên giấy tờ', { exact: true }).fill('Tờ khai chung');
+  await dialog.getByRole('button', { name: 'Thêm trường hợp' }).click();
+  await dialog.getByRole('button', { name: 'Thêm trường hợp' }).click();
+  const caseOne = dialog.locator('details').filter({ hasText: /Mã TH-1/ });
+  const caseTwo = dialog.locator('details').filter({ hasText: /Mã TH-2/ });
+  await caseOne.getByLabel('Tên trường hợp', { exact: true }).fill('Đăng ký lần đầu');
+  await caseTwo.getByLabel('Tên trường hợp', { exact: true }).fill('Đăng ký lại');
+  await caseOne.getByRole('button', { name: 'Thêm giấy tờ cho trường hợp này' }).click();
+  await caseOne.getByLabel('Tên giấy tờ', { exact: true }).fill('Giấy chứng sinh');
+  await caseTwo.getByRole('button', { name: 'Thêm giấy tờ cho trường hợp này' }).click();
+  await caseTwo.getByLabel('Tên giấy tờ', { exact: true }).fill('Đơn trình báo mất');
+  await expect(caseOne.locator('summary').first()).toContainText('1 giấy tờ riêng');
+
+  // Đổi mã khi rời ô: giấy tờ của trường hợp đi theo mã mới; mã trùng bị từ chối
+  const code = caseOne.getByLabel('Mã trường hợp', { exact: true });
+  await code.fill('TH-2'); await code.blur();
+  await expect(caseOne.getByText('Mã “TH-2” đã dùng cho trường hợp khác.')).toBeVisible();
+  await code.fill('LAN-DAU'); await code.blur();
+  const caseFirst = dialog.locator('details').filter({ hasText: /Mã LAN-DAU/ });
+  await expect(caseFirst.locator('summary').first()).toContainText('1 giấy tờ riêng');
+
+  // Xem trước như công dân: giấy tờ chung + từng trường hợp riêng
+  await dialog.getByRole('button', { name: 'Xem trước như công dân' }).click();
+  const preview = page.getByRole('dialog', { name: 'Xem trước thành phần hồ sơ' });
+  await expect(preview.getByText('Giấy tờ theo trường hợp (2)')).toBeVisible();
+  await expect(preview.getByText('Khi tạo hồ sơ, công dân chọn 1 trong 2 trường hợp', { exact: false })).toBeVisible();
+  await preview.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+  await expect(preview).toHaveCount(0);
+
+  // Xóa trường hợp 2, chuyển giấy tờ của nó về giấy tờ chung
+  await dialog.locator('details').filter({ hasText: /Mã TH-2/ }).getByRole('button', { name: 'Xóa trường hợp' }).click();
+  const confirm = page.getByRole('dialog', { name: /Xóa trường hợp “Đăng ký lại”/ });
+  await confirm.getByRole('radio', { name: /Chuyển 1 giấy tờ sang Giấy tờ chung/ }).check();
+  await confirm.getByRole('button', { name: 'Xóa trường hợp' }).click();
+  await expect(confirm).toHaveCount(0);
+
+  // B3/B7: chuyển giấy tờ chung sang trường hợp → thông báo và giấy tờ nằm trong trường hợp đích
+  const moving = dialog.locator('details', { hasText: 'Đơn trình báo mất' }).last();
+  await moving.locator('summary').click();
+  await moving.getByLabel('Áp dụng cho', { exact: true }).selectOption('LAN-DAU');
+  await expect(page.getByText('Đã chuyển giấy tờ sang trường hợp “Đăng ký lần đầu”.')).toBeVisible();
+  await expect(dialog.locator('details').filter({ hasText: /Mã LAN-DAU/ }).locator('summary').first()).toContainText('2 giấy tờ riêng');
+
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button', { name: 'Tạo và công khai' }).click();
+  await expect(dialog).toHaveCount(0);
+  const body = state.requests.find(r => r.method === 'POST')?.body as { contentPayload: { cases: { caseCode: string; caseName: string }[] }; checklistSchema: { itemName: string; caseCode: string | null }[] };
+  expect(body.contentPayload.cases.map(c => [c.caseCode, c.caseName])).toEqual([['LAN-DAU', 'Đăng ký lần đầu']]);
+  expect(body.checklistSchema.map(x => [x.itemName, x.caseCode])).toEqual([['Tờ khai chung', null], ['Giấy chứng sinh', 'LAN-DAU'], ['Đơn trình báo mất', 'LAN-DAU']]);
+});
+
+test('WF-CASE-01: biểu mẫu chưa gắn giấy tờ không hiện thành dòng giấy tờ; Quản lý thủ tục gắn nhanh vào giấy tờ', async ({ page }) => {
+  // Trang công khai: "Tờ khai từ API" (biểu mẫu không giấy tờ nào chọn) không còn hiện như một giấy tờ nộp chung
+  await mockCatalog(page);
+  await page.goto(`/thu-tuc/${procedureId}`);
+  const docs = page.locator('section', { has: page.getByRole('heading', { name: 'Thành phần hồ sơ', exact: true }) });
+  await expect(docs.getByText('Giấy tờ dùng chung', { exact: true })).toBeVisible();
+  await expect(docs.getByText('Giấy tờ nộp chung', { exact: true })).toHaveCount(0);
+  await expect(docs.locator('table').getByText('Tờ khai từ API')).toHaveCount(0);
+  // Vẫn tải được để tham khảo, nhưng không phải dòng giấy tờ
+  await expect(docs.getByText('Biểu mẫu khác để tham khảo', { exact: true })).toBeVisible();
+
+  // Quản lý thủ tục: cảnh báo + gắn vào giấy tờ → cảnh báo biến mất, lưu gửi formCodes
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  await page.goto('/procedure-manager');
+  await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
+  await page.getByRole('button', { name: 'Chi tiết', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: /Thành phần hồ sơ/ }).first().click();
+  const fix = dialog.getByRole('region', { name: '1 biểu mẫu chưa gắn với giấy tờ nào' });
+  await expect(fix).toBeVisible();
+  await dialog.getByRole('button', { name: 'Xem trước như công dân' }).click();
+  const preview = page.getByRole('dialog', { name: 'Xem trước thành phần hồ sơ' });
+  await expect(preview.getByText('1 biểu mẫu chưa gắn với giấy tờ nào nên không hiển thị ở trên.')).toBeVisible();
+  await preview.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+  await fix.getByLabel('Gắn vào giấy tờ').selectOption({ label: 'Trường hợp B · Giấy tờ trường hợp B' });
+  await fix.getByRole('button', { name: 'Gắn 1 biểu mẫu' }).click();
+  await expect(fix).toHaveCount(0);
+  await expect(page.getByText('Đã gắn 1 biểu mẫu vào giấy tờ “Giấy tờ trường hợp B”.')).toBeVisible();
+  expect(state.requests.filter(r => r.method === 'PUT')).toHaveLength(0);
+});
+
+test('xuất bản bản nháp thiếu số ngày/phí: chỉ rõ ô cần điền, không gửi lên BE; điền xong thì xuất bản được', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
+  // Như bản nháp AI thật: thời hạn chỉ có chữ, chưa có số ngày; phí chưa có số tiền
+  state.detail.contentPayload.submissionMethods = [{ methodName: 'Trực tiếp', feeAmount: null, feeUnit: null, estimatedDays: null, processingTime: { value: null, unit: null, text: 'Theo quy định' } }];
+  await page.goto(`/procedure-manager?draft=${draftId}`);
+  await expect(page.getByRole('button', { name: 'Lưu bản nháp', exact: true })).toBeVisible({ timeout: 12000 });
+  await page.getByRole('checkbox', { name: /Tôi đã đối soát kỹ thông tin/ }).check();
+  await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
+  const summary = page.getByRole('alert').first();
+  await expect(summary).toContainText('Cách nộp 1 (Trực tiếp) – Thời hạn giải quyết');
+  await expect(summary).toContainText('Cách nộp 1 (Trực tiếp) – Phí, lệ phí');
+  await expect(summary).not.toContainText('estimatedDays');
+  await expect(summary).not.toContainText('submissionMethods');
+  // Tự chuyển tới phần 4 và đánh dấu đúng ô
+  await expect(page.getByRole('button', { name: /4 Thời hạn & lệ phí/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Nhập số ngày ở ô “Số” và chọn đơn vị “Ngày” hoặc “Ngày làm việc”.').first()).toBeVisible();
+  expect(state.requests.some(r => r.path.includes('/drafts/') && ['PUT', 'POST'].includes(r.method))).toBe(false);
+
+  // Người dùng điền số ngày và mức phí → danh sách lỗi tự bớt, xuất bản gửi đúng số đã nhập
+  await page.getByLabel('Số', { exact: true }).fill('5');
+  await page.getByLabel('Đơn vị', { exact: true }).selectOption('WORKING_DAY');
+  await expect(page.getByText('Nhập số ngày ở ô “Số” và chọn đơn vị “Ngày” hoặc “Ngày làm việc”.')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Thêm mức phí', exact: true }).click();
+  await page.getByLabel('Số tiền (0 = miễn phí)', { exact: true }).fill('0');
+  await page.getByRole('checkbox', { name: /Tôi đã đối soát kỹ thông tin/ }).check();
+  await page.getByRole('button', { name: 'Xác nhận xuất bản' }).click();
+  await expect.poll(() => state.requests.some(r => r.method === 'POST' && r.path.endsWith('/publish'))).toBe(true);
+  const saved = state.requests.find(r => r.method === 'PUT' && r.path.includes('/drafts/'))?.body as { payload: { contentPayload: { submissionMethods: Record<string, unknown>[] } } };
+  expect(saved.payload.contentPayload.submissionMethods[0]).toEqual(expect.objectContaining({ estimatedDays: 5, feeAmount: 0, feeUnit: 'VND' }));
 });
