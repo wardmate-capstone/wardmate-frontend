@@ -1,5 +1,18 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-PM-TRIM-1127 — Bỏ mô tả hộp "Chỉnh sửa thủ tục" và khối gắn nhanh biểu mẫu — 27/11/2026 (Asia/Saigon, UTC+07:00)
+
+- Theo ảnh người dùng, bỏ hai mục:
+  - dòng mô tả dưới tiêu đề hộp "Chỉnh sửa thủ tục" (`ProcedureApiDetail.tsx`);
+  - khối "N biểu mẫu chưa gắn với giấy tờ nào" kèm nút "Gắn" ở phần 2 trình sửa (`ProcedureChecklistCasesEditor.tsx`). Khối này có lỗi nút hiện "Gắn 0 biểu mẫu".
+- Giữ lại:
+  - cảnh báo trong "Xem trước như công dân";
+  - mục "Biểu mẫu khác để tham khảo" ở trang công khai;
+  - hàm `attachFormsToItem` (chỉ còn dùng trong test logic).
+- **Kiểm tra:** typecheck, lint đạt; Playwright `procedure-manager.spec.ts` 28/28 (mock), test cập nhật theo giao diện mới.
+- **Chưa commit:** không chạy Git (theo CLAUDE.md).
+- **Commit gợi ý:** `refactor(procedure-manager): remove edit dialog description and quick form attach block`.
+
 ## FE-DRAFT-PUBLISH-MSG-1127 — Báo rõ ô cần điền khi xuất bản bản nháp bị từ chối — 27/11/2026 (Asia/Saigon, UTC+07:00)
 
 - **Hiện tượng:** người dùng báo xuất bản lỗi "404".

@@ -3,9 +3,9 @@ import { CaretDown, Plus, Sparkle, Trash, Warning } from '@phosphor-icons/react'
 import { Button, Modal, toast } from '@/components/ui';
 import { ProcedureDocumentsView, type DocumentForm, type DocumentItem } from '@/components/procedures/ProcedureDocumentsView';
 import { ProcedureErrorsContext, ProcedureFieldPrefix } from '@/lib/procedureValidation';
-import { caseKey, countItems, formForcedRequired, standaloneForms, groupByCase, nextCaseCode, requiresCaseChoice } from '@/lib/procedureCases';
+import { caseKey, countItems, formForcedRequired, groupByCase, nextCaseCode, requiresCaseChoice } from '@/lib/procedureCases';
 import { checklistQuantityLabel } from '@/lib/procedureDisplay';
-import { attachFormsToItem, caseFormConflicts, moveChecklistItem, removeCase, renameCase, uniqueChecklistId } from '@/lib/procedureCaseEdits';
+import { caseFormConflicts, moveChecklistItem, removeCase, renameCase, uniqueChecklistId } from '@/lib/procedureCaseEdits';
 import { COPY_TYPE_LABELS, FieldInput, getInputBoxClass, record, rows, SUBMISSION_TYPE_LABELS, type Field, type Row } from './ProcedureFieldInput';
 
 const text = (value: unknown) => (value == null ? '' : String(value));
@@ -76,8 +76,6 @@ export function ProcedureChecklistCasesEditor({ value, onChange, extractionNotes
   const plainItems = checklist.map(row => ({ checklistId: text(row.checklistId), itemName: text(row.itemName), caseCode: caseKey(text(row.caseCode)), isMandatory: row.isMandatory !== false, formCodes: Array.isArray(row.formCodes) ? (row.formCodes as unknown[]).map(text) : null }));
   const plainForms = forms.map(row => ({ formCode: text(row.formCode), formName: text(row.formName), caseCode: caseKey(text(row.caseCode)), isMandatory: row.isMandatory !== false }));
   const forced = formForcedRequired(plainItems, plainForms, cases.map(c => ({ caseCode: text(c.caseCode) })));
-  // Biểu mẫu chưa gắn giấy tờ: Workflow sẽ tách thành mục riêng trong hồ sơ; trang công khai không hiện chúng
-  const standalone = standaloneForms(plainItems, plainForms, cases.map(c => ({ caseCode: text(c.caseCode), caseName: text(c.caseName) })));
 
   // Sau khi chuyển giấy tờ sang nhóm khác: mở nhóm đích, cuộn tới và làm nổi giấy tờ vừa chuyển
   useEffect(() => {
@@ -158,17 +156,6 @@ export function ProcedureChecklistCasesEditor({ value, onChange, extractionNotes
           </ul>
           <p className="mt-2 text-[11px] text-amber-800">Kết quả bóc tách chỉ là gợi ý. Bạn cần xác nhận giấy tờ chung, các trường hợp và giấy tờ của từng trường hợp trước khi xuất bản.</p>
         </div>
-      )}
-
-      {standalone.length > 0 && (
-        <StandaloneFormsFix
-          forms={standalone.map(x => ({ code: x.form.formCode, name: x.form.formName || x.form.formCode, where: x.caseNames.length && x.caseNames.length < cases.length ? x.caseNames.join('; ') : '' }))}
-          documents={checklist.map((row, index) => ({ index, label: `${caseKey(text(row.caseCode)) ? caseLabels[text(row.caseCode)] ?? text(row.caseCode) : 'Giấy tờ chung'} · ${text(row.itemName).trim() || text(row.checklistId)}` }))}
-          onAttach={(index, codes) => {
-            onChange(attachFormsToItem(value, index, codes));
-            toast.success(`Đã gắn ${codes.length} biểu mẫu vào giấy tờ “${text(checklist[index]?.itemName).trim() || text(checklist[index]?.checklistId)}”.`);
-          }}
-        />
       )}
 
       <Section
@@ -523,52 +510,3 @@ function useStableKeys(count: number) {
   };
 }
 
-/**
- * Sửa nhanh biểu mẫu chưa gắn giấy tờ: chọn các biểu mẫu (VD: 5 mẫu thay thế của "Tờ khai của đối tượng") và giấy tờ đích.
- * Biểu mẫu chuyển sang trường hợp của giấy tờ đích để trường hợp khác không bị đòi các mẫu này.
- */
-function StandaloneFormsFix({ forms, documents, onAttach }: {
-  forms: { code: string; name: string; where: string }[];
-  documents: { index: number; label: string }[];
-  onAttach: (index: number, codes: string[]) => void;
-}) {
-  const [picked, setPicked] = useState<string[] | null>(null);
-  const [target, setTarget] = useState('');
-  const selected = (picked ?? forms.map(f => f.code)).filter(code => forms.some(f => f.code === code));
-  return (
-    <section aria-labelledby="standalone-forms-title" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-      <div>
-        <h3 id="standalone-forms-title" className="flex items-center gap-2 font-semibold"><Warning size={16} aria-hidden />{forms.length} biểu mẫu chưa gắn với giấy tờ nào</h3>
-        <p className="mt-1 text-xs leading-relaxed">Công dân không thấy các biểu mẫu này ở trang thủ tục, nhưng khi tạo hồ sơ hệ thống sẽ tách mỗi biểu mẫu thành một mục riêng. Nếu đây là các mẫu thay thế của một tờ khai, hãy gắn chúng vào giấy tờ đó.</p>
-      </div>
-      <fieldset className="space-y-1.5">
-        <legend className="sr-only">Biểu mẫu cần gắn</legend>
-        {forms.map(form => (
-          <label key={form.code} className="flex min-h-9 cursor-pointer items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="mt-0.5 accent-red-700"
-              checked={selected.includes(form.code)}
-              onChange={e => setPicked(e.target.checked ? [...selected, form.code] : selected.filter(c => c !== form.code))}
-            />
-            <span className="min-w-0 break-words">{form.name} <span className="text-amber-800">({form.code}{form.where ? ` · tách riêng ở: ${form.where}` : ''})</span></span>
-          </label>
-        ))}
-      </fieldset>
-      {documents.length ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="grid min-w-0 flex-1 basis-64 gap-1 text-xs font-semibold">
-            Gắn vào giấy tờ
-            <select aria-label="Gắn vào giấy tờ" className={getInputBoxClass(false)} value={target} onChange={e => setTarget(e.target.value)}>
-              <option value="">Chọn giấy tờ</option>
-              {documents.map(d => <option key={d.index} value={d.index}>{d.label}</option>)}
-            </select>
-          </label>
-          <Button size="small" className="pm-edit-only" disabled={!target || !selected.length} onClick={() => { onAttach(Number(target), selected); setPicked(null); setTarget(''); }}>
-            Gắn {selected.length} biểu mẫu
-          </Button>
-        </div>
-      ) : <p className="text-xs">Chưa có giấy tờ nào. Hãy thêm giấy tờ (VD: "Tờ khai của đối tượng") rồi gắn biểu mẫu.</p>}
-    </section>
-  );
-}

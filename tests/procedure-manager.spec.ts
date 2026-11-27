@@ -510,7 +510,7 @@ test('WF-CASE-01: giấy tờ chung, trường hợp (accordion), đổi mã, x�
   expect(body.checklistSchema.map(x => [x.itemName, x.caseCode])).toEqual([['Tờ khai chung', null], ['Giấy chứng sinh', 'LAN-DAU'], ['Đơn trình báo mất', 'LAN-DAU']]);
 });
 
-test('WF-CASE-01: biểu mẫu chưa gắn giấy tờ không hiện thành dòng giấy tờ; Quản lý thủ tục gắn nhanh vào giấy tờ', async ({ page }) => {
+test('WF-CASE-01: biểu mẫu chưa gắn giấy tờ không hiện thành dòng giấy tờ; bản xem trước của Quản lý thủ tục có cảnh báo', async ({ page }) => {
   // Trang công khai: "Tờ khai từ API" (biểu mẫu không giấy tờ nào chọn) không còn hiện như một giấy tờ nộp chung
   await mockCatalog(page);
   await page.goto(`/thu-tuc/${procedureId}`);
@@ -521,7 +521,7 @@ test('WF-CASE-01: biểu mẫu chưa gắn giấy tờ không hiện thành dòn
   // Vẫn tải được để tham khảo, nhưng không phải dòng giấy tờ
   await expect(docs.getByText('Biểu mẫu khác để tham khảo', { exact: true })).toBeVisible();
 
-  // Quản lý thủ tục: cảnh báo + gắn vào giấy tờ → cảnh báo biến mất, lưu gửi formCodes
+  // Quản lý thủ tục: khối "gắn nhanh" đã bỏ theo yêu cầu; chỉ còn cảnh báo trong bản xem trước
   await mockWorkspaceAuth(page, ['PROCEDURE_MANAGER']); const state = await mockCatalog(page);
   await page.goto('/procedure-manager');
   await page.getByRole('button', { name: 'Danh sách thủ tục', exact: true }).click();
@@ -529,16 +529,13 @@ test('WF-CASE-01: biểu mẫu chưa gắn giấy tờ không hiện thành dòn
   await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: /Thành phần hồ sơ/ }).first().click();
-  const fix = dialog.getByRole('region', { name: '1 biểu mẫu chưa gắn với giấy tờ nào' });
-  await expect(fix).toBeVisible();
+  await expect(dialog.getByRole('region', { name: /biểu mẫu chưa gắn với giấy tờ nào/ })).toHaveCount(0);
+  // Hộp chỉnh sửa không còn dòng mô tả dưới tiêu đề
+  await expect(dialog.getByText('Lưu thay đổi sẽ tạo phiên bản mới', { exact: false })).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Xem trước như công dân' }).click();
   const preview = page.getByRole('dialog', { name: 'Xem trước thành phần hồ sơ' });
   await expect(preview.getByText('1 biểu mẫu chưa gắn với giấy tờ nào nên không hiển thị ở trên.')).toBeVisible();
   await preview.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-  await fix.getByLabel('Gắn vào giấy tờ').selectOption({ label: 'Trường hợp B · Giấy tờ trường hợp B' });
-  await fix.getByRole('button', { name: 'Gắn 1 biểu mẫu' }).click();
-  await expect(fix).toHaveCount(0);
-  await expect(page.getByText('Đã gắn 1 biểu mẫu vào giấy tờ “Giấy tờ trường hợp B”.')).toBeVisible();
   expect(state.requests.filter(r => r.method === 'PUT')).toHaveLength(0);
 });
 

@@ -410,7 +410,6 @@ export function ProcedureApiDetail({
           if (!open) guard.requestClose(() => setEditing(null));
         }}
         title="Chỉnh sửa thủ tục"
-        description="Lưu thay đổi sẽ tạo phiên bản mới; phiên bản trước được giữ lại. Số quyết định (phần 1) và ngày hiệu lực là bắt buộc."
         className="sm:max-w-5xl"
         footer={
           <div className="flex w-full flex-wrap items-end justify-between gap-3">
