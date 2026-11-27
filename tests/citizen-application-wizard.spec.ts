@@ -16,7 +16,12 @@ test('Catalog chuyển đúng ngữ cảnh thủ tục sang luồng chuẩn bị
   await mockCatalog(page);
   await page.goto(`/thu-tuc/${sampleProcedure.id}`);
   const before = await page.evaluate(() => JSON.stringify(localStorage));
-  await page.getByRole('link', { name: 'Chuẩn bị hồ sơ', exact: true }).click();
+  // WF-CASE-01: nút chung không chọn sẵn trường hợp đầu tiên (người dân tự chọn khi tạo hồ sơ)
+  await expect(page.getByRole('link', { name: 'Chuẩn bị hồ sơ', exact: true })).not.toHaveAttribute('href', /caseCode=/);
+  // Nút trong từng trường hợp mang đúng mã trường hợp
+  const caseA = page.locator('section', { has: page.getByRole('heading', { name: 'Thành phần hồ sơ', exact: true }) }).locator('details', { hasText: 'Trường hợp A' });
+  await caseA.locator('summary').click();
+  await caseA.getByRole('link', { name: 'Chuẩn bị hồ sơ cho trường hợp này' }).click();
   await expect(page).toHaveURL(new RegExp(`procedureId=${sampleProcedure.id}.*caseCode=A`));
   expect(await page.evaluate(() => JSON.stringify(localStorage))).toBe(before);
 });
@@ -116,4 +121,41 @@ test('Chuẩn bị hồ sơ chọn sẵn đúng thủ tục trên URL khi danh s
   await page.getByRole('link', { name: 'Chuẩn bị hồ sơ', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.locator('#create-procedure')).toHaveText(/Thủ tục API số 2/);
+});
+
+test('WF-CASE-01: thủ tục nhiều trường hợp bắt buộc chọn trường hợp, xem trước đúng giấy tờ và gửi caseCode', async ({ page }) => {
+  await mockWorkspaceAuth(page, ['REGISTERED_CITIZEN']);
+  await mockCatalog(page);
+  await page.route('**/api/v1/wards', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ code: 'WARD_A', name: 'Phường A' }]) }));
+  let createdPayload: Record<string, unknown> | null = null;
+  await page.route('**/api/v1/applications', route => {
+    if (route.request().method() !== 'POST') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], page: 1, pageSize: 50, total: 0 }) });
+    createdPayload = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({ status: 400, contentType: 'application/problem+json', body: JSON.stringify({ code: 'application.invalid_case', title: 'Vui lòng chọn đúng trường hợp của thủ tục.' }) });
+  });
+
+  await page.goto(`/citizen?procedureId=${sampleProcedure.id}`);
+  const dialog = page.getByRole('dialog', { name: 'Chuẩn bị hồ sơ tiền kiểm mới' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('radio')).toHaveCount(2);
+  await page.locator('#create-ward').click();
+  await page.locator('#create-ward-listbox [role="option"]', { hasText: 'Phường A' }).click();
+
+  // Chưa chọn trường hợp → chặn ở FE, không gửi request
+  await dialog.getByRole('button', { name: 'Tạo hồ sơ nháp' }).click();
+  await expect(dialog.getByText('Chọn trường hợp thực hiện thủ tục.')).toBeVisible();
+  expect(createdPayload).toBeNull();
+
+  // Chọn TH-B: chỉ thấy giấy tờ chung + giấy tờ của B, không thấy giấy tờ của A
+  await dialog.getByRole('radio', { name: /Trường hợp B/ }).check();
+  const preview = dialog.getByRole('region', { name: 'Giấy tờ cần chuẩn bị' });
+  await expect(preview.getByText('Giấy tờ dùng chung')).toBeVisible();
+  await expect(preview.getByText('Giấy tờ trường hợp B')).toBeVisible();
+  await expect(preview.getByText('Giấy chứng sinh')).toHaveCount(0);
+
+  // BE trả invalid_case (VD: thủ tục vừa đổi trường hợp) → báo chọn lại, không đóng hộp thoại
+  await dialog.getByRole('button', { name: 'Tạo hồ sơ nháp' }).click();
+  await expect.poll(() => createdPayload?.caseCode).toBe('B');
+  await expect(dialog.getByText('Trường hợp đã chọn không còn hợp lệ. Vui lòng chọn lại.')).toBeVisible();
+  await expect(dialog).toBeVisible();
 });

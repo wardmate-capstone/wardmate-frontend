@@ -3,7 +3,12 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, ListSelect, Modal, Skeleton } from "@/components/ui";
-import { workflowError } from "@/lib/api/workflow";
+import { isInvalidCaseError, workflowError } from "@/lib/api/workflow";
+import { dossierPreview, requiresCaseChoice } from "@/lib/procedureCases";
+import { CasePicker } from "./CasePicker";
+
+type PreviewChecklist = Parameters<typeof dossierPreview>[0][number];
+type PreviewForm = Parameters<typeof dossierPreview>[1][number];
 
 const schema = z.object({
   procedureId: z
@@ -26,6 +31,8 @@ export function CreateDossierModal({
   procedures,
   wards,
   cases,
+  checklist,
+  forms,
   loading,
   unavailable,
   onRetry,
@@ -39,6 +46,9 @@ export function CreateDossierModal({
   procedures: { id: string; title: string }[];
   wards: { code: string; name: string }[];
   cases: { caseCode: string; caseName: string }[];
+  /** Danh mục giấy tờ và biểu mẫu của thủ tục, chỉ để xem trước theo trường hợp. */
+  checklist?: PreviewChecklist[] | null;
+  forms?: PreviewForm[] | null;
   loading: boolean;
   unavailable: boolean;
   onRetry: () => void;
@@ -97,6 +107,7 @@ export function CreateDossierModal({
         if (!next && !busy && !lock.current) onClose();
       }}
       title="Chuẩn bị hồ sơ tiền kiểm mới"
+      className={requiresCaseChoice(cases) ? "sm:max-w-2xl" : undefined}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
@@ -145,6 +156,12 @@ export function CreateDossierModal({
           try {
             await onSubmit(values);
           } catch (err) {
+            if (isInvalidCaseError(err)) {
+              // Danh sách trường hợp có thể vừa đổi: tải lại thủ tục và yêu cầu chọn lại
+              form.setError("caseCode", { message: "Trường hợp đã chọn không còn hợp lệ. Vui lòng chọn lại." });
+              onRetry();
+              return; // chỉ báo một lần tại ô trường hợp
+            }
             setError(workflowError(err));
           } finally {
             lock.current = false;
@@ -211,36 +228,6 @@ export function CreateDossierModal({
               />
             </Field>
 
-            {/* Thủ tục chỉ có một trường hợp: tự chọn ngầm, không hiển thị (nội dung thường rất dài) */}
-            {cases.length > 1 && (
-                <Field
-                  id="create-case"
-                  label="Trường hợp thực hiện"
-                  error={errors.caseCode?.message}
-                >
-                  <Controller
-                    control={form.control}
-                    name="caseCode"
-                    render={({ field }) => (
-                      <ListSelect
-                        id="create-case"
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        placeholder="Chọn trường hợp"
-                        options={cases.map((x) => ({
-                          value: x.caseCode,
-                          label: x.caseName,
-                        }))}
-                        disabled={disabled}
-                        invalid={Boolean(errors.caseCode)}
-                        describedBy="create-case-error"
-                      />
-                    )}
-                  />
-                </Field>
-            )}
-
             <Field
               id="create-ward"
               label="Phường/xã tiếp nhận"
@@ -270,6 +257,33 @@ export function CreateDossierModal({
                 )}
               />
             </Field>
+
+            {/* WF-CASE-01: từ 2 trường hợp người dân phải tự chọn; 1 trường hợp thì BE tự chọn nên không hỏi */}
+            {requiresCaseChoice(cases) && (
+              <Controller
+                control={form.control}
+                name="caseCode"
+                render={({ field }) => (
+                  <CasePicker
+                    cases={cases}
+                    value={field.value}
+                    onChange={(next) => {
+                      field.onChange(next);
+                      form.clearErrors("caseCode");
+                    }}
+                    checklist={checklist}
+                    forms={forms}
+                    disabled={disabled}
+                    error={errors.caseCode?.message}
+                  />
+                )}
+              />
+            )}
+            {requiresCaseChoice(cases) && (
+              <p className="text-xs text-slate-500">
+                Trường hợp được lưu cùng hồ sơ. Nếu chọn nhầm, bạn có thể đổi khi hồ sơ còn là bản nháp; hệ thống sẽ tạo hồ sơ nháp mới theo trường hợp mới.
+              </p>
+            )}
 
             {!unavailable && (!procedures.length || !wards.length) && (
               <p role="alert" className="text-sm text-red-800">

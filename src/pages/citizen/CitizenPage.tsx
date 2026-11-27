@@ -21,6 +21,7 @@ import {
   useSubmitApplicationMutation,
   useResubmitApplicationMutation,
   useCreateApplicationMutation,
+  useCancelApplicationMutation,
   workflowQueryKeys,
 } from '@/hooks/useWorkflow';
 import { workflowApi, workflowError } from '@/lib/api/workflow';
@@ -108,6 +109,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
   const submitMutation = useSubmitApplicationMutation();
   const resubmitMutation = useResubmitApplicationMutation();
   const createMutation = useCreateApplicationMutation();
+  const cancelApplicationMutation = useCancelApplicationMutation();
 
   // Lấy danh sách thủ tục công khai từ Catalog để chọn khi tạo hồ sơ
   const proceduresQuery = usePublicProcedureList({ pageNumber: 1, pageSize: 50 });
@@ -295,8 +297,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         };
       });
     } catch (err) {
-      toast.error(workflowError(err));
-      throw err;
+      // Nơi gọi (danh mục giấy tờ) đã hiện lỗi ngay tại mục; không bật thêm toast để tránh báo hai lần
+      throw new Error(workflowError(err));
     }
   }
 
@@ -345,6 +347,35 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       const msg = workflowError(err);
       toast.error(`Không thể tạo hồ sơ: ${msg}`);
       throw err;
+    } finally {
+      setSubmittingAction(false);
+    }
+  }
+
+  // WF-CASE-01: BE chưa có API đổi trường hợp của hồ sơ. Đổi = tạo hồ sơ nháp mới theo trường hợp mới (giữ phường,
+  // thông tin kê khai) rồi hủy bản nháp cũ. Tạo trước, hủy sau: lỗi giữa chừng không làm mất hồ sơ cũ.
+  // Tệp đã tải ở hồ sơ cũ không được chuyển và không bị xóa (vẫn nằm trong hồ sơ đã hủy).
+  async function handleChangeCase(caseCode: string) {
+    const current = selectedDossierDetail;
+    if (!current?.id) throw new Error('Không tìm thấy hồ sơ.');
+    setSubmittingAction(true);
+    try {
+      const fresh = await workflowApi.getApplication(current.id);
+      if (fresh.status !== 'DRAFT') throw new Error('Chỉ đổi được trường hợp khi hồ sơ còn là bản nháp.');
+      if (!fresh.wardCode) throw new Error('Hồ sơ cũ chưa có phường tiếp nhận; vui lòng tạo hồ sơ mới.');
+      if (fresh.caseCode === caseCode) throw new Error('Hồ sơ đang dùng trường hợp này.');
+      const formData = fresh.formData && typeof fresh.formData === 'object' && !Array.isArray(fresh.formData) ? fresh.formData as Record<string, unknown> : {};
+      const created = await createMutation.mutateAsync({ procedureId: fresh.procedureId, caseCode, wardCode: fresh.wardCode, formData });
+      try {
+        await cancelApplicationMutation.mutateAsync(fresh.id);
+        toast.success(`Đã chuyển sang hồ sơ nháp ${created.applicationCode} theo trường hợp mới. Hồ sơ cũ đã được hủy.`);
+      } catch (cancelError) {
+        toast.warning(`Đã tạo hồ sơ ${created.applicationCode} theo trường hợp mới, nhưng chưa hủy được hồ sơ cũ (${workflowError(cancelError)}). Bạn có thể hủy hồ sơ cũ trong danh sách Bản nháp.`);
+      }
+      queryClient.invalidateQueries({ queryKey: workflowQueryKeys.citizenApplications() });
+      const mapped = mapApplicationDtoToCitizenDossier(created);
+      setSelectedDossierDetail(mapped);
+      setSearchParams({ section: 'dossier_detail', dossierCode: mapped.code });
     } finally {
       setSubmittingAction(false);
     }
@@ -531,6 +562,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
               onSubmitPrecheck={handleSubmitPrecheck}
               onResubmitPrecheck={handleResubmitPrecheck}
               onUpdateChecklistItem={handleUpdateChecklistItem}
+              onChangeCase={handleChangeCase}
               submitting={submittingAction}
             />
           )}
@@ -588,7 +620,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         onRefreshApplication={() => void citizenAppsQuery.refetch()}
       />
 
-      <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
+      <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} checklist={selectedProcedureQuery.data?.checklistSchema} forms={selectedProcedureQuery.data?.formDefinitions} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
 
       {/* Trợ lý ảo AI hỏi đáp thủ tục */}
       <AiChatWidget />

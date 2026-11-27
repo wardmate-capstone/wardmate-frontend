@@ -6,8 +6,11 @@ import { Badge, Button, Modal, Skeleton } from '@/components/ui';
 import { useApplicationContents } from '@/hooks/useDocumentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { workflowError } from '@/lib/api/workflow';
-import { ArrowLeft, ArrowRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, ShieldCheck, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, ArrowsLeftRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, ShieldCheck, Trash } from '@phosphor-icons/react';
 import { DossierChecklistView } from '../components/DossierChecklistView';
+import { CasePicker } from '../components/CasePicker';
+import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
+import { caseDisplayName, requiresCaseChoice } from '@/lib/procedureCases';
 import { GeneratedDocumentsPanel } from '../components/GeneratedDocumentsPanel';
 import type { CitizenDossier } from '../types';
 import { useApplicationComments, useCancelApplicationMutation } from '@/hooks/useWorkflow';
@@ -17,6 +20,8 @@ interface Props {
   dossier: CitizenDossier; wardName?: string; onBack: () => void;
   onSubmitPrecheck: () => Promise<void>; onResubmitPrecheck?: () => Promise<void>;
   onUpdateChecklistItem?: (checklistId: string, status: 'PENDING' | 'COMPLETED') => Promise<void>;
+  /** Đổi trường hợp hồ sơ nháp (tạo hồ sơ mới theo trường hợp mới rồi hủy hồ sơ này). */
+  onChangeCase?: (caseCode: string) => Promise<void>;
   submitting?: boolean;
 }
 function goToPaper(id?: string | null) {
@@ -25,7 +30,14 @@ function goToPaper(id?: string | null) {
   element?.focus({ preventScroll: true }); element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPrecheck, onResubmitPrecheck, onUpdateChecklistItem, submitting = false }: Props) {
+export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPrecheck, onResubmitPrecheck, onUpdateChecklistItem, onChangeCase, submitting = false }: Props) {
+  // Tên trường hợp và danh sách trường hợp lấy từ thủ tục công khai; hồ sơ chỉ lưu mã (WF-CASE-01).
+  const procedureQuery = usePublicProcedureDetail(dossier.procedureId);
+  const procedureCases = procedureQuery.data?.contentPayload.cases ?? [];
+  const caseStep = requiresCaseChoice(procedureCases);
+  const caseName = caseDisplayName(dossier.caseCode, procedureCases);
+  const showCase = Boolean(dossier.caseCode) && (caseStep || Boolean(dossier.checklist?.some(item => item.caseCode)));
+  const [changeCaseOpen, setChangeCaseOpen] = useState(false);
   // Bản nháp chưa có phiên bản nộp nên không có nhận xét; tránh gọi rồi bị hủy khi chi tiết tải xong (version 0).
   const commentsQuery = useApplicationComments(dossier.status === 'Bản nháp' ? undefined : dossier.id, dossier.currentVersion);
   const cancelMutation = useCancelApplicationMutation();
@@ -48,7 +60,10 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
   const openComments = comments.filter(comment => comment.status === 'OPEN');
   const resolvedComments = comments.filter(comment => comment.status === 'RESOLVED');
   const statusLabel = dossier.status === 'Đã duyệt' ? 'Giấy tờ sẵn sàng' : revising ? 'Cần bổ sung' : dossier.status;
-  const currentStep = preparing ? 0 : approved || dossier.status === 'Đã từ chối' ? 2 : 1;
+  // Thủ tục nhiều trường hợp: bước "Chọn trường hợp" đã xong khi tạo hồ sơ (BE bắt buộc chọn lúc tạo)
+  const stepLabels = caseStep ? ['Chọn trường hợp', 'Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi'] : ['Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi'];
+  const currentStep = (preparing ? 0 : approved || dossier.status === 'Đã từ chối' ? 2 : 1) + (caseStep ? 1 : 0);
+  const canChangeCase = dossier.status === 'Bản nháp' && caseStep && Boolean(onChangeCase) && Boolean(dossier.id);
 
   return <div className="min-w-0 space-y-5 pb-8 [&_button]:min-h-11">
     <div className="flex items-center justify-between gap-3">
@@ -86,10 +101,23 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             </div>
           ))}
         </dl>
+        {showCase && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs">
+            <p className="min-w-0 break-words text-slate-700">
+              <span className="text-slate-500">Trường hợp: </span>
+              <strong className="font-semibold text-slate-900">{caseName ?? dossier.caseCode}</strong>
+            </p>
+            {canChangeCase && (
+              <Button size="small" variant="outline" disabled={submitting || mutating} onClick={() => setChangeCaseOpen(true)}>
+                <ArrowsLeftRight size={15} aria-hidden />Đổi trường hợp
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      <ol aria-label="Các bước tiền kiểm" className="grid grid-cols-3 border-t border-slate-200 bg-slate-50/60 px-3 py-3 sm:px-6">
-        {['Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi'].map((label, index) => (
+      <ol aria-label="Các bước tiền kiểm" className={`grid ${caseStep ? 'grid-cols-4' : 'grid-cols-3'} border-t border-slate-200 bg-slate-50/60 px-3 py-3 sm:px-6`}>
+        {stepLabels.map((label, index) => (
           <li key={label} aria-current={currentStep === index ? 'step' : undefined} className="flex flex-col items-center gap-1.5 text-center text-xs sm:flex-row sm:justify-center sm:text-xs">
             <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${index < currentStep ? 'bg-emerald-100 text-emerald-800' : index === currentStep ? 'bg-red-800 text-white' : 'border border-slate-200 bg-white text-slate-400'}`}>
               {index < currentStep ? <CheckCircle size={15} weight="bold" aria-hidden /> : index + 1}
@@ -182,6 +210,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                 checklist={dossier.checklist}
                 applicationId={dossier.id}
                 caseCode={dossier.caseCode}
+                caseName={caseName}
                 dossierStatus={dossier.status}
                 onUpdateChecklistItem={onUpdateChecklistItem}
                 onBusyChange={setDocumentBusy}
@@ -311,6 +340,19 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
     <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={revising ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa.">
       <div className="space-y-4">{contents.isPending && <Skeleton className="h-4 w-48" role="status" aria-label="Đang kiểm tra giấy tờ" />}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
     </Modal>
+    {canChangeCase && procedureQuery.data && (
+      <ChangeCaseModal
+        open={changeCaseOpen}
+        onOpenChange={setChangeCaseOpen}
+        cases={procedureCases}
+        currentCaseCode={dossier.caseCode}
+        checklist={procedureQuery.data.checklistSchema}
+        forms={procedureQuery.data.formDefinitions}
+        hasFiles={Boolean(contents.data && (contents.data.submissions.length || contents.data.supportingDocuments.length))}
+        busy={submitting}
+        onConfirm={async caseCode => { await onChangeCase!(caseCode); setChangeCaseOpen(false); }}
+      />
+    )}
     <Modal
       open={cancelModalOpen}
       onOpenChange={open => { if (!cancelMutation.isPending) setCancelModalOpen(open); }}
@@ -352,4 +394,65 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
       </div>
     </Modal>
   </div>;
+}
+
+/**
+ * Đổi trường hợp (WF-CASE-01): BE chưa có API đổi nên tạo hồ sơ nháp mới theo trường hợp mới rồi hủy hồ sơ này.
+ * Tệp đã tải không được chuyển và không bị xóa vĩnh viễn (vẫn trong hồ sơ đã hủy); có tệp thì phải xác nhận.
+ */
+function ChangeCaseModal({ open, onOpenChange, cases, currentCaseCode, checklist, forms, hasFiles, busy, onConfirm }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  cases: { caseCode: string; caseName: string }[];
+  currentCaseCode?: string;
+  checklist?: Parameters<typeof CasePicker>[0]['checklist'];
+  forms?: Parameters<typeof CasePicker>[0]['forms'];
+  hasFiles: boolean;
+  busy: boolean;
+  onConfirm: (caseCode: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [error, setError] = useState('');
+  const reset = () => { setSelected(''); setAcknowledged(false); setError(''); };
+  return (
+    <Modal
+      open={open}
+      onOpenChange={next => { if (busy) return; if (!next) reset(); onOpenChange(next); }}
+      title="Đổi trường hợp của hồ sơ"
+      description="Hệ thống tạo hồ sơ nháp mới theo trường hợp bạn chọn, giữ phường tiếp nhận và thông tin kê khai, rồi hủy hồ sơ nháp này."
+      className="sm:max-w-2xl"
+      footer={
+        <>
+          <Button variant="outline" disabled={busy} onClick={() => { reset(); onOpenChange(false); }}>Giữ trường hợp hiện tại</Button>
+          <Button
+            loading={busy}
+            disabled={!selected || (hasFiles && !acknowledged)}
+            onClick={async () => {
+              setError('');
+              try { await onConfirm(selected); reset(); }
+              catch (err) { setError(workflowError(err)); }
+            }}
+          >
+            Đổi sang trường hợp này
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <CasePicker cases={cases} value={selected} onChange={setSelected} checklist={checklist} forms={forms} currentCaseCode={currentCaseCode} disabled={busy} label="Chọn trường hợp mới" />
+        <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
+          <li>Hồ sơ mới dùng danh mục giấy tờ hiện hành của thủ tục.</li>
+          <li>Giấy tờ chung cần đính kèm lại ở hồ sơ mới. Giấy tờ của trường hợp cũ không còn được yêu cầu.</li>
+        </ul>
+        {hasFiles && (
+          <label className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-relaxed text-amber-950">
+            <input type="checkbox" checked={acknowledged} disabled={busy} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />
+            Tôi hiểu các tệp đã tải lên hồ sơ này không được chuyển sang hồ sơ mới. Tệp không bị xóa, vẫn nằm trong hồ sơ đã hủy.
+          </label>
+        )}
+        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800">{error}</p>}
+      </div>
+    </Modal>
+  );
 }

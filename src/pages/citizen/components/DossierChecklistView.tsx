@@ -9,7 +9,8 @@ import { CheckCircle, FileDoc, Paperclip, PencilSimple, UploadSimple, DownloadSi
 import { useAuthStore } from '@/stores/authStore';
 import { useApplicationContents, useDocumentMutations } from '@/hooks/useDocumentForms';
 import { documentFormApi, documentFormError, documentQuantitySchema, downloadBlob, isDocumentFileMissing, submissionStatusLabel, validateDocumentFile } from '@/lib/api/documentForms';
-import { hasChecklistEvidence } from '@/lib/documentEvidence';
+import { hasChecklistEvidence, hasFileEvidence, isPresentOnly } from '@/lib/documentEvidence';
+import { caseKey } from '@/lib/procedureCases';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { DocumentFilePreview } from '@/components/documents/DocumentFilePreview';
 import { DocumentAiVerificationCard } from '@/components/documents/DocumentAiVerificationCard';
@@ -21,6 +22,8 @@ const DocxOnlineEditor = lazy(() => import('@/components/documents/DocxOnlineEdi
 interface Props {
   procedureName: string; cases: ProcedureCase[]; checklist: ChecklistItem[];
   applicationId?: string; caseCode?: string; dossierStatus?: string;
+  /** Tên trường hợp hồ sơ đã chọn (lấy từ thủ tục); không có thì hiện mã. */
+  caseName?: string | null;
   onUpdateChecklistItem?: (checklistId: string, status: 'PENDING' | 'COMPLETED') => Promise<void>;
   onBusyChange?: (busy: boolean) => void;
 }
@@ -31,7 +34,7 @@ function isSupportedAiDocument(fileName: string): boolean {
   return lower.endsWith('.pdf') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
 }
 
-export function DossierChecklistView({ procedureName, checklist, applicationId, dossierStatus, onUpdateChecklistItem, onBusyChange }: Props) {
+export function DossierChecklistView({ procedureName, checklist, applicationId, caseCode, caseName, dossierStatus, onUpdateChecklistItem, onBusyChange }: Props) {
   const user = useAuthStore(s => s.user);
   const contents = useApplicationContents(applicationId);
   const mutations = useDocumentMutations();
@@ -55,6 +58,15 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     : 'Tệp không còn trên hệ thống lưu trữ. Hồ sơ đang khóa chỉnh sửa, vui lòng liên hệ cán bộ phường để được hướng dẫn.';
   const current = [...checklist].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const ready = (item: ChecklistItem) => Boolean(contents.data && hasChecklistEvidence(item, contents.data));
+  // WF-CASE-01: snapshot hồ sơ chỉ gồm giấy tờ chung + giấy tờ của trường hợp đã chọn; tách hai nhóm khi có giấy tờ riêng.
+  const numbered = current.map((raw, index) => ({ raw, index }));
+  const specific = numbered.filter(x => caseKey(x.raw.caseCode) !== null);
+  const sections = specific.length
+    ? [
+        { key: 'common', title: 'Giấy tờ chung', items: numbered.filter(x => caseKey(x.raw.caseCode) === null) },
+        { key: 'case', title: `Giấy tờ của trường hợp: ${caseName || caseCode || specific[0].raw.caseCode}`, items: specific },
+      ].filter(s => s.items.length)
+    : [{ key: 'all', title: '', items: numbered }];
 
   async function perform(item: ChecklistItem, action: () => Promise<void>, rethrow = false) {
     if (lock.current) { if (rethrow) throw new Error('Một thao tác tài liệu khác đang được lưu. Vui lòng chờ rồi thử lại.'); return; }
@@ -63,12 +75,14 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     catch (error) { setErrors(prev => ({ ...prev, [item.checklistId]: documentFormError(error) })); await contents.refetch(); if (rethrow) throw error; }
     finally { lock.current = false; setBusy(false); }
   }
-  async function syncChecklist(item: ChecklistItem) {
+  async function syncChecklist(item: ChecklistItem, afterDelete = false) {
     if (!applicationId) return;
     const fresh = await contents.refetch();
     if (!fresh.data || fresh.isError) throw new Error('Tệp đã lưu nhưng chưa kiểm tra được giấy tờ. Bấm “Kiểm tra lại giấy tờ” để thử lại.');
     if (dossierStatus === 'Bản nháp' && onUpdateChecklistItem) {
-      try { await onUpdateChecklistItem(item.checklistId, hasChecklistEvidence(item, fresh.data) ? 'COMPLETED' : 'PENDING'); }
+      // Giấy tờ xuất trình: giữ xác nhận "mang bản chính" khi thêm tệp; xóa tệp cuối cùng thì cần xác nhận lại.
+      const confirmed = isPresentOnly(item) && item.status === 'COMPLETED' && !afterDelete;
+      try { await onUpdateChecklistItem(item.checklistId, hasFileEvidence(item, fresh.data) || confirmed ? 'COMPLETED' : 'PENDING'); }
       catch { throw new Error('Tệp đã lưu nhưng chưa cập nhật trạng thái giấy tờ. Bấm “Kiểm tra lại giấy tờ” để thử lại.'); }
     }
   }
@@ -100,7 +114,14 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   if (contents.isError) return <div role="alert"><p>{documentFormError(contents.error)}</p><Button variant="outline" onClick={() => void contents.refetch()}>Thử lại</Button></div>;
   return <div className="space-y-4 [&_button]:min-h-11" aria-busy={busy}>
     {!current.length && <p>Hồ sơ không có mục giấy tờ cần đính kèm.</p>}
-    {current.map((raw, index) => {
+    {sections.map(section => <div key={section.key} className="space-y-4">
+    {section.title && (
+      <h4 className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 pb-1.5 text-sm font-bold text-slate-900">
+        <span className="min-w-0 break-words">{section.title}</span>
+        <span className="text-xs font-semibold text-slate-500">{section.items.filter(x => ready(x.raw)).length}/{section.items.length} hoàn tất</span>
+      </h4>
+    )}
+    {section.items.map(({ raw, index }) => {
       const altForms = (raw.forms ?? []).filter(f => f.formTemplateId);
       // Mẫu đang dùng: người dân vừa chọn → mẫu đã có tờ khai (giữ khi tải lại trang) → mẫu chính
       const submittedTemplate = altForms.length > 1 ? contents.data?.submissions.find(s => s.checklistId === raw.checklistId && altForms.some(f => f.formTemplateId === s.templateId))?.templateId : undefined;
@@ -109,6 +130,10 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       const submissions = contents.data?.submissions.filter(x => x.checklistId === item.checklistId) ?? [];
       const documents = contents.data?.supportingDocuments.filter(x => x.checklistId === item.checklistId) ?? [];
       const complete = ready(item);
+      const presentOnly = isPresentOnly(item);
+      const fileReady = Boolean(contents.data && hasFileEvidence(item, contents.data));
+      const confirmedPresent = presentOnly && complete && !fileReady;
+      const canConfirmPresent = presentOnly && !fileReady && dossierStatus === 'Bản nháp' && Boolean(onUpdateChecklistItem);
       const needsConfirmation = submissions.some(x => x.status === 'Draft' && x.fileExists);
       const fileInput = (
         <label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
@@ -179,7 +204,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                 </div>
               </div>
               <Badge variant={complete ? 'success' : needsConfirmation ? 'warning' : 'neutral'} className="px-2.5 py-0.5 text-[11px] shrink-0">
-                {complete ? 'Đã hoàn tất' : needsConfirmation ? 'Cần xác nhận tờ khai' : 'Chưa hoàn tất'}
+                {confirmedPresent ? 'Sẽ xuất trình tại quầy' : complete ? 'Đã hoàn tất' : needsConfirmation ? 'Cần xác nhận tờ khai' : 'Chưa hoàn tất'}
               </Badge>
             </div>
 
@@ -322,6 +347,23 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
               </div>
             ))}
 
+            {/* Giấy tờ chỉ xuất trình: không bắt buộc tải tệp; công dân xác nhận sẽ mang bản chính */}
+            {presentOnly && (
+              <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-950">
+                <p className="leading-relaxed">Chỉ cần mang bản chính đến Bộ phận Một cửa để cán bộ đối chiếu. Đính kèm bản chụp là không bắt buộc, giúp cán bộ kiểm tra trước.</p>
+                {editable && canConfirmPresent && (confirmedPresent ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 font-semibold text-emerald-800"><CheckCircle size={15} aria-hidden />Bạn đã xác nhận sẽ mang bản chính.</span>
+                    <Button size="small" variant="ghost" disabled={busy} onClick={() => void perform(item, async () => { await onUpdateChecklistItem!(item.checklistId, 'PENDING'); })}>Bỏ xác nhận</Button>
+                  </div>
+                ) : (
+                  <Button size="small" variant="outline" disabled={busy} onClick={() => void perform(item, async () => { await onUpdateChecklistItem!(item.checklistId, 'COMPLETED'); toast.success('Đã ghi nhận bạn sẽ xuất trình bản chính tại quầy.'); })}>
+                    <CheckCircle size={15} aria-hidden />Tôi sẽ mang bản chính khi đến quầy
+                  </Button>
+                ))}
+              </div>
+            )}
+
             {/* Upload for non-form items */}
             {!item.formTemplateId && editable && fileInput}
 
@@ -366,7 +408,8 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
         </section>
       );
     })}
-    {!editable && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Tài liệu đang được khóa chỉnh sửa theo trạng thái hồ sơ.</p>}
+    </div>)}
+    {!editable &&<p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Tài liệu đang được khóa chỉnh sửa theo trạng thái hồ sơ.</p>}
     {current.some(item => item.submissionType === 'XUAT_TRINH') && <p className="text-xs leading-relaxed text-slate-500">Hồ sơ “{procedureName}” có giấy tờ cần xuất trình. Hãy mang bản giấy khi đến Bộ phận Một cửa.</p>}
     <Modal open={Boolean(upload)} onOpenChange={open => { if (!open && !busy) { setUploads(queue => queue.slice(1)); quantityForm.reset({ quantity: 1 }); } }} title={uploads.length > 1 ? `Khai số bản trong tệp (còn ${uploads.length} tệp)` : 'Khai số bản trong tệp'} description="Nhập số bản giấy tờ thực tế được thể hiện trong tệp, không phải số trang.">
       <form className="space-y-4" onSubmit={quantityForm.handleSubmit(async ({ quantity }) => {
@@ -378,7 +421,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
         });
       })} noValidate><p className="break-all text-sm">{upload?.file.name}</p><Input label="Số bản thực tế" type="number" min={1} max={2147483647} required disabled={busy} {...quantityForm.register('quantity')} error={quantityForm.formState.errors.quantity?.message} />{upload && errors[upload.item.checklistId] && <p role="alert" className="text-sm text-red-800">{errors[upload.item.checklistId]}</p>}<Button type="submit" loading={busy}>Lưu giấy tờ</Button></form>
     </Modal>
-    <Modal open={Boolean(removing)} onOpenChange={open => { if (!open && !busy) setRemoving(undefined); }} title="Xóa giấy tờ khỏi hồ sơ" description="Sau khi xóa, bạn có thể cần đính kèm lại để hồ sơ đủ giấy tờ."><p className="mb-4 break-all">{removing?.name}</p>{removing && errors[removing.item.checklistId] && <p role="alert" className="mb-4 text-sm text-red-800">{errors[removing.item.checklistId]}</p>}<Button loading={busy} onClick={() => { if (!removing || !applicationId) return; const selected = removing; void perform(selected.item, async () => { await mutations.deleteSupporting.mutateAsync({ documentId: selected.id, applicationId }); setRemoving(undefined); await syncChecklist(selected.item); toast.success('Đã xóa giấy tờ.'); }); }}>Xác nhận xóa</Button></Modal>
+    <Modal open={Boolean(removing)} onOpenChange={open => { if (!open && !busy) setRemoving(undefined); }} title="Xóa giấy tờ khỏi hồ sơ" description="Sau khi xóa, bạn có thể cần đính kèm lại để hồ sơ đủ giấy tờ."><p className="mb-4 break-all">{removing?.name}</p>{removing && errors[removing.item.checklistId] && <p role="alert" className="mb-4 text-sm text-red-800">{errors[removing.item.checklistId]}</p>}<Button loading={busy} onClick={() => { if (!removing || !applicationId) return; const selected = removing; void perform(selected.item, async () => { await mutations.deleteSupporting.mutateAsync({ documentId: selected.id, applicationId }); setRemoving(undefined); await syncChecklist(selected.item, true); toast.success('Đã xóa giấy tờ.'); }); }}>Xác nhận xóa</Button></Modal>
     <Modal open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(undefined); }} title="Xem giấy tờ đã lưu" className="sm:max-w-4xl">{preview && <DocumentFilePreview key={preview.id} fileId={preview.id} fileName={preview.name} fileMissingMessage={fileMissingMessage} load={signal => /\.(pdf|png|jpe?g)$/i.test(preview.name) ? documentFormApi.previewSupportingDocument(preview.id, signal).catch(() => documentFormApi.downloadSupportingDocument(preview.id, signal)) : documentFormApi.downloadSupportingDocument(preview.id, signal)} />}</Modal>
     {editing && user && (
       <Suspense

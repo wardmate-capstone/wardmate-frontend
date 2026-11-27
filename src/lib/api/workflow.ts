@@ -534,6 +534,13 @@ export const workflowApi = {
 // Error Extractor & Humanizer for Workflow API
 // ----------------------------------------------------
 
+/** 400 `application.invalid_case`: thiếu/sai mã trường hợp khi tạo hồ sơ (WF-CASE-01). */
+export function isInvalidCaseError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const data = error.response?.data as { code?: string; extensions?: { code?: string } } | undefined;
+  return (data?.code ?? data?.extensions?.code) === 'application.invalid_case';
+}
+
 export function workflowError(error: unknown): string {
   if (error instanceof z.ZodError) {
     return 'Đã có lỗi khi tải dữ liệu. Vui lòng thử lại sau.';
@@ -577,6 +584,9 @@ export function workflowError(error: unknown): string {
       }
       if (code === 'application.invalid_status') {
         return 'Trạng thái hiện tại của hồ sơ không cho phép thực hiện thao tác này.';
+      }
+      if (code === 'application.invalid_case') {
+        return 'Vui lòng chọn đúng trường hợp của thủ tục. Danh sách trường hợp có thể vừa được cập nhật, hãy chọn lại.';
       }
       if (code === 'application.receipt_invalid') {
         return 'Cần xác nhận đã đối chiếu hồ sơ giấy và chọn ngày hẹn không nằm trong quá khứ.';
