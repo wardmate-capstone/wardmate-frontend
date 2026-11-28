@@ -1052,12 +1052,14 @@ export function ProcedureDraftWorkspace({
         </section>
       )}
       {preview && (
-        <section className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/30">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3">
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/30">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border-b border-amber-200 bg-amber-50 px-4 py-3">
             <div className="flex items-center gap-2"><CheckCircle size={20} className="text-amber-800" weight="fill" /><h2 className="text-[15px] font-semibold text-slate-950">Kết quả nhận diện AI</h2></div>
             <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">Chưa lưu bản nháp</span>
           </div>
-          <div className="space-y-4 p-4">
+          {/* Chia đôi trên màn hình rộng: PDF bên trái (dính khi cuộn), kiểm tra thông tin bên phải */}
+          <div className="grid gap-4 p-4 xl:grid-cols-2 xl:items-start">
+          <div className="min-w-0 space-y-4 xl:sticky xl:top-4">
             <div className="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-sm font-semibold" role="tablist" aria-label="Nội dung xem trước PDF">
               <button type="button" role="tab" aria-selected={previewMode === "pdf"} onClick={() => setPreviewMode("pdf")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "pdf" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>PDF gốc</button>
               <button type="button" role="tab" aria-selected={previewMode === "text"} onClick={() => setPreviewMode("text")} className={`min-h-10 rounded-lg px-4 transition ${previewMode === "text" ? "bg-white text-red-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>Văn bản nhận diện</button>
@@ -1093,13 +1095,15 @@ export function ProcedureDraftWorkspace({
                   <iframe
                     title="Tệp PDF đang xem"
                     src={pdfUrl}
-                    className={`w-full rounded-xl border border-slate-200 bg-white ${fullscreenPreviewPdf ? "h-[calc(100%-40px)]" : "h-[75vh] min-h-[500px]"}`}
+                    className={`w-full rounded-xl border border-slate-200 bg-white ${fullscreenPreviewPdf ? "h-[calc(100%-40px)]" : "h-[75vh] min-h-[500px] xl:h-[calc(100vh-10rem)]"}`}
                   />
                 </div>
               </div>
             ) : (
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100">{preview.extractedText}</pre>
+              <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100 xl:max-h-[calc(100vh-10rem)]">{preview.extractedText}</pre>
             )}
+          </div>
+          <div className="min-w-0 space-y-4">
             <details open className="rounded-xl border border-slate-200 bg-white">
               <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-800 focus-visible:ring-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">Kiểm tra thông tin đã nhận diện</summary>
               <div className="border-t border-slate-200 p-4">
@@ -1126,6 +1130,7 @@ export function ProcedureDraftWorkspace({
                 })}>Xuất bản thủ tục</Button>
               </div>
             )}
+          </div>
           </div>
         </section>
       )}
