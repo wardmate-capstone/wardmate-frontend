@@ -237,7 +237,8 @@ export function ProcedureApiList({
               Tổng số <strong>{result.data.totalCount}</strong> thủ tục · Trang{' '}
               <strong>{result.data.currentPage}</strong> / {Math.max(1, result.data.totalPages)}
             </span>
-            <div className="flex items-center gap-2">
+            {/* L-03: một trang thì không hiện nút chuyển trang. */}
+            {(result.data.hasPrevious || result.data.hasNext) && <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="small"
@@ -254,7 +255,7 @@ export function ProcedureApiList({
               >
                 Sau
               </Button>
-            </div>
+            </div>}
             </div>
           )}
         </div>

@@ -64,7 +64,7 @@ test('FE-02: danh sách hồ sơ báo lỗi 503 kèm Thử lại thay cho khung 
   await page.goto('/officer');
   await page.getByRole('button', { name: 'Tất cả hồ sơ', exact: true }).click();
   const table = page.getByRole('table', { name: 'Bảng danh sách hồ sơ hành chính' });
-  await expect(table.getByRole('alert')).toContainText('Hệ thống đang khởi động', { timeout: 10_000 });
+  await expect(table.getByRole('alert')).toContainText('Dịch vụ đang khởi động', { timeout: 10_000 });
   await expect(page.getByText('Chưa tải được danh sách hồ sơ', { exact: true })).toBeVisible();
   expect(calls).toBeGreaterThanOrEqual(2); // lần đầu + 1 lần tự thử lại
   healthy = true;

@@ -35,13 +35,30 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting } from '@/lib/utils';
 
+// M-09: mục đang mở nằm trên URL (?section=) để chia sẻ, đánh dấu và dùng nút Back.
+const MANAGER_SECTIONS: ManagerSectionId[] = ['overview', 'dispatch', 'applications', 'shifts', 'closures', 'leaves', 'consultations', 'stats-dossiers', 'stats-procedures', 'profiles', 'perf-officers', 'feedback-reports', 'satisfaction-level', 'profile'];
+const isManagerSection = (value: string | null): value is ManagerSectionId => Boolean(value && (MANAGER_SECTIONS as string[]).includes(value));
+
 export const ManagerPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const [currentSection, setCurrentSection] = useState<ManagerSectionId>('overview');
+  const [currentSection, setCurrentSectionState] = useState<ManagerSectionId>(() => {
+    const section = searchParams.get('section');
+    return isManagerSection(section) ? section : 'overview';
+  });
+  const setCurrentSection = (section: ManagerSectionId) => {
+    setCurrentSectionState(section);
+    if (searchParams.get('section') === section && !searchParams.has('applicationId')) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('section', section);
+      next.delete('applicationId');
+      return next;
+    });
+  };
   useEffect(() => {
     const section = searchParams.get('section');
-    if (section && ['dispatch', 'shifts', 'closures', 'leaves', 'consultations', 'applications'].includes(section)) setCurrentSection(section as ManagerSectionId);
+    if (isManagerSection(section)) setCurrentSectionState(section);
   }, [location.key, searchParams]);
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isCollapsedDesktop, setIsCollapsedDesktop] = useState(false);

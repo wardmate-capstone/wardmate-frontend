@@ -8,6 +8,7 @@ import {
   parseNotifications,
   type NotificationDto,
 } from '@/lib/api/notifications';
+import { useAuthStore } from '@/stores/authStore';
 
 export type NotificationConnectionStatus = 'connecting' | 'connected' | 'offline';
 
@@ -40,10 +41,22 @@ interface NotificationStore {
 }
 
 let activeConnection: HubConnection | null = null;
+/** Tài khoản sở hữu kết nối hiện tại. Đổi tài khoản trên cùng tab phải dựng kết nối mới bằng token mới. */
+let activeUserId: string | null = null;
 let restartTimer: number | undefined;
-let isDisposed = false;
 let restartAttempt = 0;
 let bulkMarkingDepth = 0;
+
+/** Dừng kết nối hiện tại; mọi callback của kết nối đó tự bỏ qua vì không còn là `activeConnection`. */
+function disposeActiveConnection() {
+  window.clearTimeout(restartTimer);
+  restartTimer = undefined;
+  restartAttempt = 0;
+  const previous = activeConnection;
+  activeConnection = null;
+  activeUserId = null;
+  if (previous) void previous.stop().catch(() => undefined);
+}
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   items: [],
@@ -57,24 +70,30 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   connect: () => {
-    if (activeConnection && isConnected(activeConnection)) {
+    const userId = useAuthStore.getState().user?.id ?? null;
+    if (!userId) return;
+    // Cùng tài khoản và kết nối còn sống (đang chạy hoặc đang tự thử lại) thì giữ nguyên.
+    if (activeConnection && activeUserId === userId) {
       return;
     }
 
-    isDisposed = false;
-    window.clearTimeout(restartTimer);
-    set({ status: 'connecting' });
+    // Đăng xuất rồi đăng nhập tài khoản khác trên cùng tab (không tải lại): đóng kết nối của phiên trước,
+    // xóa danh sách và bộ đếm, rồi mới dựng kết nối mới bằng token mới.
+    disposeActiveConnection();
 
     const connection = createNotificationConnection();
     activeConnection = connection;
-    set({ connection });
+    activeUserId = userId;
+    // Callback trễ của kết nối đã bị thay thế không được ghi vào store của tài khoản mới.
+    const isDisposed = () => activeConnection !== connection;
+    set({ connection, status: 'connecting', items: [], unreadCount: 0 });
 
     const loadInitialData = async () => {
       const [list, count] = await Promise.all([
         connection.invoke('GetNotifications', 1, PAGE_SIZE),
         connection.invoke<number>('GetUnreadCount'),
       ]);
-      if (isDisposed) return;
+      if (isDisposed()) return;
       const parsed = parseNotifications(list);
       set({
         items: parsed,
@@ -83,7 +102,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     };
 
     const start = async () => {
-      if (isDisposed) return;
+      if (isDisposed()) return;
       window.clearTimeout(restartTimer);
       set({ status: 'connecting' });
 
@@ -95,14 +114,14 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           await connection.start();
         }
         restartAttempt = 0;
-        if (isDisposed) return;
+        if (isDisposed()) return;
 
         await loadInitialData();
-        if (!isDisposed) {
+        if (!isDisposed()) {
           set({ status: 'connected' });
         }
       } catch {
-        if (isDisposed) return;
+        if (isDisposed()) return;
         set({ status: 'offline' });
         const delay = RESTART_DELAYS[Math.min(restartAttempt, RESTART_DELAYS.length - 1)];
         restartAttempt += 1;
@@ -115,6 +134,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     const recentEvents = new Map<string, number>();
 
     connection.on('ReceiveNotification', (value: unknown) => {
+      if (isDisposed()) return;
       const parsed = notificationDtoSchema.safeParse(value);
       if (parsed.success) {
         const incoming = parsed.data;
@@ -142,6 +162,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     });
 
     connection.on('UpdateUnreadCount', (value: unknown) => {
+      if (isDisposed()) return;
       // Đang đánh dấu tất cả: bỏ qua số đếm trung gian, sẽ đối chiếu một lần khi xong
       if (bulkMarkingDepth > 0) return;
       if (typeof value === 'number') {
@@ -150,16 +171,16 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     });
 
     connection.onreconnecting(() => {
-      if (!isDisposed) set({ status: 'connecting' });
+      if (!isDisposed()) set({ status: 'connecting' });
     });
 
     connection.onreconnected(() => {
-      if (isDisposed) return;
+      if (isDisposed()) return;
       void start();
     });
 
     connection.onclose(() => {
-      if (isDisposed) return;
+      if (isDisposed()) return;
       set({ status: 'offline' });
       restartAttempt = Math.max(restartAttempt, 1);
       restartTimer = window.setTimeout(() => void start(), RESTART_DELAYS[0]);
@@ -169,12 +190,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   disconnect: () => {
-    isDisposed = true;
-    window.clearTimeout(restartTimer);
-    if (activeConnection) {
-      void activeConnection.stop();
-      activeConnection = null;
-    }
+    disposeActiveConnection();
     set({
       connection: null,
       status: 'offline',

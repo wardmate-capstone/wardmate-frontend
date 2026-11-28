@@ -16,7 +16,9 @@ function DeliveryStatus({ state }: { state: string }) {
 function DeliveryError({ error, retry }: { error: unknown; retry?: () => void }) {
   return error ? <ErrorAlert onRetry={retry}>{notificationAdminError(error)}</ErrorAlert> : null;
 }
-function canReplay(row: DeliveryAdminDto) { return (row.state === 'Dead' || row.state === 'Blocked') && row.channel !== 'SMS'; }
+// L-32: SMS đã gỡ; kênh chưa cấu hình hoặc đã tắt/gỡ thì gửi lại chắc chắn thất bại, không cho bấm.
+const UNREPLAYABLE_ERRORS = new Set(['notification.channel_not_configured', 'channel_not_configured', 'channel_disabled', 'channel_removed']);
+function canReplay(row: DeliveryAdminDto) { return (row.state === 'Dead' || row.state === 'Blocked') && row.channel !== 'SMS' && !UNREPLAYABLE_ERRORS.has(row.errorCode ?? ''); }
 
 function DeliveryDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const [page, setPage] = useState(1);

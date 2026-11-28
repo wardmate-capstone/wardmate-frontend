@@ -48,6 +48,6 @@ export const notices = [
 export const faq = [
   { question: 'Tiền kiểm hồ sơ có phải là nộp hồ sơ trực tuyến không?', answer: 'Không. Tiền kiểm là bước cán bộ kiểm tra trước để giúp bạn chuẩn bị hồ sơ đầy đủ. Hồ sơ chính thức được tiếp nhận tại cơ quan có thẩm quyền.' },
   { question: 'Tôi có cần đăng nhập để tra cứu thủ tục không?', answer: 'Không. Bạn có thể tìm kiếm và đọc toàn bộ hướng dẫn công khai. Hệ thống chỉ yêu cầu đăng nhập khi bạn muốn lưu bản nháp, gửi tiền kiểm hoặc xem hồ sơ cá nhân.' },
-  { question: 'Khi nào hệ thống tạo mã QR?', answer: 'Mã QR chỉ được tạo sau khi cán bộ duyệt tiền kiểm. Hoàn thành tờ khai, tải tài liệu hoặc gửi bổ sung đều chưa tạo QR.' },
+  { question: 'Khi nào hệ thống tạo mã QR?', answer: 'Mã QR chỉ được tạo sau khi cán bộ xác nhận giấy tờ sẵn sàng. Hoàn thành tờ khai, tải tài liệu hoặc gửi bổ sung đều chưa tạo QR.' },
   { question: 'Nếu cán bộ yêu cầu bổ sung, tôi có phải làm lại hồ sơ không?', answer: 'Không. Hệ thống giữ nguyên nội dung không bị góp ý và đưa bạn đến đúng trường hoặc tài liệu cần sửa. Sau đó bạn gửi lại để cán bộ tiền kiểm lần nữa.' },
 ];

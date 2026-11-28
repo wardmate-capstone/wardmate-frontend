@@ -45,6 +45,20 @@ export function sessionExpiredUrl(currentPath: string): string {
   const query = new URLSearchParams({ reason: 'session-expired', returnTo: safeReturnTo(currentPath) });
   return '/dang-nhap?' + query.toString();
 }
+/**
+ * M-01: chỉ báo "Phiên đăng nhập đã hết hạn" khi trình duyệt này từng có phiên. Đây chỉ là cờ
+ * "đã từng đăng nhập" (không chứa token hay dữ liệu cá nhân); khách chưa đăng nhập thì không có cờ.
+ */
+const HAD_SESSION_KEY = 'wardmate:had-session';
+export function markHadSession(value: boolean) {
+  try {
+    if (value) window.localStorage.setItem(HAD_SESSION_KEY, '1');
+    else window.localStorage.removeItem(HAD_SESSION_KEY);
+  } catch { /* Trình duyệt chặn lưu trữ: coi như khách. */ }
+}
+export function hadSession(): boolean {
+  try { return window.localStorage.getItem(HAD_SESSION_KEY) === '1'; } catch { return false; }
+}
 export function redirectToLogin() {
   if (typeof window === 'undefined') return;
   if (window.location.pathname === '/dang-nhap') return;

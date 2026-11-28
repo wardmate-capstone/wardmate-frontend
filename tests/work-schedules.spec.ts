@@ -291,7 +291,7 @@ test('Frontdesk xác nhận fingerprint cá nhân và gửi đổi giờ với v
   await change.getByLabel('Giờ bắt đầu đề xuất (Việt Nam)').fill('06:30');
   await change.getByLabel('Giờ kết thúc đề xuất (Việt Nam)').fill('11:30');
   await change.getByRole('button', { name: 'Xác nhận', exact: true }).click();
-  await expect(change.getByRole('alert')).toContainText('07:30–17:00');
+  await expect(change.getByRole('alert')).toContainText('07:30–16:30');
   await change.getByLabel('Giờ bắt đầu đề xuất (Việt Nam)').fill('08:30');
   await change.getByLabel('Giờ kết thúc đề xuất (Việt Nam)').fill('10:00');
   await change.getByRole('button', { name: 'Xác nhận', exact: true }).click();

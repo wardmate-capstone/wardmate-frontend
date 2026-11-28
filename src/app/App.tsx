@@ -4,6 +4,7 @@ import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/Toast';
 import { NotificationToastSubscriber } from '@/components/notifications/NotificationToastSubscriber';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { RouteTitle } from '@/components/layout/RouteTitle';
 import { HomePage } from '@/pages/public/HomePage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { AuthPage } from '@/pages/auth/AuthPage';
@@ -51,6 +52,7 @@ export function App() {
       <LazyMotion features={domAnimation} strict>
         <UserProfileProvider>
           <BrowserRouter>
+            <RouteTitle />
             <Suspense fallback={<WorkspaceLoadingFallback />}>
               <Routes>
                 <Route element={<ProtectedRoute roles={['REGISTERED_CITIZEN']} permissions={['document.submissions.']} />}>

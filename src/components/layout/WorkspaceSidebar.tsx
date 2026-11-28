@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -49,6 +50,13 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
   const activeFeature = permissionFeatures.find(feature => feature.id === params.get('feature') && hasAnyPermission(permissions, feature.permissions));
   const sidebarId = `${workspace}-sidebar`;
   const select = (section: Section) => { setParams(current => { const next = new URLSearchParams(current); next.delete('feature'); return next; }); onSelectSection(section); onClose(); };
+  // L-15: Ctrl/Cmd + bấm hoặc bấm chuột giữa mở mục trong tab mới (mỗi khu làm việc đọc ?section= từ URL).
+  const openInNewTab = (event: MouseEvent, section: Section) => {
+    if (!(event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1)) return false;
+    event.preventDefault();
+    window.open(`${window.location.pathname}?section=${encodeURIComponent(section)}`, '_blank', 'noopener');
+    return true;
+  };
   useEffect(() => {
     if (!activeFeature) return;
     const bodyOverflow = document.body.style.overflow;
@@ -69,9 +77,9 @@ export function WorkspaceSidebar<Section extends string>({ workspace, subtitle, 
           const expanded = expandedItems[String(id)] ?? true;
           if (children?.length) return <div className="workspace-nav-tree" key={id}>
             <button type="button" className={`admin-nav-parent ${childActive ? 'is-active' : ''}`} aria-expanded={expanded} onClick={() => setExpandedItems(current => ({ ...current, [String(id)]: !expanded }))} title={isCompact ? label : undefined}><Icon size={20} aria-hidden /><span>{label}</span><CaretDown size={14} className={expanded ? '' : '-rotate-90'} aria-hidden /></button>
-            {(expanded || isCompact) && <div className="admin-subnav-tree">{children.map(({ id: childId, label: childLabel, icon: ChildIcon }) => <button key={childId} type="button" className={`admin-subnav-btn ${activeSection === childId ? 'is-active' : ''}`} aria-current={activeSection === childId ? 'page' : undefined} onClick={() => select(childId)} title={isCompact ? childLabel : undefined}>{ChildIcon && <ChildIcon size={16} aria-hidden />}<span>{childLabel}</span></button>)}</div>}
+            {(expanded || isCompact) && <div className="admin-subnav-tree">{children.map(({ id: childId, label: childLabel, icon: ChildIcon }) => <button key={childId} type="button" className={`admin-subnav-btn ${activeSection === childId ? 'is-active' : ''}`} aria-current={activeSection === childId ? 'page' : undefined} onClick={event => { if (!openInNewTab(event, childId)) select(childId); }} onAuxClick={event => { if (event.button === 1) openInNewTab(event, childId); }} title={isCompact ? childLabel : undefined}>{ChildIcon && <ChildIcon size={16} aria-hidden />}<span>{childLabel}</span></button>)}</div>}
           </div>;
-          return <button key={id} type="button" className={activeSection === id ? 'is-active' : ''} aria-current={activeSection === id ? 'page' : undefined} onClick={() => select(id)} title={isCompact ? label : undefined}><Icon size={20} aria-hidden /><span>{label}</span></button>;
+          return <button key={id} type="button" className={activeSection === id ? 'is-active' : ''} aria-current={activeSection === id ? 'page' : undefined} onClick={event => { if (!openInNewTab(event, id)) select(id); }} onAuxClick={event => { if (event.button === 1) openInNewTab(event, id); }} title={isCompact ? label : undefined}><Icon size={20} aria-hidden /><span>{label}</span></button>;
         })}</div>)}
       </nav>
     </aside>;

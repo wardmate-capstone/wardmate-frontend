@@ -36,8 +36,8 @@ test('home suggestions open procedure results with the same keyword and API filt
   const { catalog } = await publicMocks(page);
   await page.goto('/');
   // FE-06: gợi ý lấy từ thủ tục nổi bật đang công khai, không cố định trong code
-  // Tên thủ tục rút còn 5 từ làm nút gợi ý; tên đầy đủ ở title
-  const suggestion = page.getByRole('button', { name: 'Đăng ký khai sinh từ', exact: true });
+  // Tên thủ tục rút còn 5 từ kèm "…" làm nút gợi ý (FE-06); tên đầy đủ ở title; ô tìm kiếm bỏ dấu "…"
+  const suggestion = page.getByRole('button', { name: 'Đăng ký khai sinh từ…', exact: true });
   await expect(suggestion).toHaveAttribute('title', 'Đăng ký khai sinh từ API');
   await suggestion.click();
   await expect(page).toHaveURL('/thu-tuc?' + new URLSearchParams({ q: 'Đăng ký khai sinh từ' }));

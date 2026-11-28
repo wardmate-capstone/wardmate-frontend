@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowsClockwise, Plus, UploadSimple } from '@phosphor-icons/react';
@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/Toast';
 import { FormTemplateActions } from '@/components/forms/FormTemplateActions';
 import { useAuthStore } from '@/stores/authStore';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { createFormTemplate, createFormTemplateSchema, formTemplateErrorMessage, getFormTemplates, uploadFormTemplateDocx, type CreateFormTemplateInput, type FormTemplateDto } from '@/lib/api/formTemplates';
+import { createFormTemplate, createFormTemplateSchema, formTemplateErrorMessage, getFormTemplates, probeFormTemplateFile, uploadFormTemplateDocx, type CreateFormTemplateInput, type FormTemplateDto } from '@/lib/api/formTemplates';
 
 export function FormsView() {
   const user = useAuthStore(s => s.user);
@@ -33,6 +33,18 @@ export function FormsView() {
     queryFn: ({ signal }) => getFormTemplates({ page, pageSize: 10, searchCode, isActive: filter === 'ALL' ? undefined : filter === 'ACTIVE' }, signal),
     enabled: Boolean(user && canRead),
   });
+  // FE-13: bản ghi còn `fileDocxUrl` không bảo đảm tệp còn trong kho. Kiểm tra từng mẫu của trang đang xem
+  // (chỉ đọc phần đầu phản hồi) để không ghi "Đã có tệp Word" cho mẫu đã mất tệp.
+  const fileChecks = useQueries({
+    queries: (list.data?.items ?? []).map(item => ({
+      queryKey: ['form-templates', user?.id, 'file-status', item.id, item.updatedAtUtc, item.fileDocxUrl],
+      queryFn: ({ signal }: { signal: AbortSignal }) => probeFormTemplateFile(item.id, signal),
+      enabled: Boolean(item.fileDocxUrl),
+      staleTime: 5 * 60_000,
+      retry: false,
+    })),
+  });
+  const fileStatus = (index: number) => fileChecks[index]?.data;
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['form-templates'] });
   const create = useMutation({ mutationFn: createFormTemplate });
   const upload = useMutation({ mutationFn: ({ id, file }: { id: string; file: File }) => uploadFormTemplateDocx(id, file) });
@@ -112,19 +124,25 @@ export function FormsView() {
                     lastCellClassName="text-right"
                   />
                 ) : (
-                  list.data.items.map((item) => (
+                  list.data.items.map((item, index) => {
+                    const missing = Boolean(item.fileDocxUrl) && fileStatus(index) === 'missing';
+                    const hasFile = Boolean(item.fileDocxUrl) && !missing;
+                    return (
                     <tr key={item.id} className="border-b border-slate-100">
             <td className="min-w-44"><p className="font-semibold">{item.code}</p><p className="mt-1">{item.title}</p></td>
-            <td className="whitespace-nowrap"><Badge variant={item.fileDocxUrl ? 'success' : 'warning'}>{item.fileDocxUrl ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge></td>
+            <td className="whitespace-nowrap">{missing
+              ? <Badge variant="danger" title="Bản ghi còn đường dẫn nhưng tệp Word không còn trong kho.">Mất tệp, cần tải lại</Badge>
+              : <Badge variant={hasFile ? 'success' : 'warning'}>{hasFile ? 'Đã có tệp Word' : 'Chưa có tệp'}</Badge>}</td>
             <td className="whitespace-nowrap">{item.isActive ? 'Hoạt động' : 'Tạm dừng'}</td>
             <td className="w-[380px] min-w-[350px]">
-              <FormTemplateActions templateId={item.id} name={item.title} hasFile={Boolean(item.fileDocxUrl)} onReupload={canManage ? () => openUpload(item) : undefined} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
-                {item.fileDocxUrl ? <ArrowsClockwise size={16} aria-hidden /> : <UploadSimple size={16} aria-hidden />}
-                {item.fileDocxUrl ? 'Thay đổi' : 'Tải lên'}
+              <FormTemplateActions templateId={item.id} name={item.title} hasFile={hasFile} onReupload={canManage ? () => openUpload(item) : undefined} managementAction={canManage && <Button variant="outline" size="small" className="gap-1.5 rounded-lg px-3 shadow-none hover:translate-y-0" onClick={() => openUpload(item)}>
+                {hasFile ? <ArrowsClockwise size={16} aria-hidden /> : <UploadSimple size={16} aria-hidden />}
+                {hasFile ? 'Thay đổi' : 'Tải lên'}
               </Button>} />
             </td>
           </tr>
-                  ))
+                    );
+                  })
                 )}
                 {!list.isPending && list.data.items.length === 0 && (
                   <tr>

@@ -134,6 +134,33 @@ export async function downloadPublicFormTemplateDocx(templateId: string, signal?
   return downloadDocx(`/api/v1/public/form-templates/${templateId}/download-docx`, templateId, signal, true);
 }
 
+/**
+ * FE-13: kiểm tra tệp Word của mẫu còn trong kho mà không tải cả tệp. BE chỉ có GET download-docx
+ * (không có HEAD), nên đọc phần đầu phản hồi rồi hủy luồng dữ liệu ngay. 404 = bản ghi còn
+ * `fileDocxUrl` nhưng tệp đã mất khỏi kho. Lỗi khác (mạng, 5xx) trả 'unknown' để không báo sai.
+ */
+export async function probeFormTemplateFile(templateId: string, signal?: AbortSignal): Promise<'ok' | 'missing' | 'unknown'> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  try {
+    const response = await api.get<ReadableStream | null>(documentPath(`/api/v1/form-templates/${templateId}/download-docx`), {
+      adapter: 'fetch',
+      responseType: 'stream',
+      signal: controller.signal,
+    });
+    void response.data?.cancel?.().catch(() => undefined);
+    return 'ok';
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return 'missing';
+    if (signal?.aborted) throw error;
+    return 'unknown';
+  } finally {
+    controller.abort();
+    signal?.removeEventListener('abort', abort);
+  }
+}
+
 async function downloadDocx(path: string, templateId: string, signal: AbortSignal | undefined, skipAuth: boolean): Promise<{ blob: Blob; fileName: string }> {
   const response = await api.get<Blob>(documentPath(path), {
     skipAuth,

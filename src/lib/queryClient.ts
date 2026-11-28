@@ -15,7 +15,8 @@ export const queryClient = new QueryClient({
       retry: (count, error) => {
         if (axios.isCancel(error) || !axios.isAxiosError(error)) return false;
         const status = error.response?.status;
-        return count < 1 && (status === undefined || status >= 500);
+        // 503 khởi động đã được interceptor (src/lib/api/index.ts) tự gọi lại 2 lần; không nhân thêm.
+        return count < 1 && (status === undefined || (status >= 500 && status !== 503));
       },
     },
     // Không tự gửi lại thao tác ghi khi chưa biết kết quả phía server.

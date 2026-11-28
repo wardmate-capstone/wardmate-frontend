@@ -293,9 +293,14 @@ export function KnowledgeBaseView() {
                           <div className="kb-row-actions">
                             {editable && <Button size="small" variant="ghost" onClick={() => setEditingId(doc.id)} aria-label={`Sửa ${doc.title}`}>Sửa</Button>}
                             {needsReindex && <Button size="small" variant="ghost" onClick={() => setAction({ action: 'reindex', doc })} aria-label={`Chuẩn bị lại cho AI ${doc.title}`}>Chuẩn bị lại cho AI</Button>}
+                            {/* L-28: nguồn đồng bộ từ thủ tục đang ẩn sẽ bị tác vụ đồng bộ tắt lại; bật bằng cách công khai lại thủ tục. */}
+                            {!doc.isActive && !editable ? (
+                              <span className="inline-flex min-h-9 items-center px-2 text-xs text-slate-500" title="Tài liệu đồng bộ từ thủ tục đang ẩn. Công khai lại thủ tục ở phân hệ Quản lý thủ tục để AI dùng lại.">Theo thủ tục</span>
+                            ) : (
                             <Button size="small" variant="ghost" onClick={() => setAction({ action: doc.isActive ? 'deactivate' : 'activate', doc })} aria-label={`${doc.isActive ? 'Ngừng dùng' : 'Dùng lại'} ${doc.title}`}>
                               {doc.isActive ? 'Ngừng dùng' : 'Dùng lại'}
                             </Button>
+                            )}
                             <details className="kb-more">
                               <summary aria-label={`Thao tác khác cho ${doc.title}`}>Khác</summary>
                               <Button size="small" variant="ghost" onClick={() => setAction({ action: 'rechunk', doc })} aria-label={`Chia lại nội dung ${doc.title}`}>Chia lại nội dung</Button>

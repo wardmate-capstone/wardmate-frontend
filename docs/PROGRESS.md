@@ -1,5 +1,53 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-FULLTEST-1128 — Sửa lỗi FE theo báo cáo `public/full-test-2026-11-28-FE.pdf` — 28/11/2026 (Asia/Saigon, UTC+07:00)
+
+Chỉ sửa FE, không đổi BE (theo yêu cầu người dùng). Chưa chạy Git (theo CLAUDE.md).
+
+**Mức Cao**
+- **H-01** `src/stores/notificationStore.ts`: mỗi kết nối SignalR gắn với một tài khoản; mọi callback (tải danh sách, ReceiveNotification, UpdateUnreadCount, onclose/tự kết nối lại) kiểm tra còn là kết nối hiện tại. Đổi tài khoản trên cùng tab: `stop()` kết nối cũ, xóa danh sách + bộ đếm, dựng kết nối mới bằng token mới. Nguyên nhân cũ: cờ `isDisposed` dùng chung bị đặt lại khi kết nối mới chạy nên callback trễ của phiên công dân ghi vào store của cán bộ; `connect()` bỏ qua nếu có bất kỳ kết nối nào đang sống.
+- **FE-03** `src/lib/defaultStaffSchedule.ts`, `staffingValidation.ts`, `MonthlyScheduleView.tsx`, `ScheduleWeekPattern.tsx`: giờ mặc định và khung đề nghị đổi ca 07:30–16:30 (trước là 17:00). BE không ràng buộc khung giờ ca.
+
+**Mức Vừa**
+- **FE-13/M-02** `FormTemplateActions.tsx`, `ProcedureFormLink.tsx`, `FormsView.tsx`, `formTemplates.ts` (`probeFormTemplateFile`): bỏ "Đã có mẫu Word." khi tệp mất (404); công dân/khách thấy "Mẫu chưa có tệp, vui lòng liên hệ phường."; cán bộ khác thấy "báo Quản lý thủ tục"; Quản lý thủ tục có nút "Tải lên lại". 404 không thử lại, khóa nút tải, toast có `id` (không lặp), câu chờ "Đang tải nội dung biểu mẫu…". Danh sách biểu mẫu kiểm tra tệp từng mẫu của trang đang xem (GET đọc phần đầu rồi hủy, BE không có HEAD) → nhãn "Mất tệp, cần tải lại".
+- **M-01** `authRedirect.ts` (`markHadSession`/`hadSession`, cờ localStorage không chứa token), `lib/api/index.ts`, `AuthPage.tsx`: khách mở khu làm việc chỉ thấy "Vui lòng đăng nhập để tiếp tục."; chỉ báo hết phiên khi trình duyệt từng đăng nhập hoặc hết hạn trong lúc dùng.
+- **M-16** `lib/api/index.ts`, `queryClient.ts`: 503 khởi động (không mã hoặc `auth.session_unavailable`) tự gọi lại GET 2 lần (1,5 s, 3 s); hết lượt báo "Dịch vụ đang khởi động, vui lòng thử lại sau vài giây." thay cho "Không thể xác minh phiên đăng nhập lúc này". Lệnh ghi không tự gửi lại; React Query không retry thêm 503.
+- **M-04** `CitizenDossierDetailView.tsx`, `CitizenQrCodeView.tsx` (export `ApprovedQr`): khối "Mã QR đối chiếu tại quầy" + nút "Xem và tải mã QR" trên trang chi tiết hồ sơ sẵn sàng.
+- **M-07** `workflowAdapters.ts`, `citizen/types.ts`, `CitizenDossierDetailView.tsx`, `OfficerReviewWorkspaceView.tsx`, `OfficerAuditLogView.tsx`: hiện số biên nhận, thời điểm tiếp nhận, ngày hẹn (trang hồ sơ công dân + cán bộ, dòng OFFICIALLY_RECEIVED ở Lịch sử trạng thái); "Lý do:" → "Ghi chú:"; ô "Quyền xử lý" theo nút đang bật (Bạn đang thụ lý / Tiếp nhận tại quầy / Đã tiếp nhận / Chỉ xem) — gộp **L-24**.
+- **M-08** `OfficerPage.tsx`: toast dùng mã HS-… (lấy từ hồ sơ đang mở nếu không có trong trang danh sách).
+- **M-09** `OfficerPage.tsx`, `ManagerPage.tsx`, `AdminPage.tsx`: mục menu ghi lên `?section=` (Back/chia sẻ/đánh dấu được). Thêm mục "Đã tiếp nhận tại quầy" cho cán bộ (`apps-received`, lọc OFFICIALLY_RECEIVED) và công dân (`dossiers_received`); Manager đã có sẵn.
+- **M-13** `ProcedureDraftWorkspace.tsx`: dòng bản nháp hiện mã · tên thủ tục (từ thủ tục đã xuất bản hoặc nội dung bản nháp), tên tệp chuyển xuống dòng phụ; tiêu đề có tổng số bản nháp (đếm như Tổng quan, tối đa 50) và "Trang N/M".
+- **M-17** `CitizenDossierDetailView.tsx`, `CitizenDashboardView.tsx`: thêm bước cuối "Tiếp nhận tại quầy" (đã tiếp nhận → mọi bước hoàn tất); ô trạng thái không còn ghi "đang được cán bộ kiểm tra"; ẩn ghi chú yêu cầu bổ sung cũ khi đã gửi lại/đã tiếp nhận; "Đã hoàn tất" đếm cả hồ sơ đã tiếp nhận; "Đang xử lý" đếm cả "Đã gửi lại".
+- **M-06/M-10**: chưa làm, chờ BE trả `caseName` và tên thủ tục.
+
+**Mức Thấp**
+- FE-06 gợi ý tìm kiếm cắt theo từ + "…" (`useProcedureCategories.ts`, tìm kiếm bỏ dấu "…"); FE-18 bảng "Tất cả hồ sơ" giới hạn cột Thủ tục (2 dòng) và Cán bộ, `min-w` 820 px, hồ sơ đã tiếp nhận có nút "Chi tiết".
+- L-01 trang chủ dùng chung 6 bước với trang Hướng dẫn; L-02 `<title>` theo trang (`components/layout/RouteTitle.tsx`, kể cả 404); L-03 ẩn nút chuyển trang khi chỉ 1 trang (`Pagination`, trang Thủ tục công khai); L-04 thủ tục 1 trường hợp hiện thẳng danh mục giấy tờ; L-05 một câu báo "chưa khớp", ô xác nhận gợi ý "Nhập lại mật khẩu"; L-06 "hoàn tất tiền kiểm" + trả focus về nút Điều khoản (sửa cả FAQ "duyệt tiền kiểm"); L-07 phụ đề logo xuống dòng ở màn hẹp, link đăng nhập/đăng ký cao 44 px.
+- L-09 "Cần chỉnh sửa" thống nhất Tổng quan/menu/chi tiết; L-10 hộp "Xác nhận gửi" có nút Hủy và liệt kê giấy tờ sẽ gửi; L-12 giấy tờ gắn nhiều mẫu có ô chọn "Tệp bạn tải lên là theo mẫu nào?" (chỉ khi chưa có tờ khai); L-14 `?section=` sai/thiếu về màn mặc định, chi tiết hồ sơ không tìm thấy có thông báo + nút về danh sách; L-15 Ctrl/Cmd/chuột giữa trên menu mở tab mới, alt ảnh QR "Mã QR đối chiếu hồ sơ HS-…"; L-16 toast khi tải tờ khai/giấy tờ; L-17 "Hồ sơ gần đây" xếp theo giờ cập nhật (sửa luôn hàm đọc ngày đang sai định dạng).
+- L-19 `formatFileSize` (KB dưới 1 MB); L-20 tên mục nhận xét xuống dòng, "Xem tại mục" tách dòng, toast "Đã lưu nhận xét."; L-21 "Vẫn do X phụ trách" thay "Từ: A1 · Đến: A1"; L-22 lịch ca: T7/CN không có ca ghi "Cuối tuần", cán bộ không thấy nhãn "Chỉ xem" lặp mọi ngày; L-23 nhắc "chưa được gán lĩnh vực" có nút "Đã hiểu" (ẩn trong phiên); L-25/L-31 thêm phụ đề phân biệt Điều phối/Giám sát hồ sơ và Tài khoản đăng nhập/Người dùng hệ thống; L-26 tên kết thúc bằng mã số (A1, A2) dùng mã làm chữ ảnh đại diện; L-27 tiêu đề cột chữ thường 12 px; L-28 nguồn AI đồng bộ từ thủ tục đang ẩn không còn nút "Dùng lại" (ghi "Theo thủ tục" kèm giải thích); L-29 gợi ý "Đang ẩn" rõ nghĩa; L-32 cảnh báo Tổng quan chỉ đếm lượt Email/IN_APP, ẩn "Gửi lại" khi kênh chưa cấu hình/đã tắt/đã gỡ.
+
+**Chưa làm / giới hạn**
+- L-08 (toast 2 lần) do StrictMode ở dev, cần kiểm lại trên bản deploy; L-13 (nhận PDF scan đã ký ở mục tờ khai) cần BE chấp nhận; L-18 chờ chủ dự án xác nhận nghiệp vụ; L-22 phần "năm chỉ 2025–2027" giữ nguyên thiết kế (năm trước/nay/sau); L-25/L-31 chỉ làm rõ chữ, gộp chức năng cần chủ dự án quyết định; L-12 chưa hỗ trợ nhiều tờ khai cho một giấy tờ (BE lưu một tờ khai/mục).
+- Kiểm tra tệp mẫu (FE-13) gửi 1 GET/mẫu có tệp của trang đang xem (tối đa 10), lưu đệm 5 phút; danh sách bản nháp (M-13) đọc chi tiết các bản cần đối soát của trang đang xem.
+- Kết quả kiểm thử dùng mock HTTP; chưa kiểm trên Azure/SignalR thật.
+
+**Rà soát giao diện toàn bộ màn hình (cùng ngày)**
+- Spec mới `tests/ui-sweep-1128.spec.ts`: mở mọi mục menu của 5 khu làm việc (theo `?section=`) và 8 trang công khai ở 1440 px và 390 px, chụp ảnh vào `test-results/ui-sweep/`, tự kiểm không tràn ngang, không phần tử vượt mép phải, không lỗi runtime. Kết quả 11/11 nhóm đạt (mock, dữ liệu đa số rỗng/lỗi nên chỉ kiểm bố cục).
+- Đã sửa theo ảnh chụp:
+  - thanh đầu trang Cán bộ/Quản lý 68 → 72 px cho thẳng đường kẻ logo như các khu khác;
+  - `ErrorAlert` luôn căn trái (trong bảng trước bị căn phải theo cột Thao tác), nút Thử lại tự xuống dòng khi hẹp;
+  - lỗi thống kê (`AnalyticsStatus`) dùng `ErrorAlert` chung thay khung nền be căn giữa; thẻ "Kết quả tiền kiểm"/"Hạn xử lý" ở Tổng quan quản lý có trạng thái trống thay vì thân rỗng;
+  - Giám sát hồ sơ: không hiện 2 khung cùng một lỗi và không hiện "Không có hồ sơ nào phù hợp" khi danh sách lỗi;
+  - cán bộ: khung lỗi hàng đợi chỉ ở Tổng quan, đặt dưới tiêu đề (trước nằm trên tiêu đề và hiện cả ở Lịch ca/Nghỉ phép/Tham vấn);
+  - `<p role="alert">` trơn (thông báo thiếu quyền, 15 nơi) hiện cùng một khung vàng nhạt (`workspace-ui.css`);
+  - Hồ sơ cá nhân cán bộ/quản trị: thẻ định danh hết nửa bề rộng do `md:col-span-2` tạo lưới 2 cột ngầm → sửa, trường xếp 2 cột; nhãn thẻ Tài khoản cùng kiểu nhãn (bỏ dấu ":");
+  - tiêu đề có dòng mô tả ở Tổng quan/Hồ sơ của tôi (công dân) và Danh sách thủ tục để tiêu đề thẳng hàng giữa các trang; rút gọn gợi ý ô số liệu công dân;
+  - nút "Áp dụng" bộ lọc thống kê cùng cỡ nút thanh công cụ; phân trang Danh sách thủ tục và bảng Tài khoản/Người dùng (Admin) ẩn nút khi một trang (Admin chuyển sang `Pagination` chung).
+- **Kiểm thử:** typecheck, lint, build đạt. Bộ Playwright đầy đủ (427 ca, mock) chạy trước rà soát: 336 đạt, 91 hỏng; chạy lại tuần tự còn 87 hỏng ổn định. Đã phân loại: các ca do thay đổi lần này (câu báo 503, nhãn gợi ý "…", câu "Đã có mẫu Word") đã cập nhật test; `work-schedules:335` do lỗi hàng đợi hiện ở trang lịch → đã sửa code, nay đạt. Phần còn lại là test cũ lệch giao diện hiện tại (vd. chờ tiêu đề "Kho biểu mẫu Word", nút "Xem danh sách hồ sơ sẵn sàng", "Tổng quan công dân", `MarkRead` từng mục thay vì `MarkAllRead`, nút "Trang sau" khi danh sách đã tải dần). `auth.spec:85` hỏng cả khi khôi phục `lib/api/index.ts` về logic cũ, nên không do M-01/M-16. Không chạy Git nên không đối chiếu được với commit gốc; cần dọn các test cũ ở một task riêng.
+- Chạy lại sau rà soát giao diện (13 file: analytics, manager, admin-provisioning, admin-rbac, ui-review-1126, procedure-manager, landing, workspace-sidebar, ui-audit, citizen-dossier-ui, staffing-ui, schedule-calendar, auth; 2 worker): 123 đạt, 10 hỏng. `landing:57` do trang chủ có tiêu đề bước "Đăng nhập và chọn nơi tiền kiểm" → sửa test khớp chính xác, nay đạt. `analytics:6`, `landing:145` đạt khi chạy riêng (chập chờn khi song song). 7 ca còn lại thuộc nhóm lỗi cũ đã nêu (`auth:85,135,187`, `manager:109`, `landing:134,170`, `ui-audit` MANAGER).
+- Test mới/cập nhật: `auth.spec` (M-01), `landing.spec:57`, `ui-sweep-1128.spec.ts`, `form-templates.spec`, `public-search-chat.spec:35`, `procedure-manager.spec:76`, `ui-review-1126.spec:53`, `work-schedules.spec:294`, `staffing-validation-check.mjs` (71/71).
+- **Commit gợi ý (chia theo hạng mục):** `fix(notifications): bind SignalR connection to the signed-in user`; `fix(staffing): use 07:30–16:30 working hours`; `fix(forms): report missing template files and stop retrying 404`; `fix(auth): distinguish guests from expired sessions and retry 503 startup`; `feat(citizen): show QR, receipt and final counter step on dossier detail`; `feat(workspaces): sync menu sections to the URL and add received filters`; `fix(ui): low-severity copy and layout fixes from 2026-11-28 report`; `style(ui): align headers, alerts and pagination across workspaces`; `test: add UI sweep and update specs for 2026-11-28 fixes`.
+
 ## FE-PM-TRIM-1127 — Bỏ mô tả hộp "Chỉnh sửa thủ tục" và khối gắn nhanh biểu mẫu — 27/11/2026 (Asia/Saigon, UTC+07:00)
 
 - Theo ảnh người dùng, bỏ hai mục:

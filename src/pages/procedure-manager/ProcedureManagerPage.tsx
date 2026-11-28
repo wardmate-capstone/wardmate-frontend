@@ -180,6 +180,7 @@ export function ProcedureManagerPage({ embedded = false, readOnly = false, initi
                 {section === "dashboard" && (
                   <p>{getGreeting()}, Chuyên viên {procedureManagerName}</p>
                 )}
+                {section === "procedures" && <p>Tra cứu, lọc và mở chi tiết các thủ tục đang công khai hoặc đang ẩn.</p>}
               </div>
               {(section === "procedures" || section === "dashboard") && can("procedure.create") && <div className="flex flex-wrap gap-3">
                 <Button size="toolbar" onClick={openCreate}><Plus size={16} weight="bold" aria-hidden="true" />Thêm thủ tục</Button>

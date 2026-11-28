@@ -11,7 +11,7 @@ import {
 } from '@/lib/api/analytics';
 import type { z } from 'zod';
 import { Button } from '@/components/ui/Button';
-import { Pagination, DateField } from '@/components/ui';
+import { Pagination, DateField, ErrorAlert } from '@/components/ui';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { procedureApi } from '@/lib/api/procedures';
@@ -151,24 +151,15 @@ export function AnalyticsFilters({
           {errors.procedureId && <p role="alert" className="mt-1 text-xs font-medium text-red-600">Chọn thủ tục hợp lệ.</p>}
         </div>
         )}
-        <Button type="submit" className="h-10 min-h-0 px-5 sm:col-span-2 lg:col-span-1 lg:mt-[22px]">Áp dụng</Button>
+        <Button type="submit" size="toolbar" className="sm:col-span-2 lg:col-span-1 lg:mt-[22px]">Áp dụng</Button>
       </div>
     </form>
   );
 }
 export function AnalyticsStatus({ pending, error, retry }: { pending: boolean; error: unknown; retry: () => void }) {
   if (error) {
-    return (
-      <div
-        role="alert"
-        className="admin-card flex flex-col items-center justify-center gap-3 border-red-200 bg-red-50/40 p-6 text-center"
-      >
-        <p className="text-sm font-medium text-red-800">{analyticsError(error)}</p>
-        <Button variant="outline" size="small" onClick={retry}>
-          Thử lại
-        </Button>
-      </div>
-    );
+    // Rà soát UI 28/11: dùng khung lỗi chung (icon, chữ trái, nút Thử lại bên phải) như mọi danh sách khác.
+    return <ErrorAlert onRetry={retry}>{analyticsError(error)}</ErrorAlert>;
   }
   return pending ? (
     <div

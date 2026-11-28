@@ -60,6 +60,7 @@ function submittedTime(app: OfficerApplication): number {
 
 /** Rút gọn chữ hiển thị trong ô chọn chuẩn (tối đa ~60 ký tự, cắt ở ranh giới từ) để danh sách không tràn màn hình. */
 const OPTION_MAX = 60;
+const CATEGORY_HINT_KEY = 'wardmate:officer-category-hint-dismissed';
 function shortOptionLabel(text: string): string {
   if (text.length <= OPTION_MAX) return text;
   const cut = text.slice(0, OPTION_MAX);
@@ -94,6 +95,14 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
   const [selectedProcedure, setSelectedProcedure] = useState('ALL');
   const [selectedOfficer, setSelectedOfficer] = useState('ALL');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  // L-23: lời nhắc "chưa được gán lĩnh vực" chỉ cần đọc một lần mỗi phiên, không lặp ở mọi danh sách.
+  const [categoryHintDismissed, setCategoryHintDismissed] = useState(() => {
+    try { return window.sessionStorage.getItem(CATEGORY_HINT_KEY) === '1'; } catch { return false; }
+  });
+  const dismissCategoryHint = () => {
+    setCategoryHintDismissed(true);
+    try { window.sessionStorage.setItem(CATEGORY_HINT_KEY, '1'); } catch { /* Trình duyệt chặn lưu trữ: chỉ ẩn trong lần xem này. */ }
+  };
 
   // Map active section to status filter
   const statusFilter: ApplicationStatus | 'ALL' = useMemo(() => {
@@ -108,6 +117,8 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
         return 'RESUBMITTED';
       case 'apps-approved':
         return 'DOCUMENTS_READY';
+      case 'apps-received':
+        return 'OFFICIALLY_RECEIVED';
       default:
         return 'ALL';
     }
@@ -198,10 +209,15 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
               </button>
             ))}
           </div>
-          {queueTab === 'my-categories' && myCategoryIds.length === 0 && (
-            <p className="text-xs text-slate-500">
-              Bạn chưa được gán lĩnh vực. Bạn vẫn tự nhận được hồ sơ, nhưng Quản lý chỉ phân công được hồ sơ thuộc lĩnh vực đã gán cho bạn; hãy đề nghị Quản lý gán lĩnh vực.
-            </p>
+          {queueTab === 'my-categories' && myCategoryIds.length === 0 && !categoryHintDismissed && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <p className="min-w-0 flex-1">
+                Bạn chưa được gán lĩnh vực. Bạn vẫn tự nhận được hồ sơ, nhưng Quản lý chỉ phân công được hồ sơ thuộc lĩnh vực đã gán cho bạn; hãy đề nghị Quản lý gán lĩnh vực.
+              </p>
+              <button type="button" onClick={dismissCategoryHint} className="min-h-9 shrink-0 rounded-lg px-2.5 font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800">
+                Đã hiểu
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -364,7 +380,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
 {/* Semantic Application Table */}
       <div className="admin-card overflow-hidden">
         <div className="admin-table-wrap">
-          <table className="min-w-[900px]" aria-label="Bảng danh sách hồ sơ hành chính">
+          <table className="min-w-[820px]" aria-label="Bảng danh sách hồ sơ hành chính">
             <thead>
               <tr>
                 {/* Màn 1366px: mã hồ sơ, tên, ngày và trạng thái không xuống dòng (L24). */}
@@ -446,8 +462,9 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Thủ tục */}
-                    <td className="max-w-xs">
-                      <span className="block font-medium text-slate-900 truncate" title={app.procedureName}>
+                    <td>
+                      {/* FE-18: giới hạn bề rộng ở phần tử bên trong (bảng tự giãn bỏ qua max-width của ô), tên dài cắt 2 dòng. */}
+                      <span className="block max-w-[14rem] font-medium text-slate-900 line-clamp-2 2xl:max-w-xs" title={app.procedureName}>
                         {app.procedureName}
                       </span>
                       <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
@@ -481,7 +498,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                     </td>
 
                     {/* Cán bộ */}
-                    <td className="min-w-28 text-slate-600">
+                    <td className="max-w-[9rem] text-slate-600">
                       {app.assignedOfficer === 'Chưa phân công' ? (
                         <span className="text-slate-400 italic">—</span>
                       ) : (
@@ -544,7 +561,7 @@ export const OfficerApplicationListView: React.FC<OfficerApplicationListViewProp
                           )
                         )}
 
-                        {(app.status === 'DOCUMENTS_READY' || app.status === 'APPROVED' || app.status === 'READY_TO_SUBMIT' || app.status === 'NEED_REVISION') && (
+                        {(app.status === 'DOCUMENTS_READY' || app.status === 'APPROVED' || app.status === 'READY_TO_SUBMIT' || app.status === 'NEED_REVISION' || app.status === 'OFFICIALLY_RECEIVED') && (
                           <button
                             type="button"
                             onClick={() => onOpenReviewWorkspace(app)}

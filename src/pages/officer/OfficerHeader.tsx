@@ -29,6 +29,7 @@ export const SECTION_TITLES: Record<OfficerSection, { title: string; subtitle?: 
   'apps-need-revision': { title: 'Hồ sơ cần bổ sung' },
   'apps-resubmitted': { title: 'Hồ sơ đã gửi lại' },
   'apps-approved': { title: 'Hồ sơ có giấy tờ sẵn sàng' },
+  'apps-received': { title: 'Hồ sơ đã tiếp nhận tại quầy' },
   'audit-log': { title: 'Lịch sử xử lý', subtitle: 'Các thao tác tiền kiểm bạn đã thực hiện trên hồ sơ.' },
   notifications: { title: 'Thông báo' },
   profile: { title: 'Hồ sơ cá nhân' },
@@ -46,7 +47,7 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
   const currentMeta = SECTION_TITLES[activeSection] || SECTION_TITLES.dashboard;
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-[68px] items-center justify-between gap-4 border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between gap-4 border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-md sm:px-6">
       {/* Left controls & Breadcrumb */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile menu trigger */}

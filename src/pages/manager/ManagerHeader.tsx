@@ -8,13 +8,14 @@ import {
 import { ManagerSectionId } from './types';
 
 export const managerSectionTitles: Record<ManagerSectionId, { title: string; subtitle?: string }> = {
-  dispatch: { title: 'Điều phối hồ sơ' },
+  // L-25: hai mục cùng có giao/chuyển cán bộ; phụ đề nói rõ mục đích chính của từng mục.
+  dispatch: { title: 'Điều phối hồ sơ', subtitle: 'Hàng việc cần phân công: giao, chuyển cán bộ và cân tải công việc giữa cán bộ' },
   shifts: { title: 'Lịch ca làm' },
   closures: { title: 'Lịch ngày nghỉ' },
   leaves: { title: 'Duyệt nghỉ phép' },
   consultations: { title: 'Tham vấn chuyên môn' },
   overview: { title: 'Tổng quan điều hành', subtitle: 'Tình hình tiền kiểm và phản hồi người dân trong phường' },
-  applications: { title: 'Giám sát hồ sơ', subtitle: 'Theo dõi hồ sơ toàn phường, giao và chuyển cán bộ phụ trách' },
+  applications: { title: 'Giám sát hồ sơ', subtitle: 'Tra cứu, lọc và theo dõi tiến độ mọi hồ sơ toàn phường (kể cả đã tiếp nhận tại quầy)' },
   'stats-dossiers': { title: 'Thống kê hồ sơ hành chính', subtitle: 'Số lượt gửi tiền kiểm, giấy tờ sẵn sàng và hồ sơ còn tồn' },
   'stats-procedures': { title: 'Thống kê thủ tục hành chính', subtitle: 'Tần suất giải quyết và thời gian xử lý theo từng thủ tục' },
   profiles: { title: 'Quản lý cán bộ Một cửa', subtitle: 'Danh sách và hồ sơ nhân sự tiếp nhận hồ sơ tại bộ phận Một cửa cấp phường' },
@@ -43,7 +44,7 @@ export const ManagerHeader: React.FC<ManagerHeaderProps> = ({
   };
 
   return (
-    <header className="admin-topbar sticky top-0 z-30 flex min-h-[68px] items-center justify-between border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="admin-topbar sticky top-0 z-30 flex min-h-[72px] items-center justify-between border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-md sm:px-6">
       {/* Cụm trái: Toggle menu & Breadcrumb */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button

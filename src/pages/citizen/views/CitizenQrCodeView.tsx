@@ -195,7 +195,8 @@ export function CitizenQrCodeView({
   );
 }
 
-function ApprovedQr({
+/** Thẻ mã QR đối chiếu của hồ sơ "Giấy tờ sẵn sàng"; dùng ở mục Mã QR và trang chi tiết hồ sơ (M-04). */
+export function ApprovedQr({
   dossier,
   applicationId,
   onOpenDossierDetail,
@@ -300,7 +301,7 @@ function ApprovedQr({
           <div className="rounded-2xl border-2 border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:shadow-md">
             <img
               src={blobUrl}
-              alt={`ma-qr-${applicationId}.png`}
+              alt={`Mã QR đối chiếu hồ sơ ${dossier.code}`}
               className="size-52 sm:size-56 object-contain"
             />
           </div>

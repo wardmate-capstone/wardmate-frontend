@@ -24,3 +24,11 @@ export function matchesSearch(query: string, ...fields: (string | null | undefin
   const q = foldText(query);
   return !q || fields.some((field) => foldText(field).includes(q));
 }
+
+/** L-19: kích thước tệp dễ đọc; dưới 1 MB hiện KB (16 KB thay vì "0.00 MB"). */
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes) || bytes < 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0).replace('.', ',')} MB`;
+}

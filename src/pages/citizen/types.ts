@@ -10,6 +10,7 @@ export type CitizenSectionId =
   | 'dossiers_need_revision'
   | 'dossiers_resubmitted'
   | 'dossiers_approved'
+  | 'dossiers_received'
   | 'dossiers_cancelled'
   | 'dossier_detail'
   | 'submissions'
@@ -54,6 +55,10 @@ export interface CitizenDossier {
   deadlinePausedAtUtc?: string | null;
   /** Đã có cán bộ nhận hồ sơ hay chưa (để không ghi "đang được cán bộ kiểm tra" khi chưa ai nhận). */
   assigned?: boolean;
+  /** M-07: thông tin tiếp nhận tại quầy (OFFICIALLY_RECEIVED), đã định dạng giờ Việt Nam. */
+  receiptNumber?: string;
+  receivedAt?: string;
+  appointmentDate?: string;
 }
 
 

@@ -56,7 +56,13 @@ export function useFeaturedProcedures() {
 /** Rút tên thủ tục còn tối đa 5 từ để làm nút gợi ý; vẫn đủ để ô tìm kiếm khớp thủ tục. */
 export function shortProcedureLabel(title: string, maxWords = 5) {
   const words = title.trim().split(/\s+/);
-  return words.length > maxWords ? words.slice(0, maxWords).join(' ') : title.trim();
+  // FE-06: cắt theo từ và thêm "…" để người đọc biết tên còn tiếp.
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '…' : title.trim();
+}
+
+/** Chuỗi tìm kiếm từ nhãn gợi ý (bỏ dấu "…" ở cuối). */
+export function suggestionQuery(label: string) {
+  return label.replace(/…$/, '').trim();
 }
 
 /**

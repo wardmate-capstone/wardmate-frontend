@@ -180,7 +180,7 @@ export const OfficerAuditLogView: React.FC<OfficerAuditLogViewProps> = ({
                       </td>
                       <td className="text-slate-600 max-w-sm">
                         <span className="block">{item.procedureTitle || 'Thủ tục hành chính'}</span>
-                        {item.reason && <span className="block text-slate-500">Lý do: {item.reason}</span>}
+                        {item.reason && <span className="block text-slate-500">Ghi chú: {item.reason}</span>}
                       </td>
                       <td className="text-right font-semibold text-slate-800 whitespace-nowrap">
                         {officerName}

@@ -423,7 +423,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
           </div>
           </>)}
 
-          <div className="space-y-4 pt-1">
+          <div className={citizen ? "space-y-4 pt-1" : "grid gap-x-8 gap-y-4 pt-1 md:grid-cols-2"}>
             {/* Họ tên */}
             <div>
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
@@ -609,7 +609,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
         </>)}
 
         {/* Khối 3: Thông tin Tài khoản & Quyền truy cập */}
-        <section className="admin-card p-5 space-y-4 md:col-span-2">
+        <section className={`admin-card p-5 space-y-4 ${citizen ? 'md:col-span-2' : ''}`}>
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Key size={18} className="text-red-800" />
@@ -619,14 +619,14 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px] mb-1">Tên đăng nhập:</span>
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tên đăng nhập</span>
               <strong className="text-slate-900 font-mono text-xs bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block">
                 @{user?.username}
               </strong>
             </div>
             {/* Công dân đã có ô Email đăng ký ở trên; không có đơn vị/phạm vi quản trị nên ẩn hai mục này */}
             {!citizen && <div>
-              <span className="text-slate-400 block text-[11px] mb-1">Email liên hệ:</span>
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Email liên hệ</span>
               {user?.email ? (
                 <strong className="text-slate-900 font-mono text-xs block py-1">
                   {user.email}
@@ -636,8 +636,8 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               )}
             </div>}
             {!citizen && <div>
-              <span className="text-slate-400 block text-[11px] mb-1">
-                {isStaffRole ? 'Đơn vị Phường công tác:' : 'Phạm vi quản trị:'}
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                {isStaffRole ? 'Đơn vị phường công tác' : 'Phạm vi quản trị'}
               </span>
               {isStaffRole ? (
                 wardName ? (
@@ -655,7 +655,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               )}
             </div>}
             <div>
-              <span className="text-slate-400 block text-[11px] mb-1">Vai trò tài khoản:</span>
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Vai trò tài khoản</span>
               <div className="flex flex-wrap gap-1 mt-0.5">
                 {user?.roles && user.roles.length > 0 ? (
                   user.roles.map((r, idx) => (

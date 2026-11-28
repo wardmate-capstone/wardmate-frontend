@@ -43,6 +43,8 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
   const [editing, setEditing] = useState<{ item: ChecklistItem; submissionId?: string; readOnly: boolean }>();
   useEffect(() => { onBusyChange?.(busy || Boolean(editing)); }, [busy, editing, onBusyChange]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // L-12: giấy tờ gắn nhiều mẫu thì người dân chọn tệp tải lên là theo mẫu nào (mặc định mẫu chính).
+  const [chosenTemplate, setChosenTemplate] = useState<Record<string, string>>({});
   // Hàng đợi tệp chờ khai số bản: chọn nhiều tệp (hoặc chọn tiếp khi hộp đang mở) không làm mất tệp trước (L15).
   const [uploads, setUploads] = useState<{ item: ChecklistItem; file: File }[]>([]);
   const upload = uploads[0];
@@ -93,7 +95,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     await perform(item, async () => {
       const existing = contents.data?.submissions.find(x => x.checklistId === item.checklistId);
       if (existing) await mutations.updateDraft.mutateAsync({ submissionId: existing.id, applicationId, applicantId: user.id, file });
-      else await mutations.uploadFilledDocx.mutateAsync({ templateId: item.formTemplateId!, applicationId, checklistId: item.checklistId, applicantId: user.id, file });
+      else await mutations.uploadFilledDocx.mutateAsync({ templateId: chosenTemplate[item.checklistId] || item.formTemplateId!, applicationId, checklistId: item.checklistId, applicantId: user.id, file });
       toast.success('Đã lưu bản nháp. Hãy kiểm tra nội dung và xác nhận tờ khai.');
       await syncChecklist(item);
     }, rethrow);
@@ -106,7 +108,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
     });
   }
   async function download(id: string, isForm: boolean, name: string) {
-    try { if (!user?.id) return; const result = isForm ? await documentFormApi.downloadSubmission(id, user.id) : await documentFormApi.downloadSupportingDocument(id); downloadBlob(result.blob, result.fileName === 'tai-lieu' ? name : result.fileName); }
+    try { if (!user?.id) return; const result = isForm ? await documentFormApi.downloadSubmission(id, user.id) : await documentFormApi.downloadSupportingDocument(id); const fileName = result.fileName === 'tai-lieu' ? name : result.fileName; downloadBlob(result.blob, fileName); toast.success(`Đã tải xuống ${fileName}.`, { id: `download-${id}` }); }
     catch (error) { toast.error(isDocumentFileMissing(error) ? fileMissingMessage : documentFormError(error)); }
   }
 
@@ -135,8 +137,17 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       const confirmedPresent = presentOnly && complete && !fileReady;
       const canConfirmPresent = presentOnly && !fileReady && dossierStatus === 'Bản nháp' && Boolean(onUpdateChecklistItem);
       const needsConfirmation = submissions.some(x => x.status === 'Draft' && x.fileExists);
+      const templateChoices = item.formTemplateId && !submissions.length ? (item.forms ?? []).filter(f => f.formTemplateId) : [];
+      const templatePicker = templateChoices.length > 1 ? (
+        <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-slate-700">
+          Tệp bạn tải lên là theo mẫu nào?
+          <select className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-800 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100" value={chosenTemplate[item.checklistId] || item.formTemplateId || ''} disabled={busy} onChange={e => setChosenTemplate(prev => ({ ...prev, [item.checklistId]: e.target.value }))}>
+            {templateChoices.map(f => <option key={f.formTemplateId} value={f.formTemplateId!}>{f.formName || f.formCode}</option>)}
+          </select>
+        </label>
+      ) : null;
       const fileInput = (
-        <label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+        <>{templatePicker}<label className={`flex min-h-14 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 transition hover:border-slate-400 hover:bg-slate-50 focus-within:border-red-600 focus-within:ring-4 focus-within:ring-red-100 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
           <UploadSimple size={20} className="shrink-0 text-slate-500" aria-hidden />
           <span className="min-w-0">
             <span className="block text-xs font-semibold text-slate-800">
@@ -178,7 +189,7 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
               });
             }}
           />
-        </label>
+        </label></>
       );
 
       return (

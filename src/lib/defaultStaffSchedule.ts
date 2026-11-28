@@ -2,11 +2,13 @@ import type { ScheduleSlot } from '@/lib/api/workSchedules';
 import { calendarDays, scheduleDay } from '@/lib/scheduleCalendar';
 import { vietnamIso } from '@/lib/staffingValidation';
 
-// Giờ đi làm mặc định của cán bộ Một cửa: Thứ Hai–Thứ Sáu 07:30–17:00, không làm Thứ Bảy.
-// Cố ý KHÁC khung tính hạn tiền kiểm của BE (WF-05: 45 giờ, 07:30–16:30, cấu hình ReviewDeadline ở Workflow).
-// BE không đọc lịch ca khi tính hạn, nên đổi giờ ở đây không làm thay đổi hạn hồ sơ. Không sửa cho "khớp" hai bên.
-export const defaultWorkingHours = 'Thứ Hai–Thứ Sáu: 07:30–17:00.';
-const DEFAULT_HOURS: [string, string][] = [['07:30', '17:00']];
+// Giờ đi làm mặc định của cán bộ Một cửa: Thứ Hai–Thứ Sáu 07:30–16:30, không làm Thứ Bảy.
+// Thống nhất với khung tính hạn tiền kiểm (WF-05: 45 giờ làm việc, 07:30–16:30) theo báo cáo kiểm thử FE-03
+// ngày 28/11/2026. BE không đọc lịch ca khi tính hạn; đổi giờ ở đây không làm thay đổi hạn hồ sơ.
+export const WORKDAY_START = '07:30';
+export const WORKDAY_END = '16:30';
+export const defaultWorkingHours = `Thứ Hai–Thứ Sáu: ${WORKDAY_START}–${WORKDAY_END}.`;
+const DEFAULT_HOURS: [string, string][] = [[WORKDAY_START, WORKDAY_END]];
 
 // Prepare real slots for the existing draft/publish API, never fabricate a published calendar.
 export function defaultStaffSchedule(
@@ -30,7 +32,7 @@ export function defaultStaffSchedule(
         const startsAt = vietnamIso(`${day}T${start}`), endsAt = vietnamIso(`${day}T${end}`);
         if (Date.parse(startsAt) <= now) continue;
         if (options.carry?.some(slot => slot.officerId === officerId && Date.parse(slot.startsAt) < Date.parse(endsAt) && Date.parse(slot.endsAt) > Date.parse(startsAt))) continue;
-        // Ca liền 07:30–17:00: nghỉ phép nửa buổi chỉ cắt phần trùng, giữ phần còn lại (tối thiểu 1 giờ).
+        // Ca liền 07:30–16:30: nghỉ phép nửa buổi chỉ cắt phần trùng, giữ phần còn lại (tối thiểu 1 giờ).
         let segments: [number, number][] = [[Date.parse(startsAt), Date.parse(endsAt)]];
         for (const leave of leaves.filter(row => row.officerId === officerId)) {
           const ls = Date.parse(leave.startsAtUtc), le = Date.parse(leave.endsAtUtc);

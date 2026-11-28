@@ -348,7 +348,8 @@ export function ManagerApplicationsView() {
         {list.isError && (
           <ErrorAlert className="mx-4 my-3" retrying={list.isFetching} onRetry={() => void list.refetch()}>{workflowError(list.error)}</ErrorAlert>
         )}
-        {summary.isError && (
+        {/* Cùng một lỗi thì chỉ hiện một khung: danh sách lỗi đã báo ở trên. */}
+        {summary.isError && !list.isError && (
           <p role="alert" className="mx-4 my-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             Chưa tải được số liệu phân công: {workflowError(summary.error)}
           </p>
@@ -379,7 +380,7 @@ export function ManagerApplicationsView() {
                   columnWidths={['w-28 font-mono', 'w-60', 'w-24', 'w-28', 'w-36', 'ml-auto w-24']}
                   lastCellClassName="sticky right-0 z-10 bg-white text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]"
                 />
-              ) : items.length === 0 ? (
+              ) : list.isError ? null : items.length === 0 ? (
                 <tr>
                   <td colSpan={6}><EmptyState title="Không có hồ sơ nào phù hợp với bộ lọc hiện tại." description={hasFilter ? 'Thử bỏ bớt điều kiện lọc hoặc bấm “Xóa bộ lọc”.' : undefined} /></td>
                 </tr>

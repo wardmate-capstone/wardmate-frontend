@@ -11,18 +11,32 @@ interface CitizenDashboardViewProps {
 }
 
 
-// updatedAt có dạng "HH:mm dd/MM/yyyy"; trả về thời gian tương đối, nếu không đọc được thì giữ nguyên chuỗi gốc
+/**
+ * Đọc chuỗi giờ Việt Nam đã định dạng: "dd/MM/yyyy HH:mm" (hiện tại) hoặc "HH:mm dd/MM/yyyy" (cũ).
+ * Trả về mốc thời gian (ms) hoặc NaN nếu không đọc được.
+ */
+function parseVnDateTime(value: string): number {
+  const dateFirst = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+  const timeFirst = value.match(/^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const [dd, mo, yyyy, hh, mm] = dateFirst
+    ? [dateFirst[1], dateFirst[2], dateFirst[3], dateFirst[4] ?? '0', dateFirst[5] ?? '0'].map(Number)
+    : timeFirst ? [timeFirst[3], timeFirst[4], timeFirst[5], timeFirst[1], timeFirst[2]].map(Number) : [];
+  if (yyyy === undefined) return Number.NaN;
+  // Chuỗi đã là giờ Việt Nam (UTC+07).
+  return Date.UTC(yyyy, mo - 1, dd, hh - 7, mm);
+}
+
+// Trả về thời gian tương đối, nếu không đọc được thì giữ nguyên chuỗi gốc
 function formatRelative(value: string): string {
-  const match = value.match(/^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!match) return value;
-  const [, hh, mm, dd, mo, yyyy] = match.map(Number);
-  const diffMinutes = Math.floor((Date.now() - new Date(yyyy, mo - 1, dd, hh, mm).getTime()) / 60000);
+  const time = parseVnDateTime(value);
+  if (Number.isNaN(time)) return value;
+  const diffMinutes = Math.floor((Date.now() - time) / 60000);
   if (diffMinutes < 0) return value;
   if (diffMinutes < 1) return 'Vừa xong';
   if (diffMinutes < 60) return `${diffMinutes} phút trước`;
   if (diffMinutes < 60 * 24) return `${Math.floor(diffMinutes / 60)} giờ trước`;
   const days = Math.floor(diffMinutes / (60 * 24));
-  return days <= 7 ? `${days} ngày trước` : value.split(/\s+/)[1];
+  return days <= 7 ? `${days} ngày trước` : value.split(/\s+/).find(part => part.includes('/')) ?? value;
 }
 
 export function CitizenDashboardView({
@@ -31,17 +45,20 @@ export function CitizenDashboardView({
   onOpenFeedback,
   isLoading = false,
 }: CitizenDashboardViewProps) {
-  const pendingCount = dossiers.filter((d) => d.status === 'Chờ tiền kiểm').length;
+  const pendingCount = dossiers.filter((d) => d.status === 'Chờ tiền kiểm' || d.status === 'Đã gửi lại').length;
   const revisionCount = dossiers.filter((d) => d.status === 'Cần chỉnh sửa').length;
   const approvedCount = dossiers.filter((d) => d.status === 'Giấy tờ sẵn sàng').length;
-  const completedCount = dossiers.filter((d) => d.status === 'Đã hoàn thành').length;
+  // M-17: đã tiếp nhận tại quầy là bước cuối trên WardMate nên tính vào "Đã hoàn tất".
+  const completedCount = dossiers.filter((d) => d.status === 'Đã hoàn thành' || d.status === 'Đã tiếp nhận tại quầy').length;
+  // L-17: "Hồ sơ gần đây" hiện giờ cập nhật thì phải xếp theo giờ cập nhật (mới nhất trước).
+  const recent = [...dossiers].sort((a, b) => (parseVnDateTime(b.updatedAt) || 0) - (parseVnDateTime(a.updatedAt) || 0)).slice(0, 5);
 
   // Giữ nguyên cách đếm hiện có; chỉ thêm dòng giải thích dưới mỗi số.
   const stats: { label: string; value: number; hint: string; section: CitizenSectionId }[] = [
-    { label: 'Hồ sơ đang xử lý', value: pendingCount + revisionCount, hint: 'Chờ tiền kiểm và cần chỉnh sửa', section: 'dossiers_pending' },
-    { label: 'Cần bổ sung', value: revisionCount, hint: 'Cán bộ yêu cầu chỉnh sửa', section: 'dossiers_need_revision' },
-    { label: 'Giấy tờ sẵn sàng', value: approvedCount, hint: 'Có thể đến nhận, đối chiếu', section: 'dossiers_approved' },
-    { label: 'Đã hoàn tất', value: completedCount, hint: 'Thủ tục đã xong', section: 'dossiers_all' },
+    { label: 'Hồ sơ đang xử lý', value: pendingCount + revisionCount, hint: 'Chờ kiểm tra hoặc cần sửa', section: 'dossiers_pending' },
+    { label: 'Cần chỉnh sửa', value: revisionCount, hint: 'Cán bộ yêu cầu chỉnh sửa', section: 'dossiers_need_revision' },
+    { label: 'Giấy tờ sẵn sàng', value: approvedCount, hint: 'Mang giấy tờ, mã QR đến phường', section: 'dossiers_approved' },
+    { label: 'Đã hoàn tất', value: completedCount, hint: 'Đã tiếp nhận tại quầy', section: 'dossiers_all' },
   ];
 
   return (
@@ -107,7 +124,7 @@ export function CitizenDashboardView({
             </div>
           ) : (
             <ul className="divide-y divide-slate-100 px-5">
-              {dossiers.slice(0, 5).map((dossier) => (
+              {recent.map((dossier) => (
                 <li key={dossier.code} className="flex flex-col gap-2.5 py-3.5 sm:flex-row sm:items-center sm:gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">{dossier.procedureName}</p>

@@ -40,7 +40,8 @@ export function useAdminOverviewData() {
   const aiIndex = useKnowledgeIndexStatus();
   const deliveryCount = (state: 'Dead' | 'Blocked') => ({
     queryKey: ['admin-overview', user?.id, 'deliveries', state],
-    queryFn: ({ signal }: { signal: AbortSignal }) => notificationAdminApi.list({ state, page: 1, pageSize: 1 }, signal).then(page => page.total),
+    // L-32: chỉ đếm kênh còn dùng (Email, trong ứng dụng); lượt SMS cũ thuộc kênh đã gỡ không còn là việc cần xử lý.
+    queryFn: ({ signal }: { signal: AbortSignal }) => Promise.all((['EMAIL', 'IN_APP'] as const).map(channel => notificationAdminApi.list({ state, channel, page: 1, pageSize: 1 }, signal).then(page => page.total))).then(([email, inApp]) => email + inApp),
     enabled: canDeliveries, retry: false,
   });
   const deadDeliveries = useQuery(deliveryCount('Dead'));

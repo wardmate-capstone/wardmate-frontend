@@ -10,6 +10,7 @@ export type OfficerSection =
   | 'apps-need-revision'
   | 'apps-resubmitted'
   | 'apps-approved'
+  | 'apps-received'
   | 'audit-log'
   | 'notifications'
   | 'profile';

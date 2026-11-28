@@ -14,9 +14,9 @@ export type ErrorAlertProps = {
 /** Khung báo lỗi dùng chung: viền + nền đỏ nhạt, icon cảnh báo, nút Thử lại tùy chọn */
 export function ErrorAlert({ children, onRetry, retryLabel = 'Thử lại', retrying = false, className }: ErrorAlertProps) {
   return (
-    <div role="alert" className={cn('flex flex-wrap items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800', className)}>
-      <WarningCircle size={20} weight="fill" aria-hidden="true" className="mt-px shrink-0 text-red-600" />
-      <div className="min-w-0 flex-1 leading-6">{children}</div>
+    <div role="alert" className={cn('flex flex-wrap items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-left text-sm text-red-800', className)}>
+      <WarningCircle size={20} weight="fill" aria-hidden="true" className="mt-0.5 shrink-0 text-red-600" />
+      <div className="min-w-[12rem] flex-1 leading-6">{children}</div>
       {onRetry && (
         <button
           type="button"

@@ -4,7 +4,8 @@ import { formatDateTime } from '@/lib/dateFormat';
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { loadDrafts } from "./ProcedureDashboardView";
 import {
   ArrowArcLeft,
   ArrowClockwise,
@@ -384,6 +385,33 @@ export function ProcedureDraftWorkspace({
       label: detail.isActive ? "Đang công khai" : detail.firstPublishedAt ? "Đã ẩn" : "Chưa công khai",
     };
   };
+  // M-13: nhiều bản nháp trùng tên tệp PDF; đọc mã và tên thủ tục để phân biệt. Bản đã xuất bản lấy từ thủ tục,
+  // bản còn lại lấy từ nội dung bản nháp (tối đa 10 dòng/trang, lưu đệm theo lần cập nhật).
+  const contentRows = (list.data ?? []).filter((row) => row.status === "NeedsReview" || (row.status === "Published" && !row.publishedProcedureId));
+  const draftContents = useQueries({
+    queries: contentRows.map((row) => ({
+      queryKey: ["procedure-draft-content", row.id, row.updatedAt],
+      queryFn: ({ signal }: { signal: AbortSignal }) => procedureApi.draft(row.id, signal),
+      enabled: can("procedure.drafts.read"),
+      retry: false,
+      staleTime: 5 * 60_000,
+    })),
+  });
+  const draftProcedure = (row: { id: string; publishedProcedureId?: string | null }) => {
+    const published = publishedState(row.publishedProcedureId)?.detail;
+    if (published) return { code: published.procedureCode, title: published.title };
+    const content = draftContents[contentRows.findIndex((item) => item.id === row.id)]?.data?.payload;
+    const code = typeof content?.procedureCode === "string" ? content.procedureCode.trim() : "";
+    const title = typeof content?.title === "string" ? content.title.trim() : "";
+    return code || title ? { code, title } : undefined;
+  };
+  // API bản nháp không trả tổng số: đếm giống Tổng quan (tối đa 50 bản gần nhất).
+  const draftTotal = useQuery({
+    queryKey: ["procedure-drafts-count", (list.data ?? []).map((row) => row.id + row.updatedAt).join("|")],
+    queryFn: ({ signal }) => loadDrafts(signal),
+    enabled: can("procedure.drafts.read") && !list.loading,
+    staleTime: 30_000,
+  });
   const handleUnpublish = async () => {
     if (!unpublishing || unpublishBusy) return;
     setUnpublishBusy(true);
@@ -1105,7 +1133,12 @@ export function ProcedureDraftWorkspace({
       <section className="admin-card overflow-hidden" aria-labelledby="recent-drafts-title">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3.5 sm:px-5">
           <h2 id="recent-drafts-title" className="text-[15px] font-semibold text-slate-950">Bản nháp gần đây</h2>
-          {!list.loading && !!list.data?.length && <span className="text-xs text-slate-600">{list.data.length} bản nháp · Trang {page}</span>}
+          {!list.loading && !!list.data?.length && (
+            <span className="text-xs text-slate-600">
+              {draftTotal.data ? `${draftTotal.data.capped ? "Hơn " : ""}${draftTotal.data.items.length} bản nháp · ` : ""}
+              Trang {page}{draftTotal.data && !draftTotal.data.capped ? `/${Math.max(1, Math.ceil(draftTotal.data.items.length / 10))}` : ""}
+            </span>
+          )}
         </div>
         {(list.loading || !!list.data?.length) && (
           <div role="table" aria-labelledby="recent-drafts-title" aria-busy={list.loading} className="[--draft-columns:minmax(0,1fr)_9rem_20rem]">
@@ -1127,6 +1160,7 @@ export function ProcedureDraftWorkspace({
                 ))
               ) : list.data?.map((row) => {
                 const state = publishedState(row.publishedProcedureId);
+                const procedure = draftProcedure(row);
 
                 return (
                   <div key={row.id} role="row" className="grid min-w-0 items-center gap-2.5 px-4 py-3 transition-colors hover:bg-slate-50/70 sm:px-5 @min-[44rem]/drafts:grid-cols-(--draft-columns) @min-[44rem]/drafts:gap-4">
@@ -1135,8 +1169,21 @@ export function ProcedureDraftWorkspace({
                         <FilePdf size={21} weight="duotone" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium leading-5 text-slate-900 [overflow-wrap:anywhere] @min-[44rem]/drafts:truncate" title={row.pdfFileName}>{row.pdfFileName}</p>
-                        <p className="mt-0.5 text-xs leading-4 text-slate-600">Cập nhật {formatDateTime(row.updatedAt)}</p>
+                        {procedure ? (
+                          <>
+                            <p className="text-sm font-medium leading-5 text-slate-900 [overflow-wrap:anywhere] @min-[44rem]/drafts:line-clamp-2" title={procedure.title}>
+                              {procedure.code && <span className="font-mono text-xs font-semibold text-red-800">{procedure.code}</span>}
+                              {procedure.code && procedure.title && <span className="text-slate-400"> · </span>}
+                              {procedure.title}
+                            </p>
+                            <p className="mt-0.5 text-xs leading-4 text-slate-600 [overflow-wrap:anywhere]" title={row.pdfFileName}>{row.pdfFileName} · Cập nhật {formatDateTime(row.updatedAt)}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium leading-5 text-slate-900 [overflow-wrap:anywhere] @min-[44rem]/drafts:truncate" title={row.pdfFileName}>{row.pdfFileName}</p>
+                            <p className="mt-0.5 text-xs leading-4 text-slate-600">Cập nhật {formatDateTime(row.updatedAt)}</p>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div role="cell" className="flex min-w-0 flex-wrap items-center gap-1.5 @min-[44rem]/drafts:min-h-11 @min-[44rem]/drafts:flex-col @min-[44rem]/drafts:items-start @min-[44rem]/drafts:gap-1">

@@ -6,6 +6,9 @@ export function getInitials(name?: string | null): string {
   if (!name || !name.trim()) return 'CD';
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  // L-26: tên kết thúc bằng mã có số ("Cán bộ A1", "Cán bộ A2") thì dùng mã đó để hai người không cùng ảnh chữ.
+  const tail = parts[parts.length - 1];
+  if (/\d/.test(tail) && tail.length <= 3) return tail.slice(0, 2).toUpperCase();
   const first = parts[0][0];
   const last = parts[parts.length - 1][0];
   return (first + last).toUpperCase();

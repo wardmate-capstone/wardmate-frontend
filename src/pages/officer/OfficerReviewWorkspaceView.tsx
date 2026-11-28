@@ -1,7 +1,7 @@
 import { checklistQuantityLabel } from '@/lib/procedureDisplay';
 import { caseDisplayName, requiresCaseChoice } from '@/lib/procedureCases';
 import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { ApplicationConsultations } from '@/components/staffing/ConsultationsView';
 import { useRef, useState, useEffect } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
@@ -173,6 +173,15 @@ export function OfficerReviewWorkspaceView({
     detail.data.userId !== user?.id &&
     Boolean(user?.permissions.includes('workflow.receipt.confirm'));
 
+  // M-07 / L-24: ô "Quyền xử lý" phải khớp nút đang bật (thụ lý, tiếp nhận tại quầy) thay vì luôn "Chỉ xem".
+  const officiallyReceived = detail.data?.status === 'OFFICIALLY_RECEIVED';
+  const permissionLabel = editable ? 'Bạn đang thụ lý' : canReceive ? 'Tiếp nhận tại quầy' : officiallyReceived ? 'Đã tiếp nhận' : 'Chỉ xem';
+  const receipt = detail.data && (detail.data.receiptNumber || officiallyReceived) ? {
+    receiptNumber: detail.data.receiptNumber?.trim() || 'Chưa có thông tin',
+    receivedAt: detail.data.receivedAt ? formatDateTime(detail.data.receivedAt) : 'Chưa có thông tin',
+    appointmentDate: detail.data.appointmentDate ? formatDate(detail.data.appointmentDate) : 'Chưa hẹn',
+  } : null;
+
   const isManager = Boolean(user?.roles.includes('WARD_MANAGER'));
   const canVerifyAi = Boolean(detail.data?.assignedOfficerId === user?.id && !isManager);
 
@@ -217,6 +226,8 @@ export function OfficerReviewWorkspaceView({
         input: { versionNumber: version, targetType: target.type, targetId: target.id, fieldLabel: target.label, commentText: text },
       });
       setDecisionWarning('');
+      // L-20: báo đã lưu để cán bộ biết nhận xét đã vào hồ sơ.
+      toast.success('Đã lưu nhận xét.', { id: 'officer-comment-saved' });
       return undefined;
     } catch (error) {
       return workflowError(error);
@@ -608,7 +619,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <div className="rounded-xl bg-slate-50 p-3">
               <span className="text-xs font-medium text-slate-500">Quyền xử lý</span>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {editable ? 'Bạn đang thụ lý' : 'Chỉ xem'}
+                {permissionLabel}
               </p>
             </div>
           </div>
@@ -629,7 +640,15 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
             <ErrorAlert className="mt-4" retryLabel="Tải lại tờ khai" retrying={submissions.isFetching} onRetry={() => void submissions.refetch()}>{documentFormError(submissions.error)}</ErrorAlert>
           )}
 
-          {!editable && detail.isSuccess && (
+          {receipt && (
+            <dl aria-label="Thông tin tiếp nhận tại quầy" className="mt-3 grid gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs sm:grid-cols-3">
+              <div><dt className="text-slate-500">Số biên nhận</dt><dd className="mt-0.5 break-words font-semibold text-slate-900">{receipt.receiptNumber}</dd></div>
+              <div><dt className="text-slate-500">Thời điểm tiếp nhận</dt><dd className="mt-0.5 font-semibold text-slate-900">{receipt.receivedAt}</dd></div>
+              <div><dt className="text-slate-500">Ngày hẹn trả kết quả</dt><dd className="mt-0.5 font-semibold text-slate-900">{receipt.appointmentDate}</dd></div>
+            </dl>
+          )}
+
+          {!editable && !canReceive && !officiallyReceived && detail.isSuccess && (
             <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
               Chế độ chỉ xem: chỉ cán bộ thụ lý được nhận xét khi hồ sơ đang kiểm tra.
             </p>
@@ -833,18 +852,19 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="min-w-0 font-semibold text-slate-900">
-                          {humanizeFieldName(x.fieldLabel || 'Nhận xét')}
+                        {/* L-20: tên mục dài xuống dòng; nút "Xem tại mục" tách dòng để không dính vào chữ. */}
+                        <div className="min-w-0 flex-1">
+                          <span className="block break-words font-semibold text-slate-900">{humanizeFieldName(x.fieldLabel || 'Nhận xét')}</span>
                           {x.targetId && targets.some(t => t.id === x.targetId) && (
                             <button
                               type="button"
                               onClick={() => goToTarget(x.targetId, x.targetType)}
-                              className="ml-2 text-xs font-semibold text-red-800 hover:underline"
+                              className="mt-1 inline-flex min-h-8 items-center text-xs font-semibold text-red-800 hover:underline"
                             >
                               Xem tại mục →
                             </button>
                           )}
-                        </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant={isWithdrawn ? 'neutral' : isOpen ? 'warning' : 'success'}
@@ -928,6 +948,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                   });
                   commentForm.reset({ targetId: '', commentText: '' });
                   setDecisionWarning('');
+                  toast.success('Đã lưu nhận xét.', { id: 'officer-comment-saved' });
                 } catch (error) {
                   setCommentError(workflowError(error));
                 } finally {
@@ -1112,7 +1133,10 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                       {formatDateTime(x.createdAt)}
                     </time>
                   </div>
-                  {x.reason && <p className="mt-1.5 text-sm text-slate-600">{x.reason}</p>}
+                  {x.toStatus === 'OFFICIALLY_RECEIVED' && receipt && (
+                    <p className="mt-1.5 text-sm text-slate-700">Số biên nhận: <strong>{receipt.receiptNumber}</strong> · Ngày hẹn: {receipt.appointmentDate}</p>
+                  )}
+                  {x.reason && <p className="mt-1.5 text-sm text-slate-600"><span className="text-slate-500">Ghi chú: </span>{x.reason}</p>}
                 </div>
               ))}
             </div>

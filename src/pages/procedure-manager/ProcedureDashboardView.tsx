@@ -22,7 +22,7 @@ const num = (value?: number) => (value === undefined ? '—' : value.toLocaleStr
 const DRAFT_PAGES = 5;
 const DRAFT_PAGE_SIZE = 10;
 
-async function loadDrafts(signal: AbortSignal) {
+export async function loadDrafts(signal: AbortSignal) {
   const items: DraftSummary[] = [];
   for (let page = 1; page <= DRAFT_PAGES; page++) {
     const rows = await procedureApi.drafts(page, signal);
@@ -74,7 +74,7 @@ export function ProcedureDashboardView({
   const kpis: { label: string; value?: number; hint: string; section: ProcedureNavSection; loading: boolean }[] = [
     { label: 'Tổng số thủ tục', value: totalCount, hint: 'Gồm thủ tục đang công khai và đang ẩn', section: 'procedures', loading: statsLoading },
     { label: 'Đang công khai', value: stats?.active, hint: activePercent !== null ? `${activePercent}% tổng số thủ tục` : 'Người dân xem và nộp được', section: 'procedures', loading: statsLoading },
-    { label: 'Đang ẩn', value: stats?.inactive, hint: stats?.inactive ? 'Cần rà soát hiệu lực' : 'Không có thủ tục ẩn', section: 'procedures', loading: statsLoading },
+    { label: 'Đang ẩn', value: stats?.inactive, hint: stats?.inactive ? 'Người dân không thấy; mở để công khai lại hoặc giữ ẩn' : 'Không có thủ tục ẩn', section: 'procedures', loading: statsLoading },
     { label: 'Lĩnh vực', value: categoriesCount, hint: 'Danh mục dùng để phân loại thủ tục', section: 'categories', loading: false },
   ];
   if (canReadDrafts) {

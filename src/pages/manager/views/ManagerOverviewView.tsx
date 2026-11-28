@@ -127,9 +127,9 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
     <div className="manager-overview-secondary">
       <ChartCard id="overview-results" title="Kết quả tiền kiểm trong kỳ" subtitle="Số lượt theo từng hoạt động"
         action={<LinkButton onClick={() => onSelectSection('stats-procedures')}>Theo thủ tục</LinkButton>}>
-        {data && <>
+        {data ? <>
           <OverviewCountChart title="Lượt hoạt động tiền kiểm" points={activities} emptyMessage="Chưa có hoạt động tiền kiểm trong dữ liệu đã tổng hợp." />
-        </>}
+        </> : <EmptyState title="Chưa có số liệu để hiển thị." />}
       </ChartCard>
 
       <ChartCard id="overview-deadlines" title="Hạn xử lý hồ sơ đã sẵn sàng" subtitle="Hồ sơ đã xác nhận giấy tờ sẵn sàng (chưa phải phê duyệt)"
@@ -140,6 +140,7 @@ export function ManagerOverviewView({ onSelectSection }: { onSelectSection: (sec
             emptyMessage="Chưa có hồ sơ sẵn sàng trong kỳ để phân tích hạn." />
           {(deadlines.openMissingDeadline > 0 || deadlines.openPaused > 0) && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-950">Cần theo dõi: {deadlines.openMissingDeadline} hồ sơ đang tồn chưa có hạn xác định; {deadlines.openPaused} hồ sơ đang tạm dừng tính hạn.</p>}
         </> : <EmptyState title="Chưa có dữ liệu hạn tiền kiểm." />)}
+        {!data && <EmptyState title="Chưa có số liệu để hiển thị." />}
       </ChartCard>
 
     </div>

@@ -18,7 +18,7 @@ import type {
   CommentDto,
   HistoryDto,
 } from './workflow';
-import { formatDateTime as vnDateTime } from '@/lib/dateFormat';
+import { formatDate as vnDate, formatDateTime as vnDateTime } from '@/lib/dateFormat';
 
 // Định dạng chung "12/11/2026 14:30" theo giờ Việt Nam; giá trị không đọc được thì giữ nguyên chuỗi gốc
 function formatDateTime(isoString?: string | null): string {
@@ -193,17 +193,21 @@ const ASSIGNMENT_TITLES: Record<string, string> = {
 export function mapAssignmentHistoryToTimelineItem(h: AssignmentHistoryDto, lookup?: OfficerLookup): TimelineItem {
   // Ưu tiên họ tên backend lưu sẵn, sau đó mới tra danh bạ hoặc hiện mã rút gọn
   const name = (id?: string | null, snapshot?: string | null) => resolveOfficerDisplayName(id, snapshot, lookup);
-  const parts = [
+  // L-21: cùng một cán bộ (nhận lại hồ sơ đã gửi lại) thì không ghi "Từ: A · Đến: A".
+  const sameOfficer = Boolean(h.fromOfficerId && h.toOfficerId && h.fromOfficerId.toLowerCase() === h.toOfficerId.toLowerCase());
+  const parts = sameOfficer ? [
+    `Vẫn do ${name(h.toOfficerId, h.toOfficerName)} phụ trách`,
+  ] : [
     h.fromOfficerId ? `Từ: ${name(h.fromOfficerId, h.fromOfficerName)}` : '',
     h.toOfficerId ? `Đến: ${name(h.toOfficerId, h.toOfficerName)}` : '',
-    h.reason?.trim() ? `Lý do: ${h.reason.trim()}` : '',
-  ].filter(Boolean);
+  ];
+  if (h.reason?.trim()) parts.push(`Lý do: ${h.reason.trim()}`);
   return {
     id: `assignment-${h.id}`,
     time: formatDateTime(h.createdAt),
     title: ASSIGNMENT_TITLES[h.action] || `Thay đổi phân công: ${h.action}`,
     actor: name(h.actorId, h.actorName),
-    description: parts.join(' · ') || undefined,
+    description: parts.filter(Boolean).join(' · ') || undefined,
     type: 'officer',
     status: 'done',
   };
@@ -409,6 +413,15 @@ export function mapApplicationDtoToOfficerApplication(
   };
 }
 
+/** M-07: số biên nhận, thời điểm tiếp nhận, ngày hẹn trả (chỉ có khi đã tiếp nhận tại quầy). */
+function receiptFields(source: { receiptNumber?: string | null; receivedAt?: string | null; appointmentDate?: string | null }) {
+  return {
+    receiptNumber: source.receiptNumber?.trim() || undefined,
+    receivedAt: source.receivedAt ? formatDateTime(source.receivedAt) : undefined,
+    appointmentDate: source.appointmentDate ? vnDate(source.appointmentDate, source.appointmentDate) : undefined,
+  };
+}
+
 export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): CitizenDossier {
   const s = (summary.status || '').toUpperCase();
   let status: CitizenDossier['status'] = 'Chưa xác định trạng thái';
@@ -437,6 +450,7 @@ export function mapSummaryDtoToCitizenDossier(summary: ApplicationSummaryDto): C
     deadlineStatus: summary.deadlineStatus,
     deadlinePausedAtUtc: summary.deadlinePausedAtUtc,
     assigned: Boolean(summary.assignedOfficerId),
+    ...receiptFields(summary),
   };
 }
 
@@ -504,6 +518,7 @@ export function mapApplicationDtoToCitizenDossier(
     deadlineStatus: dto.deadlineStatus,
     deadlinePausedAtUtc: dto.deadlinePausedAtUtc,
     assigned: Boolean(dto.assignedOfficerId),
+    ...receiptFields(dto),
   };
 }
 

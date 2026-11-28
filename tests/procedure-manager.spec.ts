@@ -76,7 +76,8 @@ test('public detail supports case switching, no fake download, source and mobile
 test('network error never falls back to mock and can retry', async ({ page }) => {
   const state = await mockCatalog(page); state.listError = true;
   await page.goto('/thu-tuc');
-  await expect(page.getByRole('alert')).toContainText('Dịch vụ tạm thời');
+  // M-16: 503 không mã = dịch vụ đang khởi động; FE tự thử lại 2 lần rồi mới báo.
+  await expect(page.getByRole('alert')).toContainText('Dịch vụ đang khởi động');
   await expect(page.locator('.procedures-list > li')).toHaveCount(0);
   state.listError = false;
   await page.getByRole('button', { name: 'Thử lại' }).click();

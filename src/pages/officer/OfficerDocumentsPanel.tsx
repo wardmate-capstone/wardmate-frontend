@@ -1,3 +1,4 @@
+import { formatFileSize } from '@/lib/utils';
 import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { displayDocumentFileName } from '@/lib/documentFileName';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -118,7 +119,7 @@ export function OfficerDocumentsPanel({
             {item.submittedAt && <p className="text-xs text-slate-500 mt-1">Ngày gửi: {formatDateTime(item.submittedAt)}</p>}
             {item.officerComment && <p className="whitespace-pre-wrap break-words text-sm mt-1">Ghi chú: {item.officerComment}</p>}
             <p className="text-sm mt-1">
-              {(item.fileSizeBytes / 1024 / 1024).toFixed(2)} MB{evidence && !evidence.fileExists && ' · Không tìm thấy tệp'}
+              {formatFileSize(item.fileSizeBytes)}{evidence && !evidence.fileExists && ' · Không tìm thấy tệp'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

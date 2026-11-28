@@ -53,7 +53,12 @@ const SECTION_STATUS: Partial<Record<OfficerSection, string>> = {
   'apps-need-revision': 'NEED_REVISION',
   'apps-resubmitted': 'SUBMITTED',
   'apps-approved': 'DOCUMENTS_READY',
+  'apps-received': 'OFFICIALLY_RECEIVED',
 };
+
+// M-09: mục đang mở nằm trên URL (?section=) để chia sẻ, đánh dấu và dùng nút Back như khu công dân.
+const OFFICER_SECTIONS: OfficerSection[] = ['dashboard', 'apps-all', 'apps-pending', 'apps-reviewing', 'apps-need-revision', 'apps-resubmitted', 'apps-approved', 'apps-received', 'audit-log', 'notifications', 'shifts', 'closures', 'leaves', 'consultations', 'profile'];
+const isOfficerSection = (value: string | null): value is OfficerSection => Boolean(value && (OFFICER_SECTIONS as string[]).includes(value));
 
 // Ngày chọn là ngày Việt Nam; gửi mốc đầu/cuối ngày theo giờ trình duyệt dạng ISO.
 function dayBoundary(date: string, end: boolean): string | undefined {
@@ -68,18 +73,38 @@ export const OfficerPage: React.FC = () => {
   const officerName = profile?.fullName?.trim() || user?.username || 'Cán bộ Một cửa';
 
   // Navigation States
-  const [activeSection, setActiveSection] = useState<OfficerSection>('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeSection, setActiveSectionState] = useState<OfficerSection>(() => {
+    const section = searchParams.get('section');
+    return isOfficerSection(section) ? section : 'dashboard';
+  });
+  // Đổi mục: ghi lên URL (tạo mục lịch sử) để Back quay lại mục trước thay vì rời trang.
+  // Đổi do chính trang (vd. sau khi xác nhận sẵn sàng vẫn ở lại workspace) thì không đóng hồ sơ đang mở.
+  const ownSectionChange = useRef(false);
+  const setActiveSection = (section: OfficerSection) => {
+    setActiveSectionState(section);
+    if (searchParams.get('section') === section && !searchParams.has('applicationId')) return;
+    ownSectionChange.current = true;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('section', section);
+      next.delete('applicationId');
+      return next;
+    });
+  };
   const [reviewingApp, setReviewingApp] = useState<OfficerApplication | null>(null);
   const [quickPreviewApp, setQuickPreviewApp] = useState<OfficerApplication | null>(null);
   // Bảng danh sách thành thẻ có nhãn trên điện thoại (L22), giống Admin/Công dân.
   const mainRef = useRef<HTMLElement>(null);
   useAutoStackTables(mainRef);
-  const [searchParams] = useSearchParams();
   const location = useLocation();
+  // Back/Forward hoặc liên kết thông báo đổi ?section= thì mở đúng mục (section sai thì giữ mục hiện tại).
   useEffect(() => {
+    if (ownSectionChange.current) { ownSectionChange.current = false; return; }
     const section = searchParams.get('section');
-    if (section && ['shifts', 'closures', 'leaves', 'consultations'].includes(section)) {
-      setActiveSection(section as OfficerSection); setReviewingApp(null);
+    if (isOfficerSection(section)) {
+      setActiveSectionState(section);
+      if (!searchParams.get('applicationId')) setReviewingApp(null);
     }
   }, [location.key, searchParams]);
   const urlApplicationId = searchParams.get('applicationId');
@@ -222,12 +247,19 @@ export const OfficerPage: React.FC = () => {
     Boolean(app && myCategoryIds.length > 0 && !(app.categoryId && myCategoryIds.includes(app.categoryId)));
   const [outsideConfirm, setOutsideConfirm] = useState<OfficerApplication | null>(null);
 
+  // M-08: toast luôn dùng mã HS-…; hồ sơ không có trong trang danh sách hiện tại thì lấy từ hồ sơ đang mở.
+  const applicationLabel = (appId: string, target?: OfficerApplication) =>
+    target?.applicationNumber
+    || (reviewingApp?.id === appId ? reviewingApp.applicationNumber : undefined)
+    || (quickPreviewApp?.id === appId ? quickPreviewApp.applicationNumber : undefined)
+    || 'đang xử lý';
+
   // ACTION: Nhận xử lý hồ sơ (Tiếp nhận hồ sơ tiền kiểm)
   const handleTakeApplication = async (appId: string) => {
     if (assignLock.current) return;
     assignLock.current = true;
     const targetApp = applications.find((a) => a.id === appId);
-    const appNumber = targetApp?.applicationNumber || appId;
+    const appNumber = applicationLabel(appId, targetApp);
     try {
       // Kết quả nhận hồ sơ đã chứa chi tiết đầy đủ; workspace tự tải nhận xét nên không gọi thêm 2 request.
       const result = await assignMutation.mutateAsync(appId);
@@ -253,7 +285,7 @@ export const OfficerPage: React.FC = () => {
   // ACTION: Yêu cầu bổ sung
   const handleRequestRevision = async (appId: string, notes: string, _issues: string[], submissionId?: string) => {
     const targetApp = applications.find((a) => a.id === appId);
-    const appNumber = targetApp?.applicationNumber || appId;
+    const appNumber = applicationLabel(appId, targetApp);
       await requestRevisionMutation.mutateAsync({ id: appId, input: { reason: notes }, submissionId });
       toast.warning(`Đã gửi yêu cầu bổ sung hồ sơ ${appNumber} đến công dân.`);
       setReviewingApp(null);
@@ -264,7 +296,7 @@ export const OfficerPage: React.FC = () => {
   // ACTION: Duyệt tiền kiểm
   const handleConfirmReadiness = async (appId: string, submissionId?: string) => {
     const targetApp = applications.find((a) => a.id === appId);
-    const appNumber = targetApp?.applicationNumber || appId;
+    const appNumber = applicationLabel(appId, targetApp);
       await readinessMutation.mutateAsync({ id: appId, submissionId });
       toast.success(`Hồ sơ ${appNumber} đã được xác nhận giấy tờ sẵn sàng.`);
       // Ở lại workspace (đã khóa sửa) để cán bộ tạo PDF; mục bên trái chuyển sang Giấy tờ sẵn sàng.
@@ -392,7 +424,6 @@ export const OfficerPage: React.FC = () => {
 
         {/* Semantic Main Content */}
         <main ref={mainRef} id="officer-main" className="admin-main flex-1" tabIndex={-1}>
-          {activeQuery.isError && !inListSection && <ErrorAlert className="mb-4" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
           {/* Tiêu đề trang chung (như Admin/Manager/Công dân); màn kiểm tra hồ sơ và Hồ sơ cá nhân tự có tiêu đề */}
           {!reviewingApp && activeSection !== 'profile' && (
             <div className="admin-page-heading mb-6">
@@ -404,6 +435,8 @@ export const OfficerPage: React.FC = () => {
               </div>
             </div>
           )}
+          {/* Chỉ Tổng quan dùng hàng đợi hồ sơ ngoài danh sách; lịch ca, nghỉ phép, tham vấn… không hiện lỗi hàng đợi. */}
+          {activeQuery.isError && activeSection === 'dashboard' && !reviewingApp && <ErrorAlert className="mb-6" retryLabel="Thử tải lại hàng đợi" onRetry={() => void refetchAll()}>{workflowError(activeQuery.error)}</ErrorAlert>}
           {/* Priority: If currently in Review Workspace */}
           {reviewingApp ? (
             <OfficerReviewWorkspaceView
@@ -433,7 +466,8 @@ export const OfficerPage: React.FC = () => {
                 activeSection === 'apps-reviewing' ||
                 activeSection === 'apps-need-revision' ||
                 activeSection === 'apps-resubmitted' ||
-                activeSection === 'apps-approved') && (
+                activeSection === 'apps-approved' ||
+                activeSection === 'apps-received') && (
                 <OfficerApplicationListView
                   applications={applications}
                   activeSection={activeSection}

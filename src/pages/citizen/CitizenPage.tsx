@@ -10,7 +10,7 @@ import { UserDropdown } from '@/components/layout/UserDropdown';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { toast } from '@/components/ui/Toast';
-import { ErrorAlert } from '@/components/ui';
+import { Button, ErrorAlert } from '@/components/ui';
 import { CitizenFeedbackModal } from '@/components/feedback/CitizenFeedbackModal';
 import { ProceduresPage } from '@/pages/public/ProceduresPage';
 import { usePublicProcedureDetail, usePublicProcedureList } from '@/hooks/useProcedureCategories';
@@ -43,6 +43,7 @@ import {
   List,
   Plus,
   QrCode,
+  Receipt,
   SidebarSimple,
   UserCircle,
   WarningCircle,
@@ -64,14 +65,15 @@ import { CitizenSubmissionsView } from './views/CitizenSubmissionsView';
 export type { CitizenSectionId, CitizenDossier } from './types';
 
 const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string }> = {
-  dashboard: { title: 'Tổng quan' },
+  dashboard: { title: 'Tổng quan', subtitle: 'Tình hình các hồ sơ tiền kiểm của bạn.' },
   procedures: { title: 'Tra cứu thủ tục' },
-  dossiers_all: { title: 'Hồ sơ của tôi' },
+  dossiers_all: { title: 'Hồ sơ của tôi', subtitle: 'Theo dõi trạng thái và tiếp tục chuẩn bị các hồ sơ tiền kiểm.' },
   dossiers_draft: { title: 'Hồ sơ bản nháp' },
   dossiers_pending: { title: 'Hồ sơ chờ tiền kiểm' },
   dossiers_need_revision: { title: 'Hồ sơ cần chỉnh sửa' },
   dossiers_resubmitted: { title: 'Hồ sơ đã gửi lại' },
   dossiers_approved: { title: 'Hồ sơ giấy tờ sẵn sàng' },
+  dossiers_received: { title: 'Hồ sơ đã tiếp nhận tại quầy' },
   dossiers_cancelled: { title: 'Hồ sơ đã hủy' },
   dossier_detail: { title: 'Chi tiết hồ sơ' },
   submissions: {
@@ -87,9 +89,13 @@ const sectionTitles: Record<CitizenSectionId, { title: string; subtitle?: string
   profile: { title: 'Hồ sơ cá nhân' },
 };
 
+const isCitizenSection = (value: string | null): value is CitizenSectionId => Boolean(value && Object.hasOwn(sectionTitles, value));
+
 export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: { embedded?: boolean; initialSection?: CitizenSectionId } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlSection = searchParams.get('section') as CitizenSectionId | null;
+  // L-14: section sai thì coi như không có (về màn mặc định), không để lại màn cũ hoặc màn trống.
+  const rawSection = searchParams.get('section');
+  const urlSection = isCitizenSection(rawSection) ? rawSection : null;
   const urlDossierCode = searchParams.get('dossierCode');
   const urlDossierId = searchParams.get('dossierId');
   const requestedProcedureId = searchParams.get('procedureId');
@@ -383,8 +389,9 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
 
   // Xử lý khi URL thay đổi
   useEffect(() => {
-    if (urlSection && urlSection !== activeSection) {
-      setActiveSection(urlSection);
+    const wanted = urlSection ?? (embedded ? null : initialSection);
+    if (wanted && wanted !== activeSection) {
+      setActiveSection(wanted);
     }
     const targetIdentifier = urlDossierCode || urlDossierId;
     if (targetIdentifier && dossiers.length > 0) {
@@ -436,6 +443,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
         { id: 'dossiers_need_revision', label: 'Cần chỉnh sửa', icon: WarningCircle, permissions: ['document.submissions.write'] },
         { id: 'dossiers_resubmitted', label: 'Đã gửi lại', icon: ArrowCounterClockwise, permissions: ['document.submissions.read'] },
         { id: 'dossiers_approved', label: 'Giấy tờ sẵn sàng', icon: CheckCircle, permissions: ['document.submissions.read'] },
+        { id: 'dossiers_received', label: 'Đã tiếp nhận tại quầy', icon: Receipt, permissions: ['document.submissions.read'] },
         { id: 'dossiers_cancelled', label: 'Đã hủy', icon: XCircle, permissions: ['document.submissions.read'] },
       ] },
       // Lối vào thẳng kho mã QR: người dân thường cần mã ngay tại quầy Một cửa, không phải tìm từng dòng hồ sơ.
@@ -502,7 +510,8 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
           {activeSection !== 'profile' && <div className="admin-page-heading mb-6">
             <div>
               <h1>{meta.title}</h1>
-              {meta.subtitle && <p>{meta.subtitle}</p>}
+              {/* Mọi mục đều có dòng mô tả để tiêu đề thẳng hàng giữa các trang. */}
+              {(meta.subtitle ?? (isDossierSection ? sectionTitles.dossiers_all.subtitle : undefined)) && <p>{meta.subtitle ?? sectionTitles.dossiers_all.subtitle}</p>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -552,6 +561,15 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
                 onLoadMore: () => { if (dossierListQuery.hasNextPage && !dossierListQuery.isFetchingNextPage) void dossierListQuery.fetchNextPage(); },
               }}
             />
+          )}
+
+          {activeSection === 'dossier_detail' && !selectedDossierDetail && (
+            citizenAppsQuery.isPending || ((urlDossierCode || urlDossierId) && dossiers.some(d => d.code === urlDossierCode || d.id === urlDossierId))
+              ? <p role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Đang tải hồ sơ…</p>
+              : <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6">
+                  <p role="alert" className="text-sm text-slate-700">{urlDossierCode || urlDossierId ? 'Không tìm thấy hồ sơ này trong danh sách của bạn.' : 'Chưa chọn hồ sơ để xem chi tiết.'}</p>
+                  <Button variant="outline" onClick={() => selectSection('dossiers_all')}>Về danh sách hồ sơ</Button>
+                </div>
           )}
 
           {activeSection === 'dossier_detail' && selectedDossierDetail && (

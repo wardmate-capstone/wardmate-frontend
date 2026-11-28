@@ -16,7 +16,7 @@ import { guideSteps as preparationSteps } from '@/data/preparationGuide';
 
 import { Link, useNavigate } from 'react-router-dom';
 import { procedureError } from '@/lib/api/procedures';
-import { useProcedureCategories, useFeaturedProcedures, shortProcedureLabel } from '@/hooks/useProcedureCategories';
+import { useProcedureCategories, useFeaturedProcedures, shortProcedureLabel, suggestionQuery } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 
 const revealInView = {
@@ -70,7 +70,7 @@ export function HomePage() {
                 <span className="font-medium">Gợi ý:</span>
                 {featuredList.slice(0, 3).map((item) => {
                   const suggestion = shortProcedureLabel(item.title);
-                  return <button key={item.id} type="button" title={item.title} className="hero-suggestion" onClick={() => navigate('/thu-tuc?' + new URLSearchParams({ q: suggestion }))}>{suggestion}</button>;
+                  return <button key={item.id} type="button" title={item.title} className="hero-suggestion" onClick={() => navigate('/thu-tuc?' + new URLSearchParams({ q: suggestionQuery(suggestion) }))}>{suggestion}</button>;
                 })}
               </div>}
             </form>

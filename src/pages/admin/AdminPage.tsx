@@ -6,6 +6,7 @@ import { formatTime, formatDate } from '@/lib/dateFormat';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { WorkspaceSidebar, type WorkspaceNavGroup } from '@/components/layout/WorkspaceSidebar';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { getGreeting, matchesSearch } from "@/lib/utils";
@@ -31,7 +32,7 @@ import {
   Users,
 } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/Toast";
-import { Modal, RefreshButton, SearchInput, Skeleton, TableSkeletonRows, Select, EmptyState, ErrorAlert } from "@/components/ui";
+import { Modal, RefreshButton, SearchInput, Skeleton, TableSkeletonRows, Select, EmptyState, ErrorAlert, Pagination } from "@/components/ui";
 import {
   getAdminUsers,
   getAccount,
@@ -137,7 +138,7 @@ const navigation: WorkspaceNavGroup<SectionId>[] = [
 
 
 
-const sectionMeta: Record<SectionId, { title: string }> = {
+const sectionMeta: Record<SectionId, { title: string; subtitle?: string }> = {
   'system-settings': { title: 'Cấu hình hệ thống' },
   closures: { title: 'Lịch ngày lễ toàn quốc' },
   'analytics-jobs': { title: 'Cập nhật số liệu thống kê' },
@@ -145,8 +146,9 @@ const sectionMeta: Record<SectionId, { title: string }> = {
   overview: { title: "Tổng quan" },
   procedures: { title: "Danh sách thủ tục" },
   knowledge: { title: "Dữ liệu kiến thức AI" },
-  accounts: { title: "Tài khoản đăng nhập" },
-  users: { title: "Người dùng hệ thống" },
+  // L-31: phân biệt hai mục cùng dữ liệu tài khoản.
+  accounts: { title: "Tài khoản đăng nhập", subtitle: "Tạo tài khoản cán bộ, khóa hoặc mở đăng nhập" },
+  users: { title: "Người dùng hệ thống", subtitle: "Xem hồ sơ cá nhân, vai trò và đơn vị công tác của từng người dùng" },
   wards: { title: "Quản lý đơn vị Phường / Xã" },
   roles: { title: "Vai trò & quyền hạn" },
   integrations: { title: "Giám sát dịch vụ" },
@@ -156,7 +158,14 @@ const sectionMeta: Record<SectionId, { title: string }> = {
 };
 
 export function AdminPage({ embedded = false, initialSection = "overview" }: { embedded?: boolean; initialSection?: SectionId } = {}) {
-  const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
+  // M-09/L-15: mục đang mở nằm trên URL (?section=) để chia sẻ, mở tab mới và dùng nút Back.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSection = searchParams.get('section');
+  const validUrlSection = !embedded && urlSection && Object.hasOwn(sectionMeta, urlSection) ? urlSection as SectionId : null;
+  const [activeSection, setActiveSection] = useState<SectionId>(validUrlSection ?? initialSection);
+  useEffect(() => {
+    if (!embedded) setActiveSection(validUrlSection ?? initialSection);
+  }, [embedded, validUrlSection, initialSection]);
   const [auditTab, setAuditTab] = useState<AdminAuditTab>('events');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -460,6 +469,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
 
   function selectSection(id: SectionId) {
     setActiveSection(id);
+    if (!embedded && searchParams.get('section') !== id) setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('section', id); return next; });
     setSelectedUser(null);
     setDetailProfile(null);
     setQuery("");
@@ -517,6 +527,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
             <div className="admin-page-heading mb-6">
               <div>
                 <h1>{meta.title}</h1>
+                {meta.subtitle && <p>{meta.subtitle}</p>}
                 {activeSection === "overview" && (
                   <p>
                     {getGreeting()}, Quản trị viên {adminName}
@@ -1119,31 +1130,9 @@ function AccountsView({
         </div>
       )}
 
-      {/* Pagination Footer */}
+      {/* Phân trang dùng chung (ẩn nút khi chỉ có một trang) */}
       {!loading && !error && total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-slate-100 text-xs text-slate-500">
-          <span>
-            Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Tổng cộng <strong>{total}</strong> tài khoản)
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-            >
-              Trước
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-            >
-              Sau
-            </button>
-          </div>
-        </div>
+        <Pagination className="border-t border-slate-100 p-4" label="Phân trang tài khoản" page={page} total={total} pageSize={pageSize} totalPages={totalPages} unit="tài khoản" onPageChange={onPageChange} />
       )}
     </section>
   );
@@ -1420,29 +1409,9 @@ function UsersView({
         </p>
       )}
 
-      {/* Phân trang */}
-      {!loading && !error && totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-4 text-xs text-slate-600">
-          <span>Trang {page} / {totalPages} · Tổng {total} người dùng</span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-            >
-              ‹ Trước
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-            >
-              Sau ›
-            </button>
-          </div>
-        </div>
+      {/* Phân trang dùng chung */}
+      {!loading && !error && total > 0 && (
+        <Pagination className="border-t border-slate-100 p-4" label="Phân trang người dùng" page={page} total={total} pageSize={pageSize} totalPages={totalPages} unit="người dùng" onPageChange={onPageChange} />
       )}
     </section>
   );

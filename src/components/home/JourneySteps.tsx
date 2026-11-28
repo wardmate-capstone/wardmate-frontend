@@ -1,19 +1,9 @@
-import {
-  ArrowRight,
-  ClipboardText as ClipboardList,
-  FileMagnifyingGlass as FileSearch,
-  QrCode,
-  SealCheck,
-  ShieldCheck,
-} from '@phosphor-icons/react';
+import { ArrowRight, SealCheck } from '@phosphor-icons/react';
 import { m, useReducedMotion } from 'motion/react';
+import { guideSteps } from '@/data/preparationGuide';
 
-const steps = [
-  { label: 'Tìm đúng thủ tục', detail: 'Tra cứu bằng tên thủ tục hoặc nhu cầu của bạn để xem đúng hướng dẫn.', icon: FileSearch },
-  { label: 'Chuẩn bị giấy tờ', detail: 'Đọc điều kiện và hoàn thành danh sách giấy tờ theo từng mục rõ ràng.', icon: ClipboardList },
-  { label: 'Nhận góp ý tiền kiểm', detail: 'Cán bộ kiểm tra trước và chỉ rõ nội dung cần bổ sung nếu có.', icon: ShieldCheck },
-  { label: 'Nhận QR khi giấy tờ sẵn sàng', detail: 'Mang giấy tờ và mã QR đến cơ quan để thực hiện tiếp nhận chính thức.', icon: QrCode },
-];
+// L-01: dùng chung các bước với trang Hướng dẫn để số bước luôn khớp.
+const steps = guideSteps.map(step => ({ label: step.title, detail: step.description, icon: step.icon }));
 
 export function JourneySteps() {
   const reduceMotion = useReducedMotion();
@@ -26,7 +16,7 @@ export function JourneySteps() {
           <div className="journey-overview-content">
             <span className="journey-overview-icon"><SealCheck size={27} aria-hidden="true" /></span>
             <p className="journey-eyebrow">Quy trình chuẩn bị hồ sơ</p>
-            <h2 id="journey-title">Chuẩn bị hồ sơ<br />qua 4 bước</h2>
+            <h2 id="journey-title">Chuẩn bị hồ sơ<br />qua {steps.length} bước</h2>
             <a href="#trang-chu" className="journey-start-link">Bắt đầu tra cứu <ArrowRight size={18} aria-hidden="true" /></a>
           </div>
         </div>

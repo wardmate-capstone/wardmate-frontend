@@ -93,6 +93,18 @@ export function ProcedureDocumentsView({ checklist, forms, cases, renderForms, c
           <DocumentTable rows={commonSubmit} renderForms={renderForms} />
         </Group>
       )}
+      {/* L-04: chỉ một trường hợp thì không có gì để chọn; hiện thẳng danh mục giấy tờ. */}
+      {perCase.length === 1 ? (() => {
+        const own = perCase[0].rows.filter(r => !commonKeys.has(r.key));
+        return (own.length > 0 || caseAction) ? (
+          <Group title={commonRows.length ? 'Giấy tờ nộp thêm' : 'Giấy tờ phải nộp'}>
+            <div className="space-y-3">
+              {own.length > 0 && <DocumentTable rows={own} renderForms={renderForms} showType />}
+              {caseAction?.(perCase[0].caseCode)}
+            </div>
+          </Group>
+        ) : null;
+      })() : (
       <Group title={`Giấy tờ theo trường hợp (${perCase.length})`} hint="Chỉ cần chuẩn bị thêm giấy tờ của trường hợp phù hợp với bạn.">
         <div className="space-y-2">
           {perCase.map((group, index) => {
@@ -123,6 +135,7 @@ export function ProcedureDocumentsView({ checklist, forms, cases, renderForms, c
           })}
         </div>
       </Group>
+      )}
       {showOrphans && <Orphans items={orphans} />}
       {showOrphans ? <Standalone checklist={checklist} forms={forms} cases={validCases} /> : <StandaloneDownloads checklist={checklist} forms={forms} cases={validCases} renderForms={renderForms} />}
     </div>

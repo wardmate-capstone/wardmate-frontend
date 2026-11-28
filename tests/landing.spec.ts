@@ -58,7 +58,7 @@ test('điều hướng đến đăng nhập và chuyển sang đăng ký', async
   await page.goto('/');
   await page.getByRole('link', { name: 'Đăng nhập' }).click();
   await expect(page).toHaveURL(/\/dang-nhap$/);
-  await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Đăng nhập', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Đăng ký ngay' }).click();
   await expect(page).toHaveURL(/\/dang-ky$/);
   await expect(page.getByRole('heading', { name: 'Đăng ký tài khoản' })).toBeVisible();

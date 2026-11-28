@@ -6,7 +6,8 @@ import { Badge, Button, Modal, Skeleton } from '@/components/ui';
 import { useApplicationContents } from '@/hooks/useDocumentForms';
 import { hasChecklistEvidence } from '@/lib/documentEvidence';
 import { workflowError } from '@/lib/api/workflow';
-import { ArrowLeft, ArrowRight, ArrowsLeftRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, ShieldCheck, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, ArrowsLeftRight, CheckCircle, ChatText, FileText, Buildings, CalendarBlank, Clock, PaperPlaneTilt, QrCode, Receipt, ShieldCheck, Trash } from '@phosphor-icons/react';
+import { ApprovedQr } from './CitizenQrCodeView';
 import { DossierChecklistView } from '../components/DossierChecklistView';
 import { CasePicker } from '../components/CasePicker';
 import { usePublicProcedureDetail } from '@/hooks/useProcedureCategories';
@@ -52,17 +53,26 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
   const preparing = ['Bản nháp', 'Cần chỉnh sửa'].includes(dossier.status);
   const revising = dossier.status === 'Cần chỉnh sửa';
   const approved = dossier.status === 'Giấy tờ sẵn sàng' || dossier.status === 'Đã duyệt' || dossier.status === 'Đã hoàn thành';
+  // M-17: tiếp nhận tại quầy là bước cuối của luồng trên WardMate.
+  const received = dossier.status === 'Đã tiếp nhận tại quầy';
+  const showQr = Boolean(dossier.id) && (dossier.status === 'Giấy tờ sẵn sàng' || dossier.status === 'Đã duyệt');
   const required = (dossier.checklist ?? []).filter(item => item.isMandatory);
   const missing = contents.data ? required.filter(item => !hasChecklistEvidence(item, contents.data!)) : [];
   const readyCount = required.length - missing.length;
   const canSend = preparing && (!revising || Boolean(onResubmitPrecheck)) && dossier.checklist !== undefined && contents.isSuccess && !missing.length && !mutating && !submitting;
   const openConfirm = () => { setAcknowledged(false); setSendError(''); setConfirmOpen(true); };
   const openComments = comments.filter(comment => comment.status === 'OPEN');
+  // L-10: liệt kê giấy tờ sẽ gửi trong hộp xác nhận.
+  const attached = contents.data ? (dossier.checklist ?? []).filter(item => hasChecklistEvidence(item, contents.data!)) : [];
+  // M-17: ghi chú yêu cầu bổ sung cũ không còn giá trị sau khi đã gửi lại hoặc đã tiếp nhận tại quầy.
+  const showOfficerNote = Boolean(dossier.officerNote) && (revising || approved || dossier.status === 'Đã từ chối');
   const resolvedComments = comments.filter(comment => comment.status === 'RESOLVED');
-  const statusLabel = dossier.status === 'Đã duyệt' ? 'Giấy tờ sẵn sàng' : revising ? 'Cần bổ sung' : dossier.status;
+  const statusLabel = dossier.status === 'Đã duyệt' ? 'Giấy tờ sẵn sàng' : dossier.status;
   // Thủ tục nhiều trường hợp: bước "Chọn trường hợp" đã xong khi tạo hồ sơ (BE bắt buộc chọn lúc tạo)
-  const stepLabels = caseStep ? ['Chọn trường hợp', 'Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi'] : ['Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi'];
-  const currentStep = (preparing ? 0 : approved || dossier.status === 'Đã từ chối' ? 2 : 1) + (caseStep ? 1 : 0);
+  const baseSteps = ['Chuẩn bị giấy tờ', 'Gửi tiền kiểm', 'Nhận phản hồi', 'Tiếp nhận tại quầy'];
+  const stepLabels = caseStep ? ['Chọn trường hợp', ...baseSteps] : baseSteps;
+  // Đã tiếp nhận: mọi bước hoàn tất. Giấy tờ sẵn sàng: bước kế tiếp là mang giấy tờ đến quầy.
+  const currentStep = received ? stepLabels.length : (preparing ? 0 : approved ? 3 : dossier.status === 'Đã từ chối' ? 2 : 1) + (caseStep ? 1 : 0);
   const canChangeCase = dossier.status === 'Bản nháp' && caseStep && Boolean(onChangeCase) && Boolean(dossier.id);
 
   return <div className="min-w-0 space-y-5 pb-8 [&_button]:min-h-11">
@@ -73,7 +83,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
       <div className="p-5 sm:p-6">
         <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Hồ sơ tiền kiểm</span>
-          <Badge variant={approved ? 'success' : revising ? 'warning' : dossier.status === 'Đã từ chối' ? 'danger' : 'neutral'} className="text-xs">
+          <Badge variant={approved || received ? 'success' : revising ? 'warning' : dossier.status === 'Đã từ chối' ? 'danger' : 'neutral'} className="text-xs">
             {statusLabel}
           </Badge>
           {(dossier.currentVersion ?? 0) > 0 && <span className="text-xs text-slate-400">v{dossier.currentVersion}</span>}
@@ -116,7 +126,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
         )}
       </div>
 
-      <ol aria-label="Các bước tiền kiểm" className={`grid ${caseStep ? 'grid-cols-4' : 'grid-cols-3'} border-t border-slate-200 bg-slate-50/60 px-3 py-3 sm:px-6`}>
+      <ol aria-label="Các bước tiền kiểm" className={`grid ${caseStep ? 'grid-cols-5' : 'grid-cols-4'} gap-1 border-t border-slate-200 bg-slate-50/60 px-3 py-3 sm:px-6`}>
         {stepLabels.map((label, index) => (
           <li key={label} aria-current={currentStep === index ? 'step' : undefined} className="flex flex-col items-center gap-1.5 text-center text-xs sm:flex-row sm:justify-center sm:text-xs">
             <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${index < currentStep ? 'bg-emerald-100 text-emerald-800' : index === currentStep ? 'bg-red-800 text-white' : 'border border-slate-200 bg-white text-slate-400'}`}>
@@ -173,7 +183,28 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
           </section>
         )}
 
-        {dossier.officerNote && (
+        {(received || dossier.receiptNumber) && (
+          <section aria-labelledby="dossier-receipt-title" className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 sm:p-5">
+            <h3 id="dossier-receipt-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <Receipt size={18} className="text-emerald-700" aria-hidden />Đã tiếp nhận tại Bộ phận Một cửa
+            </h3>
+            <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+              {[
+                { label: 'Số biên nhận', value: dossier.receiptNumber },
+                { label: 'Thời điểm tiếp nhận', value: dossier.receivedAt },
+                { label: 'Ngày hẹn trả kết quả', value: dossier.appointmentDate },
+              ].map(item => (
+                <div key={item.label} className="min-w-0 rounded-xl border border-emerald-100 bg-white p-3">
+                  <dt className="text-[11px] text-slate-500">{item.label}</dt>
+                  <dd className="mt-0.5 break-words font-semibold text-slate-900">{item.value || 'Chưa có thông tin'}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-xs leading-relaxed text-slate-600">Giữ giấy biên nhận để theo dõi và nhận kết quả theo ngày hẹn tại phường.</p>
+          </section>
+        )}
+
+        {showOfficerNote && (
           <section className="rounded-xl border border-slate-200 bg-white p-4">
             <h3 className="flex items-center gap-2 text-xs font-bold text-slate-900">
               <ChatText size={16} aria-hidden />{dossier.status === 'Đã từ chối' ? 'Lý do từ chối' : 'Ghi chú của cán bộ'}
@@ -218,6 +249,13 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
             )}
           </div>
         </section>
+
+        {showQr && dossier.id && (
+          <section id="dossier-qr" aria-labelledby="dossier-qr-title" tabIndex={-1} className="scroll-mt-24 space-y-3 focus:outline-red-700">
+            <h3 id="dossier-qr-title" className="flex items-center gap-2 text-base font-bold text-slate-900"><QrCode size={20} className="text-red-800" aria-hidden />Mã QR đối chiếu tại quầy</h3>
+            <ApprovedQr dossier={dossier} applicationId={dossier.id} />
+          </section>
+        )}
 
         {dossier.id && approved && <GeneratedDocumentsPanel applicationId={dossier.id} />}
 
@@ -307,10 +345,16 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
                   </p>
                 ) : (
                   <p className="text-xs leading-relaxed text-slate-600">
-                    {approved ? 'Vui lòng chuẩn bị giấy tờ bản giấy khi đến nộp tại Bộ phận Một cửa.' : dossier.status === 'Đã từ chối' ? 'Xem lý do cán bộ từ chối để thực hiện lại.' : dossier.assigned === false ? 'Hồ sơ đã gửi và đang chờ cán bộ tiếp nhận; giấy tờ đã khóa chỉnh sửa.' : 'Hồ sơ đang được cán bộ kiểm tra; giấy tờ đã khóa chỉnh sửa.'}
+                    {received ? 'Hồ sơ đã được tiếp nhận tại Bộ phận Một cửa. Theo dõi kết quả theo giấy biên nhận.' : approved ? 'Vui lòng mang giấy tờ bản giấy và mã QR khi đến nộp tại Bộ phận Một cửa.' : dossier.status === 'Đã từ chối' ? 'Xem lý do cán bộ từ chối để thực hiện lại.' : dossier.assigned === false ? 'Hồ sơ đã gửi và đang chờ cán bộ tiếp nhận; giấy tờ đã khóa chỉnh sửa.' : 'Hồ sơ đang được cán bộ kiểm tra; giấy tờ đã khóa chỉnh sửa.'}
                   </p>
                 )}
               </>
+            )}
+
+            {showQr && (
+              <a href="#dossier-qr" onClick={() => window.setTimeout(() => document.getElementById('dossier-qr')?.focus({ preventScroll: true }), 0)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-800 px-4 text-sm font-semibold text-white transition hover:bg-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2">
+                <QrCode size={18} aria-hidden />Xem và tải mã QR
+              </a>
             )}
 
             {preparing && (
@@ -337,8 +381,8 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
         </section>
       </aside>
     </div>
-    <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={revising ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa.">
-      <div className="space-y-4">{contents.isPending && <Skeleton className="h-4 w-48" role="status" aria-label="Đang kiểm tra giấy tờ" />}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}<Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></div>
+    <Modal open={confirmOpen} onOpenChange={open => { if (!submitting && !mutating) setConfirmOpen(open); }} title={revising ? 'Xác nhận gửi lại hồ sơ' : 'Xác nhận gửi tiền kiểm'} description="Kiểm tra tài liệu trước khi gửi. Sau khi gửi, tài liệu sẽ được khóa chỉnh sửa." footer={<><Button variant="outline" disabled={submitting} onClick={() => setConfirmOpen(false)}>Hủy</Button><Button loading={submitting} disabled={!acknowledged || !canSend} onClick={async () => { setSendError(''); try { if (revising) await onResubmitPrecheck?.(); else await onSubmitPrecheck(); setConfirmOpen(false); } catch (error) { setSendError(workflowError(error)); await contents.refetch(); } }}>Xác nhận gửi</Button></>}>
+      <div className="space-y-4">{!!attached.length && <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-700">Giấy tờ sẽ gửi ({attached.length}):</p><ul className="mt-1.5 list-disc space-y-1 pl-5 text-xs text-slate-600">{attached.map(item => <li key={item.checklistId} className="break-words">{item.itemName}</li>)}</ul></div>}{contents.isPending && <Skeleton className="h-4 w-48" role="status" aria-label="Đang kiểm tra giấy tờ" />}{contents.isError && <p role="alert">Chưa tải được giấy tờ. Vui lòng thử lại.</p>}{!!missing.length && <p role="alert">Còn {missing.length} mục bắt buộc chưa đủ giấy tờ. Đóng hộp thoại để bổ sung.</p>}<label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acknowledged} disabled={submitting} onChange={e => setAcknowledged(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-red-800" />Tôi đã kiểm tra thông tin và hiểu rằng đây là yêu cầu tiền kiểm, chưa phải nộp hồ sơ hành chính chính thức.</label>{sendError && <p role="alert" className="text-sm text-red-800">{sendError}</p>}</div>
     </Modal>
     {canChangeCase && procedureQuery.data && (
       <ChangeCaseModal

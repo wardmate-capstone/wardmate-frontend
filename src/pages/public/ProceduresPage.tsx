@@ -12,7 +12,7 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input, Skeleton } from '@/components/ui';
 import { procedureError } from '@/lib/api/procedures';
-import { useProcedureCategories, useProcedureSuggestions, usePublicProcedureList } from '@/hooks/useProcedureCategories';
+import { suggestionQuery, useProcedureCategories, useProcedureSuggestions, usePublicProcedureList } from '@/hooks/useProcedureCategories';
 import { ProcedureFeedback } from '@/components/ui/ProcedureFeedback';
 import { useAuthState } from '@/hooks/useAuthState';
 import { PublicPageIntro } from './PublicPageIntro';
@@ -136,7 +136,7 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
                   key={id}
                   type="button"
                   title={title}
-                  onClick={() => handleQuickSearch(tag)}
+                  onClick={() => handleQuickSearch(suggestionQuery(tag))}
                   className="rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-900 border border-slate-200/80 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors"
                 >
                   {tag}
@@ -290,7 +290,7 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
               </ul>
               <div className="procedures-pagination">
                 <p role="status">Hiển thị {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, totalCount)} / {totalCount} thủ tục · Trang {currentPage}/{totalPages}</p>
-                <nav aria-label="Phân trang thủ tục" className="flex flex-wrap items-center gap-2">
+                {totalPages > 1 && <nav aria-label="Phân trang thủ tục" className="flex flex-wrap items-center gap-2">
                   <Button variant="outline" className="min-h-11 px-3 border-slate-300" disabled={!result.data?.hasPrevious} onClick={() => changePage(currentPage - 1)} aria-label="Trang trước">
                     <CaretLeft aria-hidden="true" /><span className="hidden sm:inline">Trước</span>
                   </Button>
@@ -309,7 +309,7 @@ export function ProceduresPage({ embedded = false }: { embedded?: boolean }) {
                   <Button variant="outline" className="min-h-11 px-3 border-slate-300" disabled={!result.data?.hasNext} onClick={() => changePage(currentPage + 1)} aria-label="Trang sau">
                     <span className="hidden sm:inline">Sau</span><CaretRight aria-hidden="true" />
                   </Button>
-                </nav>
+                </nav>}
               </div>
             </>
           ) : !result.isPending && !result.isError ? (

@@ -24,7 +24,7 @@ import { PasswordMatchHint, PasswordStrength } from '@/components/auth/PasswordS
 
 type AuthPageProps = { mode: 'login' | 'register' };
 
-export function PasswordField({ id, label, autoComplete, field, error }: { id: string; label: string; autoComplete: string; field: UseFormRegisterReturn; error?: string }) {
+export function PasswordField({ id, label, autoComplete, field, error, placeholder = 'Nhập mật khẩu' }: { id: string; label: string; autoComplete: string; field: UseFormRegisterReturn; error?: string; placeholder?: string }) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -32,7 +32,7 @@ export function PasswordField({ id, label, autoComplete, field, error }: { id: s
       <label className="auth-label" htmlFor={id}>{label}</label>
       <div className="relative">
         <LockKey className="auth-field-icon" size={20} aria-hidden="true" />
-        <Input {...field} error={error} id={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} className="auth-input min-h-11 sm:min-h-12 pl-11 pr-11" placeholder="Nhập mật khẩu" required />
+        <Input {...field} error={error} id={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} className="auth-input min-h-11 sm:min-h-12 pl-11 pr-11" placeholder={placeholder} required />
         <button type="button" className="auth-password-toggle" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
           {visible ? <EyeSlash size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
         </button>
@@ -46,9 +46,12 @@ export function AuthPage({ mode }: AuthPageProps) {
   const [searchParams] = useSearchParams();
   const returnTo = safeReturnTo(searchParams.get('returnTo'));
   const expired = !isRegister && searchParams.get('reason') === 'session-expired';
+  // M-01: khách mở trang cần đăng nhập (có returnTo) được mời đăng nhập, không bị báo hết phiên.
+  const loginRequired = !isRegister && !expired && returnTo !== '/';
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const termsButtonRef = useRef<HTMLButtonElement>(null);
   const pending = useRef(false);
   const active = useRef(true);
   const { register: field, handleSubmit, reset, setError, watch, formState: { errors } } = useForm<AuthFormValues>({
@@ -151,6 +154,11 @@ export function AuthPage({ mode }: AuthPageProps) {
               Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.
             </p>
           )}
+          {loginRequired && (
+            <p role="status" className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs sm:text-sm text-slate-700">
+              Vui lòng đăng nhập để tiếp tục.
+            </p>
+          )}
 
           <form className="auth-form-fields mt-4 grid gap-3.5" noValidate onSubmit={handleSubmit(submit)}>
             {isRegister && (
@@ -223,9 +231,11 @@ export function AuthPage({ mode }: AuthPageProps) {
               id="confirm-password"
               label="Xác nhận mật khẩu"
               autoComplete="new-password"
+              placeholder="Nhập lại mật khẩu"
               />
             )}
-            {isRegister && <PasswordMatchHint password={passwordValue} confirm={confirmValue} />}
+            {/* L-05: lỗi kiểm tra đã nói "chưa khớp" thì không hiện thêm dòng gợi ý trùng ý. */}
+            {isRegister && !errors.confirmPassword && <PasswordMatchHint password={passwordValue} confirm={confirmValue} />}
 
             <div className={`flex flex-wrap items-center gap-2 pt-0.5 text-xs sm:text-sm ${isRegister ? 'justify-between' : 'justify-end'}`}>
               {isRegister && (
@@ -241,6 +251,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                     Tôi đồng ý với{' '}
                     <button
                       type="button"
+                      ref={termsButtonRef}
                       onClick={(e) => {
                         e.preventDefault();
                         setTermsModalOpen(true);
@@ -253,7 +264,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                 </label>
               )}
               {!isRegister && (
-                <Link to="/quen-mat-khau" className="font-semibold text-red-800 hover:underline">
+                <Link to="/quen-mat-khau" className="inline-flex min-h-11 items-center px-1 font-semibold text-red-800 hover:underline">
                   Quên mật khẩu?
                 </Link>
               )}
@@ -302,7 +313,11 @@ export function AuthPage({ mode }: AuthPageProps) {
       {/* Modal Điều khoản sử dụng dịch vụ */}
       <Modal
         open={termsModalOpen}
-        onOpenChange={setTermsModalOpen}
+        onOpenChange={(open) => {
+          setTermsModalOpen(open);
+          // L-06: đóng hộp điều khoản thì trả focus về nút đã mở.
+          if (!open) window.setTimeout(() => termsButtonRef.current?.focus(), 0);
+        }}
         title="Điều khoản sử dụng dịch vụ WardMate"
       >
         <div className="space-y-3.5 text-xs sm:text-sm text-slate-700 max-h-[60vh] overflow-y-auto pr-1">
@@ -318,7 +333,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           <div className="space-y-2">
             <h4 className="font-bold text-slate-900">2. Ranh giới pháp lý & Tiền kiểm:</h4>
             <p className="text-slate-600">
-              Việc hoàn tất chuẩn bị hồ sơ hoặc duyệt tiền kiểm trên WardMate <strong>không thay thế</strong> việc nộp hồ sơ giấy và đối chiếu gốc tại cơ quan tiếp nhận chính thức. Quyết định thụ lý chỉ được xác lập khi cán bộ tiếp nhận trực tiếp đối chiếu hồ sơ tại UBND.
+              Việc hoàn tất chuẩn bị hồ sơ hoặc hoàn tất tiền kiểm trên WardMate <strong>không thay thế</strong> việc nộp hồ sơ giấy và đối chiếu gốc tại cơ quan tiếp nhận chính thức. Quyết định thụ lý chỉ được xác lập khi cán bộ tiếp nhận trực tiếp đối chiếu hồ sơ tại UBND.
             </p>
           </div>
           <div className="space-y-2">
@@ -328,7 +343,7 @@ export function AuthPage({ mode }: AuthPageProps) {
             </p>
           </div>
           <div className="pt-3 border-t border-slate-100 flex justify-end">
-            <Button onClick={() => setTermsModalOpen(false)}>
+            <Button onClick={() => { setTermsModalOpen(false); window.setTimeout(() => termsButtonRef.current?.focus(), 0); }}>
               Đã hiểu và đóng
             </Button>
           </div>

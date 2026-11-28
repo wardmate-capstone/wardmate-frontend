@@ -1,3 +1,4 @@
+import { formatFileSize } from '@/lib/utils';
 import { useEffect, useId, useRef, useState } from 'react';
 import { formatDateTime as vnDateTime } from '@/lib/dateFormat';
 import { FilePdf, UploadSimple, X } from '@phosphor-icons/react';
@@ -353,7 +354,7 @@ export function KnowledgePdfModal({ open, onOpenChange }: { open: boolean; onOpe
               <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-700" aria-hidden="true"><FilePdf size={22} weight="duotone" /></span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-900" title={file.name}>{file.name}</p>
-                <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
               </div>
               <Button size="small" variant="outline" disabled={busy} onClick={() => fileInput.current?.click()}>Đổi tệp</Button>
               <button type="button" disabled={busy} onClick={() => setFile(null)} aria-label="Bỏ tệp đã chọn"

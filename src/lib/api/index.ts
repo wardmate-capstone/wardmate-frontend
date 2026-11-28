@@ -1,6 +1,6 @@
 import axios, { type AxiosAdapter } from 'axios';
 import { createJwtClient } from './createJwtClient';
-import { redirectToLogin } from '../authRedirect';
+import { hadSession, markHadSession, redirectToLogin } from '../authRedirect';
 import { useAuthStore, type CurrentUser } from '@/stores/authStore';
 import type { UserProfileDto, ProfileInput } from '@/types/profile';
 import { configuredServiceOrigins, serviceUrls } from './serviceUrls';
@@ -48,12 +48,45 @@ export const authClient = createJwtClient({
   // A CSRF rejection is a configuration/security error, not an expired session.
   isRefreshSessionExpired: (error) => axios.isAxiosError(error) && error.response?.status === 401,
   onSessionExpired: () => {
+    // Khôi phục phiên lúc mở trang: chỉ là "hết hạn" nếu trước đó trình duyệt này đã đăng nhập (M-01).
+    // Hết hạn trong lúc đang dùng (không phải lúc khởi động) luôn báo hết phiên.
+    const wasSignedIn = !bootstrapping || hadSession();
+    markHadSession(false);
     clearSession();
-    useAuthStore.setState({ expired: true });
+    useAuthStore.setState({ expired: wasSignedIn });
     if (!bootstrapping) redirectToLogin();
   },
 });
 export const api = authClient.api;
+
+/**
+ * M-16 (gộp FE-02): dịch vụ Azure đang khởi động trả 503. Riêng lỗi khởi động (không có mã, hoặc
+ * `auth.session_unavailable` khi IAM chưa sẵn sàng) thì tự gọi lại tối đa 2 lần với GET; hết lượt thì
+ * đổi câu báo thành "Dịch vụ đang khởi động…" thay cho "Không thể xác minh phiên đăng nhập lúc này".
+ * Lệnh ghi (POST/PUT/…) không tự gửi lại vì chưa biết kết quả phía máy chủ.
+ */
+export const SERVICE_STARTING_MESSAGE = 'Dịch vụ đang khởi động, vui lòng thử lại sau vài giây.';
+const STARTUP_RETRY_DELAYS = [500, 1_000];
+const STARTUP_CODES = new Set(['auth.session_unavailable']);
+api.interceptors.response.use(undefined, async (error: unknown) => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 503 || !error.config) throw error;
+  const data: unknown = error.response.data;
+  const code = data && typeof data === 'object' && 'code' in data && typeof data.code === 'string' ? data.code : undefined;
+  if (code && !STARTUP_CODES.has(code)) throw error;
+  const config = error.config as typeof error.config & { _startupRetry?: number };
+  const attempt = config._startupRetry ?? 0;
+  const method = (config.method ?? 'get').toLowerCase();
+  if ((method === 'get' || method === 'head') && attempt < STARTUP_RETRY_DELAYS.length && !config.signal?.aborted) {
+    await new Promise(resolve => setTimeout(resolve, STARTUP_RETRY_DELAYS[attempt]));
+    if (!config.signal?.aborted) {
+      config._startupRetry = attempt + 1;
+      return api.request(config);
+    }
+  }
+  error.response.data = { ...(data && typeof data === 'object' && !(data instanceof Blob) ? data : {}), status: 503, title: SERVICE_STARTING_MESSAGE, detail: SERVICE_STARTING_MESSAGE };
+  error.message = SERVICE_STARTING_MESSAGE;
+  throw error;
+});
 
 const channel = typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
   ? new BroadcastChannel('wardmate-auth:' + baseURL) : null;
@@ -111,6 +144,7 @@ export function logout(): Promise<void> {
   logoutPending = api.post('/api/v1/auth/revoke-token', undefined, authCookieConfig)
     .then((response) => {
       if (response.status !== 204) throw new Error('Máy chủ chưa xác nhận thu hồi phiên. Vui lòng thử lại.');
+      markHadSession(false);
       clearSession();
       channel?.postMessage('logout');
     }).finally(() => { logoutPending = undefined; });
@@ -130,6 +164,7 @@ async function loadCurrentUser(version: number) {
     : [];
   // PROFILE-AVATAR-01: chỉ nhận đường dẫn ảnh tương đối của IAM; giá trị khác coi như chưa có ảnh
   const avatarUrl = typeof data.avatarUrl === 'string' && data.avatarUrl.startsWith('/api/v1/users/') ? data.avatarUrl : null;
+  markHadSession(true);
   useAuthStore.setState({ status: 'authenticated', user: { ...data, assignedCategories, avatarUrl }, error: null, expired: false });
 }
 
@@ -528,7 +563,7 @@ export function authErrorMessage(error: unknown): string {
     if (status === 404) return 'Không tìm thấy thông tin hồ sơ.';
     if (status === 429) return 'Bạn thao tác quá nhiều lần. Vui lòng chờ rồi thử lại.';
     // 503: dịch vụ Azure đang khởi động lại (minReplicas: 0), thường sẵn sàng sau vài giây
-    if (status === 503) return 'Hệ thống đang khởi động. Vui lòng chờ vài giây rồi bấm Thử lại.';
+    if (status === 503) return SERVICE_STARTING_MESSAGE;
     if (status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
     const data = error.response?.data;
     const errors = data?.errors && typeof data.errors === 'object'

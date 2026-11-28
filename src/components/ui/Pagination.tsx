@@ -30,6 +30,8 @@ const navButton =
 export function Pagination({ page, total, pageSize, onPageChange, totalPages: pagesOverride, unit = 'mục', hasNext, disabled = false, label = 'Phân trang', extra, className }: PaginationProps) {
   const totalPages = pagesOverride ?? (total === undefined ? undefined : Math.max(1, Math.ceil(total / pageSize)));
   const canNext = hasNext ?? (totalPages !== undefined && page < totalPages);
+  // L-03: chỉ có một trang thì không hiện nút chuyển trang (chỉ còn thông tin và phần bổ sung).
+  const singlePage = page <= 1 && !canNext;
   return (
     <nav aria-label={label} className={cn('flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600', className)}>
       <p>
@@ -39,6 +41,7 @@ export function Pagination({ page, total, pageSize, onPageChange, totalPages: pa
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {extra}
+        {!singlePage && <>
         <button type="button" className={navButton} disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}>
           <CaretLeft size={14} weight="bold" aria-hidden="true" />
           Trang trước
@@ -47,6 +50,7 @@ export function Pagination({ page, total, pageSize, onPageChange, totalPages: pa
           Trang sau
           <CaretRight size={14} weight="bold" aria-hidden="true" />
         </button>
+        </>}
       </div>
     </nav>
   );

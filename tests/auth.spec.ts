@@ -333,3 +333,16 @@ test('tự động làm mới token sau khi access token hết hạn 15 phút m�
   expect(secondStatus).toBe(200);
   expect(refreshes).toBe(1); // Không tăng thêm
 });
+
+test('M-01: khách chưa đăng nhập vào khu làm việc được mời đăng nhập, không bị báo hết phiên', async ({ page, context }) => {
+  await mock(context, async (route) => reply(route, 401, {}));
+  await page.goto('/citizen');
+  await expect(page).toHaveURL(/\/dang-nhap\?returnTo=%2Fcitizen$/);
+  await expect(page.getByText('Vui lòng đăng nhập để tiếp tục.')).toBeVisible();
+  await expect(page.getByText('Phiên đăng nhập đã hết hạn', { exact: false })).toHaveCount(0);
+  // Trình duyệt từng đăng nhập (cờ không chứa token) thì vẫn báo hết phiên như trước.
+  await page.evaluate(() => window.localStorage.setItem('wardmate:had-session', '1'));
+  await page.goto('/citizen');
+  await expect(page).toHaveURL(/reason=session-expired/);
+  await expect(page.getByText('Phiên đăng nhập đã hết hạn', { exact: false })).toBeVisible();
+});

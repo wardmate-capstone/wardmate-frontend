@@ -46,8 +46,8 @@ export function validateShiftChangePeriod(values: Record<string, string>, now = 
   const start = vietnamDateTime(values.startsAt), end = vietnamDateTime(values.endsAt);
   const midnight = Date.parse(`${values.startsAt.slice(0, 10)}T00:00:00+07:00`);
   if (values.startsAt.slice(0, 10) !== values.endsAt.slice(0, 10) ||
-      start - midnight < 7.5 * 3600000 || end - midnight > 17 * 3600000) {
-    return 'Giờ đề xuất phải trong khung 07:30–17:00 cùng ngày (giờ Việt Nam).';
+      start - midnight < 7.5 * 3600000 || end - midnight > 16.5 * 3600000) {
+    return 'Giờ đề xuất phải trong khung 07:30–16:30 cùng ngày (giờ Việt Nam).';
   }
   if (end - start < 2 * 3600000) return 'Mỗi ca đề xuất phải kéo dài tối thiểu 2 giờ.';
 }
