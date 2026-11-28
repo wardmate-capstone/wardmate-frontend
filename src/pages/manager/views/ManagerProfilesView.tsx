@@ -5,7 +5,7 @@ import {
   Plus,
   Trash,
 } from '@phosphor-icons/react';
-import { TableSkeletonRows, ConfirmDeleteModal, RefreshButton, SearchInput, Select } from '@/components/ui';
+import { Button, TableSkeletonRows, ConfirmDeleteModal, RefreshButton, SearchInput, Select } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { getInitials } from '@/hooks/useUserProfile';
 import { toast } from '@/components/ui/Toast';
@@ -348,7 +348,8 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
         }}
         title="Phân công lĩnh vực phụ trách"
         description={`Chọn lĩnh vực hỗ trợ cho ${categoryProfile?.fullName ?? 'cán bộ'}. Danh sách này dùng để lọc và phân công theo lĩnh vực, không chặn cán bộ nhận hồ sơ lĩnh vực khác trong phường.`}
-        footer={
+        footer={<>
+          <Button variant="outline" disabled={categorySubmitting} onClick={() => setCategoryProfile(undefined)}>Hủy</Button>
           <button
             type="button"
             disabled={categorySubmitting}
@@ -366,7 +367,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
           >
             {categorySubmitting ? 'Đang lưu...' : 'Lưu phân công'}
           </button>
-        }
+        </>}
       >
         <div className="grid gap-2 sm:grid-cols-2">
           {categories.map((category) => (
@@ -485,7 +486,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 onClick={() => setFdModalOpen(false)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"
@@ -543,7 +544,7 @@ export const ManagerProfilesView: React.FC<ManagerProfilesViewProps> = ({
                 onClick={() => setAccountToToggle(null)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"

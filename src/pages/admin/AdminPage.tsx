@@ -707,7 +707,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                 onClick={() => setAccountToToggleDirect(null)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"
@@ -757,7 +757,7 @@ export function AdminPage({ embedded = false, initialSection = "overview" }: { e
                 onClick={() => setAccountToToggle(null)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"
@@ -1602,7 +1602,7 @@ function WardsView({
                 onClick={() => setWardModalOpen(false)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

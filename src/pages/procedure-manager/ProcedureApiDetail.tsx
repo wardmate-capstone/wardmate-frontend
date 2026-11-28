@@ -410,7 +410,7 @@ export function ProcedureApiDetail({
           if (!open) guard.requestClose(() => setEditing(null));
         }}
         title="Chỉnh sửa thủ tục"
-        className="sm:max-w-5xl"
+        className="sm:max-w-5xl sm:max-h-[94dvh]"
         footer={
           <div className="flex w-full flex-wrap items-end justify-between gap-3">
           {/* Ngày hiệu lực đặt cạnh nút lưu để luôn thấy, không bị khuất cuối nội dung */}
@@ -418,7 +418,6 @@ export function ProcedureApiDetail({
           <Input
             label="Ngày hiệu lực của thay đổi"
             required
-            hint="Ngày thay đổi bắt đầu áp dụng."
             ref={dateInput}
             error={dateError}
             disabled={busy}

@@ -1016,9 +1016,9 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                           const current = commentForm.getValues('commentText');
                           commentForm.setValue('commentText', current ? `${current}\n${tpl}` : tpl, { shouldDirty: true });
                         }}
-                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs leading-snug text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                       >
-                        + {tpl.slice(0, 42)}…
+                        + {tpl}
                       </button>
                     ))}
                   </div>
@@ -1123,6 +1123,9 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
               <h3 className="text-lg font-bold text-slate-900">Lịch sử trạng thái</h3>
             </div>
             <div className="space-y-3">
+              {detail.isSuccess && !detail.data.history?.length && (
+                <EmptyState title="Chưa có lịch sử trạng thái." description="Các lần chuyển trạng thái của hồ sơ sẽ hiện tại đây." />
+              )}
               {detail.data?.history?.map(x => (
                 <div key={x.id} className="relative rounded-xl border border-slate-200 p-4 pl-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1269,7 +1272,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                     key={i}
                     type="button"
                     onClick={() => reasonForm.setValue('reason', tpl, { shouldValidate: true, shouldDirty: true })}
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-left truncate max-w-[220px]"
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs leading-snug text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                     title={tpl}
                   >
                     {tpl}
@@ -1365,7 +1368,7 @@ Chỉ trả về nội dung lý do để gửi cho người dân, không thêm l
                 disabled={withdrawing}
                 onClick={() => setWithdrawingComment(null)}
               >
-                Hủy bỏ
+                Hủy
               </Button>
               <Button
                 variant="primary"

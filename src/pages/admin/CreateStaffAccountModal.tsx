@@ -116,13 +116,13 @@ export function CreateStaffAccountModal({ open, wards, onOpenChange, onCreated }
         {field('fullName', 'Họ và tên *', <input {...register('fullName')} {...aria('fullName')} autoComplete="off" placeholder="Ví dụ: Trần Minh Hoàng" className={inputClass} />)}
         {field('username', 'Tên đăng nhập *', <input {...register('username')} {...aria('username')} autoComplete="off" placeholder="Ví dụ: hoang.tm" className={inputClass} />)}
         {field('email', 'Email công vụ *', <input {...register('email')} {...aria('email')} type="email" autoComplete="off" placeholder="hoang.tm@phuong.gov.vn" className={inputClass} />)}
-        {field('password', 'Mật khẩu khởi tạo * (≥ 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt)', (
+        {field('password', 'Mật khẩu khởi tạo *', (
           <input {...register('password')} {...aria('password')} type="password" autoComplete="new-password" placeholder="••••••••" className={inputClass} />
         ))}
         <PasswordStrength value={password} strict />
         <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
           <button type="button" onClick={() => onOpenChange(false)} className="px-4 py-2 text-xs font-bold text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50">
-            Hủy bỏ
+            Hủy
           </button>
           <button type="submit" disabled={isSubmitting} className="admin-primary-action">
             {isSubmitting ? 'Đang tạo...' : 'Tạo tài khoản'}

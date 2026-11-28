@@ -641,7 +641,7 @@ export function CitizenPage({ embedded = false, initialSection = 'dashboard' }: 
       <CreateDossierModal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} initial={{ procedureId: selectedProcedureId, caseCode: selectedCaseCode, wardCode: newWardCode }} procedures={availableProcedures} wards={availableWards} cases={availableCases} checklist={selectedProcedureQuery.data?.checklistSchema} forms={selectedProcedureQuery.data?.formDefinitions} loading={proceduresQuery.isPending || wardsQuery.isPending || selectedProcedureQuery.isFetching} unavailable={proceduresQuery.isError || wardsQuery.isError || selectedProcedureQuery.isError} onRetry={() => { void proceduresQuery.refetch(); void wardsQuery.refetch(); if (selectedProcedureId) void selectedProcedureQuery.refetch(); }} busy={submittingAction} onProcedureChange={setSelectedProcedureId} onSubmit={handleCreateDraft} />
 
       {/* Trợ lý ảo AI hỏi đáp thủ tục */}
-      <AiChatWidget />
+      <AiChatWidget compact />
     </div>
   );
 }

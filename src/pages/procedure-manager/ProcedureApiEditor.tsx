@@ -299,7 +299,8 @@ export function ProcedureApiEditor({
           </p>
           {!disabled && <p className="hidden text-xs text-slate-500 sm:block"><span className="font-bold text-red-600">*</span> là thông tin bắt buộc · Chỉ nhập thông tin đã kiểm tra</p>}
         </div>
-        <ol className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        {/* Từ 640 px xuống dòng để thấy đủ 7 phần (bản nháp cạnh PDF); điện thoại giữ một hàng cuộn ngang để chừa chỗ nhập liệu. */}
+        <ol className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible">
           {tabItems.map((label, index) => {
             const active = step === index;
             const hasIssue = issues.some(issue => issue.step === index);

@@ -74,7 +74,7 @@ export const DossierAiReviewCard: React.FC<DossierAiReviewCardProps> = ({
               variant="primary"
               disabled={loading || disabled}
               onClick={onRunReview}
-              className="gap-1.5 bg-purple-700 hover:bg-purple-800 text-white shadow-xs"
+              className="gap-1.5 shadow-xs"
             >
               <ArrowsClockwise size={15} className={loading ? 'animate-spin' : ''} weight="bold" />
               <span>{loading ? 'Đang phân tích...' : result ? 'Kiểm tra lại toàn bộ' : 'Bắt đầu kiểm tra AI'}</span>

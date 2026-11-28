@@ -557,7 +557,7 @@ export const CccdOcrScanModal: React.FC<CccdOcrScanModalProps> = ({
                     onClick={() => handleClose(false)}
                     disabled={loading}
                   >
-                    Hủy bỏ
+                    Hủy
                   </Button>
                   <Button
                     variant="primary"

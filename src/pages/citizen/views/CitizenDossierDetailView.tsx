@@ -226,7 +226,7 @@ export function CitizenDossierDetailView({ dossier, wardName, onBack, onSubmitPr
               </div>
             </div>
             {contents.data && (
-              <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-xs font-bold text-slate-700">
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-200/70 px-2.5 py-0.5 text-xs font-bold text-slate-700">
                 {readyCount}/{required.length} hoàn tất
               </span>
             )}

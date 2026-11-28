@@ -364,7 +364,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               Thông tin Định danh & Nhân thân
             </h2>
             {isEditing && (
-              <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
                 Được phép sửa
               </span>
             )}
@@ -391,7 +391,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
                       aria-label="Số định danh cá nhân (CCCD)" id="self-profile-identityNumber" disabled={isSaving} aria-invalid={Boolean(errors.identityNumber)} aria-describedby={errors.identityNumber ? "self-error-identityNumber" : undefined} value={formData.identityNumber}
                       onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value.replace(/\D/g, '') })}
                       placeholder="Nhập 12 chữ số CCCD"
-                      className="w-full h-10 px-3.5 font-mono text-base font-bold tracking-widest text-red-950 bg-white border border-red-300 rounded-xl shadow-2xs transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                      className="w-full h-10 px-3.5 pr-14 text-sm font-semibold tabular-nums tracking-wide text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs transition-all placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">
                       {formData.identityNumber?.length || 0}/12
@@ -546,7 +546,7 @@ export const UnifiedSelfProfileView: React.FC<{ variant?: 'staff' | 'citizen' }>
               Địa chỉ & Nơi cư trú
             </h2>
             {isEditing && (
-              <span className="text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
+              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full">
                 Được phép sửa
               </span>
             )}

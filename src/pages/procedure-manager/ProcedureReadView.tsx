@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { isValidElement, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui';
 import { checklistQuantityLabel, formatQuantityLines, hasFourColumnLegal, legalIssueDate, methodFeeLabel, methodTimeLabel } from '@/lib/procedureDisplay';
 import type { submissionMethodSchema } from '@/lib/api/procedures';
@@ -38,7 +38,13 @@ function Item({ label, value, wide, highlight, boxed }: { label: string; value: 
 }
 
 function Group({ title, icon, badge, children }: { title: string; icon?: ReactNode; badge?: string; children: ReactNode[] }) {
-  const validChildren = children.filter(Boolean);
+  // Mục Item không có giá trị tự ẩn; nhóm chỉ còn mục rỗng thì ẩn cả nhóm (không hiện khung trống).
+  const validChildren = children.filter(child => {
+    if (!child) return false;
+    if (!isValidElement<{ value?: unknown }>(child) || child.type !== Item) return true;
+    const value = child.props.value;
+    return !(value === '' || value === null || value === undefined || (Array.isArray(value) && !value.length));
+  });
   if (!validChildren.length) return null;
   return (
     <section className="rounded-xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all hover:border-slate-300">

@@ -48,7 +48,7 @@ export function ConfirmDeleteModal({
               disabled={loading}
               onClick={() => onOpenChange(false)}
             >
-              Hủy bỏ
+              Hủy
             </Button>
             <Button
               type="button"

@@ -288,3 +288,6 @@
   .schedule-list-mobile-status { display: inline-flex; }
   .schedule-list-none[aria-hidden] { display: none; }
 }
+
+/* Rà soát UI 28/11: cuối tuần không có ca dùng nền xám nhạt, tách khỏi màu hồng của ngày lễ/nghỉ phép. */
+.schedule-cell.is-weekend { background: #f8fafc; }

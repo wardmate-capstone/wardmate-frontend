@@ -66,12 +66,13 @@ function getWardDisplayName(code?: string | null, wardsList?: Array<{ code: stri
   return clean.replace(/_/g, ' ');
 }
 
-export const AiChatWidget: React.FC = () => {
+/** compact: chỉ hiện biểu tượng (khu làm việc) để nút nổi không che nút thao tác ở góc phải dưới. */
+export const AiChatWidget: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const userId = useAuthStore(state => state.status === 'authenticated' ? state.user?.id : undefined);
-  return <ChatPanel key={userId ?? 'guest'} authenticated={Boolean(userId)} />;
+  return <ChatPanel key={userId ?? 'guest'} authenticated={Boolean(userId)} compact={compact} />;
 };
 
-function ChatPanel({ authenticated }: { authenticated: boolean }) {
+function ChatPanel({ authenticated, compact = false }: { authenticated: boolean; compact?: boolean }) {
   const location = useLocation();
   const procedureSuggestions = useProcedureSuggestions(3);
   const quickSuggestions = [
@@ -479,14 +480,15 @@ function ChatPanel({ authenticated }: { authenticated: boolean }) {
           ref={toggleRef}
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2.5 rounded-full border border-red-950/20 bg-linear-to-br from-red-700 to-red-900 p-2 text-white shadow-[0_8px_25px_rgba(121,27,23,.28)] hover:from-red-800 hover:to-red-950 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-red-800 motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0 sm:pr-4"
+          className={`group flex items-center gap-2.5 rounded-full border border-red-950/20 bg-linear-to-br from-red-700 to-red-900 p-2 text-white shadow-[0_8px_25px_rgba(121,27,23,.28)] hover:from-red-800 hover:to-red-950 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-red-800 motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0 ${compact ? '' : 'sm:pr-4'}`}
           aria-label="Mở trợ lý hỗ trợ thủ tục"
+          title={compact ? 'Hỏi Đáp AI' : undefined}
         >
           <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white/15" aria-hidden="true">
             <BrandMark size={28} className="size-7 object-contain motion-safe:transition-transform motion-safe:group-hover:-rotate-6" />
             <Sparkle size={13} weight="fill" className="absolute -top-0.5 -right-0.5 text-amber-200 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:rotate-12 motion-safe:group-hover:scale-125 motion-safe:group-focus-visible:scale-125" />
           </span>
-          <span className="hidden text-sm font-bold sm:inline">Hỏi Đáp AI</span>
+          {!compact && <span className="hidden text-sm font-bold sm:inline">Hỏi Đáp AI</span>}
         </button>
       )}
 

@@ -57,7 +57,7 @@ export function ProcedureDetailPage() {
   if (!procedure) {
     return (
       <section className="mx-auto max-w-3xl px-5 py-16 text-center">
-        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold text-slate-900">
+        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold text-slate-900 focus:outline-none">
           Không tìm thấy thủ tục
         </h1>
         <p className="my-5 text-slate-600">

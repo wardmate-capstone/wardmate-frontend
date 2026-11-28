@@ -93,10 +93,10 @@ export function useStaffDirectory(enabled: boolean) {
     return items;
   }, enabled);
 }
-export function QueryState({ query, empty }: { query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown }; empty?: boolean }) {
+export function QueryState({ query, empty, emptyTitle, emptyDescription }: { query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown }; empty?: boolean; emptyTitle?: string; emptyDescription?: string }) {
   if (query.isPending) return <div role="status" className="staff-state"><ArrowsClockwise size={24} className="motion-safe:animate-spin" aria-hidden="true" /><p>Đang tải dữ liệu…</p></div>;
   if (query.isError) return <ErrorAlert onRetry={() => void query.refetch()}>{staffingError(query.error)}</ErrorAlert>;
-  return empty ? <EmptyState title="Chưa có dữ liệu trong phạm vi đang xem." description="Bạn có thể đổi bộ lọc hoặc làm mới để kiểm tra lại." /> : null;
+  return empty ? <EmptyState title={emptyTitle ?? 'Chưa có dữ liệu trong phạm vi đang xem.'} description={emptyDescription ?? 'Bạn có thể đổi bộ lọc hoặc làm mới để kiểm tra lại.'} /> : null;
 }
 export function Pager({ page, total, setPage, pageSize = 20 }: { page: number; total: number; setPage: (page: number) => void; pageSize?: number }) {
   return <Pagination className="staff-pager" page={page} total={total} pageSize={pageSize} onPageChange={setPage} />;
