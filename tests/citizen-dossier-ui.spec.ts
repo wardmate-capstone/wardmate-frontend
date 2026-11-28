@@ -2,14 +2,36 @@ import { test, expect, type Page } from '@playwright/test';
 import { documentIds, mockDocumentWorkflow } from './fixtures/documentWorkflow';
 import { authReply } from './fixtures/auth';
 
-async function openDossier(page: Page) {
+async function openDossier(page: Page, presentOnly = false) {
   const state = await mockDocumentWorkflow(page);
+  state.presentOnly = presentOnly;
+  state.withoutForm = presentOnly;
   await page.route('**/api/v1/wards', route => authReply(route, { json: [{ code: 'WARD_A', name: 'Phường thử nghiệm' }] }));
   await page.goto('/citizen?section=dossiers_all');
   await page.getByRole('button', { name: 'Chi tiết', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Giấy tờ và biểu mẫu', exact: true })).toBeVisible();
   return state;
 }
+
+test('ẩn khung xác nhận xuất trình và giữ luồng đính kèm giấy tờ', async ({ page }) => {
+  const state = await openDossier(page, true);
+  const item = page.locator(`#checklist-${documentIds.evidence}`);
+  const send = page.getByRole('button', { name: 'Gửi hồ sơ tiền kiểm', exact: true });
+
+  await expect(item.getByText('Xuất trình khi đến quầy', { exact: false })).toBeVisible();
+  await expect(item.getByText('Chọn tệp đính kèm', { exact: true })).toBeVisible();
+  await expect(item.getByText('Chỉ cần mang bản chính', { exact: false })).toHaveCount(0);
+  await expect(item.getByRole('button', { name: 'Tôi sẽ mang bản chính khi đến quầy' })).toHaveCount(0);
+  await expect(send).toBeDisabled();
+  expect(state.writes).toHaveLength(0);
+
+  await item.getByLabel('Đính kèm giấy tờ').setInputFiles({ name: 'giay-to.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-test') });
+  const upload = page.getByRole('dialog', { name: 'Khai số bản trong tệp' });
+  await upload.getByLabel('Số bản thực tế').fill('2');
+  await upload.getByRole('button', { name: 'Lưu giấy tờ', exact: true }).click();
+  await expect(item.getByText('Đã hoàn tất', { exact: true })).toBeVisible();
+  await expect(send).toBeEnabled();
+});
 
 test('dossier gives one clear next action and reflows across desktop, tablet and mobile', async ({ page }) => {
   const state = await openDossier(page);

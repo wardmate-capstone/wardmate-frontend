@@ -1,5 +1,11 @@
 # Tiến độ và bàn giao WardMate
 
+## FE-CITIZEN-PRESENTATION — Ẩn khung xác nhận xuất trình | 2026-11-28 22:50 (Asia/Saigon, UTC+07:00)
+
+- `src/pages/citizen/components/DossierChecklistView.tsx` bỏ khung xanh và nút xác nhận mang bản chính trên các mục chỉ xuất trình. Nhãn "Xuất trình khi đến quầy" và ô chọn tệp vẫn hiển thị. Workflow hiện trả 422 `application.documents_incomplete` khi đánh dấu hoàn tất mà thiếu bằng chứng tệp.
+- `tests/citizen-dossier-ui.spec.ts` và `tests/fixtures/documentWorkflow.ts` kiểm tra khung đã ẩn, người dân vẫn tải tệp được, và nút gửi tiền kiểm chỉ bật sau khi có đủ tệp trong kịch bản kiểm thử.
+- `npm run lint` và `npm run build` đạt. Vite báo chú thích trong dependency và kích thước bundle. Playwright Edge cho màn chi tiết hồ sơ đạt 3/3 ca với API giả lập. Hợp đồng API, DTO, ProblemDetails và token giữ nguyên.
+
 ## FE-FULLTEST-1128 — Sửa lỗi FE theo báo cáo `public/full-test-2026-11-28-FE.pdf` — 28/11/2026 (Asia/Saigon, UTC+07:00)
 
 Chỉ sửa FE, không đổi BE (theo yêu cầu người dùng). Chưa chạy Git (theo CLAUDE.md).

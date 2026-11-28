@@ -135,7 +135,6 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
       const presentOnly = isPresentOnly(item);
       const fileReady = Boolean(contents.data && hasFileEvidence(item, contents.data));
       const confirmedPresent = presentOnly && complete && !fileReady;
-      const canConfirmPresent = presentOnly && !fileReady && dossierStatus === 'Bản nháp' && Boolean(onUpdateChecklistItem);
       const needsConfirmation = submissions.some(x => x.status === 'Draft' && x.fileExists);
       const templateChoices = item.formTemplateId && !submissions.length ? (item.forms ?? []).filter(f => f.formTemplateId) : [];
       const templatePicker = templateChoices.length > 1 ? (
@@ -357,23 +356,6 @@ export function DossierChecklistView({ procedureName, checklist, applicationId, 
                 )}
               </div>
             ))}
-
-            {/* Giấy tờ chỉ xuất trình: không bắt buộc tải tệp; công dân xác nhận sẽ mang bản chính */}
-            {presentOnly && (
-              <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-950">
-                <p className="leading-relaxed">Chỉ cần mang bản chính đến Bộ phận Một cửa để cán bộ đối chiếu. Đính kèm bản chụp là không bắt buộc, giúp cán bộ kiểm tra trước.</p>
-                {editable && canConfirmPresent && (confirmedPresent ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 font-semibold text-emerald-800"><CheckCircle size={15} aria-hidden />Bạn đã xác nhận sẽ mang bản chính.</span>
-                    <Button size="small" variant="ghost" disabled={busy} onClick={() => void perform(item, async () => { await onUpdateChecklistItem!(item.checklistId, 'PENDING'); })}>Bỏ xác nhận</Button>
-                  </div>
-                ) : (
-                  <Button size="small" variant="outline" disabled={busy} onClick={() => void perform(item, async () => { await onUpdateChecklistItem!(item.checklistId, 'COMPLETED'); toast.success('Đã ghi nhận bạn sẽ xuất trình bản chính tại quầy.'); })}>
-                    <CheckCircle size={15} aria-hidden />Tôi sẽ mang bản chính khi đến quầy
-                  </Button>
-                ))}
-              </div>
-            )}
 
             {/* Upload for non-form items */}
             {!item.formTemplateId && editable && fileInput}

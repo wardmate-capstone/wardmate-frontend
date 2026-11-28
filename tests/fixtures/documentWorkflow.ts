@@ -15,10 +15,12 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
   await mockCatalog(page);
   const docx = await createPreviewDocx();
   const state = { actor, status, version: status === 'DRAFT' ? 0 : 1, submissionStatus: '', checklistStatus: 'PENDING', evidenceQuantity: 0, failChot: false, failPatch: false, failComment: false, failDecision: false, withoutForm: false, qr: false,
+    presentOnly: false,
     writes: [] as { path: string; body: string }[], reads: [] as string[], comments: [] as Record<string, unknown>[], pdfs: [] as Record<string, unknown>[] };
+  const evidenceSubmissionType = () => state.presentOnly ? 'XUAT_TRINH' : 'NOP';
   const checklists = () => [
     { id: documentIds.checklist, code: 'TO_KHAI', title: 'Tờ khai thử nghiệm', formTemplateId: documentIds.template, quantity: 1, submissionType: 'NOP', documentCopyType: 'ORIGINAL', sortOrder: 1, isRequired: true, status: state.checklistStatus, createdAt: time, updatedAt: time },
-    { id: documentIds.evidence, code: 'GIAY_TO', title: 'Giấy tờ thử nghiệm', formTemplateId: null, quantity: 2, submissionType: 'NOP', documentCopyType: 'ORIGINAL', sortOrder: 2, isRequired: true, status: state.evidenceQuantity >= 2 ? 'COMPLETED' : 'PENDING', createdAt: time, updatedAt: time },
+    { id: documentIds.evidence, code: 'GIAY_TO', title: 'Giấy tờ thử nghiệm', formTemplateId: null, quantity: 2, submissionType: evidenceSubmissionType(), documentCopyType: 'ORIGINAL', sortOrder: 2, isRequired: true, status: state.evidenceQuantity >= 2 ? 'COMPLETED' : 'PENDING', createdAt: time, updatedAt: time },
   ].filter(x => !state.withoutForm || x.id !== documentIds.checklist);
   const app = () => ({ id: documentIds.application, applicationCode: 'HS-TEST-01', userId: documentIds.citizen, procedureId: documentIds.template, procedureTitle: 'Thủ tục thử nghiệm', caseCode: null, wardCode: 'WARD_A', status: state.status, formData: { applicantName: 'Người kiểm thử', 'a/b~c': 'Giá trị kiểm thử' }, checklists: checklists(), history: [], resubmitCount: Math.max(0, state.version - 1), currentVersionNumber: state.version, assignedOfficerId: state.status === 'DRAFT' ? null : documentIds.officer, assignmentVersion: state.status === 'DRAFT' ? 0 : 2, createdAt: time, updatedAt: time });
   const submission = () => ({ id: documentIds.submission, templateId: documentIds.template, applicationId: documentIds.application, checklistId: documentIds.checklist, applicantId: documentIds.citizen, fileName: 'to-khai.docx', fileSizeBytes: docx.length, status: state.submissionStatus, createdAt: time, updatedAt: time });
@@ -33,7 +35,7 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
       state.reads.push(path);
       if (path.endsWith('/approved-qr/image')) return authReply(route, { body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64'), contentType: 'image/png' });
       if (path.endsWith('/approved-qr')) return state.qr ? reply({ id: documentIds.supporting, applicationId: documentIds.application, submissionId: documentIds.submission, qrCodeValue: 'https://example.test/verify/HS-TEST-01', generatedAt: time }) : reply({ code: 'document.qr_not_found' }, 404);
-      if (path.endsWith('/contents')) return reply({ applicationId: documentIds.application, submissions: state.submissionStatus ? [{ ...submission(), fileExists: true, quantity: 1 }] : [], supportingDocuments: state.evidenceQuantity ? [{ id: documentIds.supporting, checklistId: documentIds.evidence, fileName: 'giay-to.pdf', status: 'Uploaded', fileExists: true, submissionType: 'NOP', documentCopyType: 'ORIGINAL', quantity: state.evidenceQuantity }] : [] });
+      if (path.endsWith('/contents')) return reply({ applicationId: documentIds.application, submissions: state.submissionStatus ? [{ ...submission(), fileExists: true, quantity: 1 }] : [], supportingDocuments: state.evidenceQuantity ? [{ id: documentIds.supporting, checklistId: documentIds.evidence, fileName: 'giay-to.pdf', status: 'Uploaded', fileExists: true, submissionType: evidenceSubmissionType(), documentCopyType: 'ORIGINAL', quantity: state.evidenceQuantity }] : [] });
       if (path.includes('/by-application/')) return reply(state.submissionStatus ? [submission()] : []);
       if (path.endsWith('/download-docx')) return authReply(route, { body: docx, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       if (path.endsWith('/download')) return authReply(route, { body: Buffer.from('%PDF-1.4\n%%EOF'), contentType: 'application/pdf' });
@@ -54,6 +56,7 @@ export async function mockDocumentWorkflow(page: Page, actor: 'citizen' | 'offic
     }
     if (path.includes('/checklists/')) {
       if (state.failPatch) { state.failPatch = false; return reply({ code: 'application.documents_unavailable' }, 503); }
+      if (state.presentOnly && path.endsWith(`/${documentIds.evidence}`)) return reply(app());
       state.checklistStatus = request.postDataJSON().status; return reply(app());
     }
     if (path.endsWith('/supporting-documents')) {
